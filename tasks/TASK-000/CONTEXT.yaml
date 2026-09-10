@@ -1,0 +1,37 @@
+task: TASK-000
+mode: repository_audit
+
+required:
+  - .company-os/PROJECT_STATE.md
+  - .company-os/AGENT_PROTOCOL.md
+  - .company-os/TOKEN_POLICY.md
+  - .company-os/CONTEXT_POLICY.md
+  - docs/PRODUCT_VISION.md
+  - docs/MASTER_PROMPT.md
+  - docs/ARCHITECTURE.md
+  - docs/IMPLEMENTATION_PLAN.md
+  - tasks/TASK-000/TASK.md
+
+repository_scan:
+  allowed: true
+  reason: "TASK-000 is the explicit one-time architecture audit."
+  exclude:
+    - node_modules
+    - .git/objects
+    - dist
+    - build
+    - coverage
+    - __pycache__
+    - .venv
+    - venv
+    - .idea
+    - .vscode
+    - binaries
+    - generated assets
+
+writes_allowed:
+  - docs/audit/**
+  - tasks/TASK-000/**
+  - .company-os/PROJECT_STATE.md
+
+source_code_modification_allowed: false
