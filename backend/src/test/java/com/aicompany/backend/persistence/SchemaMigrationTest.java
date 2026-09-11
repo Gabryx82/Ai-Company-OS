@@ -32,7 +32,7 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // Schema versions only, in order. The development seed is a separate
         // Flyway stream and must never appear here, otherwise the next schema
         // migration becomes out of order (R1).
-        assertThat(versions).containsExactly("1", "2");
+        assertThat(versions).containsExactly("1", "2", "3");
     }
 
     @Test
@@ -73,6 +73,49 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // description stays optional on purpose
         assertThat(nullabilityOf("tasks", "description")).isEqualTo("YES");
         assertThat(nullabilityOf("projects", "description")).isEqualTo("YES");
+
+        // And so does the project of a task, for this phase only: the rows that
+        // existed before V3 have no project, and nothing may invent one for them.
+        // See ADR-005 §1 -- tightening this to NOT NULL is a later decision with
+        // a migration of its own, not a detail.
+        assertThat(nullabilityOf("tasks", "project_id")).isEqualTo("YES");
+    }
+
+    @Test
+    void taskProjectRelationIsEnforcedByTheDatabase() {
+
+        // The service check is what makes the error readable; this is what makes
+        // it true. A task row cannot point at a project that is not there,
+        // whoever writes it.
+        List<String> foreignKeys = jdbc.queryForList(
+                "SELECT constraint_name FROM information_schema.table_constraints "
+                        + "WHERE table_name = 'tasks' AND constraint_type = 'FOREIGN KEY' "
+                        + "ORDER BY constraint_name",
+                String.class);
+
+        assertThat(foreignKeys).containsExactly("tasks_project_id_fkey");
+
+        // Deleting a project out from under its tasks must be refused rather than
+        // cascade: the Company OS archives projects, it does not delete them
+        // (ADR-004 §3), so NO ACTION is the deliberate choice here.
+        String deleteRule = jdbc.queryForObject(
+                "SELECT rc.delete_rule FROM information_schema.referential_constraints rc "
+                        + "WHERE rc.constraint_name = 'tasks_project_id_fkey'",
+                String.class);
+
+        assertThat(deleteRule).isEqualTo("NO ACTION");
+    }
+
+    @Test
+    void tasksAreIndexedByProject() {
+
+        // PostgreSQL does not index the referencing side of a foreign key on its
+        // own, and "the tasks of this project" is the read the relation exists for.
+        List<String> indexes = jdbc.queryForList(
+                "SELECT indexname FROM pg_indexes WHERE tablename = 'tasks' ORDER BY indexname",
+                String.class);
+
+        assertThat(indexes).contains("tasks_project_id_idx");
     }
 
     @Test

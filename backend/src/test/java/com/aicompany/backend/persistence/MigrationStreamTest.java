@@ -2,8 +2,10 @@ package com.aicompany.backend.persistence;
 
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
+import org.flywaydb.core.api.MigrationVersion;
 import org.flywaydb.core.api.output.MigrateResult;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -203,6 +205,82 @@ class MigrationStreamTest {
         assertThat(appliedSchemaVersions(schema)).isEqualTo(schemaVersionsPlusProbe());
     }
 
+    /**
+     * TASK-003 — the real V2 to V3 upgrade, on a database that already holds
+     * data, rather than on an empty one.
+     *
+     * <p>This is the case a fresh {@code migrate} never exercises: every other
+     * test here builds the schema in one go, so a migration that silently
+     * depended on an empty table would still pass. Flyway's {@code target} stops
+     * the stream at V2, the test writes the rows a running installation would
+     * have, and only then lets V3 run.
+     */
+    @Test
+    void taskProjectRelationIsAddedToAPopulatedV2Database() {
+
+        String schema = "task003_v2_to_v3";
+
+        // 1. A database at V2: projects exist, tasks exist, they are unrelated.
+        MigrateResult toV2 = schemaFlywayUpTo(schema, "2").migrate();
+        assertThat(toV2.success).isTrue();
+        assertThat(appliedSchemaVersions(schema)).containsExactly("1", "2");
+        assertThat(columnsOf(schema, "tasks")).doesNotContain("project_id");
+
+        DevSeedFlyway.apply(dataSource(), schema);
+
+        jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, description, status, priority) "
+                + "VALUES (?, ?, ?, ?)", "task written before V3", "kept as it was", "OPEN", "HIGH");
+        jdbc().update("INSERT INTO \"" + schema + "\".projects "
+                + "(name, description, status, created_at, updated_at) "
+                + "VALUES (?, ?, 'ACTIVE', now(), now())", "Project written before V3", null);
+
+        // 2. The upgrade under test. One migration, nothing else pending.
+        MigrateResult toV3 = schemaFlyway(schema).migrate();
+
+        assertThat(toV3.success).isTrue();
+        assertThat(toV3.migrationsExecuted).isEqualTo(1);
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(resolvedSchemaVersions());
+
+        // 3. The relation exists, and the rows that predate it are untouched --
+        //    same values, and explicitly no project rather than an invented one
+        //    (ADR-005 §2).
+        assertThat(columnsOf(schema, "tasks")).contains("project_id");
+        assertThat(taskTitles(schema)).containsExactly("task written before V3");
+        assertThat(agentNames(schema)).isEqualTo(SEEDED_AGENTS);
+
+        assertThat(jdbc().queryForObject(
+                "SELECT count(*) FROM \"" + schema + "\".tasks WHERE project_id IS NOT NULL",
+                Integer.class))
+                .isZero();
+
+        assertThat(jdbc().queryForObject(
+                "SELECT description FROM \"" + schema + "\".tasks WHERE title = ?",
+                String.class, "task written before V3"))
+                .isEqualTo("kept as it was");
+
+        assertThat(jdbc().queryForObject(
+                "SELECT count(*) FROM \"" + schema + "\".projects", Integer.class))
+                .isEqualTo(1);
+
+        // 4. A pre-existing task can be assigned after the upgrade, and the
+        //    foreign key refuses an identifier that resolves to nothing.
+        Long projectId = jdbc().queryForObject(
+                "SELECT id FROM \"" + schema + "\".projects", Long.class);
+
+        jdbc().update("UPDATE \"" + schema + "\".tasks SET project_id = ? WHERE title = ?",
+                projectId, "task written before V3");
+
+        assertThatThrownBy(() -> jdbc().update(
+                "UPDATE \"" + schema + "\".tasks SET project_id = 987654 WHERE title = ?",
+                "task written before V3"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        // 5. And the stream can still move past its new head.
+        assertThat(schemaFlyway(schema, NEXT_MIGRATION_FIXTURE).migrate().migrationsExecuted)
+                .isEqualTo(1);
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(schemaVersionsPlusProbe());
+    }
+
     @Test
     void removingLegacyHistoryIsANoOpWhenThereIsNothingToRemove() {
 
@@ -243,6 +321,19 @@ class MigrationStreamTest {
 
     private static List<String> schemaVersionsPlus(String extraVersion) {
         return Stream.concat(resolvedSchemaVersions().stream(), Stream.of(extraVersion)).toList();
+    }
+
+    /**
+     * The schema stream stopped at one version, so a test can put a database in
+     * a historical state and migrate forward from there.
+     */
+    private static Flyway schemaFlywayUpTo(String schema, String version) {
+        return Flyway.configure()
+                .dataSource(dataSource())
+                .locations(SCHEMA_LOCATION)
+                .schemas(schema)
+                .target(MigrationVersion.fromVersion(version))
+                .load();
     }
 
     private static Flyway schemaFlyway(String schema, String... extraLocations) {

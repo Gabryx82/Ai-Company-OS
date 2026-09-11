@@ -4,6 +4,7 @@ import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.model.ProjectStatus;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.support.AbstractPostgresTest;
+import com.aicompany.backend.task.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +31,15 @@ class ProjectPersistenceTest extends AbstractPostgresTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private TaskRepository taskRepository;
+
     @BeforeEach
     void clearProjects() {
+        // Tasks go first. Since V3 they hold a foreign key to projects, and the
+        // database refuses to delete a project a task still points at -- which is
+        // exactly the behaviour TaskProjectRelationPersistenceTest asserts.
+        taskRepository.deleteAll();
         repository.deleteAll();
     }
 
