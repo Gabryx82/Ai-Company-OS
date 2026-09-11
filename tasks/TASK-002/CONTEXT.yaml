@@ -1,0 +1,77 @@
+task: TASK-002
+title: Core Domain Model & Project Registry Foundation
+mode: implementation
+parent: none
+
+baseline:
+  branch: task-002-project-registry-foundation
+  base: master
+  head_at_start: 32174a1
+  remote: none
+
+required:
+  - .company-os/PROJECT_STATE.md
+  - .company-os/AGENT_PROTOCOL.md
+  - .company-os/TOKEN_POLICY.md
+  - tasks/TASK-001A/HANDOFF.md
+  - docs/adr/ADR-002-postgresql-flyway-persistence.md
+  - docs/adr/ADR-003-dev-seed-separate-migration-stream.md
+
+repository_scan:
+  allowed: false
+  reason: "Nuovo modulo isolato. Letture limitate al backend e agli artefatti di governance."
+
+files_in_play:
+  - backend/src/main/java/com/aicompany/backend/project/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/**
+  - backend/src/test/resources/db/fixture/**
+
+writes_allowed:
+  - backend/src/main/java/com/aicompany/backend/project/**
+  - backend/src/main/resources/db/migration/V2__create_projects.sql
+  - backend/src/test/**
+  - docs/adr/**
+  - tasks/TASK-002/**
+  - .company-os/PROJECT_STATE.md
+
+invariants:
+  - "PostgreSQL + Flyway, schema di proprietà di Flyway"
+  - "spring.jpa.hibernate.ddl-auto=validate"
+  - "seed dev in stream Flyway separato (ADR-003)"
+  - "POST /api/tasks valido -> 201 + Location; {} -> 400"
+  - "nessun H2"
+  - "entita Task invariata"
+
+forbidden:
+  - task_project_relationship
+  - task_domain_enums
+  - physical_delete_endpoint
+  - frontend
+  - agent_registry
+  - skills_rules_tools
+  - python_ai_service
+  - memory_graph
+  - external_integrations
+  - authentication
+  - global_exception_handler
+  - stack_change
+  - general_refactoring
+  - task_003
+
+git_constraints:
+  work_branch: task-002-project-registry-foundation
+  forbidden_operations:
+    - merge_to_master
+    - push
+    - remote_configuration
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - branch_deletion
+    - history_rewrite
+  never_commit:
+    - secrets
+    - real_env_files
+    - build_output
+    - local_database_data

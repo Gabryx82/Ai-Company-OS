@@ -4,124 +4,116 @@
 AI Company OS
 
 ## Status
-PHASE 0 completata. **TASK-001 e TASK-001A completate, validate e integrate in `master`**
-(2026-09-11). La fondazione di persistenza è la base stabile del progetto.
-Pronti per la definizione dello scope di TASK-002.
+PHASE 1 in corso. **TASK-002 implementata e verificata sul branch
+`task-002-project-registry-foundation`** (2026-09-11), in attesa di review.
+Non integrata in `master`.
 
 ## Current phase
-PHASE 1 — Foundations (persistenza completata)
+PHASE 1 — Foundations (persistenza completata, primo dominio introdotto)
 
 ## Current task
-**Nessuna attiva.** TASK-002 non avviata: richiede approvazione dello scope.
+**TASK-002 — Core Domain Model & Project Registry Foundation.** Implementazione completa,
+suite verde, artefatti prodotti. Prossimo passo: review differenziale, poi decisione di merge.
 
 ## Last completed task
-**TASK-001 — Reproducible Persistence Foundation: COMPLETATA e integrata in `master`.**
+**TASK-002 — Core Domain Model & Project Registry Foundation** (implementata, non ancora
+integrata).
 
-Ciclo completo: implementazione → review differenziale Codex (`PASS WITH FIXES`) →
-TASK-001A per il fix del rilievo HIGH → validazione → merge.
+Il Company OS ha il suo primo dominio reale: `Project`, tabella PostgreSQL creata da `V2`,
+con CRUD, ciclo di vita esplicito e **archiviazione al posto della cancellazione fisica**.
 
-| Fase | Esito |
+Vincolo di scope rispettato: il progetto è *pronto a diventare* il contenitore di task,
+agenti, documenti, framework, template, integrazioni e memoria — non lo è ancora. `V2` è
+puramente additiva: crea una tabella e due indici, non tocca `agents` né `tasks`, non
+introduce chiavi esterne.
+
+| Elemento | Scelta |
 |---|---|
-| TASK-001 | H2 in-memory sostituito da PostgreSQL con schema di proprietà di Flyway, Hibernate `validate`, DTO con Bean Validation, test su database reale |
-| Review Codex | `PASS WITH FIXES` — 1 HIGH (R1), 3 MEDIUM, 3 LOW. Nessun BLOCKER |
-| TASK-001A | R1 chiuso: schema e seed separati in due stream Flyway. Parte di R2 e delimitazioni di R4 recepite |
-| Merge | `--no-ff` in `master`, branch conservato, storia non riscritta |
+| Entità | `Project(id, name, description, status, createdAt, updatedAt)`, `BIGINT` identity come le altre |
+| Stato | Enum chiuso `ACTIVE` / `ARCHIVED`, imposto anche da `CHECK` nel database |
+| Cancellazione | Nessun mapping `DELETE` → `405`. Si archivia |
+| Transizioni | Sull'entità, non nel service. Transizione illegale → `409` |
+| Unicità nome | Indice unico funzionale su `lower(name)`; anche la violazione concorrente diventa `409` |
+| Errori | `ProblemDetail`, advice **limitato a `ProjectController`** |
 
-Artefatti: `tasks/TASK-001/*`, `tasks/TASK-001A/*`, `docs/adr/ADR-001`, `ADR-002`,
-`ADR-003`, `docs/RUNNING.md`, `docs/reviews/TASK-001_CODEX_REVIEW.md`.
+API: `POST /api/projects`, `GET /api/projects[?status=]`, `GET /{id}`, `PUT /{id}`,
+`POST /{id}/archive`, `POST /{id}/restore`.
+
+Artefatti: `tasks/TASK-002/*`, `docs/adr/ADR-004`.
+
+Prima, in `master`: **TASK-001 e TASK-001A — Reproducible Persistence Foundation**, ciclo
+completo implementazione → review Codex (`PASS WITH FIXES`) → fix del rilievo HIGH → merge.
+Artefatti: `tasks/TASK-001/*`, `tasks/TASK-001A/*`, `docs/adr/ADR-001`, `ADR-002`, `ADR-003`,
+`docs/RUNNING.md`, `docs/reviews/TASK-001_CODEX_REVIEW.md`.
 
 ## Stato del sistema
 - Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`, porta su loopback.
-- Schema: di proprietà di **Flyway** (`db/migration`, storia `flyway_schema_history`); Hibernate in `validate`. Una colonna mancante blocca l'avvio; la perdita di un `NOT NULL` **no** — delimitazione chiarita dalla review (R4).
-- Seed di sviluppo: **stream Flyway separato** (`db/dev/V1`, storia `flyway_dev_seed_history`), applicato solo dal profilo `dev` da `DevSeedFlywayConfiguration`. `AgentInitializer` resta rimosso. Lo stream di schema è identico in tutti i profili, quindi `V2`, `V3`, … restano applicabili anche su un database seminato (ADR-003).
+- Schema: di proprietà di **Flyway** (`db/migration`, storia `flyway_schema_history`), oggi a **`V2`**; Hibernate in `validate`. Una colonna mancante blocca l'avvio; la perdita di un `NOT NULL` **no** — delimitazione chiarita dalla review (R4).
+- Tabelle: `agents`, `tasks`, **`projects`**.
+- Seed di sviluppo: **stream Flyway separato** (`db/dev/V1`, storia `flyway_dev_seed_history`), applicato solo dal profilo `dev` da `DevSeedFlywayConfiguration`. Lo stream di schema è identico in tutti i profili (ADR-003).
 - Transizione automatica in `dev` per i database che contengono ancora `V1000`: la riga legacy viene rimossa dalla storia di schema, i dati restano.
 - Profili: `dev` (default), `test` (Testcontainers), `prod` (sole variabili d'ambiente).
-- API: DTO con Bean Validation su `agents` e `tasks`. `POST /api/tasks {}` → `400`. Creazione valida → `201` + `Location`.
-- Test: **26**, tutti contro PostgreSQL reale. `./mvnw -B clean test` → BUILD SUCCESS.
+- API: DTO con Bean Validation su `agents`, `tasks` e `projects`. `POST /api/tasks {}` → `400`. `POST /api/projects {}` → `400` con elenco dei campi. Creazione valida → `201` + `Location`.
+- Contratto di errore: `ProblemDetail` **solo** sotto `/api/projects`; `agents` e `tasks` conservano il default di Spring. Disomogeneità nota e testata, si chiude con TD-07.
+- Test: **66**, contro PostgreSQL reale (erano 26). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso dal progetto.
 
-## Stato Git (verificato il 2026-09-11, dopo il merge)
-- Branch corrente: **`master`**, HEAD `e8d0286` — merge commit di
-  `task-001-persistence-foundation`.
-- Merge eseguito con **`--no-ff`**: topologia del branch conservata, nessun fast-forward,
-  nessuna riscrittura di storia, nessun branch cancellato.
-- `task-001-persistence-foundation` **conservato** a `82ea1df`, interamente contenuto in
-  `master`.
-- **Nessun remote configurato, nessun push eseguito.** Una destinazione remota richiede
-  approvazione esplicita.
+## Stato Git (verificato il 2026-09-11)
+- Branch corrente: **`task-002-project-registry-foundation`**, creato da `master` a `32174a1`.
+- **`master` intatto**, nessun merge di TASK-002.
+- **Nessun remote configurato, nessun push eseguito.** Una destinazione remota richiede approvazione esplicita.
+- Storia non riscritta: nessun force push, reset, rebase o cancellazione di branch.
 - Working tree pulito.
 
-Commit integrati in `master` con questo merge:
+Commit di TASK-002:
 
 | Hash | Contenuto |
 |---|---|
-| `ea25bee` | backend applicativo preesistente |
-| `503663c` | governance Company OS e artefatti TASK-000 |
-| `2f01194` | review Codex di TASK-000 |
-| `5e164f5` | TASK-001 — persistenza |
-| `c295189` | TASK-001 — test |
-| `b6e0b81` | TASK-001 — documentazione e ADR |
-| `dba676b` | TASK-001A — separazione degli stream Flyway |
-| `2a9912b` | TASK-001A — test di regressione |
-| `82ea1df` | TASK-001A — ADR-003 e correzioni documentali |
-| `e8d0286` | merge in `master` |
+| `4e4fa64` | `feat(project)` — dominio `Project`, `V2`, repository/service/controller, DTO, advice |
+| `9fb3029` | `test(project)` — 40 test nuovi, rinumerazione della fixture di test a `V900` |
+| HEAD | `docs(task-002)` — ADR-004, artefatti, aggiornamento di questo file |
 
-`master` prima del merge era a `930f70f` — «Initial project structure», l'unico commit che
-conteneva già.
-
-Verifiche eseguite **prima** del merge: working tree pulito, branch corretto, `master`
-intatto a `930f70f`, `./mvnw -B clean test` → 26 test, 0 failure. Suite rieseguita **dopo**
-il merge su `master`: 26 test, 0 failure, BUILD SUCCESS.
+Branch precedenti conservati: `task-000-audit`, `task-001-persistence-foundation`.
 
 ## Decisioni architetturali
-- **ADR-001** — Spring Boot resta il control plane; il livello AI sarà un servizio Python separato, non ancora implementato. *Accettata* (approvazione utente, 2026-09-11).
-- **ADR-002** — PostgreSQL con schema di proprietà di Flyway, verificato su database reale. *Accettata, parzialmente superata da ADR-003* (punto 6 e garanzia dev→prod).
+- **ADR-001** — Spring Boot resta il control plane; il livello AI sarà un servizio Python separato, non ancora implementato. *Accettata*.
+- **ADR-002** — PostgreSQL con schema di proprietà di Flyway, verificato su database reale. *Accettata, parzialmente superata da ADR-003*.
 - **ADR-003** — Il seed di sviluppo è uno stream Flyway separato dallo schema, con tabella di storia propria. *Accettata*.
+- **ADR-004** — Project Registry: `Project` è un'entità autonoma senza relazioni in TASK-002; insieme di stati chiuso imposto due volte (enum + `CHECK`); si archivia invece di cancellare; transizione illegale → `409`; unicità del nome garantita dal database; contratto di errore limitato al modulo. *Accettata*.
 
-## Prossimo passo proposto — preparazione di TASK-002
+## Prossimo passo proposto
 
-Sequenza rivista dalla review Codex: **contratti minimi e dominio con test → completamento
-API/CI → sicurezza minima e contratto Run → Model Gateway → frontend minimo**.
+1. **Review differenziale di TASK-002** (Codex), con i sette punti aperti elencati in
+   `tasks/TASK-002/HANDOFF.md` — in particolare `archive` non idempotente, `GET` senza
+   filtro che include gli archiviati, e advice limitato a un controller.
+2. **Decisione di merge** di `task-002-project-registry-foundation` in `master`.
+3. Solo dopo, definizione dello scope di **TASK-003**.
 
-**TASK-002 candidata: API contracts and domain model.** Lo stato del progetto è pronto a
-riceverla; lo scope **non è ancora approvato** e la task **non è avviata**.
+Candidati naturali per TASK-003, **nessuno approvato**:
 
-Cosa la rende eseguibile ora:
-
-| Prerequisito | Stato |
+| Candidato | Nota |
 |---|---|
-| Schema versionato ed evolvibile | ✅ `V2` applicabile, dimostrato da test (ADR-003) |
-| Rete di sicurezza sui test | ✅ 26 test su PostgreSQL reale |
-| Drift di schema che blocca l'avvio | ✅ Hibernate `validate`, con portata documentata |
-| Base integrata in `master` | ✅ merge `e8d0286` |
-
-Scope candidato, da approvare:
-1. Entità `Project` e relazione con `Task`.
-2. Enum di dominio per `status` e `priority`, oggi stringhe libere obbligatorie — cambio di
-   contratto osservabile, da dichiarare.
-3. Migrazione `V2` corrispondente in `db/migration`.
-4. Test di persistenza e di contratto per le nuove strutture.
-
-Decisioni da prendere **prima** di avviare la task:
-- Quali valori ammessi per `status` e `priority`, e se serve una macchina a stati o solo un
-  insieme chiuso.
-- Se `Task` debba appartenere obbligatoriamente a un `Project` (migrazione dei dati
-  esistenti) oppure la relazione sia opzionale.
-- Se introdurre `GET /api/tasks/{id}`, oggi assente benché `POST` emetta un header
-  `Location` che punta a quell'URI (LOW della review, ancora aperto).
-
-Alternativa a priorità più bassa, se si preferisce consolidare: una task documentale che
-chiuda R3/R5/R6/R7 e le correzioni ai file `docs/audit/*` di TASK-000.
+| Relazione `Task` → `Project` | Richiede le tre decisioni rimandate da ADR-004 §1: appartenenza obbligatoria o no, cosa fare delle righe esistenti, cosa significa archiviare un progetto con task aperti |
+| Enum di dominio su `Task.status` / `priority` | Cambio di contratto osservabile, da dichiarare |
+| `GET /api/tasks/{id}` | LOW della review TASK-001, ancora aperto |
+| TD-07 — contratto di errore uniforme | Chiuderebbe la disomogeneità introdotta consapevolmente da TASK-002 |
+| Task documentale | Chiude R3/R5/R6/R7 e le correzioni ai file `docs/audit/*` di TASK-000 |
 
 ## Debito aperto rilevante
 TD-04 sicurezza, TD-07 gestione errori, TD-08 `MasterOrchestrator`, TD-11 CORS, TD-12/TD-13 dominio, TD-14 CI assente, TD-15 Lombok inutilizzato, TD-17/TD-18 `README.md`.
 
-Rilievi della review TASK-001 **ancora aperti**, indipendenti dalla strategia di migrazione
-e non affrontati in TASK-001A: **R3** (`.env` configura Compose ma non il processo Maven),
-**R5** (`server.address` non vincolato a loopback), **R6** (tag immagine mobile, nomi Compose
-fissi), **R7** (`.gitignore` non copre `.env.*`), più il debito devtools sull'exit code di
-`spring-boot:run` — quest'ultimo ora documentato in `docs/RUNNING.md` §2.
-Correzioni documentali richieste dalla review agli artefatti `docs/audit/*` di TASK-000: ancora da applicare, fuori scope TASK-001.
+Rilievi della review TASK-001 **ancora aperti**: **R3** (`.env` configura Compose ma non il
+processo Maven), **R5** (`server.address` non vincolato a loopback), **R6** (tag immagine
+mobile, nomi Compose fissi), **R7** (`.gitignore` non copre `.env.*`), più il debito devtools
+sull'exit code di `spring-boot:run` — quest'ultimo documentato in `docs/RUNNING.md` §2.
+Correzioni documentali richieste dalla review agli artefatti `docs/audit/*` di TASK-000:
+ancora da applicare.
+
+Debito nuovo, contratto consapevolmente da TASK-002:
+- due forme di errore coesistenti nell'API, fino a TD-07;
+- nessuna paginazione su `GET /api/projects`;
+- nessuno slug pubblico stabile: il nome è anche la chiave naturale;
+- `docs/RUNNING.md` non documenta ancora gli endpoint `/api/projects`.
 
 ## Working principles
 - Human-in-the-Loop.
@@ -134,7 +126,7 @@ Correzioni documentali richieste dalla review agli artefatti `docs/audit/*` di T
 
 ## Target architecture
 AI Company OS will progressively include:
-- Project Registry
+- Project Registry ✅ *fondazione introdotta da TASK-002*
 - Agent Registry
 - Skills / Rules / Subagents / Tools / MCP Registry
 - Model Gateway and local/cloud routing
@@ -158,8 +150,5 @@ AI Company OS will progressively include:
 - 3D Omniverse integration
 
 ## Immediate goal
-**Approvazione umana dello scope di TASK-002** (contratti API e modello di dominio), con le
-tre decisioni elencate in «Prossimo passo proposto» prese prima dell'avvio.
-
-Nessuna implementazione è autorizzata finché lo scope non è approvato: TASK-002 **non è
-avviata**.
+**Review di TASK-002 e decisione di merge.** TASK-003 **non è avviata** e il suo scope non è
+approvato.
