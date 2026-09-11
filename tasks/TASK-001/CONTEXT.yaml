@@ -1,0 +1,84 @@
+task: TASK-001
+title: Reproducible Persistence Foundation
+mode: implementation
+
+baseline:
+  branch: task-001-persistence-foundation
+  created_from: task-000-audit
+  head_at_start: 503663c
+  contains:
+    - ea25bee  # backend application code
+    - 503663c  # TASK-000 audit artifacts
+    - 2f01194  # Codex differential review
+  remote: none
+
+required:
+  - .company-os/PROJECT_STATE.md
+  - .company-os/AGENT_PROTOCOL.md
+  - .company-os/TOKEN_POLICY.md
+  - .company-os/CONTEXT_POLICY.md
+  - tasks/TASK-000/HANDOFF.md
+  - docs/audit/CODEX_REVIEW.md
+  - docs/audit/MIGRATION_MAP.md
+  - docs/ARCHITECTURE.md
+  - docs/IMPLEMENTATION_PLAN.md
+  - tasks/TASK-001/TASK.md
+
+repository_scan:
+  allowed: false
+  reason: "Audit già eseguito in TASK-000. Letture mirate ai soli file toccati."
+
+files_in_play:
+  - backend/pom.xml
+  - backend/src/main/resources/application*.properties
+  - backend/src/main/resources/db/**
+  - backend/src/main/java/com/aicompany/backend/agent/**
+  - backend/src/main/java/com/aicompany/backend/task/**
+  - backend/src/test/java/**
+  - docker-compose.yml
+  - .env.example
+  - .gitignore
+
+writes_allowed:
+  - backend/**
+  - docker-compose.yml
+  - .env.example
+  - .gitignore
+  - docs/adr/**
+  - docs/RUNNING.md
+  - tasks/TASK-001/**
+  - .company-os/PROJECT_STATE.md
+
+source_code_modification_allowed: true
+scope_note: "Consentito solo entro lo scope TASK-001. Nessun refactoring generale."
+
+forbidden:
+  - frontend
+  - langgraph
+  - agent_registry
+  - python_service
+  - full_authentication
+  - general_refactoring
+  - stack_change
+  - project_entity
+  - new_entity_relations
+  - domain_enums_or_state_machines
+  - new_crud_endpoints
+  - task_002
+
+git_constraints:
+  work_branch: task-001-persistence-foundation
+  forbidden_operations:
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - branch_deletion
+    - history_rewrite
+    - merge_to_master
+    - remote_configuration_without_approval
+    - automatic_push
+  never_commit:
+    - secrets
+    - real_env_files
+    - build_output
+    - local_database_data

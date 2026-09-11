@@ -4,34 +4,48 @@
 AI Company OS
 
 ## Status
-Existing project. Initial architecture audit **completed** (TASK-000, 2026-09-11).
-Awaiting differential review by Codex and human approval before TASK-001.
+PHASE 0 completata. Fondazione di persistenza implementata (TASK-001, 2026-09-11).
+In attesa di review differenziale Codex su TASK-001.
 
 ## Current phase
-PHASE 0 — Existing System Audit (audit done, review pending)
+PHASE 1 — Foundations (persistenza completata)
 
 ## Current task
-None active. TASK-000 closed; TASK-001 not started.
+Nessuna attiva. TASK-001 chiusa; TASK-002 non avviata.
 
 ## Last completed task
-TASK-000 — Existing Repository Audit.
-Artifacts: `docs/audit/*` (7 files), `tasks/TASK-000/{IMPLEMENTATION,ARTIFACT,HANDOFF}.md`.
+TASK-001 — Reproducible Persistence Foundation.
+Artefatti: `tasks/TASK-001/{TASK.md,CONTEXT.yaml,IMPLEMENTATION.md,ARTIFACT.md,HANDOFF.md}`, `docs/adr/ADR-001`, `docs/adr/ADR-002`, `docs/RUNNING.md`.
 
-## Audit outcome (summary)
-- Only application code in the repository: `backend/` — Spring Boot 4.1, Java 21, 13 Java files, ~350 lines.
-- Three embryonic contexts: `agent` (read-only), `task` (partial CRUD), `ai.orchestrator` (keyword stub, **no AI**).
-- Persistence: H2 in-memory, `ddl-auto=update`, no migrations. PostgreSQL driver present but unused.
-- Absent although declared in `README.md`: frontend, Python/LangGraph service, Supabase.
-- Coverage of the 25 target domains: **< 2%** (Agents ~10%, Task Engine ~8%).
-- Build and tests green (`./mvnw -B test`, exit 0); functional test coverage effectively zero.
-- Verdict: **do not rewrite**. The repository is a healthy skeleton, not a legacy system. One targeted REPLACE only: `MasterOrchestrator`.
+## Stato del sistema
+- Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`, porta su loopback.
+- Schema: di proprietà di **Flyway** (`db/migration`); Hibernate in `validate`, il drift blocca l'avvio.
+- Seed di sviluppo: migrazione `db/dev/V1000`, applicata solo dal profilo `dev`. `AgentInitializer` rimosso.
+- Profili: `dev` (default), `test` (Testcontainers), `prod` (sole variabili d'ambiente).
+- API: DTO con Bean Validation su `agents` e `tasks`. `POST /api/tasks {}` → `400`. Creazione valida → `201` + `Location`.
+- Test: **17**, tutti contro PostgreSQL reale. `./mvnw -B clean test` → BUILD SUCCESS.
+- H2 rimosso dal progetto.
 
-## Open decisions requiring human approval
-- **ADR-001** — keep Spring Boot as the control plane instead of migrating to FastAPI (as suggested in `docs/MASTER_PROMPT.md`), adding a separate Python service for the AI layer at M-5. See `docs/audit/MIGRATION_MAP.md` §5.
-- **TASK-001 scope** — proposed: persistence and domain foundation (M-0 + M-1). It touches existing application code, which TASK-000 forbade, so it needs explicit approval per `AGENT_PROTOCOL.md` §4.
+## Stato Git (verificato il 2026-09-11)
+- Branch corrente: `task-001-persistence-foundation`.
+- `master`: `930f70f`, intatto, nessun merge.
+- Backend applicativo: committato in `ea25bee`; artefatti TASK-000 in `503663c`; review Codex in `2f01194`.
+- TASK-001: `5e164f5` (persistenza), `c295189` (test), più il commit di documentazione.
+- Working tree pulito. **Nessun remote configurato** e nessun push eseguito: una destinazione remota richiede approvazione esplicita.
+- Correzione rispetto allo stato precedente di questo file: il codice applicativo **non** è più «staged ma non committato». L'affermazione «unica copia sul disco locale» è stata rimossa perché non verificabile, come osservato dalla review Codex (R1).
 
-## Urgent operational issue
-Application code is **staged but not committed** and **no Git remote is configured**. The only copy of the work is on the local disk. To be resolved first (M-0).
+## Decisioni architetturali
+- **ADR-001** — Spring Boot resta il control plane; il livello AI sarà un servizio Python separato, non ancora implementato. *Accettata* (approvazione utente, 2026-09-11).
+- **ADR-002** — PostgreSQL con schema di proprietà di Flyway, verificato su database reale. *Accettata*.
+
+## Prossimo passo proposto
+Sequenza rivista dalla review Codex: **contratti minimi e dominio con test → completamento API/CI → sicurezza minima e contratto Run → Model Gateway → frontend minimo**.
+
+TASK-002 candidata: contratti API e modello di dominio (entità `Project`, relazioni, enum di stato), con i test già disponibili come rete di sicurezza. **Non avviata**: richiede approvazione dello scope.
+
+## Debito aperto rilevante
+TD-04 sicurezza, TD-07 gestione errori, TD-08 `MasterOrchestrator`, TD-11 CORS, TD-12/TD-13 dominio, TD-14 CI assente, TD-15 Lombok inutilizzato, TD-17/TD-18 `README.md`.
+Correzioni documentali richieste dalla review agli artefatti `docs/audit/*` di TASK-000: ancora da applicare, fuori scope TASK-001.
 
 ## Working principles
 - Human-in-the-Loop.
@@ -68,5 +82,4 @@ AI Company OS will progressively include:
 - 3D Omniverse integration
 
 ## Immediate goal
-Differential review of the TASK-000 audit by Codex, then human approval of ADR-001 and of the TASK-001 scope.
-Minimum migration path recorded in `docs/audit/MIGRATION_MAP.md`: M-0 Git hygiene → M-1 PostgreSQL + Flyway + Docker → M-2 `Project` domain → M-3 API contracts → M-4 tests/CI → M-5 Model Gateway → M-6 minimal frontend.
+Review differenziale di TASK-001 da parte di Codex, poi approvazione dello scope di TASK-002.
