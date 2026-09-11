@@ -3,6 +3,7 @@ package com.aicompany.backend.persistence;
 import com.aicompany.backend.support.AbstractPostgresTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
@@ -18,6 +19,9 @@ class SchemaMigrationTest extends AbstractPostgresTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Value("${spring.jpa.hibernate.ddl-auto}")
+    private String ddlAuto;
+
     @Test
     void initialMigrationIsApplied() {
 
@@ -25,7 +29,15 @@ class SchemaMigrationTest extends AbstractPostgresTest {
                 "SELECT version FROM flyway_schema_history WHERE success = TRUE ORDER BY installed_rank",
                 String.class);
 
-        assertThat(versions).contains("1");
+        // Exactly V1: the development seed is a separate Flyway stream and must
+        // never appear here, otherwise a later V2 becomes out of order (R1).
+        assertThat(versions).containsExactly("1");
+    }
+
+    @Test
+    void hibernateOnlyValidatesTheSchema() {
+
+        assertThat(ddlAuto).isEqualTo("validate");
     }
 
     @Test
@@ -38,7 +50,9 @@ class SchemaMigrationTest extends AbstractPostgresTest {
 
         // Nothing beyond the migrated tables and Flyway's own history: proof that
         // Hibernate did not add anything of its own.
-        assertThat(tables).containsExactly("agents", "flyway_schema_history", "tasks");
+        assertThat(tables)
+                .containsExactly("agents", "flyway_schema_history", "tasks")
+                .doesNotContain("flyway_dev_seed_history");
     }
 
     @Test

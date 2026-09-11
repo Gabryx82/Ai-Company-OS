@@ -7,13 +7,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+
+import javax.sql.DataSource;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The development seed has a single owner: a versioned migration applied only
- * when the "dev" profile adds classpath:db/dev to the Flyway locations.
+ * The development seed has a single owner — a versioned migration under
+ * {@code db/dev} — applied only under the "dev" profile, and it lives in a Flyway
+ * stream of its own.
+ *
+ * <p>This test runs the real application context. {@link MigrationStreamTest}
+ * covers the stream mechanics on databases in states a context cannot express.
  */
 @SpringBootTest
 @ActiveProfiles("dev")
@@ -26,6 +34,12 @@ class DevSeedMigrationTest {
     @Autowired
     private Flyway flyway;
 
+    @Autowired
+    private DataSource dataSource;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
     @Test
     void devProfileSeedsTheDemonstrationAgents() {
 
@@ -36,14 +50,34 @@ class DevSeedMigrationTest {
     }
 
     @Test
-    void runningMigrationsAgainDoesNotDuplicateTheSeed() {
+    void theSeedIsRecordedInItsOwnHistoryNotInTheSchemaHistory() {
+
+        // The schema stream is the same one production runs: V1 and nothing else.
+        assertThat(versionsIn(DevSeedFlyway.SCHEMA_HISTORY_TABLE)).containsExactly("1");
+
+        // The seed keeps its own history, so it never constrains schema versions.
+        // "0" is the baseline row written because the schema stream had already
+        // created the tables; "1" is the seed migration.
+        assertThat(versionsIn(DevSeedFlyway.HISTORY_TABLE)).containsExactly("0", "1");
+    }
+
+    @Test
+    void runningBothStreamsAgainDoesNotDuplicateTheSeed() {
 
         long before = agentRepository.count();
 
-        // Flyway's schema history, not an application-level emptiness check, is
-        // what keeps the seed from being applied twice.
+        // What a restart does: schema stream first, then the seed stream.
         flyway.migrate();
+        var seedRun = DevSeedFlyway.apply(dataSource, null);
 
+        assertThat(seedRun.migrationsExecuted).isZero();
         assertThat(agentRepository.count()).isEqualTo(before).isEqualTo(3);
+    }
+
+    private List<String> versionsIn(String historyTable) {
+        return jdbc.queryForList(
+                "SELECT version FROM " + historyTable
+                        + " WHERE success = TRUE AND version IS NOT NULL ORDER BY installed_rank",
+                String.class);
     }
 }
