@@ -1,6 +1,7 @@
 package com.aicompany.backend.task.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -12,6 +13,11 @@ import jakarta.validation.constraints.Size;
  * <p>{@code status} and {@code priority} are required free-form strings. They are
  * not enums yet: defining the allowed values and their transitions is a domain
  * decision left to a later task.
+ *
+ * <p>{@code projectId} is optional, and omitting it creates an unassigned task.
+ * That is what keeps this an additive change: a client written against the
+ * pre-relation contract keeps working unchanged. An unknown project is a 404 and
+ * an archived one a 409 -- the task is not created in either case.
  */
 public record TaskCreateRequest(
 
@@ -28,6 +34,9 @@ public record TaskCreateRequest(
 
         @NotBlank(message = "priority is required")
         @Size(max = 255, message = "priority must be at most 255 characters")
-        String priority
+        String priority,
+
+        @Positive(message = "projectId must be a positive identifier")
+        Long projectId
 ) {
 }
