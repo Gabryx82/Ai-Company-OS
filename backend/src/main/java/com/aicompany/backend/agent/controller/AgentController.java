@@ -1,8 +1,8 @@
 package com.aicompany.backend.agent.controller;
 
 
+import com.aicompany.backend.agent.dto.AgentResponse;
 import com.aicompany.backend.agent.service.AgentService;
-import com.aicompany.backend.agent.model.Agent;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,9 +22,12 @@ public class AgentController {
 
 
     @GetMapping
-    public List<Agent> getAgents(){
+    public List<AgentResponse> getAgents(){
 
-        return service.getAllAgents();
+        return service.getAllAgents()
+                .stream()
+                .map(AgentResponse::from)
+                .toList();
 
     }
 }

@@ -10,13 +10,16 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String title;
 
     @Column(length = 5000)
     private String description;
 
+    @Column(nullable = false)
     private String status;
 
+    @Column(nullable = false)
     private String priority;
 
     public Task() {

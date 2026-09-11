@@ -11,12 +11,16 @@ public class Agent {
     private Long id;
 
 
+    @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
     private String role;
 
+    @Column(nullable = false)
     private String specialization;
 
+    @Column(nullable = false)
     private boolean active;
 
 
