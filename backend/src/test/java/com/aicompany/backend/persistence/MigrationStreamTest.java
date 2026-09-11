@@ -14,6 +14,7 @@ import org.testcontainers.utility.DockerImageName;
 import javax.sql.DataSource;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * case gets its own PostgreSQL schema inside one shared container, so the cases
  * stay independent and no local volume is ever touched.
  *
- * <p>{@code classpath:db/fixture/v2} stands in for the next schema migration and
+ * <p>{@code classpath:db/fixture/next} stands in for the next schema migration and
  * {@code classpath:db/fixture/legacy} rebuilds the pre-fix layout. Both live under
  * {@code src/test/resources} and are never resolved by the application.
  */
@@ -35,8 +36,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class MigrationStreamTest {
 
     private static final String SCHEMA_LOCATION = "classpath:db/migration";
-    private static final String NEXT_MIGRATION_FIXTURE = "classpath:db/fixture/v2";
+    private static final String NEXT_MIGRATION_FIXTURE = "classpath:db/fixture/next";
     private static final String LEGACY_SEED_FIXTURE = "classpath:db/fixture/legacy";
+
+    /**
+     * Version of the probe fixture. It has to sit above the head of the real
+     * schema stream and below the legacy 1000; see the fixture itself.
+     */
+    private static final String PROBE_VERSION = "900";
 
     private static final List<String> SEEDED_AGENTS =
             List.of("Code Architect", "Database Specialist", "Frontend Developer");
@@ -54,12 +61,13 @@ class MigrationStreamTest {
         MigrateResult result = schemaFlyway(schema).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(1);
+        assertThat(result.migrationsExecuted).isEqualTo(resolvedSchemaVersions().size());
 
-        // The schema stream stops at 1: no seed version leaks into it any more.
-        assertThat(appliedSchemaVersions(schema)).containsExactly("1");
+        // The schema stream carries schema versions only: no seed version leaks
+        // into it any more, whatever the current head happens to be.
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(resolvedSchemaVersions());
         assertThat(tablesIn(schema))
-                .containsExactly("agents", "flyway_schema_history", "tasks")
+                .containsExactly("agents", "flyway_schema_history", "projects", "tasks")
                 .doesNotContain(DevSeedFlyway.HISTORY_TABLE);
 
         // Nothing seeded it: the schema stream carries no data.
@@ -79,7 +87,7 @@ class MigrationStreamTest {
         assertThat(agentNames(schema)).isEqualTo(SEEDED_AGENTS);
 
         // The seed is recorded in its own table and stays out of the schema history.
-        assertThat(appliedSchemaVersions(schema)).containsExactly("1");
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(resolvedSchemaVersions());
 
         // "0" is the baseline row the seed stream writes because the schema stream
         // already populated the schema; "1" is the seed migration itself.
@@ -110,12 +118,12 @@ class MigrationStreamTest {
                 "pre-existing task", "OPEN", "HIGH");
 
         // This is the case that failed before TASK-001A with
-        // "Detected resolved migration not applied to database: 2".
+        // "Detected resolved migration not applied to database: <probe>".
         MigrateResult upgrade = schemaFlyway(schema, NEXT_MIGRATION_FIXTURE).migrate();
 
         assertThat(upgrade.success).isTrue();
         assertThat(upgrade.migrationsExecuted).isEqualTo(1);
-        assertThat(appliedSchemaVersions(schema)).containsExactly("1", "2");
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(schemaVersionsPlusProbe());
         assertThat(columnsOf(schema, "tasks")).contains("probe_marker");
 
         // Data written before the upgrade survives it, seed included.
@@ -137,7 +145,8 @@ class MigrationStreamTest {
         production.validate();
 
         assertThat(production.migrate().migrationsExecuted).isZero();
-        assertThat(production.info().current().getVersion().getVersion()).isEqualTo("1");
+        assertThat(production.info().current().getVersion().getVersion())
+                .isEqualTo(resolvedSchemaVersions().getLast());
         assertThat(Arrays.stream(production.info().all()).map(MigrationInfo::getScript))
                 .doesNotContain(DevSeedFlyway.LEGACY_SEED_SCRIPT, "V1__dev_seed_agents.sql");
 
@@ -145,7 +154,7 @@ class MigrationStreamTest {
         assertThat(schemaFlyway(schema, NEXT_MIGRATION_FIXTURE).migrate().migrationsExecuted)
                 .isEqualTo(1);
 
-        assertThat(appliedSchemaVersions(schema)).containsExactly("1", "2");
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(schemaVersionsPlusProbe());
     }
 
     // AC-4, second half — a production database that was never seeded.
@@ -157,7 +166,7 @@ class MigrationStreamTest {
         schemaFlyway(schema).migrate();
         schemaFlyway(schema, NEXT_MIGRATION_FIXTURE).migrate();
 
-        assertThat(appliedSchemaVersions(schema)).containsExactly("1", "2");
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(schemaVersionsPlusProbe());
         assertThat(tablesIn(schema)).doesNotContain(DevSeedFlyway.HISTORY_TABLE);
         assertThat(agentCount(schema)).isZero();
     }
@@ -170,16 +179,18 @@ class MigrationStreamTest {
 
         // Rebuild the pre-fix state: schema and seed in one versioned stream.
         schemaFlyway(schema, LEGACY_SEED_FIXTURE).migrate();
-        assertThat(appliedSchemaVersions(schema)).containsExactly("1", "1000");
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(schemaVersionsPlus("1000"));
         assertThat(agentNames(schema)).isEqualTo(SEEDED_AGENTS);
 
-        // R1 reproduced: with 1000 in the schema history, V2 cannot be applied.
+        // R1 reproduced: with 1000 in the schema history, a lower-numbered
+        // migration that has not run yet cannot be applied.
         assertThatThrownBy(() -> schemaFlyway(schema, NEXT_MIGRATION_FIXTURE).migrate())
-                .hasMessageContaining("Detected resolved migration not applied to database: 2");
+                .hasMessageContaining(
+                        "Detected resolved migration not applied to database: " + PROBE_VERSION);
 
         // The documented transition: drop the one legacy row, nothing else.
         assertThat(DevSeedFlyway.removeLegacySeedHistory(dataSource(), schema)).isTrue();
-        assertThat(appliedSchemaVersions(schema)).containsExactly("1");
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(resolvedSchemaVersions());
 
         // Seeded rows were not deleted, and the seed stream does not re-insert them.
         assertThat(agentNames(schema)).isEqualTo(SEEDED_AGENTS);
@@ -189,7 +200,7 @@ class MigrationStreamTest {
         // And the upgrade that used to be blocked now works.
         assertThat(schemaFlyway(schema, NEXT_MIGRATION_FIXTURE).migrate().migrationsExecuted)
                 .isEqualTo(1);
-        assertThat(appliedSchemaVersions(schema)).containsExactly("1", "2");
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(schemaVersionsPlusProbe());
     }
 
     @Test
@@ -204,10 +215,35 @@ class MigrationStreamTest {
 
         // History table present, but no legacy row in it.
         assertThat(DevSeedFlyway.removeLegacySeedHistory(dataSource(), schema)).isFalse();
-        assertThat(appliedSchemaVersions(schema)).containsExactly("1");
+        assertThat(appliedSchemaVersions(schema)).isEqualTo(resolvedSchemaVersions());
     }
 
     // --- helpers -----------------------------------------------------------
+
+    /**
+     * The versions the schema stream resolves right now, read from Flyway
+     * itself rather than hard-coded. Every migration a later task adds extends
+     * this list automatically, so these regressions keep testing the migration
+     * strategy instead of the current head.
+     */
+    private static List<String> resolvedSchemaVersions() {
+        return Arrays.stream(Flyway.configure()
+                        .dataSource(dataSource())
+                        .locations(SCHEMA_LOCATION)
+                        .load()
+                        .info()
+                        .all())
+                .map(info -> info.getVersion().getVersion())
+                .toList();
+    }
+
+    private static List<String> schemaVersionsPlusProbe() {
+        return schemaVersionsPlus(PROBE_VERSION);
+    }
+
+    private static List<String> schemaVersionsPlus(String extraVersion) {
+        return Stream.concat(resolvedSchemaVersions().stream(), Stream.of(extraVersion)).toList();
+    }
 
     private static Flyway schemaFlyway(String schema, String... extraLocations) {
 
