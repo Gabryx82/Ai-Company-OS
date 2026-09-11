@@ -1,0 +1,78 @@
+task: TASK-001A
+title: Fix Flyway Migration and Dev Seed Strategy
+mode: implementation
+parent: TASK-001
+
+baseline:
+  branch: task-001-persistence-foundation
+  head_at_start: b6e0b81
+  remote: none
+  origin_finding: "docs/reviews/TASK-001_CODEX_REVIEW.md — R1 (HIGH), con effetto su R2 (MEDIUM)"
+
+required:
+  - .company-os/PROJECT_STATE.md
+  - .company-os/AGENT_PROTOCOL.md
+  - .company-os/TOKEN_POLICY.md
+  - tasks/TASK-001/HANDOFF.md
+  - docs/reviews/TASK-001_CODEX_REVIEW.md
+  - docs/adr/ADR-002-postgresql-flyway-persistence.md
+  - docs/RUNNING.md
+
+repository_scan:
+  allowed: false
+  reason: "Fix mirato su un rilievo noto. Letture limitate ai file dello stream Flyway e ai test."
+
+files_in_play:
+  - backend/src/main/resources/application*.properties
+  - backend/src/main/resources/db/**
+  - backend/src/main/java/com/aicompany/backend/config/**
+  - backend/src/test/java/**
+  - backend/src/test/resources/**
+
+writes_allowed:
+  - backend/src/main/java/com/aicompany/backend/config/**
+  - backend/src/main/resources/**
+  - backend/src/test/**
+  - docs/adr/**
+  - docs/RUNNING.md
+  - tasks/TASK-001/**
+  - tasks/TASK-001A/**
+  - .company-os/PROJECT_STATE.md
+
+invariants:
+  - "PostgreSQL + Flyway"
+  - "spring.jpa.hibernate.ddl-auto=validate"
+  - "POST /api/tasks valido -> 201 + Location"
+  - "status e priority obbligatori"
+
+forbidden:
+  - out_of_order_flyway_globally
+  - volume_deletion
+  - h2_reintroduction
+  - project_entity
+  - domain_enums_or_state_machines
+  - new_crud_endpoints
+  - frontend
+  - python_service
+  - full_authentication
+  - general_refactoring
+  - stack_change
+  - task_002
+  - codex_review_R3_R5_R6_R7   # rilievi reali, task separata
+
+git_constraints:
+  work_branch: task-001-persistence-foundation
+  forbidden_operations:
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - branch_deletion
+    - history_rewrite
+    - merge_to_master
+    - remote_configuration_without_approval
+    - automatic_push
+  never_commit:
+    - secrets
+    - real_env_files
+    - build_output
+    - local_database_data

@@ -1,5 +1,12 @@
 # TASK-001 — HANDOFF → Codex (review differenziale)
 
+> **Aggiornamento 2026-09-11 — review ricevuta ed elaborata.**
+> Esito: `PASS WITH FIXES` (`docs/reviews/TASK-001_CODEX_REVIEW.md`).
+> Il rilievo **R1 (HIGH)** e la parte di **R2** che ne dipendeva sono chiusi da **TASK-001A**
+> (`tasks/TASK-001A/`, ADR-003). Il punto 4 delle domande qui sotto — «il seed dev come
+> migrazione `V1000` è sufficiente?» — ha ricevuto risposta **no**, con evidenza runtime.
+> R3, R5, R6, R7 restano aperti e tracciati in `.company-os/PROJECT_STATE.md`.
+
 ## Cosa è stato fatto
 Sostituita H2 in-memory + `ddl-auto=update` con PostgreSQL, schema di proprietà di Flyway, DTO con Bean Validation e test su database reale. Scope rispettato: nessun `Project`, relazione, enum, provider, frontend o CRUD aggiuntivo.
 
