@@ -1,0 +1,26 @@
+package com.aicompany.backend.task.service;
+
+import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.repository.TaskRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class TaskService {
+
+    private final TaskRepository repository;
+
+    public TaskService(TaskRepository repository) {
+        this.repository = repository;
+    }
+
+    public List<Task> getAllTasks() {
+        return repository.findAll();
+    }
+
+    public Task save(Task task) {
+        return repository.save(task);
+    }
+
+}

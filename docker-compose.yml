@@ -1,0 +1,30 @@
+# Local development database for AI Company OS.
+# Application schema is owned by Flyway migrations, never by this file.
+
+name: ai-company-os
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: aicompany-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-aicompany}
+      POSTGRES_USER: ${POSTGRES_USER:-aicompany}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aicompany_local_dev}
+    # Bound to loopback on purpose: the backend has no authentication yet,
+    # so the database must not be reachable from the network.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aicompany} -d ${POSTGRES_DB:-aicompany}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    name: aicompany_postgres_data

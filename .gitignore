@@ -1,0 +1,25 @@
+# Local environment — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Build output
+target/
+build/
+dist/
+out/
+
+# Local database data (should live in a Docker volume, not in the repo)
+pgdata/
+postgres-data/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
