@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -24,6 +27,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * conflict rules, and the absence of a physical delete.
  */
 class ProjectApiTest extends AbstractPostgresTest {
+
+    /**
+     * Turkish dotless i, U+0131. PostgreSQL folds it onto "I" with upper() but
+     * not with lower(), which is how the review found that the service and the
+     * unique index were applying two different rules.
+     */
+    private static final String DOTLESS_I = "\u0131";
 
     @Autowired
     private MockMvc mockMvc;
@@ -139,6 +149,39 @@ class ProjectApiTest extends AbstractPostgresTest {
         assertThat(repository.count()).isEqualTo(1);
     }
 
+    @Test
+    void namesThatOnlyCollideUnderUpperCaseAreNotDuplicates() throws Exception {
+
+        // Regression for the review finding F-1. The service used to ask
+        // upper(name) = upper(?) while the unique index is on lower(name), so
+        // creating "i-dotless" next to "I" was rejected with 409 even though the
+        // database -- the actual invariant, ADR-004 section 5 -- allows both.
+        createProject("I");
+
+        assertThat(repository.existsByNormalisedName(DOTLESS_I)).isFalse();
+
+        postProject(DOTLESS_I).andExpect(status().isCreated());
+
+        assertThat(repository.count()).isEqualTo(2);
+    }
+
+    @Test
+    void theApiAndTheDatabaseAgreeOnWhatADuplicateIs() throws Exception {
+
+        // Whatever the service accepts, the index must accept, and the other way
+        // round. Checked on the pair that used to disagree and on the ASCII pair
+        // that always agreed.
+        createProject("I");
+
+        assertThat(repository.existsByNormalisedName(DOTLESS_I)).isFalse();
+        assertThat(repository.existsByNormalisedName("i")).isTrue();
+
+        postProject(DOTLESS_I).andExpect(status().isCreated());
+        postProject("i").andExpect(status().isConflict());
+
+        assertThat(repository.count()).isEqualTo(2);
+    }
+
     // --- read --------------------------------------------------------------
 
     @Test
@@ -220,6 +263,40 @@ class ProjectApiTest extends AbstractPostgresTest {
                         .content("""
                                 {"name":"COMPANY OS"}"""))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void updatingAnArchivedProjectIsAConflict() throws Exception {
+
+        Long id = createProject("Company OS");
+        mockMvc.perform(post("/api/projects/" + id + "/archive")).andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/projects/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Renamed while archived"}"""))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Archived project is immutable"));
+
+        // Refused, and nothing changed: not a partial write.
+        Project untouched = repository.findById(id).orElseThrow();
+        assertThat(untouched.getName()).isEqualTo("Company OS");
+        assertThat(untouched.getStatus()).isEqualTo(ProjectStatus.ARCHIVED);
+    }
+
+    @Test
+    void restoringMakesTheSameUpdateSucceed() throws Exception {
+
+        Long id = createProject("Company OS");
+        mockMvc.perform(post("/api/projects/" + id + "/archive")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + id + "/restore")).andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/projects/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Renamed after restore"}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Renamed after restore"));
     }
 
     @Test
@@ -330,5 +407,16 @@ class ProjectApiTest extends AbstractPostgresTest {
 
     private Long createProject(String name) {
         return repository.saveAndFlush(new Project(name, null)).getId();
+    }
+
+    /**
+     * Posts a name as UTF-8 bytes with the encoding stated explicitly, so the
+     * non-ASCII cases above test case folding and not the test's own encoding.
+     */
+    private ResultActions postProject(String name) throws Exception {
+        return mockMvc.perform(post("/api/projects")
+                .contentType(MediaType.APPLICATION_JSON)
+                .characterEncoding(StandardCharsets.UTF_8)
+                .content(("{\"name\":\"" + name + "\"}").getBytes(StandardCharsets.UTF_8)));
     }
 }

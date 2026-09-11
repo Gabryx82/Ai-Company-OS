@@ -1,7 +1,8 @@
 package com.aicompany.backend.project.controller;
 
+import com.aicompany.backend.project.exception.ArchivedProjectIsImmutableException;
 import com.aicompany.backend.project.exception.IllegalProjectStateTransitionException;
-import com.aicompany.backend.project.exception.ProjectNameAlreadyExistsException;
+import com.aicompany.backend.project.exception.ProjectNameConflictException;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -30,9 +31,19 @@ class ProjectExceptionHandler {
         return problem(HttpStatus.NOT_FOUND, "Project not found", e.getMessage());
     }
 
-    @ExceptionHandler(ProjectNameAlreadyExistsException.class)
-    ProblemDetail handleDuplicateName(ProjectNameAlreadyExistsException e) {
+    @ExceptionHandler(ProjectNameConflictException.class)
+    ProblemDetail handleDuplicateName(ProjectNameConflictException e) {
         return problem(HttpStatus.CONFLICT, "Project name already in use", e.getMessage());
+    }
+
+    /**
+     * Editing an archived project. A conflict rather than a 403: the request is
+     * refused because of the state of the resource, and restoring it makes the
+     * same request succeed.
+     */
+    @ExceptionHandler(ArchivedProjectIsImmutableException.class)
+    ProblemDetail handleArchivedIsImmutable(ArchivedProjectIsImmutableException e) {
+        return problem(HttpStatus.CONFLICT, "Archived project is immutable", e.getMessage());
     }
 
     @ExceptionHandler(IllegalProjectStateTransitionException.class)

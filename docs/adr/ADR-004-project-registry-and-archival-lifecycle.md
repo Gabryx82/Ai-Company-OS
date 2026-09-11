@@ -90,11 +90,26 @@ impossibile aggirarla, perché `status` non ha un setter.
 
 `CREATE UNIQUE INDEX projects_name_unique_idx ON projects (lower(name))`.
 
-*Perché nel database.* Il controllo `existsByNameIgnoreCase` nel service serve a produrre un
-`409` leggibile nel caso ordinario, ma non è una garanzia: due richieste concorrenti possono
+*Perché nel database.* Il controllo di esistenza nel service serve a produrre un `409`
+leggibile nel caso ordinario, ma non è una garanzia: due richieste concorrenti possono
 superarlo entrambe. L'indice è ciò che effettivamente impedisce il duplicato; il service
-traduce la `DataIntegrityViolationException` risultante nello stesso `409`, così il contratto
-dell'API è identico nei due percorsi.
+traduce la violazione risultante nello stesso `409`, così il contratto dell'API è identico
+nei due percorsi.
+
+*La normalizzazione del pre-check è quella dell'indice, non un'altra.* Il controllo è scritto
+`lower(name) = lower(:name)`, esplicitamente, perché la forma derivata `existsByNameIgnoreCase`
+genera `upper(name) = upper(?)` e in PostgreSQL `upper` non è l'inversa di `lower`:
+per la i turca senza punto (U+0131) `upper` la fa coincidere con `I`, `lower` no. Con
+`upper` il service rifiutava con `409` nomi che l'indice — cioè l'invariante — consente, e non
+poteva nemmeno usare quell'indice, che è su `lower(name)`. Se un giorno l'indice cambia forma,
+le due query devono cambiare con lui. Rilievo F-1 della review.
+
+*Solo la violazione di quell'indice diventa un conflitto di nome.* Il service ispeziona la
+`DataIntegrityViolationException` e la traduce in `ProjectNameConflictException` **solo** se
+riguarda `projects_name_unique_idx`; qualunque altra violazione di integrità propaga
+invariata. Tradurle tutte significherebbe che la prima chiave esterna o la prima colonna
+`NOT NULL` aggiunta da una task futura si presenterebbe al client come «quel nome è già
+preso». Rilievo F-2 della review.
 
 *Perché case-insensitive.* Un registro con «Company OS» e «company os» affiancati è un
 registro rotto, indipendentemente da quale sia quello giusto.
@@ -132,6 +147,33 @@ database: con più istanze e orologi non sincronizzati l'ordinamento per `create
 essere leggermente incoerente. Irrilevante con un solo processo; da rivedere prima di
 scalare orizzontalmente.
 
+### 8. Un progetto archiviato non si modifica
+
+`PUT /api/projects/{id}` su un progetto `ARCHIVED` risponde `409`. Per modificarlo bisogna
+prima `POST /{id}/restore`. La regola vive su `Project.updateDetails()`, accanto alle
+transizioni, non nel service.
+
+*Perché.* Archiviare significa «fuori dal registro operativo». Un progetto fuori dal registro
+che continua ad accettare modifiche non è fuori da niente: è un progetto normale che non
+compare in una lista. E siccome continua comunque a occupare il proprio nome nell'indice
+unico, restava possibile rinominare un archiviato per liberare — o sottrarre — un nome a un
+progetto attivo, senza che nessuna regola dichiarata governasse la cosa.
+
+*Perché `409` e non `403`.* Il rifiuto dipende dallo stato della risorsa, non dai permessi di
+chi chiama, ed è reversibile dal chiamante stesso: `restore` e la stessa richiesta passa. È lo
+stesso codice delle transizioni illegali, per la stessa ragione.
+
+*Perché sull'entità.* Identica a §4: se la regola stesse nel service, ogni nuovo punto di
+ingresso dovrebbe ricordarsi di riapplicarla.
+
+*Conseguenza.* Il flusso «correggo il nome di un vecchio progetto» diventa
+`restore` → `PUT` → `archive`, tre richieste invece di una. Accettato: rende esplicito che si
+sta rimettendo mano a qualcosa che era stato messo via.
+
+*Storia.* Questa decisione non era stata presa in TASK-002: il comportamento permissivo era
+implicito nel codice e asserito da un test unitario senza essere dichiarato da nessuna parte.
+La review lo ha registrato come F-4 e ha chiesto che venisse deciso invece che ereditato.
+
 ## Alternative scartate
 
 | Alternativa | Perché no |
@@ -141,6 +183,8 @@ scalare orizzontalmente.
 | `deleted_at` nullable (soft delete) | Esprime lo stesso stato in due modi, `status` e un timestamp, che possono divergere |
 | `archive` idempotente (`200` sempre) | Nasconde un errore del chiamante e rende la macchina a stati non verificabile |
 | Advice globale su tutta l'API | Cambia il contratto di endpoint fuori scope |
+| Progetto archiviato ancora modificabile | Svuota il significato di «fuori dal registro» e lascia senza regola il nome che l'archiviato continua a occupare (§8) |
+| Tradurre ogni `DataIntegrityViolationException` in conflitto di nome | La prima FK o colonna `NOT NULL` futura diventerebbe un `409` fuorviante (§5) |
 | Identificatore `UUID` | Rompe la coerenza con `agents` e `tasks` senza un requisito che lo giustifichi |
 
 ## Conseguenze operative
@@ -150,5 +194,8 @@ scalare orizzontalmente.
 - Il numero di versione della fixture di test che rappresenta «la prossima migrazione» è
   passato da `V2` a `V900`, perché `V2` è ora una migrazione reale. Il vincolo — sopra la
   testa dello stream di schema e sotto `1000` — è documentato nella fixture stessa.
-- I test che asserivano l'elenco delle versioni applicate ora lo leggono da Flyway invece di
-  scriverlo a mano, così le prossime migrazioni non li rompono.
+- I test che asserivano l'elenco delle *versioni* applicate ora lo leggono da Flyway invece di
+  scriverlo a mano. Gli elenchi di *tabelle* restano espliciti: chi aggiunge una tabella deve
+  dichiararla.
+- Le correzioni F-1, F-2, F-3 e F-4 della review sono state applicate sullo stesso branch,
+  senza migrazione: nessuna delle quattro tocca lo schema.

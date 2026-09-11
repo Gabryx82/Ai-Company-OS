@@ -21,6 +21,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class ProjectPersistenceTest extends AbstractPostgresTest {
 
+    /** Turkish dotless i, U+0131. See ProjectApiTest for why it is here. */
+    private static final String DOTLESS_I = "\u0131";
+
     @Autowired
     private ProjectRepository repository;
 
@@ -56,11 +59,23 @@ class ProjectPersistenceTest extends AbstractPostgresTest {
         assertThat(createdAt).isNotNull();
         assertThat(firstUpdate).isNotNull().isAfterOrEqualTo(createdAt);
 
+        // Read back at the precision the column actually keeps: PostgreSQL stores
+        // microseconds and Instant.now() carries more digits than that, so the
+        // row-level comparisons below must not be decided by the truncation.
+        Instant storedCreatedAt = storedTimestamp(saved.getId(), "created_at");
+
         saved.updateDetails("Company OS v2", "renamed");
         Project updated = repository.saveAndFlush(saved);
 
+        // isAfter, not isAfterOrEqualTo: the weaker form was satisfied by an
+        // updatedAt that never moved at all, so it could not have caught a
+        // missing @PreUpdate (review finding F-3).
+        assertThat(updated.getUpdatedAt()).isAfter(firstUpdate);
         assertThat(updated.getCreatedAt()).isEqualTo(createdAt);
-        assertThat(updated.getUpdatedAt()).isAfterOrEqualTo(firstUpdate);
+
+        // And the row moved too, not just the object in memory.
+        assertThat(storedTimestamp(saved.getId(), "updated_at")).isAfter(storedCreatedAt);
+        assertThat(storedTimestamp(saved.getId(), "created_at")).isEqualTo(storedCreatedAt);
     }
 
     @Test
@@ -106,6 +121,11 @@ class ProjectPersistenceTest extends AbstractPostgresTest {
                 .containsExactly("Archived one");
     }
 
+    private Instant storedTimestamp(Long id, String column) {
+        return jdbc.queryForObject(
+                "SELECT " + column + " FROM projects WHERE id = ?", Instant.class, id);
+    }
+
     @Test
     void databaseRejectsAProjectWithoutName() {
 
@@ -137,6 +157,25 @@ class ProjectPersistenceTest extends AbstractPostgresTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
 
         assertThat(repository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void theIndexTreatsAsDistinctTwoNamesThatOnlyCollideUnderUpperCase() {
+
+        // The invariant the service must mirror, read straight off PostgreSQL:
+        // lower() keeps these apart even though upper() does not. Review
+        // finding F-1.
+        assertThat(jdbc.queryForObject(
+                "SELECT lower(?) = lower('I')", Boolean.class, DOTLESS_I)).isFalse();
+        assertThat(jdbc.queryForObject(
+                "SELECT upper(?) = upper('I')", Boolean.class, DOTLESS_I)).isTrue();
+
+        repository.saveAndFlush(new Project("I", null));
+        repository.saveAndFlush(new Project(DOTLESS_I, null));
+
+        assertThat(repository.count()).isEqualTo(2);
+        assertThat(repository.existsByNormalisedName(DOTLESS_I)).isTrue();
+        assertThat(repository.existsByNormalisedName("i")).isTrue();
     }
 
     @Test

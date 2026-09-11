@@ -1,6 +1,6 @@
 package com.aicompany.backend.project.service;
 
-import com.aicompany.backend.project.exception.ProjectNameAlreadyExistsException;
+import com.aicompany.backend.project.exception.ProjectNameConflictException;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.model.ProjectStatus;
@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Application service for the project registry.
@@ -29,8 +30,8 @@ public class ProjectService {
 
     public Project create(String name, String description) {
 
-        if (repository.existsByNameIgnoreCase(name)) {
-            throw new ProjectNameAlreadyExistsException(name);
+        if (repository.existsByNormalisedName(name)) {
+            throw new ProjectNameConflictException(name);
         }
 
         return saveGuardingUniqueName(new Project(name, description), name);
@@ -52,10 +53,11 @@ public class ProjectService {
 
         Project project = findById(id);
 
-        if (repository.existsByNameIgnoreCaseAndIdNot(name, id)) {
-            throw new ProjectNameAlreadyExistsException(name);
+        if (repository.existsByNormalisedNameAndIdNot(name, id)) {
+            throw new ProjectNameConflictException(name);
         }
 
+        // Rejects an archived project; the rule is on the entity, not here.
         project.updateDetails(name, description);
         return saveGuardingUniqueName(project, name);
     }
@@ -77,12 +79,48 @@ public class ProjectService {
      * ordinary case. It is not a guarantee: two concurrent requests can both pass
      * it and only the unique index will stop the second one. Translating that
      * failure here keeps the API contract identical either way.
+     *
+     * <p>Only a violation of {@code projects_name_unique_idx} is translated.
+     * Reporting every {@link DataIntegrityViolationException} as a duplicate name
+     * would turn the first foreign key or new NOT NULL column into a misleading
+     * 409, so anything else propagates untouched.
      */
     private Project saveGuardingUniqueName(Project project, String name) {
         try {
             return repository.saveAndFlush(project);
         } catch (DataIntegrityViolationException e) {
-            throw new ProjectNameAlreadyExistsException(name);
+            if (violatesNameUniqueIndex(e)) {
+                throw new ProjectNameConflictException(name);
+            }
+            throw e;
         }
+    }
+
+    /**
+     * Walks the cause chain looking for the name index. Hibernate exposes the
+     * constraint name it extracted from the driver; the message check behind it
+     * is a fallback for the cases where the dialect hands back nothing.
+     */
+    private static boolean violatesNameUniqueIndex(Throwable failure) {
+
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+
+            if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
+                    && ProjectRepository.NAME_UNIQUE_INDEX.equalsIgnoreCase(violation.getConstraintName())) {
+                return true;
+            }
+
+            String message = cause.getMessage();
+            if (message != null
+                    && message.toLowerCase(Locale.ROOT).contains(ProjectRepository.NAME_UNIQUE_INDEX)) {
+                return true;
+            }
+
+            if (cause.getCause() == cause) {
+                break;
+            }
+        }
+
+        return false;
     }
 }

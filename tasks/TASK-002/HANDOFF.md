@@ -1,5 +1,9 @@
 # TASK-002 — HANDOFF → Codex (review differenziale)
 
+> **Stato: review ricevuta, rilievi F-1…F-4 corretti sullo stesso branch.**
+> Le sezioni sotto descrivono l'implementazione originale; la sezione «Esito della review»
+> in fondo dice cosa è cambiato dopo.
+
 ## Cosa è stato fatto
 
 Primo dominio reale del Company OS: **`Project`**, tabella PostgreSQL creata da `V2`, con
@@ -15,7 +19,8 @@ chiavi esterne.
 | Stato | Enum chiuso `ACTIVE` / `ARCHIVED`, imposto anche da `CHECK` nel database |
 | Cancellazione | Nessun mapping `DELETE` → `405`. Si archivia |
 | Transizioni | Sull'entità, non nel service. Transizione illegale → `409` |
-| Unicità nome | Indice unico funzionale su `lower(name)`; il service traduce anche la violazione concorrente in `409` |
+| Modifica | Solo se `ACTIVE`. `PUT` su un archiviato → `409`: prima `restore` |
+| Unicità nome | Indice unico funzionale su `lower(name)`; il service usa la **stessa** normalizzazione e traduce in `409` la sola violazione di quell'indice |
 | Errori | `ProblemDetail`, advice **limitato a `ProjectController`** |
 
 API: `POST /api/projects`, `GET /api/projects[?status=]`, `GET /{id}`, `PUT /{id}`,
@@ -103,6 +108,36 @@ emetta un `Location` che punta lì — `/api/projects` non ha lo stesso problema
 
 Debito di progetto: TD-04, TD-07, TD-08, TD-11, TD-12/TD-13, TD-14, TD-15, TD-17/TD-18.
 Correzioni documentali ai file `docs/audit/*` di TASK-000: ancora da applicare.
+
+## Esito della review
+
+Quattro rilievi sono stati corretti sul branch, senza migrazione: `V2` è invariata e lo
+schema non cambia. Suite da 66 a **77 test**, verde.
+
+| Rilievo | Cosa era | Cosa è ora |
+|---|---|---|
+| **F-1** | `existsByNameIgnoreCase` generava `upper(name) = upper(?)` mentre l'indice è su `lower(name)`: con un progetto `I`, creare `ı` (U+0131) dava `409` benché l'indice lo consenta, e la query non poteva usare l'indice | `@Query` esplicite su `lower(...)`; regressione Unicode a livello di API e di riga |
+| **F-2** | Ogni `DataIntegrityViolationException` diventava «nome duplicato» | Solo `projects_name_unique_idx` → `ProjectNameConflictException`; il resto propaga. Coperto da `ProjectServiceConflictTest` |
+| **F-3** | `isAfterOrEqualTo` su `updatedAt`: il test restava verde anche con `@PreUpdate` rimossa | `isAfter`, sull'oggetto e sulla riga, con la troncatura ai microsecondi gestita |
+| **F-4** | Un progetto `ARCHIVED` restava completamente mutabile, e la cosa non era decisa da nessuna parte | Decisione presa: **ADR-004 §8**, `PUT` su archiviato → `409`, guard sull'entità |
+
+Rinominata `ProjectNameAlreadyExistsException` → `ProjectNameConflictException`.
+
+**I tre punti aperti 1, 2 e 3 dell'elenco sopra restano aperti** e sono ancora domande per il
+revisore: `archive` non idempotente, `GET` senza filtro che include gli archiviati, advice
+limitato a un controller. Il punto 4 (timestamp dall'orologio dell'applicazione) resta come
+scelta, non come difetto.
+
+## Debito registrato dalla review, non implementato
+
+Rilievi F-5…F-10, tracciati in `.company-os/PROJECT_STATE.md` come **TD-19…TD-24**. Il primo
+ha una condizione di rivalutazione esplicita:
+
+> **TD-19 (F-5) — nessun controllo di concorrenza.** Nessun `@Version` su `Project`: due
+> `archive` concorrenti rispondono entrambi `200`, due `PUT` concorrenti si sovrascrivono in
+> silenzio. Oggi accettabile. **Da rivalutare prima di dare ad `archive`/`restore` qualunque
+> effetto su entità figlie** — cioè prima della relazione `Task` → `Project` — perché da quel
+> momento il lost update smette di essere solo un `200` di troppo.
 
 ## Vincolo
 

@@ -1,5 +1,6 @@
 package com.aicompany.backend.project.model;
 
+import com.aicompany.backend.project.exception.ArchivedProjectIsImmutableException;
 import com.aicompany.backend.project.exception.IllegalProjectStateTransitionException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -65,8 +66,18 @@ public class Project {
     /**
      * Replaces the descriptive fields. Status is not part of this: lifecycle
      * changes go through the dedicated transitions.
+     *
+     * <p>Only an active project can be edited. An archived one is out of the
+     * working registry and stays as it was until somebody restores it: see
+     * ADR-004 §8. The rule lives here, next to the transitions, so no entry
+     * point can forget it -- the same reason {@code status} has no setter.
      */
     public void updateDetails(String name, String description) {
+
+        if (isArchived()) {
+            throw new ArchivedProjectIsImmutableException();
+        }
+
         this.name = name;
         this.description = description;
     }

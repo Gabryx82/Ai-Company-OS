@@ -127,6 +127,46 @@ impedisce il duplicato, e `saveGuardingUniqueName` traduce la
 commit della transazione, cioè **dopo** che l'advice ha già costruito la risposta, e
 diventerebbe un `500`.
 
+## 4bis. Correzioni della review
+
+Quattro rilievi della review differenziale sono stati chiusi sullo stesso branch. Nessuno
+tocca lo schema: `V2` resta invariata.
+
+**F-1 — la normalizzazione del pre-check non era quella dell'indice.**
+`existsByNameIgnoreCase` genera `upper(name) = upper(?)`; l'indice è su `lower(name)`. In
+PostgreSQL le due non coincidono: per la i turca senza punto (U+0131) `upper` la fa
+collassare su `I`, `lower` no. Con un progetto di nome `I`, creare `ı` veniva rifiutato con
+`409` benché l'indice — l'invariante dichiarata da ADR-004 §5 — lo consenta; e la query non
+poteva nemmeno usare quell'indice. I due metodi derivati sono stati sostituiti da
+`existsByNormalisedName` / `existsByNormalisedNameAndIdNot`, `@Query` esplicite su
+`lower(...)`, con il nome dell'indice tenuto come costante nel repository.
+
+**F-2 — il fallback traduceva troppo.** `saveGuardingUniqueName` catturava ogni
+`DataIntegrityViolationException` e la riportava come nome duplicato. Ora risale la catena
+delle cause e traduce in `ProjectNameConflictException` **solo** una violazione di
+`projects_name_unique_idx`, confrontando il constraint estratto da Hibernate e, come
+ripiego, il messaggio; tutto il resto propaga. Il database resta l'autorità sotto
+concorrenza: quel che cambia è che una futura FK non si presenterà come «nome già preso».
+`ProjectNameAlreadyExistsException` è stata rinominata `ProjectNameConflictException`, che è
+quello che effettivamente rappresenta ora.
+
+**F-3 — il test dei timestamp non poteva fallire.** L'asserzione era
+`isAfterOrEqualTo(firstUpdate)` con `firstUpdate` preso alla creazione: restava verde anche
+con `updatedAt` fermo, quindi non avrebbe intercettato un `@PreUpdate` mancante. Ora è
+`isAfter`, sull'oggetto e sulla riga. Le due letture della riga si confrontano fra loro
+perché PostgreSQL tronca ai microsecondi e `Instant.now()` porta più cifre: confrontare la
+riga con l'oggetto in memoria falliva per la troncatura, non per il comportamento.
+
+**F-4 — un progetto archiviato era completamente mutabile.** Decisione presa e registrata in
+ADR-004 §8: non lo è più. `Project.updateDetails()` rifiuta se lo stato è `ARCHIVED`, con
+`ArchivedProjectIsImmutableException` → `409`. La regola sta sull'entità, accanto alle
+transizioni, per la stessa ragione di ADR-004 §4.
+
+Ogni correzione è stata verificata rimettendo il difetto e controllando che il test nuovo
+fallisse: il ripristino di `upper(...)` fa cadere le due regressioni Unicode, togliere
+`@PreUpdate` fa cadere il test dei timestamp, togliere il guard fa cadere i tre test su
+`ARCHIVED`.
+
 ## 5. Perché l'advice è limitato a un controller
 
 ```java
@@ -199,15 +239,16 @@ versione di seed** finisca nella storia di schema. Una futura migrazione le far�
 | `db/migration/V2__create_projects.sql` | Schema del registro |
 | `project/model/Project.java` | Entità e regole di transizione |
 | `project/model/ProjectStatus.java` | Insieme chiuso degli stati |
-| `project/repository/ProjectRepository.java` | Query per stato e unicità case-insensitive |
+| `project/repository/ProjectRepository.java` | Query per stato e unicità normalizzata con `lower(...)` |
 | `project/service/ProjectService.java` | Transazioni, lookup, contratto di unicità |
 | `project/controller/ProjectController.java` | Superficie HTTP, senza `DELETE` |
 | `project/controller/ProjectExceptionHandler.java` | `ProblemDetail` per il solo modulo project |
 | `project/dto/Project{Create,Update}Request.java`, `ProjectResponse.java` | Contratti di I/O |
-| `project/exception/*.java` (3) | `404`, `409` duplicato, `409` transizione |
-| `test/project/ProjectLifecycleTest.java` | 7 test, dominio puro |
-| `test/project/ProjectPersistenceTest.java` | 9 test su PostgreSQL |
-| `test/project/ProjectApiTest.java` | 22 test di contratto HTTP |
+| `project/exception/*.java` (4) | `404`, `409` duplicato, `409` transizione, `409` archiviato immutabile |
+| `test/project/ProjectLifecycleTest.java` | 9 test, dominio puro |
+| `test/project/ProjectPersistenceTest.java` | 10 test su PostgreSQL |
+| `test/project/ProjectApiTest.java` | 26 test di contratto HTTP |
+| `test/project/ProjectServiceConflictTest.java` | 4 test, traduzione dei fallimenti del database |
 | `docs/adr/ADR-004-*.md` | Decisione architetturale |
 
 **Rinominato**

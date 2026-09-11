@@ -7,29 +7,57 @@ ciclo di vita esplicito che sostituisce la cancellazione con l'archiviazione, e 
 superficie CRUD completa e testata. Nessuna entità esistente è stata collegata: la
 migrazione è puramente additiva.
 
-Tutti i 13 acceptance criteria sono soddisfatti.
+Tutti i 13 acceptance criteria sono soddisfatti. Dopo la review differenziale, i rilievi
+F-1, F-2, F-3 e F-4 sono stati corretti sullo stesso branch, senza toccare lo schema.
 
 ## Evidenze
 
 ### Suite automatica
 
 ```
-./mvnw -B clean test  →  Tests run: 66, Failures: 0, Errors: 0, Skipped: 0  —  BUILD SUCCESS
+./mvnw -B clean test  →  Tests run: 77, Failures: 0, Errors: 0, Skipped: 0  —  BUILD SUCCESS
 ```
 
 | Classe | Test | Contenuto |
 |---|---|---|
-| `ProjectApiTest` | 22 | Contratto HTTP: CRUD, validazione, conflitti, transizioni, assenza di `DELETE` |
-| `ProjectPersistenceTest` | 9 | Round-trip su PostgreSQL, timestamp, guardie del database |
-| `ProjectLifecycleTest` | 7 | Regole di transizione, dominio puro senza Spring |
+| `ProjectApiTest` | 26 | Contratto HTTP: CRUD, validazione, conflitti, transizioni, assenza di `DELETE`, immutabilità dell'archiviato, regressioni Unicode |
+| `ProjectPersistenceTest` | 10 | Round-trip su PostgreSQL, timestamp, guardie del database, comportamento reale dell'indice |
+| `ProjectLifecycleTest` | 9 | Regole di transizione e di modifica, dominio puro senza Spring |
 | `MigrationStreamTest` | 7 | Invariata come intento, adattata alla nuova testa dello stream |
 | `SchemaMigrationTest` | 7 | `V2` applicata, tabella `projects`, tipi, indici, nullabilità |
 | `TaskApiValidationTest` | 6 | Invarianti TASK-001, invariate |
+| `ProjectServiceConflictTest` | 4 | Traduzione dei fallimenti di integrità del database |
 | `TaskPersistenceTest` | 4 | Invarianti TASK-001, invariate |
 | `DevSeedMigrationTest` | 3 | Seed dev sempre in stream separato |
 | `BackendApplicationTests` | 1 | Avvio del contesto |
 
-Prima di TASK-002 la suite contava 26 test. I 40 nuovi sono tutti sul dominio `Project`.
+Prima di TASK-002 la suite contava 26 test; l'implementazione ne ha portati 66, le correzioni
+della review 77.
+
+### Correzioni della review: prova che i test nuovi possono fallire
+
+Ogni fix è stato verificato rimettendo il difetto e rieseguendo. Nessuna delle regressioni
+nuove è decorativa.
+
+| Difetto rimesso | Test che cadono |
+|---|---|
+| `lower(...)` → `upper(...)` nel repository | `namesThatOnlyCollideUnderUpperCaseAreNotDuplicates`, `theApiAndTheDatabaseAgreeOnWhatADuplicateIs` |
+| `@PreUpdate` rimossa da `Project` | `timestampsAreSetOnCreateAndOnlyUpdatedAtMovesOnChange` |
+| Guard `ARCHIVED` rimosso da `updateDetails` | `anArchivedProjectCannotBeEdited`, `updatingAnArchivedProjectIsAConflict`, `updatingAnArchivedProjectIsRefusedBeforeAnythingIsWritten` |
+
+Divergenza Unicode, misurata su `postgres:17-alpine` (`datcollate = en_US.utf8`, la stessa
+immagine di Testcontainers e di `docker-compose.yml`):
+
+```
+ upper_says_duplicate | lower_says_duplicate
+----------------------+----------------------
+ t                    | f
+```
+
+per la i turca senza punto (U+0131) confrontata con `I`. Prima del fix,
+`POST /api/projects {"name":"ı"}` con un progetto `I` esistente rispondeva `409`; ora
+risponde `201`, come l'indice consente. La stessa asserzione è replicata a livello di riga in
+`theIndexTreatsAsDistinctTwoNamesThatOnlyCollideUnderUpperCase`.
 
 ### Migrazione sul database di sviluppo reale
 
@@ -97,6 +125,7 @@ I tre agent del seed e le task preesistenti sono intatti.
 | `POST /api/projects/1/archive` | `200`, `status: ARCHIVED` |
 | `POST /api/projects/1/archive` (di nuovo) | `409` — `A project cannot go from ARCHIVED to ARCHIVED` |
 | `DELETE /api/projects/1` | **`405`** |
+| `PUT /api/projects/1` su progetto archiviato | `409` — `{"title":"Archived project is immutable"}` *(comportamento introdotto dal fix F-4; lo smoke test originale precede la review)* |
 | `GET /api/projects?status=ARCHIVED` | `200`, il progetto è ancora lì |
 | `POST /api/projects/1/restore` | `200`, `status: ACTIVE` |
 
@@ -118,14 +147,14 @@ rimosse dal database di sviluppo al termine. Il volume non è stato toccato.
 | AC-1 `V2` additiva in ogni profilo | Log Flyway su DB dev reale; `SchemaMigrationTest` in profilo `test`; `MigrationStreamTest` su schemi isolati |
 | AC-2 `201` + `Location`, nasce `ACTIVE` | `validProjectIsCreatedActiveWithALocationHeader`, `locationHeaderPointsAtSomethingThatCanBeRead`; smoke test |
 | AC-3 body invalido → `400`, niente persistito | `emptyBodyIsRejectedAndNothingIsPersisted`, `blankNameIsRejected`, `overlongNameIsRejected` |
-| AC-4 duplicato case-insensitive → `409` | `duplicateNameIsRejectedIgnoringCase`; `databaseRejectsADuplicateNameRegardlessOfCase` |
+| AC-4 duplicato case-insensitive → `409` | `duplicateNameIsRejectedIgnoringCase`; `databaseRejectsADuplicateNameRegardlessOfCase`; `theApiAndTheDatabaseAgreeOnWhatADuplicateIs`; `ProjectServiceConflictTest` per il percorso dell'indice |
 | AC-5 `404` con `ProblemDetail` | `unknownProjectIsReportedAsNotFound` |
 | AC-6 archive, riarchiviare → `409` | `archiveMovesTheProjectOutOfTheRegistryWithoutDeletingIt`, `archivingTwiceIsAConflict` |
 | AC-7 restore, su attivo → `409` | `restoreBringsAnArchivedProjectBack`, `restoringAnActiveProjectIsAConflict` |
 | AC-8 `DELETE` → `405` | `thereIsNoPhysicalDeleteOverHttp`; smoke test |
 | AC-9 filtro per stato, valore ignoto → `400` | `listingCanBeFilteredByStatus`, `unknownStatusFilterIsARequestError` |
 | AC-10 guardie del database | `databaseRejectsAProjectWithoutName`, `databaseRejectsAStatusOutsideTheClosedSet` |
-| AC-11 timestamp | `timestampsAreSetOnCreateAndOnlyUpdatedAtMovesOnChange`, `projectTimestampsAreStoredWithATimeZone` |
+| AC-11 timestamp | `timestampsAreSetOnCreateAndOnlyUpdatedAtMovesOnChange` (ora `isAfter`, sull'oggetto e sulla riga), `projectTimestampsAreStoredWithATimeZone` |
 | AC-12 invarianti TASK-001 | `TaskApiValidationTest`, `TaskPersistenceTest`, `DevSeedMigrationTest` invariati nell'intento; `theProjectErrorContractDoesNotLeakIntoTheTaskApi`; smoke test |
 | AC-13 suite verde | `Tests run: 66, Failures: 0` |
 
@@ -146,6 +175,7 @@ Commit:
 |---|---|
 | `4e4fa64` | `feat(project): add the Project domain and its registry API` |
 | `9fb3029` | `test(project): cover the registry contract and unblock the schema stream` |
-| HEAD | `docs(task-002): record ADR-004 and the project registry artefacts` |
+| `3ddb3b8` | `docs(task-002): record ADR-004 and the project registry artefacts` |
+| — | correzioni della review F-1…F-4, **non ancora committate** al momento in cui questo file è stato aggiornato |
 
 Nessun segreto, file `.env` reale, output di build o dato di database è stato committato.

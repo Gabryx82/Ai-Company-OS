@@ -1,5 +1,6 @@
 package com.aicompany.backend.project;
 
+import com.aicompany.backend.project.exception.ArchivedProjectIsImmutableException;
 import com.aicompany.backend.project.exception.IllegalProjectStateTransitionException;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.model.ProjectStatus;
@@ -38,8 +39,7 @@ class ProjectLifecycleTest {
 
         assertThatThrownBy(project::archive)
                 .isInstanceOf(IllegalProjectStateTransitionException.class)
-                .hasMessageContaining("ARCHIVED")
-                .hasMessageContaining("ARCHIVED");
+                .hasMessage("A project cannot go from ARCHIVED to ARCHIVED");
     }
 
     @Test
@@ -64,12 +64,40 @@ class ProjectLifecycleTest {
     void updatingDetailsDoesNotTouchTheLifecycle() {
 
         Project project = new Project("Company OS", "before");
-        project.archive();
         project.updateDetails("Company OS renamed", "after");
 
         assertThat(project.getName()).isEqualTo("Company OS renamed");
         assertThat(project.getDescription()).isEqualTo("after");
-        assertThat(project.getStatus()).isEqualTo(ProjectStatus.ARCHIVED);
+        assertThat(project.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
+    }
+
+    @Test
+    void anArchivedProjectCannotBeEdited() {
+
+        // ADR-004 section 8. Until this rule existed an archived project stayed
+        // fully mutable, and it kept holding its name in the unique index while
+        // doing so; the review recorded that as F-4.
+        Project project = new Project("Company OS", "before");
+        project.archive();
+
+        assertThatThrownBy(() -> project.updateDetails("Company OS renamed", "after"))
+                .isInstanceOf(ArchivedProjectIsImmutableException.class)
+                .hasMessageContaining("restore it first");
+
+        assertThat(project.getName()).isEqualTo("Company OS");
+        assertThat(project.getDescription()).isEqualTo("before");
+    }
+
+    @Test
+    void restoringMakesAProjectEditableAgain() {
+
+        Project project = new Project("Company OS", "before");
+        project.archive();
+        project.restore();
+        project.updateDetails("Company OS renamed", "after");
+
+        assertThat(project.getName()).isEqualTo("Company OS renamed");
+        assertThat(project.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
     }
 
     @Test
