@@ -4,25 +4,31 @@
 AI Company OS
 
 ## Status
-PHASE 0 completata. Fondazione di persistenza implementata (TASK-001) e corretta dopo la
-review Codex (TASK-001A), 2026-09-11.
-In attesa di review differenziale Codex sui soli fix di TASK-001A.
+PHASE 0 completata. **TASK-001 e TASK-001A completate, validate e integrate in `master`**
+(2026-09-11). La fondazione di persistenza è la base stabile del progetto.
+Pronti per la definizione dello scope di TASK-002.
 
 ## Current phase
 PHASE 1 — Foundations (persistenza completata)
 
 ## Current task
-Nessuna attiva. TASK-001 e TASK-001A chiuse; TASK-002 non avviata.
+**Nessuna attiva.** TASK-002 non avviata: richiede approvazione dello scope.
 
 ## Last completed task
-TASK-001A — Fix Flyway Migration and Dev Seed Strategy.
-Chiude il rilievo **R1 (HIGH)** della review Codex: il seed `V1000` viveva nella stessa
-storia Flyway dello schema e bloccava ogni migrazione successiva alla `V1`.
-Artefatti: `tasks/TASK-001A/{TASK.md,CONTEXT.yaml,IMPLEMENTATION.md,ARTIFACT.md,HANDOFF.md}`,
-`docs/adr/ADR-003`, correzioni a `docs/adr/ADR-002` e `docs/RUNNING.md`.
+**TASK-001 — Reproducible Persistence Foundation: COMPLETATA e integrata in `master`.**
 
-Precedente: TASK-001 — Reproducible Persistence Foundation.
-Artefatti: `tasks/TASK-001/{TASK.md,CONTEXT.yaml,IMPLEMENTATION.md,ARTIFACT.md,HANDOFF.md}`, `docs/adr/ADR-001`, `docs/adr/ADR-002`, `docs/RUNNING.md`.
+Ciclo completo: implementazione → review differenziale Codex (`PASS WITH FIXES`) →
+TASK-001A per il fix del rilievo HIGH → validazione → merge.
+
+| Fase | Esito |
+|---|---|
+| TASK-001 | H2 in-memory sostituito da PostgreSQL con schema di proprietà di Flyway, Hibernate `validate`, DTO con Bean Validation, test su database reale |
+| Review Codex | `PASS WITH FIXES` — 1 HIGH (R1), 3 MEDIUM, 3 LOW. Nessun BLOCKER |
+| TASK-001A | R1 chiuso: schema e seed separati in due stream Flyway. Parte di R2 e delimitazioni di R4 recepite |
+| Merge | `--no-ff` in `master`, branch conservato, storia non riscritta |
+
+Artefatti: `tasks/TASK-001/*`, `tasks/TASK-001A/*`, `docs/adr/ADR-001`, `ADR-002`,
+`ADR-003`, `docs/RUNNING.md`, `docs/reviews/TASK-001_CODEX_REVIEW.md`.
 
 ## Stato del sistema
 - Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`, porta su loopback.
@@ -34,24 +40,78 @@ Artefatti: `tasks/TASK-001/{TASK.md,CONTEXT.yaml,IMPLEMENTATION.md,ARTIFACT.md,H
 - Test: **26**, tutti contro PostgreSQL reale. `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso dal progetto.
 
-## Stato Git (verificato il 2026-09-11)
-- Branch corrente: `task-001-persistence-foundation`.
-- `master`: `930f70f`, intatto, nessun merge.
-- Backend applicativo: committato in `ea25bee`; artefatti TASK-000 in `503663c`; review Codex in `2f01194`.
-- TASK-001: `5e164f5` (persistenza), `c295189` (test), `b6e0b81` (documentazione).
-- TASK-001A: `dba676b` (separazione degli stream Flyway), `2a9912b` (test di regressione), più il commit di documentazione.
-- Working tree pulito. **Nessun remote configurato** e nessun push eseguito: una destinazione remota richiede approvazione esplicita.
-- Correzione rispetto allo stato precedente di questo file: il codice applicativo **non** è più «staged ma non committato». L'affermazione «unica copia sul disco locale» è stata rimossa perché non verificabile, come osservato dalla review Codex (R1).
+## Stato Git (verificato il 2026-09-11, dopo il merge)
+- Branch corrente: **`master`**, HEAD `e8d0286` — merge commit di
+  `task-001-persistence-foundation`.
+- Merge eseguito con **`--no-ff`**: topologia del branch conservata, nessun fast-forward,
+  nessuna riscrittura di storia, nessun branch cancellato.
+- `task-001-persistence-foundation` **conservato** a `82ea1df`, interamente contenuto in
+  `master`.
+- **Nessun remote configurato, nessun push eseguito.** Una destinazione remota richiede
+  approvazione esplicita.
+- Working tree pulito.
+
+Commit integrati in `master` con questo merge:
+
+| Hash | Contenuto |
+|---|---|
+| `ea25bee` | backend applicativo preesistente |
+| `503663c` | governance Company OS e artefatti TASK-000 |
+| `2f01194` | review Codex di TASK-000 |
+| `5e164f5` | TASK-001 — persistenza |
+| `c295189` | TASK-001 — test |
+| `b6e0b81` | TASK-001 — documentazione e ADR |
+| `dba676b` | TASK-001A — separazione degli stream Flyway |
+| `2a9912b` | TASK-001A — test di regressione |
+| `82ea1df` | TASK-001A — ADR-003 e correzioni documentali |
+| `e8d0286` | merge in `master` |
+
+`master` prima del merge era a `930f70f` — «Initial project structure», l'unico commit che
+conteneva già.
+
+Verifiche eseguite **prima** del merge: working tree pulito, branch corretto, `master`
+intatto a `930f70f`, `./mvnw -B clean test` → 26 test, 0 failure. Suite rieseguita **dopo**
+il merge su `master`: 26 test, 0 failure, BUILD SUCCESS.
 
 ## Decisioni architetturali
 - **ADR-001** — Spring Boot resta il control plane; il livello AI sarà un servizio Python separato, non ancora implementato. *Accettata* (approvazione utente, 2026-09-11).
 - **ADR-002** — PostgreSQL con schema di proprietà di Flyway, verificato su database reale. *Accettata, parzialmente superata da ADR-003* (punto 6 e garanzia dev→prod).
 - **ADR-003** — Il seed di sviluppo è uno stream Flyway separato dallo schema, con tabella di storia propria. *Accettata*.
 
-## Prossimo passo proposto
-Sequenza rivista dalla review Codex: **contratti minimi e dominio con test → completamento API/CI → sicurezza minima e contratto Run → Model Gateway → frontend minimo**.
+## Prossimo passo proposto — preparazione di TASK-002
 
-TASK-002 candidata: contratti API e modello di dominio (entità `Project`, relazioni, enum di stato), con i test già disponibili come rete di sicurezza. **Non avviata**: richiede approvazione dello scope.
+Sequenza rivista dalla review Codex: **contratti minimi e dominio con test → completamento
+API/CI → sicurezza minima e contratto Run → Model Gateway → frontend minimo**.
+
+**TASK-002 candidata: API contracts and domain model.** Lo stato del progetto è pronto a
+riceverla; lo scope **non è ancora approvato** e la task **non è avviata**.
+
+Cosa la rende eseguibile ora:
+
+| Prerequisito | Stato |
+|---|---|
+| Schema versionato ed evolvibile | ✅ `V2` applicabile, dimostrato da test (ADR-003) |
+| Rete di sicurezza sui test | ✅ 26 test su PostgreSQL reale |
+| Drift di schema che blocca l'avvio | ✅ Hibernate `validate`, con portata documentata |
+| Base integrata in `master` | ✅ merge `e8d0286` |
+
+Scope candidato, da approvare:
+1. Entità `Project` e relazione con `Task`.
+2. Enum di dominio per `status` e `priority`, oggi stringhe libere obbligatorie — cambio di
+   contratto osservabile, da dichiarare.
+3. Migrazione `V2` corrispondente in `db/migration`.
+4. Test di persistenza e di contratto per le nuove strutture.
+
+Decisioni da prendere **prima** di avviare la task:
+- Quali valori ammessi per `status` e `priority`, e se serve una macchina a stati o solo un
+  insieme chiuso.
+- Se `Task` debba appartenere obbligatoriamente a un `Project` (migrazione dei dati
+  esistenti) oppure la relazione sia opzionale.
+- Se introdurre `GET /api/tasks/{id}`, oggi assente benché `POST` emetta un header
+  `Location` che punta a quell'URI (LOW della review, ancora aperto).
+
+Alternativa a priorità più bassa, se si preferisce consolidare: una task documentale che
+chiuda R3/R5/R6/R7 e le correzioni ai file `docs/audit/*` di TASK-000.
 
 ## Debito aperto rilevante
 TD-04 sicurezza, TD-07 gestione errori, TD-08 `MasterOrchestrator`, TD-11 CORS, TD-12/TD-13 dominio, TD-14 CI assente, TD-15 Lombok inutilizzato, TD-17/TD-18 `README.md`.
@@ -98,5 +158,8 @@ AI Company OS will progressively include:
 - 3D Omniverse integration
 
 ## Immediate goal
-Review differenziale dei soli fix di TASK-001A da parte di Codex, poi approvazione dello
-scope di TASK-002.
+**Approvazione umana dello scope di TASK-002** (contratti API e modello di dominio), con le
+tre decisioni elencate in «Prossimo passo proposto» prese prima dell'avvio.
+
+Nessuna implementazione è autorizzata finché lo scope non è approvato: TASK-002 **non è
+avviata**.
