@@ -4,18 +4,47 @@
 AI Company OS
 
 ## Status
-PHASE 1 in corso. **TASK-002 completata, revisionata, integrata in `master` e verificata**
-(2026-09-11). Review differenziale eseguita: i quattro rilievi correggibili (F-1…F-4) sono
-stati chiusi prima del merge, i restanti (F-5…F-10) restano aperti come TD-19…TD-24. Merge
-in fast-forward, storia lineare, suite verde su `master`.
+PHASE 1 in corso. **TASK-003 implementata sul branch `task-003-task-project-association`,
+in attesa di review differenziale** (2026-09-11). Suite completa verde (107 test). Nessun
+merge, nessun push.
 
-**TASK-003 non è avviata** e il suo scope non è approvato.
+TASK-002 resta completata, revisionata e integrata in `master`.
 
 ## Current phase
-PHASE 1 — Foundations (persistenza completata, primo dominio introdotto)
+PHASE 1 — Foundations (persistenza completata, primo dominio introdotto, prima relazione di
+dominio introdotta)
 
 ## Current task
-**Nessuna.** TASK-002 è chiusa; lo scope di TASK-003 non è stato definito né approvato.
+**TASK-003 — Task → Project Association Foundation.** Implementata, non ancora revisionata,
+non integrata. Branch `task-003-task-project-association`, creato da `master` (`c73fa39`).
+
+Introduce la prima relazione persistente del Company OS: `Task` → `Project`, con chiave
+esterna PostgreSQL creata da `V3`, mapping JPA unidirezionale, API di assegnazione e listato
+per progetto.
+
+Vincolo di scope rispettato: la relazione **esiste ed è imposta dal database**, ma
+`archive`/`restore` di un progetto **non producono ancora nessun effetto** sui suoi task.
+
+Le tre domande che ADR-004 §1 aveva esplicitamente rimandato sono state sciolte prima di
+implementare, e sono il contenuto di **ADR-005**:
+
+| Domanda | Decisione |
+|---|---|
+| `project_id` nullable in questa fase? | **Sì.** Nessun valore corretto esiste per le righe preesistenti; un progetto sintetico «Unassigned» di backfill sarebbe un workaround indelebile che asserisce il falso |
+| Come migrare i task esistenti? | **Non si migrano.** `V3` non contiene `UPDATE`. Restano `project_id NULL`, stato esplicito nel contratto (`projectId: null`) e recuperabile con `PUT /api/tasks/{id}/project` |
+| Associare a un progetto `ARCHIVED`? | **`409`.** Un contenitore fuori dal registro operativo non riceve lavoro nuovo. `409` e non `403` perché il chiamante può togliere il rifiuto da sé: `restore`, e la stessa richiesta passa |
+
+Decisioni conseguenti: relazione unidirezionale (nessuna `@OneToMany` su `Project`, così la
+cascata non può essere un flag); chiave esterna senza `ON DELETE` (`NO ACTION` è la scelta);
+nessun `DELETE /api/tasks/{id}/project`; `PUT` sull'associazione idempotente; progetto
+inesistente su `GET /api/projects/{id}/tasks` → `404` e non lista vuota; advice sui task
+limitato alle sole eccezioni nuove, così la forma del `400` preesistente non cambia.
+
+API nuova o modificata:
+`POST /api/tasks` con `projectId` opzionale, `GET /api/tasks` con `projectId` in uscita,
+`PUT /api/tasks/{id}/project`, `GET /api/projects/{projectId}/tasks`.
+
+Artefatti: `tasks/TASK-003/*`, `docs/adr/ADR-005-task-project-association.md`.
 
 ## Last completed task
 **TASK-002 — Core Domain Model & Project Registry Foundation** (implementata, revisionata,
@@ -51,26 +80,25 @@ Artefatti: `tasks/TASK-001/*`, `tasks/TASK-001A/*`, `docs/adr/ADR-001`, `ADR-002
 
 ## Stato del sistema
 - Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`, porta su loopback.
-- Schema: di proprietà di **Flyway** (`db/migration`, storia `flyway_schema_history`), oggi a **`V2`**; Hibernate in `validate`. Una colonna mancante blocca l'avvio; la perdita di un `NOT NULL` **no** — delimitazione chiarita dalla review (R4).
-- Tabelle: `agents`, `tasks`, **`projects`**.
+- Schema: di proprietà di **Flyway** (`db/migration`, storia `flyway_schema_history`), oggi a **`V3`** sul branch di TASK-003 e **`V2`** in `master`; Hibernate in `validate`. Una colonna mancante blocca l'avvio; la perdita di un `NOT NULL` **no** — delimitazione chiarita dalla review (R4).
+- Tabelle: `agents`, `tasks`, **`projects`**. Dal branch di TASK-003, `tasks.project_id` nullable con chiave esterna `tasks_project_id_fkey` verso `projects(id)`, senza `ON DELETE`, e indice `tasks_project_id_idx`.
 - Seed di sviluppo: **stream Flyway separato** (`db/dev/V1`, storia `flyway_dev_seed_history`), applicato solo dal profilo `dev` da `DevSeedFlywayConfiguration`. Lo stream di schema è identico in tutti i profili (ADR-003).
 - Transizione automatica in `dev` per i database che contengono ancora `V1000`: la riga legacy viene rimossa dalla storia di schema, i dati restano.
 - Profili: `dev` (default), `test` (Testcontainers), `prod` (sole variabili d'ambiente).
 - API: DTO con Bean Validation su `agents`, `tasks` e `projects`. `POST /api/tasks {}` → `400`. `POST /api/projects {}` → `400` con elenco dei campi. Creazione valida → `201` + `Location`.
-- Contratto di errore: `ProblemDetail` **solo** sotto `/api/projects`; `agents` e `tasks` conservano il default di Spring. Disomogeneità nota e testata, si chiude con TD-07.
-- Test: **77**, contro PostgreSQL reale (erano 26; 66 a fine implementazione, 77 dopo le correzioni della review). `./mvnw -B clean test` → BUILD SUCCESS.
+- Contratto di errore: `ProblemDetail` sotto `/api/projects` e — dal branch di TASK-003 — sulle sole risposte di errore **introdotte da TASK-003** sotto `/api/tasks` e `/api/projects/{id}/tasks`. Gli endpoint preesistenti di `agents` e `tasks` conservano il default di Spring, validazione inclusa. Disomogeneità nota e testata, si chiude con TD-07.
+- Test: **77** in `master`, **107** sul branch di TASK-003, tutti contro PostgreSQL reale. `./mvnw -B clean test` → BUILD SUCCESS in entrambi.
 - H2 rimosso dal progetto.
 
 ## Stato Git (verificato il 2026-09-11)
-- Branch corrente: **`master`**, HEAD `c5133d3`.
-- **TASK-002 integrata in `master` con fast-forward** (`32174a1..c5133d3`): nessun merge
-  commit, storia lineare.
-- Suite rieseguita su `master` dopo il merge: **77/77 verdi**, BUILD SUCCESS.
-- **Nessun remote configurato, nessun push eseguito.** Una destinazione remota richiede approvazione esplicita.
+- Branch corrente: **`task-003-task-project-association`**, creato da `master` (`c73fa39`).
+- **Nessun merge, nessun push.** `master` è intatto a `c73fa39`.
+- **Nessun remote configurato.** Una destinazione remota richiede approvazione esplicita.
 - Storia non riscritta: nessun force push, reset, rebase o cancellazione di branch.
-- Working tree pulito.
+- Suite sul branch di TASK-003: **107/107 verdi**, BUILD SUCCESS.
 
-Commit di TASK-002, ora in `master`:
+TASK-002 resta integrata in `master` con fast-forward (`32174a1..c5133d3`), storia lineare,
+suite verde:
 
 | Hash | Contenuto |
 |---|---|
@@ -80,40 +108,41 @@ Commit di TASK-002, ora in `master`:
 | `c5133d3` | `fix(project)` — chiusura dei rilievi di review F-1…F-4, test relativi, documentazione |
 
 Branch conservati, non cancellati: `task-000-audit`, `task-001-persistence-foundation`,
-`task-002-project-registry-foundation`.
+`task-002-project-registry-foundation`, `task-003-task-project-association`.
 
 ## Decisioni architetturali
 - **ADR-001** — Spring Boot resta il control plane; il livello AI sarà un servizio Python separato, non ancora implementato. *Accettata*.
 - **ADR-002** — PostgreSQL con schema di proprietà di Flyway, verificato su database reale. *Accettata, parzialmente superata da ADR-003*.
 - **ADR-003** — Il seed di sviluppo è uno stream Flyway separato dallo schema, con tabella di storia propria. *Accettata*.
 - **ADR-004** — Project Registry: `Project` è un'entità autonoma senza relazioni in TASK-002; insieme di stati chiuso imposto due volte (enum + `CHECK`); si archivia invece di cancellare; transizione illegale → `409`; unicità del nome garantita dal database, con il service che ne usa la stessa normalizzazione; un progetto archiviato non è modificabile (§8); contratto di errore limitato al modulo. *Accettata*.
+- **ADR-005** — Relazione `Task` → `Project`: `project_id` nullable in questa fase, con la ragione dichiarata; i task preesistenti non si migrano e restano senza progetto; associare a un progetto `ARCHIVED` è `409`; `archive`/`restore` **non** hanno effetti sui task, e la relazione è unidirezionale proprio perché la cascata resti una decisione da scrivere e non un flag; chiave esterna senza `ON DELETE`; `PUT` sull'associazione idempotente; solo le risposte di errore nuove parlano `ProblemDetail`. *Accettata*.
 
 ## Prossimo passo proposto
 
-1. ~~Review differenziale di TASK-002~~ — **fatta**. F-1…F-4 chiusi, F-5…F-10 registrati come
-   TD-19…TD-24.
-2. ~~Decisione di merge~~ — **fatta**: fast-forward in `master`, suite verde.
-3. **Definizione e approvazione dello scope di TASK-003.** Non ancora avvenuta.
+1. **Review differenziale di TASK-003.** I punti su cui è richiesto un parere indipendente
+   sono elencati in `tasks/TASK-003/HANDOFF.md`.
+2. Decisione di merge di TASK-003.
+3. Definizione dello scope di TASK-004. **Non ancora avvenuta.**
 
-Restano aperte **tre scelte di contratto**, come domande di progetto e non come difetti —
-sono decisioni deliberate, motivate in `docs/adr/ADR-004-*.md` e in
-`tasks/TASK-002/HANDOFF.md`, e valgono finché nessuno decide altrimenti:
-
-| Scelta | Domanda aperta |
-|---|---|
-| `archive` non idempotente | Riarchiviare risponde `409`. Comodità per il client contro verificabilità della macchina a stati |
-| `GET /api/projects` senza filtro include gli archiviati | Niente filtro implicito, al prezzo di richiedere sempre `?status=ACTIVE` per il caso d'uso più frequente |
-| Advice limitato a `ProjectController` | Due forme di errore coesistono nell'API finché TD-07 non viene affrontato |
-
-Candidati naturali per TASK-003, **nessuno approvato**:
+Candidati per TASK-004, **nessuno approvato**:
 
 | Candidato | Nota |
 |---|---|
-| Relazione `Task` → `Project` | Richiede le tre decisioni rimandate da ADR-004 §1: appartenenza obbligatoria o no, cosa fare delle righe esistenti, cosa significa archiviare un progetto con task aperti. **Blocca TD-19**: dà ad `archive` effetti su entità figlie, quindi il controllo di concorrenza va deciso prima |
+| Cascata `archive`/`restore` da `Project` a `Task` | È il nodo successivo naturale. **Richiede di sciogliere prima TD-19 e TD-25**: dal momento in cui `archive` riscrive anche i task, il lost update smette di essere un `200` di troppo |
+| `project_id` verso `NOT NULL` | Richiede prima un percorso che assegni tutto ciò che è rimasto scoperto, e una migrazione che lo verifichi |
 | Enum di dominio su `Task.status` / `priority` | Cambio di contratto osservabile, da dichiarare |
 | `GET /api/tasks/{id}` | LOW della review TASK-001, ancora aperto |
-| TD-07 — contratto di errore uniforme | Chiuderebbe la disomogeneità introdotta consapevolmente da TASK-002 |
-| Task documentale | Chiude R3/R5/R6/R7 e le correzioni ai file `docs/audit/*` di TASK-000 |
+| TD-07 — contratto di errore uniforme | Oggi tre forme convivono: `ProblemDetail` sotto `/api/projects`, `ProblemDetail` sulle sole risposte nuove sotto `/api/tasks`, il default di Spring altrove |
+| Task documentale | Chiude R3/R5/R6/R7, le correzioni ai file `docs/audit/*` di TASK-000 e `docs/RUNNING.md`, che non documenta né `/api/projects` né gli endpoint di TASK-003 |
+
+Restano aperte le **tre scelte di contratto** di TASK-002 — `archive` non idempotente,
+`GET /api/projects` senza filtro include gli archiviati, advice limitato a un controller —
+più due nuove, dichiarate in ADR-005 e ancora domande di progetto e non difetti:
+
+| Scelta | Domanda aperta |
+|---|---|
+| Nessun `DELETE /api/tasks/{id}/project` | `NULL → non NULL` è una porta a senso unico: un task assegnato non torna mai «senza progetto» |
+| `GET /api/tasks` senza filtri | Non c'è modo di chiedere «i task senza progetto», che è proprio il caso d'uso di chi deve sistemare le righe preesistenti |
 
 ## Debito aperto rilevante
 TD-04 sicurezza, TD-07 gestione errori, TD-08 `MasterOrchestrator`, TD-11 CORS, TD-12/TD-13 dominio, TD-14 CI assente, TD-15 Lombok inutilizzato, TD-17/TD-18 `README.md`.
@@ -122,12 +151,18 @@ TD-04 sicurezza, TD-07 gestione errori, TD-08 `MasterOrchestrator`, TD-11 CORS, 
 
 | ID | Rilievo | Contenuto |
 |---|---|---|
-| **TD-19** | F-5 | **Nessun controllo di concorrenza.** Nessun `@Version` su `Project`, nessun lock: due `archive` concorrenti rispondono entrambi `200` invece che `200` + `409`, e due `PUT` concorrenti si sovrascrivono in silenzio. **Requisito da rivalutare prima di introdurre qualunque effetto di `archive`/`restore` su entità figlie** — cioè prima della relazione `Task` → `Project`: finché archiviare non tocca nient'altro il costo è un `200` di troppo, dopo diventa un lost update con conseguenze |
+| **TD-19** | F-5 | **Ancora aperto dopo TASK-003, e correttamente:** la condizione di rivalutazione — «prima di dare ad `archive`/`restore` effetti su entità figlie» — **non è scattata**, perché TASK-003 introduce la relazione ma non la cascata e `archive` continua a toccare solo la propria riga. Da sciogliere, insieme a TD-25, nella task che introdurrà la cascata. **Nessun controllo di concorrenza.** Nessun `@Version` su `Project`, nessun lock: due `archive` concorrenti rispondono entrambi `200` invece che `200` + `409`, e due `PUT` concorrenti si sovrascrivono in silenzio. Finché archiviare non tocca nient'altro il costo è un `200` di troppo; dal momento in cui `archive` riscriverà anche i task diventa un lost update con conseguenze |
 | **TD-20** | F-6 | Contratto di errore disomogeneo *dentro* il modulo project: JSON malformato o `Content-Type` mancante su `/api/projects` non producono un `ProblemDetail`. Si chiude naturalmente con TD-07 |
 | **TD-21** | F-7 | Asserzione debole in `theProjectErrorContractDoesNotLeakIntoTheTaskApi`: verifica solo l'assenza di `$.errors`, resterebbe verde se `agents`/`tasks` passassero a `ProblemDetail` senza quella proprietà |
-| **TD-22** | F-8 | AC-1 non ha copertura automatica del percorso *incrementale*: nessun test porta un database da `V1` a `V2` e verifica che `agents` e `tasks` restino intatte. Verificato solo a mano sul volume di sviluppo |
+| **TD-22** | F-8 | AC-1 di TASK-002 non ha copertura automatica del percorso *incrementale*: nessun test porta un database da `V1` a `V2` e verifica che `agents` e `tasks` restino intatte. TASK-003 ha aggiunto il test equivalente per `V2` → `V3` — `MigrationStreamTest.taskProjectRelationIsAddedToAPopulatedV2Database`, che usa `Flyway.target` — quindi il **modello** del test ora esiste e applicarlo a `V1` → `V2` è meccanico. Il caso `V1` → `V2` resta comunque scoperto |
 | **TD-23** | F-9 | `MigrationStreamTest` legge le versioni da Flyway ma fissa ancora l'elenco delle tabelle: la prossima migrazione che crea una tabella lo rompe comunque. Scelta accettabile, affermazione da correggere dove è scritta |
 | **TD-24** | F-10 | `ProjectService.findById` è `@Transactional(readOnly = true)` e viene chiamato da `update`/`archive`/`restore` via `this.`: le scritture funzionano perché il self-invocation aggira il proxy. Passare a proxy AspectJ, o estrarre il lookup, le romperebbe |
+
+### Debito nuovo da TASK-003 (registrato, non implementato)
+
+| ID | Contenuto |
+|---|---|
+| **TD-25** | **Finestra di concorrenza sull'assegnazione.** Fra il controllo «il progetto è `ACTIVE`» e il `commit` dell'assegnazione, un altro thread può archiviare il progetto: il task finisce attaccato a un progetto archiviato. Oggi la conseguenza si esaurisce lì — è uno stato che il sistema già ammette, perché un progetto si archivia liberamente con task dentro (ADR-005 §4) — e nessuna regola successiva lo usa. **Va chiusa insieme a TD-19, con lo stesso meccanismo**, nel momento in cui `archive` acquisterà effetti sui figli |
 
 Rilievi della review TASK-001 **ancora aperti**: **R3** (`.env` configura Compose ma non il
 processo Maven), **R5** (`server.address` non vincolato a loopback), **R6** (tag immagine
@@ -154,7 +189,7 @@ Debito nuovo, contratto consapevolmente da TASK-002:
 
 ## Target architecture
 AI Company OS will progressively include:
-- Project Registry ✅ *fondazione introdotta da TASK-002*
+- Project Registry ✅ *fondazione introdotta da TASK-002; primo collegamento — i task — introdotto da TASK-003*
 - Agent Registry
 - Skills / Rules / Subagents / Tools / MCP Registry
 - Model Gateway and local/cloud routing
@@ -178,6 +213,12 @@ AI Company OS will progressively include:
 - 3D Omniverse integration
 
 ## Immediate goal
-**Definizione dello scope di TASK-003.** TASK-002 è chiusa e integrata; TASK-003 **non è
-avviata** e il suo scope non è approvato. Prima di scegliere la relazione `Task` → `Project`
-va sciolto **TD-19**: è quella task a dare ad `archive`/`restore` effetti su entità figlie.
+**Review differenziale di TASK-003**, poi decisione di merge. La task è implementata sul
+branch `task-003-task-project-association`, suite verde a 107 test, upgrade `V2 → V3`
+verificato due volte: in Testcontainers su un database popolato fermato a `V2`, e sul volume
+di sviluppo reale `aicompany_postgres_data`. TASK-004 **non è avviata** e il suo scope non
+è approvato.
+
+Il nodo successivo, qualunque sia la task che lo affronterà, è la cascata
+`archive`/`restore` verso i task: richiede di sciogliere **TD-19** e **TD-25** prima di
+scriverne il codice, non dopo.

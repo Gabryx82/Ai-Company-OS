@@ -1,0 +1,91 @@
+task: TASK-003
+title: Task -> Project Association Foundation
+mode: implementation
+parent: none
+
+baseline:
+  branch: task-003-task-project-association
+  base: master
+  head_at_start: c73fa39
+  remote: none
+
+required:
+  - .company-os/PROJECT_STATE.md
+  - .company-os/AGENT_PROTOCOL.md
+  - .company-os/TOKEN_POLICY.md
+  - tasks/TASK-002/HANDOFF.md
+  - docs/adr/ADR-004-project-registry-and-archival-lifecycle.md
+  - backend/src/main/java/com/aicompany/backend/task/**
+  - backend/src/main/java/com/aicompany/backend/project/**
+
+repository_scan:
+  allowed: false
+  reason: "Relazione fra due moduli gia noti. Letture limitate ai due domini, alle migrazioni e ai test."
+
+files_in_play:
+  - backend/src/main/java/com/aicompany/backend/task/**
+  - backend/src/main/java/com/aicompany/backend/project/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/**
+
+writes_allowed:
+  - backend/src/main/java/com/aicompany/backend/task/**
+  - backend/src/main/resources/db/migration/V3__add_task_project_relation.sql
+  - backend/src/test/**
+  - docs/adr/**
+  - tasks/TASK-003/**
+  - .company-os/PROJECT_STATE.md
+
+invariants:
+  - "PostgreSQL + Flyway, schema di proprieta di Flyway"
+  - "spring.jpa.hibernate.ddl-auto=validate"
+  - "seed dev in stream Flyway separato (ADR-003)"
+  - "POST /api/tasks valido -> 201 + Location; {} -> 400 con la forma di errore preesistente"
+  - "nessun H2"
+  - "V3 additiva: nessuna UPDATE sui dati esistenti"
+  - "archive/restore di un progetto non tocca i suoi task"
+  - "entita Project invariata"
+
+decisions_required_before_implementation:
+  - id: nullable
+    question: "project_id deve essere nullable in questa fase?"
+    answer: "Si. Nessun valore corretto esiste per le righe preesistenti, e un progetto sintetico di backfill sarebbe un workaround permanente. ADR-005 §1"
+  - id: existing_rows
+    question: "Come migrare i Task gia esistenti?"
+    answer: "Non si migrano. Restano project_id NULL, stato esplicito nel contratto e recuperabile via PUT /api/tasks/{id}/project. ADR-005 §2"
+  - id: archived_target
+    question: "Cosa accade associando un Task a un Project ARCHIVED?"
+    answer: "409. Un contenitore fuori dal registro operativo non riceve lavoro nuovo. Reversibile dal chiamante con restore. ADR-005 §3"
+
+forbidden:
+  - cascade_archive_restore_to_tasks
+  - automatic_deletion
+  - td_19_concurrency_control
+  - task_domain_enums
+  - planner
+  - agent_assignment
+  - graph_orchestration
+  - global_exception_handler
+  - frontend
+  - python_ai_service
+  - authentication
+  - stack_change
+  - general_refactoring
+  - task_004
+
+git_constraints:
+  work_branch: task-003-task-project-association
+  forbidden_operations:
+    - merge_to_master
+    - push
+    - remote_configuration
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - branch_deletion
+    - history_rewrite
+  never_commit:
+    - secrets
+    - real_env_files
+    - build_output
+    - local_database_data
