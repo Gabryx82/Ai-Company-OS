@@ -4,21 +4,22 @@
 AI Company OS
 
 ## Status
-PHASE 1 in corso. **TASK-002 implementata, verificata e passata in review sul branch
-`task-002-project-registry-foundation`** (2026-09-11). Review differenziale eseguita, i
-quattro rilievi correggibili (F-1…F-4) sono stati applicati sullo stesso branch; i restanti
-(F-5…F-10) sono registrati come debito. Non integrata in `master`.
+PHASE 1 in corso. **TASK-002 completata, revisionata, integrata in `master` e verificata**
+(2026-09-11). Review differenziale eseguita: i quattro rilievi correggibili (F-1…F-4) sono
+stati chiusi prima del merge, i restanti (F-5…F-10) restano aperti come TD-19…TD-24. Merge
+in fast-forward, storia lineare, suite verde su `master`.
+
+**TASK-003 non è avviata** e il suo scope non è approvato.
 
 ## Current phase
 PHASE 1 — Foundations (persistenza completata, primo dominio introdotto)
 
 ## Current task
-**TASK-002 — Core Domain Model & Project Registry Foundation.** Implementazione completa,
-suite verde, artefatti prodotti. Prossimo passo: review differenziale, poi decisione di merge.
+**Nessuna.** TASK-002 è chiusa; lo scope di TASK-003 non è stato definito né approvato.
 
 ## Last completed task
-**TASK-002 — Core Domain Model & Project Registry Foundation** (implementata, non ancora
-integrata).
+**TASK-002 — Core Domain Model & Project Registry Foundation** (implementata, revisionata,
+corretta e **merged in `master` il 2026-09-11**).
 
 Il Company OS ha il suo primo dominio reale: `Project`, tabella PostgreSQL creata da `V2`,
 con CRUD, ciclo di vita esplicito e **archiviazione al posto della cancellazione fisica**.
@@ -61,21 +62,25 @@ Artefatti: `tasks/TASK-001/*`, `tasks/TASK-001A/*`, `docs/adr/ADR-001`, `ADR-002
 - H2 rimosso dal progetto.
 
 ## Stato Git (verificato il 2026-09-11)
-- Branch corrente: **`task-002-project-registry-foundation`**, creato da `master` a `32174a1`.
-- **`master` intatto**, nessun merge di TASK-002.
+- Branch corrente: **`master`**, HEAD `c5133d3`.
+- **TASK-002 integrata in `master` con fast-forward** (`32174a1..c5133d3`): nessun merge
+  commit, storia lineare.
+- Suite rieseguita su `master` dopo il merge: **77/77 verdi**, BUILD SUCCESS.
 - **Nessun remote configurato, nessun push eseguito.** Una destinazione remota richiede approvazione esplicita.
 - Storia non riscritta: nessun force push, reset, rebase o cancellazione di branch.
 - Working tree pulito.
 
-Commit di TASK-002:
+Commit di TASK-002, ora in `master`:
 
 | Hash | Contenuto |
 |---|---|
 | `4e4fa64` | `feat(project)` — dominio `Project`, `V2`, repository/service/controller, DTO, advice |
 | `9fb3029` | `test(project)` — 40 test nuovi, rinumerazione della fixture di test a `V900` |
-| HEAD | `docs(task-002)` — ADR-004, artefatti, aggiornamento di questo file |
+| `3ddb3b8` | `docs(task-002)` — ADR-004 e artefatti di task |
+| `c5133d3` | `fix(project)` — chiusura dei rilievi di review F-1…F-4, test relativi, documentazione |
 
-Branch precedenti conservati: `task-000-audit`, `task-001-persistence-foundation`.
+Branch conservati, non cancellati: `task-000-audit`, `task-001-persistence-foundation`,
+`task-002-project-registry-foundation`.
 
 ## Decisioni architetturali
 - **ADR-001** — Spring Boot resta il control plane; il livello AI sarà un servizio Python separato, non ancora implementato. *Accettata*.
@@ -85,13 +90,20 @@ Branch precedenti conservati: `task-000-audit`, `task-001-persistence-foundation
 
 ## Prossimo passo proposto
 
-1. ~~Review differenziale di TASK-002~~ — **fatta**. F-1…F-4 corretti sul branch, F-5…F-10
-   registrati come TD-19…TD-24.
-2. **Decisione di merge** di `task-002-project-registry-foundation` in `master`. Restano
-   aperte, come domande e non come difetti, le tre scelte di contratto in
-   `tasks/TASK-002/HANDOFF.md`: `archive` non idempotente, `GET` senza filtro che include
-   gli archiviati, advice limitato a un controller.
-3. Solo dopo, definizione dello scope di **TASK-003**.
+1. ~~Review differenziale di TASK-002~~ — **fatta**. F-1…F-4 chiusi, F-5…F-10 registrati come
+   TD-19…TD-24.
+2. ~~Decisione di merge~~ — **fatta**: fast-forward in `master`, suite verde.
+3. **Definizione e approvazione dello scope di TASK-003.** Non ancora avvenuta.
+
+Restano aperte **tre scelte di contratto**, come domande di progetto e non come difetti —
+sono decisioni deliberate, motivate in `docs/adr/ADR-004-*.md` e in
+`tasks/TASK-002/HANDOFF.md`, e valgono finché nessuno decide altrimenti:
+
+| Scelta | Domanda aperta |
+|---|---|
+| `archive` non idempotente | Riarchiviare risponde `409`. Comodità per il client contro verificabilità della macchina a stati |
+| `GET /api/projects` senza filtro include gli archiviati | Niente filtro implicito, al prezzo di richiedere sempre `?status=ACTIVE` per il caso d'uso più frequente |
+| Advice limitato a `ProjectController` | Due forme di errore coesistono nell'API finché TD-07 non viene affrontato |
 
 Candidati naturali per TASK-003, **nessuno approvato**:
 
@@ -166,5 +178,6 @@ AI Company OS will progressively include:
 - 3D Omniverse integration
 
 ## Immediate goal
-**Review di TASK-002 e decisione di merge.** TASK-003 **non è avviata** e il suo scope non è
-approvato.
+**Definizione dello scope di TASK-003.** TASK-002 è chiusa e integrata; TASK-003 **non è
+avviata** e il suo scope non è approvato. Prima di scegliere la relazione `Task` → `Project`
+va sciolto **TD-19**: è quella task a dare ad `archive`/`restore` effetti su entità figlie.
