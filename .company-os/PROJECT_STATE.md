@@ -4,21 +4,24 @@
 AI Company OS
 
 ## Status
-PHASE 1 in corso. **TASK-003 implementata, revisionata e corretta sul branch
-`task-003-task-project-association`** (2026-09-12). Review indipendente eseguita: i due
-rilievi obbligatori (M-1, M-2, entrambi di qualità dei test) sono stati chiusi e verificati
-per mutazione; i LOW restano aperti, due dei quali registrati come TD-26 e TD-27. Suite
-completa verde (**109 test**). Nessun merge, nessun push.
+PHASE 1 in corso. **TASK-003 completata, revisionata, corretta e integrata in `master`**
+(2026-09-12). Review indipendente eseguita: i due rilievi obbligatori (M-1, M-2, entrambi di
+qualità dei test) chiusi e verificati per mutazione prima del merge; i LOW restano aperti,
+due dei quali registrati come TD-26 e TD-27. Merge in fast-forward, storia lineare, suite
+verde su `master` (**109 test**).
 
-TASK-002 resta completata, revisionata e integrata in `master`.
+**TASK-004 non è avviata** e il suo scope non è approvato.
 
 ## Current phase
 PHASE 1 — Foundations (persistenza completata, primo dominio introdotto, prima relazione di
 dominio introdotta)
 
 ## Current task
-**TASK-003 — Task → Project Association Foundation.** Implementata, revisionata, corretta,
-**non integrata**. Branch `task-003-task-project-association`, creato da `master` (`c73fa39`).
+**Nessuna.** TASK-003 è chiusa; lo scope di TASK-004 non è stato definito né approvato.
+
+## Last completed task
+**TASK-003 — Task → Project Association Foundation** (implementata, revisionata, corretta e
+**merged in `master` il 2026-09-12**).
 
 Introduce la prima relazione persistente del Company OS: `Task` → `Project`, con chiave
 esterna PostgreSQL creata da `V3`, mapping JPA unidirezionale, API di assegnazione e listato
@@ -48,7 +51,7 @@ API nuova o modificata:
 
 Artefatti: `tasks/TASK-003/*`, `docs/adr/ADR-005-task-project-association.md`.
 
-## Last completed task
+## Task precedenti
 **TASK-002 — Core Domain Model & Project Registry Foundation** (implementata, revisionata,
 corretta e **merged in `master` il 2026-09-11**).
 
@@ -82,32 +85,37 @@ Artefatti: `tasks/TASK-001/*`, `tasks/TASK-001A/*`, `docs/adr/ADR-001`, `ADR-002
 
 ## Stato del sistema
 - Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`, porta su loopback.
-- Schema: di proprietà di **Flyway** (`db/migration`, storia `flyway_schema_history`), oggi a **`V3`** sul branch di TASK-003 e **`V2`** in `master`; Hibernate in `validate`. Una colonna mancante blocca l'avvio; la perdita di un `NOT NULL` **no** — delimitazione chiarita dalla review (R4).
-- Tabelle: `agents`, `tasks`, **`projects`**. Dal branch di TASK-003, `tasks.project_id` nullable con chiave esterna `tasks_project_id_fkey` verso `projects(id)`, senza `ON DELETE`, e indice `tasks_project_id_idx`.
+- Schema: di proprietà di **Flyway** (`db/migration`, storia `flyway_schema_history`), oggi a **`V3`** in `master`; Hibernate in `validate`. Una colonna mancante blocca l'avvio; la perdita di un `NOT NULL` **no** — delimitazione chiarita dalla review (R4).
+- Tabelle: `agents`, `tasks`, **`projects`**. Da `V3`, `tasks.project_id` nullable con chiave esterna `tasks_project_id_fkey` verso `projects(id)`, senza `ON DELETE`, e indice `tasks_project_id_idx`.
 - Seed di sviluppo: **stream Flyway separato** (`db/dev/V1`, storia `flyway_dev_seed_history`), applicato solo dal profilo `dev` da `DevSeedFlywayConfiguration`. Lo stream di schema è identico in tutti i profili (ADR-003).
 - Transizione automatica in `dev` per i database che contengono ancora `V1000`: la riga legacy viene rimossa dalla storia di schema, i dati restano.
 - Profili: `dev` (default), `test` (Testcontainers), `prod` (sole variabili d'ambiente).
 - API: DTO con Bean Validation su `agents`, `tasks` e `projects`. `POST /api/tasks {}` → `400`. `POST /api/projects {}` → `400` con elenco dei campi. Creazione valida → `201` + `Location`.
-- Contratto di errore: `ProblemDetail` sotto `/api/projects` e — dal branch di TASK-003 — sulle sole risposte di errore **introdotte da TASK-003** sotto `/api/tasks` e `/api/projects/{id}/tasks`. Gli endpoint preesistenti di `agents` e `tasks` conservano il default di Spring, validazione inclusa. Disomogeneità nota e testata, si chiude con TD-07.
-- Test: **77** in `master`, **109** sul branch di TASK-003 dopo le correzioni della review, tutti contro PostgreSQL reale tranne i 3 strutturali sull'advice. `./mvnw -B clean test` → BUILD SUCCESS in entrambi.
+- Contratto di errore: `ProblemDetail` sotto `/api/projects` e sulle sole risposte di errore **introdotte da TASK-003** sotto `/api/tasks` e `/api/projects/{id}/tasks`. Gli endpoint preesistenti di `agents` e `tasks` conservano il default di Spring, validazione inclusa. Disomogeneità nota e testata, si chiude con TD-07.
+- Test: **109** in `master` (erano 77), tutti contro PostgreSQL reale tranne i 3 strutturali sull'advice. `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso dal progetto.
 
 ## Stato Git (verificato il 2026-09-12)
-- Branch corrente: **`task-003-task-project-association`**, creato da `master` (`c73fa39`).
-- **Nessun merge, nessun push.** `master` è intatto a `c73fa39`.
-- **Nessun remote configurato.** Una destinazione remota richiede approvazione esplicita.
+- Branch corrente: **`master`**, HEAD `d024a27`.
+- **TASK-003 integrata in `master` con fast-forward** (`c73fa39..d024a27`): nessun merge
+  commit, storia lineare.
+- Suite rieseguita su `master` dopo il merge: **109/109 verdi**, BUILD SUCCESS.
+- **Nessun remote configurato, nessun push eseguito.** Una destinazione remota richiede
+  approvazione esplicita.
 - Storia non riscritta: nessun force push, reset, rebase o cancellazione di branch.
-- Suite sul branch di TASK-003: **109/109 verdi**, BUILD SUCCESS.
+- Working tree pulito.
 
-TASK-002 resta integrata in `master` con fast-forward (`32174a1..c5133d3`), storia lineare,
-suite verde:
+Commit di TASK-003, ora in `master`:
 
 | Hash | Contenuto |
 |---|---|
-| `4e4fa64` | `feat(project)` — dominio `Project`, `V2`, repository/service/controller, DTO, advice |
-| `9fb3029` | `test(project)` — 40 test nuovi, rinumerazione della fixture di test a `V900` |
-| `3ddb3b8` | `docs(task-002)` — ADR-004 e artefatti di task |
-| `c5133d3` | `fix(project)` — chiusura dei rilievi di review F-1…F-4, test relativi, documentazione |
+| `967690c` | `feat(task)` — relazione `Task` → `Project`, `V3`, mapping JPA, API di assegnazione, advice ristretto |
+| `f37cde6` | `test(task)` — 30 test nuovi, incluso l'upgrade `V2` → `V3` su database popolato |
+| `566ea83` | `docs(task-003)` — ADR-005 e artefatti di task |
+| `d024a27` | `test(task)` — chiusura dei rilievi di review M-1 e M-2, verificati per mutazione |
+
+Prima, in `master`: TASK-002 integrata in fast-forward (`32174a1..c5133d3`), storia lineare,
+suite verde — `4e4fa64`, `9fb3029`, `3ddb3b8`, `c5133d3`.
 
 Branch conservati, non cancellati: `task-000-audit`, `task-001-persistence-foundation`,
 `task-002-project-registry-foundation`, `task-003-task-project-association`.
@@ -123,8 +131,8 @@ Branch conservati, non cancellati: `task-000-audit`, `task-001-persistence-found
 
 1. ~~Review differenziale di TASK-003~~ — **fatta**. M-1 e M-2 chiusi e verificati per
    mutazione, LOW-1…LOW-6 non corretti, TD-26 e TD-27 registrati.
-2. **Decisione di merge di TASK-003.**
-3. Definizione dello scope di TASK-004. **Non ancora avvenuta.**
+2. ~~Decisione di merge di TASK-003~~ — **fatta**: fast-forward in `master`, suite verde.
+3. **Definizione e approvazione dello scope di TASK-004.** Non ancora avvenuta.
 
 Candidati per TASK-004, **nessuno approvato**:
 
@@ -217,12 +225,11 @@ AI Company OS will progressively include:
 - 3D Omniverse integration
 
 ## Immediate goal
-**Decisione di merge di TASK-003.** La task è implementata, revisionata e corretta sul
-branch `task-003-task-project-association`, suite verde a 109 test, upgrade `V2 → V3`
-verificato due volte: in Testcontainers su un database popolato fermato a `V2`, e sul volume
-di sviluppo reale `aicompany_postgres_data`. TASK-004 **non è avviata** e il suo scope non
-è approvato.
+**Definizione dello scope di TASK-004.** TASK-003 è chiusa e integrata; TASK-004 **non è
+avviata** e il suo scope non è approvato.
 
 Il nodo successivo, qualunque sia la task che lo affronterà, è la cascata
 `archive`/`restore` verso i task: richiede di sciogliere **TD-19** e **TD-25** prima di
-scriverne il codice, non dopo.
+scriverne il codice, non dopo. È anche il motivo per cui la relazione introdotta da TASK-003
+è unidirezionale — senza una collezione mappata su `Project`, la cascata non può arrivare
+per distrazione.
