@@ -10,14 +10,40 @@ qualità dei test) chiusi e verificati per mutazione prima del merge; i LOW rest
 due dei quali registrati come TD-26 e TD-27. Merge in fast-forward, storia lineare, suite
 verde su `master` (**109 test**).
 
-**TASK-004 non è avviata** e il suo scope non è approvato.
+**TASK-004: scope definito e approvato il 2026-09-12. Implementazione non avviata** — nessuna
+riga di Java scritta, nessun branch creato.
 
 ## Current phase
 PHASE 1 — Foundations (persistenza completata, primo dominio introdotto, prima relazione di
 dominio introdotta)
 
 ## Current task
-**Nessuna.** TASK-003 è chiusa; lo scope di TASK-004 non è stato definito né approvato.
+**TASK-004 — Archival Consistency & Project Lock Protocol.** Stato: **APPROVED, non avviata**.
+
+Chiude l'incoerenza lasciata dichiarata da ADR-005 §4: oggi l'archiviazione di un progetto è
+una barriera in entrata (`409` su chi vuole entrare) e una porta aperta in uscita (`200` a chi
+sposta un task fuori da un progetto archiviato).
+
+Decisioni approvate, motivate in **ADR-006**:
+
+| Decisione | Contenuto |
+|---|---|
+| Consistenza **derivata** | `archive`/`restore` continuano a scrivere **una sola riga**, la propria: zero `UPDATE` su `tasks`. Cambia la regola, non il dato — un task il cui progetto è `ARCHIVED` non si sposta. Così `restore` è l'inverso esatto **per costruzione**, senza nessuna memoria da tenere |
+| Congelamento | Scrittura → `409`; letture → `200`, invariate. `PUT` verso lo **stesso** progetto archiviato → `200` no-op: il congelamento riguarda le mutazioni, e una conferma non muta niente |
+| Protocollo di lock **L1–L7** | La riga del progetto è il punto di serializzazione. Chi **cambia** lo stato prende `FOR UPDATE` (L1); chi lo **legge per agire** prende `FOR SHARE` su **ogni** riga da cui dipende (L2) — destinazione sola per creazione e assegnazione da `NULL` (L3), **origine e destinazione** per una riassegnazione (L4); acquisizione multi-riga in **ordine di id crescente** (L5); le letture non bloccano (L6); il protocollo è **universale** per ogni write path presente o futuro che dipende da `Project.status` (L7) |
+| Nessuna migrazione | Lo schema resta a **`V3`**. Niente si materializza, il contratto non cambia, e «nessun task in un progetto archiviato» sarebbe comunque un invariante falso (ADR-005 §4) |
+| Contratto invariato | `TaskResponse` resta identico a TASK-003. La scopribilità dello stato congelato è **fuori scope**: nessun `projectStatus` |
+| Nessun `503` | Lock bloccanti ordinari: nessun timeout, nessun retry, nessun codice di stato nuovo |
+
+Un solo cambio di contratto osservabile: `PUT /api/tasks/{id}/project` passa da `200` a `409`
+quando **sposta** un task fuori da un progetto archiviato.
+
+Perché pessimistico e non `@Version`: `@Version` **non chiude TD-25** — l'assegnazione non
+scrive la riga del progetto, non c'è versione da confrontare — richiede una migrazione, e
+trasformerebbe in `409` due assegnazioni concorrenti che non sono in conflitto.
+
+Artefatti: `tasks/TASK-004/TASK.md`, `CONTEXT.yaml`, `IMPLEMENTATION.md`,
+`docs/adr/ADR-006-archival-consistency-and-project-serialization.md`.
 
 ## Last completed task
 **TASK-003 — Task → Project Association Foundation** (implementata, revisionata, corretta e
@@ -125,6 +151,7 @@ Branch conservati, non cancellati: `task-000-audit`, `task-001-persistence-found
 - **ADR-002** — PostgreSQL con schema di proprietà di Flyway, verificato su database reale. *Accettata, parzialmente superata da ADR-003*.
 - **ADR-003** — Il seed di sviluppo è uno stream Flyway separato dallo schema, con tabella di storia propria. *Accettata*.
 - **ADR-004** — Project Registry: `Project` è un'entità autonoma senza relazioni in TASK-002; insieme di stati chiuso imposto due volte (enum + `CHECK`); si archivia invece di cancellare; transizione illegale → `409`; unicità del nome garantita dal database, con il service che ne usa la stessa normalizzazione; un progetto archiviato non è modificabile (§8); contratto di errore limitato al modulo. *Accettata*.
+- **ADR-006** — Coerenza di `archive`/`restore` verso i task, e protocollo di lock sul progetto: la consistenza è **derivata**, `archive` non scrive nessuna riga di `tasks` e `restore` è l'inverso esatto per costruzione; un task in un progetto archiviato è congelato in scrittura e leggibile, mentre il `PUT` idempotente verso lo stesso progetto resta `200` no-op; la riga del progetto è l'unico punto di serializzazione, con lock esclusivo per chi cambia lo stato e condiviso per chi lo legge per agire, acquisizione multi-riga in ordine di id crescente e clausola di chiusura universale; nessuna migrazione, contratto pubblico invariato, nessun `503` né policy di timeout. *Accettata (approvata il 2026-09-12), **non ancora implementata***.
 - **ADR-005** — Relazione `Task` → `Project`: `project_id` nullable in questa fase, con la ragione dichiarata; i task preesistenti non si migrano e restano senza progetto; associare a un progetto `ARCHIVED` è `409`; `archive`/`restore` **non** hanno effetti sui task, e la relazione è unidirezionale proprio perché la cascata resti una decisione da scrivere e non un flag; chiave esterna senza `ON DELETE`; `PUT` sull'associazione idempotente; solo le risposte di errore nuove parlano `ProblemDetail`. *Accettata*.
 
 ## Prossimo passo proposto
@@ -132,17 +159,20 @@ Branch conservati, non cancellati: `task-000-audit`, `task-001-persistence-found
 1. ~~Review differenziale di TASK-003~~ — **fatta**. M-1 e M-2 chiusi e verificati per
    mutazione, LOW-1…LOW-6 non corretti, TD-26 e TD-27 registrati.
 2. ~~Decisione di merge di TASK-003~~ — **fatta**: fast-forward in `master`, suite verde.
-3. **Definizione e approvazione dello scope di TASK-004.** Non ancora avvenuta.
+3. ~~Definizione e approvazione dello scope di TASK-004~~ — **fatta** (2026-09-12). Scelto il
+   nodo della cascata `archive`/`restore`, nella forma **derivata**; TD-19 e TD-25 sciolti
+   *prima* di scriverne il codice, come la condizione richiedeva.
+4. **Implementazione di TASK-004.** Non ancora avviata. Branch proposto:
+   `task-004-archival-consistency`, da `master` (`d5ff121`).
 
-Candidati per TASK-004, **nessuno approvato**:
+Candidati non scelti, che restano sul tavolo per le task successive:
 
 | Candidato | Nota |
 |---|---|
-| Cascata `archive`/`restore` da `Project` a `Task` | È il nodo successivo naturale. **Richiede di sciogliere prima TD-19 e TD-25**: dal momento in cui `archive` riscrive anche i task, il lost update smette di essere un `200` di troppo |
 | `project_id` verso `NOT NULL` | Richiede prima un percorso che assegni tutto ciò che è rimasto scoperto, e una migrazione che lo verifichi |
 | Enum di dominio su `Task.status` / `priority` | Cambio di contratto osservabile, da dichiarare |
 | `GET /api/tasks/{id}` | LOW della review TASK-001, ancora aperto |
-| TD-07 — contratto di errore uniforme | Oggi tre forme convivono: `ProblemDetail` sotto `/api/projects`, `ProblemDetail` sulle sole risposte nuove sotto `/api/tasks`, il default di Spring altrove |
+| TD-07 — contratto di errore uniforme | Oggi tre forme convivono: `ProblemDetail` sotto `/api/projects`, `ProblemDetail` sulle sole risposte nuove sotto `/api/tasks`, il default di Spring altrove. **Assorbirà TD-20, TD-27 e TD-29** |
 | Task documentale | Chiude R3/R5/R6/R7, le correzioni ai file `docs/audit/*` di TASK-000 e `docs/RUNNING.md`, che non documenta né `/api/projects` né gli endpoint di TASK-003 |
 
 Restano aperte le **tre scelte di contratto** di TASK-002 — `archive` non idempotente,
@@ -175,6 +205,27 @@ TD-04 sicurezza, TD-07 gestione errori, TD-08 `MasterOrchestrator`, TD-11 CORS, 
 | **TD-26** | **Il path lazy non è esercitato fuori da una transazione.** Tutte le letture di produzione risolvono il progetto con un `join fetch`, quindi `Task.project` viene creato come proxy ma inizializzato solo dentro `TaskProjectRelationPersistenceTest.associationSurvivesAWriteAndReadCycle`. Nessun test copre il caso che in produzione fallirebbe davvero: una query senza `join fetch` il cui risultato viene letto a contesto di persistenza chiuso. La prossima repository method scritta senza `join fetch` produrrà `LazyInitializationException` a runtime e la suite resterà verde |
 | **TD-27** | **Path variable non numerico: due forme di errore sullo stesso endpoint.** `GET /api/projects/abc/tasks` e `PUT /api/tasks/abc/project` rispondono `400` con la forma di default di Spring, mentre `GET /api/projects/999/tasks` risponde `ProblemDetail`. Stessa rotta, due dialetti, a seconda che l'identificatore sia sbagliato o assente. Stessa famiglia di TD-20: **da affrontare insieme alla normalizzazione futura degli errori (TD-07)**, non da sola |
 | **TD-25** | **Finestra di concorrenza sull'assegnazione.** Fra il controllo «il progetto è `ACTIVE`» e il `commit` dell'assegnazione, un altro thread può archiviare il progetto: il task finisce attaccato a un progetto archiviato. Oggi la conseguenza si esaurisce lì — è uno stato che il sistema già ammette, perché un progetto si archivia liberamente con task dentro (ADR-005 §4) — e nessuna regola successiva lo usa. **Va chiusa insieme a TD-19, con lo stesso meccanismo**, nel momento in cui `archive` acquisterà effetti sui figli |
+
+### Debito e TASK-004 (scope approvato, **implementazione non avviata**)
+
+Nulla di quanto segue è ancora chiuso: **TD-19, TD-24 e TD-25 restano `OPEN` a oggi**. La
+tabella registra l'esito previsto dallo scope approvato, così che la contabilità sia
+verificabile alla chiusura invece che ricostruita a posteriori.
+
+| ID | Stato oggi | Esito previsto alla chiusura di TASK-004 |
+|---|---|---|
+| **TD-25** | OPEN | **CLOSED**, interamente: le regole L2+L3+L4 rendono impossibile che un task risulti assegnato, al commit, a un progetto che era già `ARCHIVED` |
+| **TD-19** | OPEN | **RESOLVED nella sola componente (a)**, il ciclo di vita: L1 serializza le transizioni, e il lost update sui figli che TD-19 anticipava non può esistere perché `archive` non scrive figli. Il testo del debito andrà aggiornato dichiarando che la componente (b) è uscita verso TD-28 |
+| **TD-24** | OPEN | **CLOSED se e solo se AC-18 passa** — test strutturale, verificato per mutazione, che il lookup delle scritture di `ProjectService` è privato e privo di `@Transactional`. Se non passa, **resta `OPEN` e non blocca la chiusura di TASK-004** |
+| **TD-26** | OPEN | invariato. Diventa marginalmente più rilevante — la nuova guardia legge `task.getProject()` — ma sempre dentro la transazione del service |
+
+Debito **registrato in approvazione**, da iscrivere formalmente alla chiusura della task:
+
+| ID | Gravità | Contenuto |
+|---|---|---|
+| **TD-28** | — | Componente (b) di TD-19, estratta perché è un problema di natura diversa: `PUT /api/projects/{id}` resta esposto alla **sovrascrittura con dati stantii**. Il lock di riga lo serializza ma non lo rileva — il secondo scrittore sovrascrive con un corpo composto senza conoscere il primo. Richiede concorrenza ottimistica **nel contratto HTTP** (`ETag`/`If-Match`, o un numero di versione esposto): decisione sull'API, non sul database |
+| **TD-29** | **MINOR**, subordinato a **TD-07** | Assenza di un **contratto API normalizzato** per gli errori infrastrutturali di concorrenza e locking: un deadlock o una cancellazione amministrativa affiora con la forma di errore di default, come ogni altro errore infrastrutturale oggi. **Non implica timeout, retry o `503`** — è una questione di forma della risposta, non di policy. Si chiude dentro TD-07, insieme a TD-20 e TD-27 |
+| **TD-30** | **MINOR** | **Limite dichiarato del modello.** Il protocollo serializza il *progetto*, non il *task*: due riassegnazioni concorrenti dello stesso task — `A → B` e `A → C` — restano **last-write-wins**, perché entrambe prendono `FOR SHARE` sulle righe corrette e i due lock non conflittano. TASK-004 garantisce la coerenza fra `Project.status` e le scritture sui task, **non** la concorrenza sul task stesso. **Da non confondere con TD-25**, che era una violazione di invariante — un task attaccato a un progetto archiviato — mentre questa è una corsa fra due chiamanti che vogliono cose diverse, con uno stato finale sempre valido. Parente di TD-28: si chiude con un controllo di concorrenza sull'entità (`@Version` su `Task`) o sul contratto (`If-Match` sull'associazione) |
 
 Rilievi della review TASK-001 **ancora aperti**: **R3** (`.env` configura Compose ma non il
 processo Maven), **R5** (`server.address` non vincolato a loopback), **R6** (tag immagine
@@ -225,11 +276,20 @@ AI Company OS will progressively include:
 - 3D Omniverse integration
 
 ## Immediate goal
-**Definizione dello scope di TASK-004.** TASK-003 è chiusa e integrata; TASK-004 **non è
-avviata** e il suo scope non è approvato.
+**Implementazione di TASK-004.** Lo scope è approvato (2026-09-12) e l'implementazione **non è
+avviata**: nessuna riga di Java, nessun branch, working tree con i soli artefatti di scope.
 
-Il nodo successivo, qualunque sia la task che lo affronterà, è la cascata
-`archive`/`restore` verso i task: richiede di sciogliere **TD-19** e **TD-25** prima di
-scriverne il codice, non dopo. È anche il motivo per cui la relazione introdotta da TASK-003
-è unidirezionale — senza una collezione mappata su `Project`, la cascata non può arrivare
-per distrazione.
+Primo passo: branch `task-004-archival-consistency` da `master` (`d5ff121`), poi i test di
+concorrenza **prima** del codice — AC-9 e AC-10 devono fallire sul comportamento di oggi. Se
+passano subito è sbagliato il test, non il codice.
+
+L'ordine di lavoro non è cosmetico: i passi che chiudono **TD-19(a)** e **TD-25** vengono
+*prima* del passo che introduce la regola di congelamento, perché è quella la condizione che
+ADR-005 §4 poneva — sciogliere i due debiti prima di scrivere il codice della cascata, non
+dopo. È anche il motivo per cui la relazione introdotta da TASK-003 è unidirezionale: senza una
+collezione mappata su `Project`, la cascata non può arrivare per distrazione.
+
+Due condizioni di stop valgono come scritte in `tasks/TASK-004/CONTEXT.yaml`: se emerge la
+necessità di una **migrazione**, o se `PESSIMISTIC_READ` risulta mappato a `FOR UPDATE` dal
+dialetto (AC-11 rosso), la task si ferma e la cosa torna in approvazione invece di essere
+aggirata nel codice.
