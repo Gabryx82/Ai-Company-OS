@@ -367,6 +367,101 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
     }
 
     // ------------------------------------------------------------------
+    // TD-30 -- the protocol serialises the project, not the task.
+    // ------------------------------------------------------------------
+
+    /**
+     * The edge case TD-30 points at, pushed one step further than TD-30 states it.
+     *
+     * <p>A task T sits in project A. One transaction starts moving it to B, reads
+     * its source as A, finds A ACTIVE, and stops short of committing. Meanwhile
+     * somebody else moves T into C and commits, and C is then archived and that
+     * commits too. Only then does the first transaction commit.
+     *
+     * <p>At the moment that write lands, T belongs to C and C is ARCHIVED -- and
+     * the frozen rule was never evaluated against C, because the transaction that
+     * is writing looked at A. The guard is not bypassed by force; it is bypassed
+     * by <em>staleness</em>.
+     *
+     * <p>This is not the same thing TD-30 currently describes. TD-30 says two
+     * concurrent reassignments of the same task are last-write-wins, and calls
+     * that a race between callers with a valid end state. Here the end state is
+     * <em>not</em> valid under TASK-004's own rules: a write committed against a
+     * task whose project was archived, which invariant I-3 forbids outright.
+     *
+     * <p>Written against the protocol as approved. If a task row lock is ever
+     * added, this interleaving stops being reachable and the test has to be
+     * restated in terms of the second transaction blocking.
+     */
+    @Test
+    void aStaleReassignmentMustNotCommitAgainstATaskThatMeanwhileMovedIntoAnArchivedProject() throws Exception {
+
+        Long projectA = projectRepository.saveAndFlush(new Project("Company OS", null)).getId();
+        Long projectB = projectRepository.saveAndFlush(new Project("Planner", null)).getId();
+        Long projectC = projectRepository.saveAndFlush(new Project("Model Gateway", null)).getId();
+
+        Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
+        newTransaction().execute(status -> taskService.assignToProject(taskId, projectA));
+
+        CountDownLatch staleWriterHasDecided = new CountDownLatch(1);
+        CountDownLatch theWorldHasMovedOn = new CountDownLatch(1);
+        AtomicReference<Throwable> staleWriterFailure = new AtomicReference<>();
+
+        Future<?> staleWriter = threads.submit(() -> {
+            try {
+                newTransaction().execute(status -> {
+
+                    // Reads T, sees its project is A, sees A is ACTIVE, decides.
+                    // Everything this transaction knows about the world is fixed here.
+                    taskService.assignToProject(taskId, projectB);
+
+                    staleWriterHasDecided.countDown();
+                    awaitAtMost(theWorldHasMovedOn);
+                    return null;
+                });
+            } catch (Throwable failure) {
+                staleWriterFailure.set(unwrap(failure));
+            }
+        });
+
+        awaitOrFail(staleWriterHasDecided, "the stale writer to decide against project A");
+
+        // The world moves on underneath it, in two committed steps.
+        newTransaction().execute(status -> taskService.assignToProject(taskId, projectC));
+        newTransaction().execute(status -> projectService.archive(projectC));
+
+        // The state the stale write is about to land on top of.
+        Long projectOnTheEveOfTheStaleCommit = assignedProjectIdOf(taskId);
+        String statusOnTheEveOfTheStaleCommit = statusOf(projectC);
+
+        theWorldHasMovedOn.countDown();
+        staleWriter.get(TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+        assertThat(projectOnTheEveOfTheStaleCommit)
+                .as("fixture: the task must really be in C before the stale transaction commits")
+                .isEqualTo(projectC);
+
+        assertThat(statusOnTheEveOfTheStaleCommit)
+                .as("fixture: C must really be archived before the stale transaction commits")
+                .isEqualTo("ARCHIVED");
+
+        assertThat(assignedProjectIdOf(taskId))
+                .as("""
+                    I-3: a task whose project is ARCHIVED is frozen for writes. At the instant \
+                    this write committed, the task belonged to C and C was archived, so the \
+                    write had to be refused -- and the task had to stay in C. A transaction \
+                    that evaluated the frozen rule against the project the task used to be in \
+                    has not obeyed the rule, it has outrun it. Locking the project rows cannot \
+                    catch this: the stale writer holds the rows it read, and C is not one of \
+                    them.""")
+                .isEqualTo(projectC);
+
+        assertThat(staleWriterFailure.get())
+                .as("the stale write had to fail, not succeed")
+                .isNotNull();
+    }
+
+    // ------------------------------------------------------------------
     // Harness
     // ------------------------------------------------------------------
 
