@@ -10,7 +10,8 @@
 | `backend/src/main/java/.../task/dto/TaskProjectAssignmentRequest.java` | Body di `PUT /api/tasks/{id}/project` |
 | `backend/src/main/java/.../task/exception/TaskNotFoundException.java` | `404` |
 | `backend/src/main/java/.../task/exception/ArchivedProjectCannotReceiveTasksException.java` | `409` |
-| `backend/src/test/java/.../task/TaskProjectAssociationApiTest.java` | 20 test di contratto HTTP |
+| `backend/src/test/java/.../task/TaskProjectAssociationApiTest.java` | 19 test di contratto HTTP |
+| `backend/src/test/java/.../task/controller/TaskExceptionHandlerScopeTest.java` | 3 test strutturali: cosa l'advice intercetta e dove (fix M-1 della review) |
 | `backend/src/test/java/.../persistence/TaskProjectRelationPersistenceTest.java` | 7 test di persistenza su PostgreSQL reale |
 | `docs/adr/ADR-005-task-project-association.md` | Le tre decisioni rimandate da ADR-004 §1, più cinque conseguenti |
 | `tasks/TASK-003/{CONTEXT.yaml,TASK.md,IMPLEMENTATION.md,ARTIFACT.md,HANDOFF.md}` | Artefatti di task |
@@ -89,16 +90,18 @@ forma del `400` di `POST /api/tasks`.
 ### Suite completa
 
 ```
-./mvnw -B clean test  ->  Tests run: 107, Failures: 0, Errors: 0, Skipped: 0  -  BUILD SUCCESS
+./mvnw -B clean test  ->  Tests run: 109, Failures: 0, Errors: 0, Skipped: 0  -  BUILD SUCCESS
 ```
 
-77 test prima, **107** adesso. I 30 nuovi: 20 di contratto HTTP, 7 di persistenza, 2 di
-schema (`taskProjectRelationIsEnforcedByTheDatabase`, `tasksAreIndexedByProject`), 1 di
-upgrade incrementale.
+77 test prima, **109** dopo le correzioni della review. I 32 nuovi: 19 di contratto HTTP,
+3 strutturali sull'advice, 7 di persistenza, 2 di schema
+(`taskProjectRelationIsEnforcedByTheDatabase`, `tasksAreIndexedByProject`), 1 di upgrade
+incrementale.
 
 | Classe | Test |
 |---|---|
-| `TaskProjectAssociationApiTest` | 20 |
+| `TaskProjectAssociationApiTest` | 19 |
+| `TaskExceptionHandlerScopeTest` | 3 |
 | `TaskProjectRelationPersistenceTest` | 7 |
 | `SchemaMigrationTest` | 9 (erano 7) |
 | `MigrationStreamTest` | 8 (erano 7) |

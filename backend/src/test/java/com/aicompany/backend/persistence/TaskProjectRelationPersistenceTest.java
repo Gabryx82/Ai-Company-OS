@@ -6,6 +6,8 @@ import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.repository.TaskRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,9 @@ class TaskProjectRelationPersistenceTest extends AbstractPostgresTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @BeforeEach
     void clearEverything() {
         taskRepository.deleteAll();
@@ -47,9 +52,24 @@ class TaskProjectRelationPersistenceTest extends AbstractPostgresTest {
         task.assignTo(project);
         Long taskId = taskRepository.saveAndFlush(task).getId();
 
+        // Without this the test asserts against memory. JPA guarantees one
+        // instance per identity inside a persistence context, so findById would
+        // hand back the very object just written -- no SELECT is issued, and the
+        // test would stay green even if the column were never read back.
+        entityManager.clear();
+
         Task reloaded = taskRepository.findById(taskId).orElseThrow();
 
+        // Proof that the clear above did its job. If somebody removes it, this
+        // fails first and says why, instead of the test quietly going hollow.
+        assertThat(reloaded).isNotSameAs(task);
+
+        assertThat(reloaded.getTitle()).isEqualTo("Persisted task");
         assertThat(reloaded.getProjectId()).isEqualTo(project.getId());
+
+        // Reading through the association initialises the lazy reference against
+        // a real row: the only place the LAZY mapping is exercised, since every
+        // production read path resolves the project with a join fetch.
         assertThat(reloaded.getProject().getName()).isEqualTo("Company OS");
     }
 

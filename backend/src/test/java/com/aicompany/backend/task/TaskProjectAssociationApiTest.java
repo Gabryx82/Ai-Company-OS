@@ -342,20 +342,11 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
         assertThat(taskRepository.count()).isEqualTo(1);
     }
 
-    @Test
-    void theValidationContractOfTheTaskApiIsUnchanged() throws Exception {
-
-        // TASK-003 adds a ProblemDetail advice to the task controller, but it
-        // handles only the exceptions TASK-003 introduces. The 400 an existing
-        // client already knew keeps the shape it had: widening the error contract
-        // is TD-07, not a side effect of this task.
-        mockMvc.perform(post("/api/tasks")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors").doesNotExist())
-                .andExpect(jsonPath("$.title").doesNotExist());
-    }
+    // The guard that TASK-003 did not widen the pre-existing 400 contract is
+    // TaskExceptionHandlerScopeTest, not a request here. Asserting the shape of
+    // that body through MockMvc cannot work: Spring's default handling calls
+    // sendError without dispatching to /error, so the recorded body is empty and
+    // every doesNotExist() on it passes whatever the real contract says.
 
     @Test
     void theProjectApiKeepsNoOpinionAboutTasks() throws Exception {

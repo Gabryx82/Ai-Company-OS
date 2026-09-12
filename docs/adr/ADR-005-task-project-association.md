@@ -193,8 +193,17 @@ continua a restituire entità che il controller mappa.
 
 *Perché la differenza.* `Task.project` è `LAZY` e `spring.jpa.open-in-view` è `false`: il
 contesto di persistenza è chiuso quando il controller vede l'entità, quindi leggere
-`projectId` fuori dal service solleverebbe `LazyInitializationException`. La mappatura deve
-avvenire dove i dati ci sono. `Project` non ha associazioni e non ha il problema.
+`projectId` fuori dal service è sicuro **solo finché** la query che ha caricato il task ha
+risolto anche il progetto. `Project` non ha associazioni e non ha il problema.
+
+*Precisazione, dalla review.* Con le query di oggi la mappatura nel controller
+funzionerebbe: entrambe usano un `join fetch`, quindi il riferimento è già inizializzato e
+nessuna `LazyInitializationException` è raggiungibile. La versione originale di questo
+paragrafo affermava il contrario, ed era sbagliata. La ragione vera è più debole e va detta
+per quella che è: mappare nel service **non dipende dal fatto che ogni query futura si
+ricordi il `join fetch`**. È una difesa contro la prossima repository method scritta senza,
+non un rimedio a un fallimento inevitabile — e la differenza conta, perché una motivazione
+sbagliata è la prima cosa che qualcuno smonta quando quel codice gli sta stretto.
 
 *Effetto collaterale voluto.* Con l'entità confinata nel service, l'unico modo per cambiare
 il progetto di un task è `assignToProject`, cioè il punto in cui le regole sono.

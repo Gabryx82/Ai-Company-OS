@@ -4,9 +4,11 @@
 AI Company OS
 
 ## Status
-PHASE 1 in corso. **TASK-003 implementata sul branch `task-003-task-project-association`,
-in attesa di review differenziale** (2026-09-11). Suite completa verde (107 test). Nessun
-merge, nessun push.
+PHASE 1 in corso. **TASK-003 implementata, revisionata e corretta sul branch
+`task-003-task-project-association`** (2026-09-12). Review indipendente eseguita: i due
+rilievi obbligatori (M-1, M-2, entrambi di qualità dei test) sono stati chiusi e verificati
+per mutazione; i LOW restano aperti, due dei quali registrati come TD-26 e TD-27. Suite
+completa verde (**109 test**). Nessun merge, nessun push.
 
 TASK-002 resta completata, revisionata e integrata in `master`.
 
@@ -15,8 +17,8 @@ PHASE 1 — Foundations (persistenza completata, primo dominio introdotto, prima
 dominio introdotta)
 
 ## Current task
-**TASK-003 — Task → Project Association Foundation.** Implementata, non ancora revisionata,
-non integrata. Branch `task-003-task-project-association`, creato da `master` (`c73fa39`).
+**TASK-003 — Task → Project Association Foundation.** Implementata, revisionata, corretta,
+**non integrata**. Branch `task-003-task-project-association`, creato da `master` (`c73fa39`).
 
 Introduce la prima relazione persistente del Company OS: `Task` → `Project`, con chiave
 esterna PostgreSQL creata da `V3`, mapping JPA unidirezionale, API di assegnazione e listato
@@ -87,15 +89,15 @@ Artefatti: `tasks/TASK-001/*`, `tasks/TASK-001A/*`, `docs/adr/ADR-001`, `ADR-002
 - Profili: `dev` (default), `test` (Testcontainers), `prod` (sole variabili d'ambiente).
 - API: DTO con Bean Validation su `agents`, `tasks` e `projects`. `POST /api/tasks {}` → `400`. `POST /api/projects {}` → `400` con elenco dei campi. Creazione valida → `201` + `Location`.
 - Contratto di errore: `ProblemDetail` sotto `/api/projects` e — dal branch di TASK-003 — sulle sole risposte di errore **introdotte da TASK-003** sotto `/api/tasks` e `/api/projects/{id}/tasks`. Gli endpoint preesistenti di `agents` e `tasks` conservano il default di Spring, validazione inclusa. Disomogeneità nota e testata, si chiude con TD-07.
-- Test: **77** in `master`, **107** sul branch di TASK-003, tutti contro PostgreSQL reale. `./mvnw -B clean test` → BUILD SUCCESS in entrambi.
+- Test: **77** in `master`, **109** sul branch di TASK-003 dopo le correzioni della review, tutti contro PostgreSQL reale tranne i 3 strutturali sull'advice. `./mvnw -B clean test` → BUILD SUCCESS in entrambi.
 - H2 rimosso dal progetto.
 
-## Stato Git (verificato il 2026-09-11)
+## Stato Git (verificato il 2026-09-12)
 - Branch corrente: **`task-003-task-project-association`**, creato da `master` (`c73fa39`).
 - **Nessun merge, nessun push.** `master` è intatto a `c73fa39`.
 - **Nessun remote configurato.** Una destinazione remota richiede approvazione esplicita.
 - Storia non riscritta: nessun force push, reset, rebase o cancellazione di branch.
-- Suite sul branch di TASK-003: **107/107 verdi**, BUILD SUCCESS.
+- Suite sul branch di TASK-003: **109/109 verdi**, BUILD SUCCESS.
 
 TASK-002 resta integrata in `master` con fast-forward (`32174a1..c5133d3`), storia lineare,
 suite verde:
@@ -119,9 +121,9 @@ Branch conservati, non cancellati: `task-000-audit`, `task-001-persistence-found
 
 ## Prossimo passo proposto
 
-1. **Review differenziale di TASK-003.** I punti su cui è richiesto un parere indipendente
-   sono elencati in `tasks/TASK-003/HANDOFF.md`.
-2. Decisione di merge di TASK-003.
+1. ~~Review differenziale di TASK-003~~ — **fatta**. M-1 e M-2 chiusi e verificati per
+   mutazione, LOW-1…LOW-6 non corretti, TD-26 e TD-27 registrati.
+2. **Decisione di merge di TASK-003.**
 3. Definizione dello scope di TASK-004. **Non ancora avvenuta.**
 
 Candidati per TASK-004, **nessuno approvato**:
@@ -162,6 +164,8 @@ TD-04 sicurezza, TD-07 gestione errori, TD-08 `MasterOrchestrator`, TD-11 CORS, 
 
 | ID | Contenuto |
 |---|---|
+| **TD-26** | **Il path lazy non è esercitato fuori da una transazione.** Tutte le letture di produzione risolvono il progetto con un `join fetch`, quindi `Task.project` viene creato come proxy ma inizializzato solo dentro `TaskProjectRelationPersistenceTest.associationSurvivesAWriteAndReadCycle`. Nessun test copre il caso che in produzione fallirebbe davvero: una query senza `join fetch` il cui risultato viene letto a contesto di persistenza chiuso. La prossima repository method scritta senza `join fetch` produrrà `LazyInitializationException` a runtime e la suite resterà verde |
+| **TD-27** | **Path variable non numerico: due forme di errore sullo stesso endpoint.** `GET /api/projects/abc/tasks` e `PUT /api/tasks/abc/project` rispondono `400` con la forma di default di Spring, mentre `GET /api/projects/999/tasks` risponde `ProblemDetail`. Stessa rotta, due dialetti, a seconda che l'identificatore sia sbagliato o assente. Stessa famiglia di TD-20: **da affrontare insieme alla normalizzazione futura degli errori (TD-07)**, non da sola |
 | **TD-25** | **Finestra di concorrenza sull'assegnazione.** Fra il controllo «il progetto è `ACTIVE`» e il `commit` dell'assegnazione, un altro thread può archiviare il progetto: il task finisce attaccato a un progetto archiviato. Oggi la conseguenza si esaurisce lì — è uno stato che il sistema già ammette, perché un progetto si archivia liberamente con task dentro (ADR-005 §4) — e nessuna regola successiva lo usa. **Va chiusa insieme a TD-19, con lo stesso meccanismo**, nel momento in cui `archive` acquisterà effetti sui figli |
 
 Rilievi della review TASK-001 **ancora aperti**: **R3** (`.env` configura Compose ma non il
@@ -213,8 +217,8 @@ AI Company OS will progressively include:
 - 3D Omniverse integration
 
 ## Immediate goal
-**Review differenziale di TASK-003**, poi decisione di merge. La task è implementata sul
-branch `task-003-task-project-association`, suite verde a 107 test, upgrade `V2 → V3`
+**Decisione di merge di TASK-003.** La task è implementata, revisionata e corretta sul
+branch `task-003-task-project-association`, suite verde a 109 test, upgrade `V2 → V3`
 verificato due volte: in Testcontainers su un database popolato fermato a `V2`, e sul volume
 di sviluppo reale `aicompany_postgres_data`. TASK-004 **non è avviata** e il suo scope non
 è approvato.

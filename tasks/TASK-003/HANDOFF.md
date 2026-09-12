@@ -129,6 +129,32 @@ Debito di progetto: TD-04, TD-07, TD-08, TD-11, TD-12/TD-13, TD-14, TD-15, TD-17
 Correzioni documentali ai file `docs/audit/*` di TASK-000: ancora da applicare.
 `docs/RUNNING.md` non documenta né `/api/projects` né gli endpoint nuovi.
 
+## Esito della review
+
+Review indipendente eseguita, verdetto `FIX REQUIRED` con **un solo fix obbligatorio**.
+Nessun difetto di comportamento: migrazione, FK, indice, assenza di cascade, tutti i percorsi
+HTTP, i confini transazionali, l'assenza di N+1 e la compatibilità del contratto preesistente
+sono stati verificati su database e istanza reali, e reggono. I due rilievi corretti sono
+entrambi di qualità dei test.
+
+| Rilievo | Cosa era | Cosa è ora |
+|---|---|---|
+| **M-1** | `theValidationContractOfTheTaskApiIsUnchanged` asseriva `$.errors` e `$.title` assenti sulla risposta di `POST /api/tasks {}`. Sotto MockMvc il body è **vuoto** — `sendError` senza dispatch a `/error` — quindi ogni `doesNotExist()` passava a vuoto. L'API reale restituisce invece `errors`: il test asseriva l'assenza di qualcosa che c'è, e sarebbe rimasto verde anche riscrivendo il contratto che dichiarava di proteggere | Rimosso, sostituito da `TaskExceptionHandlerScopeTest`: 3 asserzioni strutturali sulle annotazioni, dove la decisione è presa davvero. Insieme esatto delle eccezioni gestite; nessun tipo gestito assegnabile da `MethodArgumentNotValidException` (copre anche `BindException`, `RuntimeException`, `Exception`); `assignableTypes` esattamente i due controller, con `basePackages` e `annotations` vuoti |
+| **M-2** | `associationSurvivesAWriteAndReadCycle` non eseguiva nessun read cycle. Con `@Transactional`, `findById` restituisce l'istanza del first-level cache: eseguito con `show-sql`, **nessuna `SELECT` su `tasks` dopo l'insert**. Nemmeno il path lazy veniva esercitato | `entityManager.clear()` prima della rilettura, più `isNotSameAs(task)` che fa fallire il test se qualcuno toglie il `clear`. Ora la riga viene riletta dal database e `getProject()` inizializza un proxy reale |
+
+**Entrambe le guardie sono state verificate per mutazione**, non solo eseguite: introdotto in
+`TaskExceptionHandler` un handler per `MethodArgumentNotValidException` → falliscono
+`beanValidationFailuresAreLeftToSpring` e `theAdviceHandlesOnlyTheExceptionsTaskThreeIntroduces`;
+rimosso `entityManager.clear()` → fallisce `isNotSameAs`. Mutazioni rimosse.
+
+Corretta anche **ADR-005 §9**: la motivazione originale del mapping DTO nel service diceva
+che leggere `projectId` nel controller solleverebbe `LazyInitializationException`. Non è vero
+con le query di oggi, che usano tutte `join fetch`. La ragione vera — difesa contro la
+prossima query scritta senza `join fetch` — è più debole e ora è scritta per quella che è.
+
+Rilievi LOW-1…LOW-6 **non corretti**, per scelta: due sono stati registrati come debito
+(TD-26, TD-27), gli altri sono osservazioni di forma senza conseguenza raggiungibile oggi.
+
 ## Vincolo
 
 TASK-004 **non avviata**. Nessun merge, push, remote o riscrittura di storia.
