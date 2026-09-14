@@ -362,7 +362,121 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.tasks").doesNotExist());
     }
 
+    // --- the frozen rule: ADR-006 section 2 ---------------------------------
+
+    /**
+     * AC-4. A task inside an archived project does not move, and restoring that
+     * project is what lets it move again -- the same three-request flow ADR-004
+     * section 8 already accepted for editing an archived project, applied to one
+     * more resource.
+     */
+    @Test
+    void aTaskInsideAnArchivedProjectCannotBeMovedOut() throws Exception {
+
+        Long source = activeProject("Company OS");
+        Long destination = activeProject("Planner");
+        Long taskId = unassignedTask("Wire the planner");
+        assignTo(taskId, source);
+
+        mockMvc.perform(post("/api/projects/" + source + "/archive")).andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"projectId":%d}""".formatted(destination)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Task in an archived project cannot be modified"))
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString(String.valueOf(source))));
+
+        assertThat(projectIdOf(taskId)).isEqualTo(source);
+
+        mockMvc.perform(post("/api/projects/" + source + "/restore")).andExpect(status().isOk());
+        assignTo(taskId, destination);
+
+        assertThat(projectIdOf(taskId)).isEqualTo(destination);
+    }
+
+    /**
+     * AC-5. Both projects archived: the refusal names the <em>source</em>, because
+     * the task is frozen before anybody looks at where it was going. Deterministic,
+     * not incidental -- ADR-006 section 7.
+     */
+    @Test
+    void whenBothProjectsAreArchivedTheSourceIsWhatIsReported() throws Exception {
+
+        Long source = activeProject("Company OS");
+        Long taskId = unassignedTask("Wire the planner");
+        assignTo(taskId, source);
+        mockMvc.perform(post("/api/projects/" + source + "/archive")).andExpect(status().isOk());
+
+        Long destination = archivedProject("Planner");
+
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"projectId":%d}""".formatted(destination)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Task in an archived project cannot be modified"));
+    }
+
+    /**
+     * AC-6. Confirming the project a task is already in changes nothing, so there
+     * is nothing to refuse -- even when that project is archived. ADR-005 section 5
+     * settled that a PUT declaring an already-true state is right; freezing is
+     * about mutations.
+     */
+    @Test
+    void reassigningATaskToTheArchivedProjectItIsAlreadyInIsANoOp() throws Exception {
+
+        Long projectId = activeProject("Company OS");
+        Long taskId = unassignedTask("Wire the planner");
+        assignTo(taskId, projectId);
+        mockMvc.perform(post("/api/projects/" + projectId + "/archive")).andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"projectId":%d}""".formatted(projectId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.projectId").value(projectId));
+
+        assertThat(projectIdOf(taskId)).isEqualTo(projectId);
+    }
+
+    /**
+     * AC-8 / I-10. The public shape is exactly the one TASK-003 published. The
+     * discoverability of the frozen state was deliberately left out of TASK-004
+     * (ADR-006 section 3), and this is what says so in a way that fails if somebody
+     * adds a field without deciding to.
+     */
+    @Test
+    void theTaskResponseShapeIsUnchanged() throws Exception {
+
+        Long projectId = activeProject("Company OS");
+        Long taskId = unassignedTask("Wire the planner");
+        assignTo(taskId, projectId);
+
+        mockMvc.perform(get("/api/tasks"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].*", org.hamcrest.Matchers.hasSize(6)))
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].title").exists())
+                .andExpect(jsonPath("$[0].status").exists())
+                .andExpect(jsonPath("$[0].priority").exists())
+                .andExpect(jsonPath("$[0].projectId").value(projectId))
+                .andExpect(jsonPath("$[0].projectStatus").doesNotExist());
+    }
+
     // --- helpers -----------------------------------------------------------
+
+    private Long projectIdOf(Long taskId) {
+        return taskRepository.findAllWithProject().stream()
+                .filter(task -> task.getId().equals(taskId))
+                .findFirst()
+                .orElseThrow()
+                .getProjectId();
+    }
+
 
     private Long activeProject(String name) {
         return projectRepository.saveAndFlush(new Project(name, null)).getId();

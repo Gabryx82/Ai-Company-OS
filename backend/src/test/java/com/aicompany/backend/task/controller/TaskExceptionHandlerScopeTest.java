@@ -2,6 +2,7 @@ package com.aicompany.backend.task.controller;
 
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
+import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
 import com.aicompany.backend.task.exception.TaskNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -29,7 +30,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>So the decision is pinned where it is actually made -- in the annotations --
  * rather than in a response that the test harness cannot observe.
  *
- * <p>ADR-005 §8: the advice handles only the exceptions TASK-003 introduces.
+ * <p>ADR-005 §8: the advice handles only the exceptions TASK-003 and TASK-004
+ * introduce -- and, just as pointedly, no handler for a locking failure. ADR-006
+ * §7 leaves those to the default shape rather than inventing a 503 and a retry
+ * policy for them; that is TD-29, and it belongs to TD-07.
  * Bean Validation is deliberately left to Spring, so the 400 that
  * {@code POST /api/tasks} has returned since TASK-001 keeps its shape. Making the
  * whole API speak one error dialect is TD-07, a decision of its own.
@@ -37,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TaskExceptionHandlerScopeTest {
 
     @Test
-    void theAdviceHandlesOnlyTheExceptionsTaskThreeIntroduces() {
+    void theAdviceHandlesOnlyTheArchivalExceptions() {
 
         // An exact set, so adding a handler is a deliberate act that has to come
         // with a reason -- not something that arrives with an unrelated change.
@@ -45,7 +49,8 @@ class TaskExceptionHandlerScopeTest {
                 .containsExactlyInAnyOrder(
                         TaskNotFoundException.class,
                         ProjectNotFoundException.class,
-                        ArchivedProjectCannotReceiveTasksException.class);
+                        ArchivedProjectCannotReceiveTasksException.class,
+                        ArchivedProjectTaskIsImmutableException.class);
     }
 
     @Test

@@ -74,7 +74,10 @@ class ProjectServiceConflictTest {
     @Test
     void theSameTranslationAppliesOnUpdate() {
 
-        when(repository.findById(anyLong())).thenReturn(Optional.of(new Project("Company OS", null)));
+        // findByIdForUpdate, not findById: since TASK-004 every write path takes
+        // the project row exclusively before reading its state (ADR-006 L1).
+        when(repository.findByIdForUpdate(anyLong()))
+                .thenReturn(Optional.of(new Project("Company OS", null)));
         when(repository.existsByNormalisedNameAndIdNot(anyString(), anyLong())).thenReturn(false);
         when(repository.saveAndFlush(any(Project.class)))
                 .thenThrow(integrityViolation(ProjectRepository.NAME_UNIQUE_INDEX));
@@ -89,7 +92,7 @@ class ProjectServiceConflictTest {
         Project archived = new Project("Company OS", null);
         archived.archive();
 
-        when(repository.findById(anyLong())).thenReturn(Optional.of(archived));
+        when(repository.findByIdForUpdate(anyLong())).thenReturn(Optional.of(archived));
         when(repository.existsByNormalisedNameAndIdNot(anyString(), anyLong())).thenReturn(false);
 
         assertThatThrownBy(() -> service.update(1L, "Renamed", "new description"))

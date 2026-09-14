@@ -6,6 +6,7 @@ import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.project.service.ProjectService;
 import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
+import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
 import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.task.service.TaskService;
@@ -33,10 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * The project lock protocol of TASK-004, asserted against real PostgreSQL with
  * two threads and hand-controlled transactions.
  *
- * <p><strong>These tests are expected to fail on the current baseline.</strong>
- * They describe the behaviour ADR-006 §4 specifies and the code does not have
- * yet: nothing serialises a project's lifecycle state today, so both races
- * below resolve the wrong way.
+ * <p>All four were written before the implementation and were seen to fail
+ * without it: nothing serialised a project's lifecycle state, so every race
+ * below resolved the wrong way. They are the executable form of ADR-006 §4.
  *
  * <h2>Why the transactions are opened by hand</h2>
  *
@@ -58,9 +58,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * transaction is blocked" has no positive signal -- it can only be seen as "the
  * other transaction has not reached its next latch" -- so the waiting thread
  * gives up after a bounded window and commits, which is exactly what releases the
- * lock the other one is waiting for. On the current baseline nothing blocks and
- * every latch fires, so today's run is fully deterministic and does not depend on
- * that window at all.
+ * lock the other one is waiting for. Before the protocol existed nothing blocked
+ * and every latch fired; with it, the window is the expected path in the tests
+ * where one transaction is meant to be parked behind another's lock.
  *
  * <h2>How commit order is established</h2>
  *
@@ -389,9 +389,18 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
      * <em>not</em> valid under TASK-004's own rules: a write committed against a
      * task whose project was archived, which invariant I-3 forbids outright.
      *
-     * <p>Written against the protocol as approved. If a task row lock is ever
-     * added, this interleaving stops being reachable and the test has to be
-     * restated in terms of the second transaction blocking.
+     * <p>With L0 in place the interleaving stops being reachable: the second
+     * reassignment blocks on the task row until the stale transaction commits,
+     * and then re-reads. The assertion is therefore written on the invariant
+     * rather than on the schedule -- <strong>no write commits behind the archive
+     * of the project the task belongs to</strong> -- which is falsifiable in both
+     * worlds. Before L0 the stale write commits third, after the archive. With
+     * L0 it commits first, and the outcome is an ordinary sequence of writes
+     * each of which saw fresh state.
+     *
+     * <p>The bounded wait is the expected path here, not a fallback: once the
+     * second reassignment is parked behind the task lock it cannot signal, and
+     * the stale transaction going ahead to commit is what releases it.
      */
     @Test
     void aStaleReassignmentMustNotCommitAgainstATaskThatMeanwhileMovedIntoAnArchivedProject() throws Exception {
@@ -406,10 +415,13 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
         CountDownLatch staleWriterHasDecided = new CountDownLatch(1);
         CountDownLatch theWorldHasMovedOn = new CountDownLatch(1);
         AtomicReference<Throwable> staleWriterFailure = new AtomicReference<>();
+        AtomicInteger staleWriterCommit = new AtomicInteger();
+        AtomicInteger archiveCommit = new AtomicInteger();
 
         Future<?> staleWriter = threads.submit(() -> {
             try {
                 newTransaction().execute(status -> {
+                    stampCommitOrder(staleWriterCommit);
 
                     // Reads T, sees its project is A, sees A is ACTIVE, decides.
                     // Everything this transaction knows about the world is fixed here.
@@ -428,21 +440,23 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
 
         // The world moves on underneath it, in two committed steps.
         newTransaction().execute(status -> taskService.assignToProject(taskId, projectC));
-        newTransaction().execute(status -> projectService.archive(projectC));
+        newTransaction().execute(status -> {
+            stampCommitOrder(archiveCommit);
+            return projectService.archive(projectC);
+        });
 
-        // The state the stale write is about to land on top of.
-        Long projectOnTheEveOfTheStaleCommit = assignedProjectIdOf(taskId);
-        String statusOnTheEveOfTheStaleCommit = statusOf(projectC);
+        Long projectAfterTheWorldMovedOn = assignedProjectIdOf(taskId);
+        String statusAfterTheWorldMovedOn = statusOf(projectC);
 
         theWorldHasMovedOn.countDown();
         staleWriter.get(TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-        assertThat(projectOnTheEveOfTheStaleCommit)
-                .as("fixture: the task must really be in C before the stale transaction commits")
+        assertThat(projectAfterTheWorldMovedOn)
+                .as("fixture: the task must really have been moved into C")
                 .isEqualTo(projectC);
 
-        assertThat(statusOnTheEveOfTheStaleCommit)
-                .as("fixture: C must really be archived before the stale transaction commits")
+        assertThat(statusAfterTheWorldMovedOn)
+                .as("fixture: C must really have been archived")
                 .isEqualTo("ARCHIVED");
 
         assertThat(assignedProjectIdOf(taskId))
@@ -456,9 +470,16 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
                     them.""")
                 .isEqualTo(projectC);
 
-        assertThat(staleWriterFailure.get())
-                .as("the stale write had to fail, not succeed")
-                .isNotNull();
+        if (staleWriterFailure.get() == null) {
+            assertThat(staleWriterCommit.get())
+                    .as("""
+                        I-11: the stale write committed, so it must have committed while the                         task still belonged to the project it had read -- that is, before the                         archive. Committing behind a committed archive means it wrote against                         a task that at that instant belonged to an archived project, having                         evaluated the frozen rule against a project the task had already                         left. Locking the project rows cannot catch that; locking the task                         row first (L0) can.""")
+                    .isLessThan(archiveCommit.get());
+        } else {
+            assertThat(staleWriterFailure.get())
+                    .as("the only legal refusal here is the frozen-task conflict")
+                    .isInstanceOf(ArchivedProjectTaskIsImmutableException.class);
+        }
     }
 
     // ------------------------------------------------------------------
