@@ -401,17 +401,13 @@ class ProjectApiTest extends AbstractPostgresTest {
 
     // --- other modules are untouched ---------------------------------------
 
-    @Test
-    void theProjectErrorContractDoesNotLeakIntoTheTaskApi() throws Exception {
-
-        // The advice is scoped to ProjectController, so the task endpoints keep
-        // the response shape they had before this module existed.
-        mockMvc.perform(post("/api/tasks")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors").doesNotExist());
-    }
+    // theProjectErrorContractDoesNotLeakIntoTheTaskApi lived here until TASK-005.
+    // It asserted the opposite of what is now true -- the contract does reach the
+    // task API, deliberately (ADR-007 §6) -- and its assertion was the weak one
+    // recorded as TD-21: checking only that $.errors was absent, it would have
+    // stayed green if the task API had moved to ProblemDetail without that
+    // property. What replaces it is ApiErrorContractTest, which asserts the shape
+    // everywhere instead of asserting its absence in one place.
 
     private Long createProject(String name) {
         return repository.saveAndFlush(new Project(name, null)).getId();
