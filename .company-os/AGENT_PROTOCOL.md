@@ -1,7 +1,16 @@
 # Agent Protocol
 
+> **Since 2026-09-14 the project runs in Autonomous Project Mode with Human Final Review.**
+> `.company-os/AUTONOMOUS_CHARTER.md` defines the authority and the hard stops;
+> `.company-os/AUTONOMOUS_LOOP.md` defines the working loop. Where this document and the
+> charter disagree, the charter wins — it is the newer decision. Everything here that the
+> charter does not contradict still applies.
+
 ## 1. General rule
 An agent receives one bounded task at a time and may work autonomously inside that scope.
+
+Under Autonomous Project Mode the agent also **defines** the next task itself, using the
+priority order in `AUTONOMOUS_LOOP.md` §4, and starts it without waiting.
 
 ## 2. Before working
 Read, in this order:
@@ -33,17 +42,15 @@ The active agent must NOT autonomously:
 
 Those require explicit human approval.
 
-## 4. Human-in-the-Loop
-For early non-repetitive implementation tasks:
-1. Explain the architecture and concepts.
-2. Show the intended change.
-3. Let the human validate/learn.
-4. Implement only within approved scope.
-5. Test.
-6. Present the result/diff.
-7. Human validates visually/functionally where relevant.
+## 4. Human review — where the gate is now
+**Superseded for the per-task case by `AUTONOMOUS_CHARTER.md`.** The gate is no longer before
+each task; it is `master`, and it is final.
 
-Automation can increase later for repetitive, well-tested tasks.
+Inside the loop the agent explains its reasoning in the task artifacts and the ADRs instead of
+in a conversation, and reviews its own diff adversarially (`AUTONOMOUS_LOOP.md` §2) in place of
+the human pass that used to sit there. Nothing reaches `master` without a human.
+
+The hard stops in the charter are the only points where work pauses for a person.
 
 ## 5. End-of-task mandatory artifacts
 Every completed task must contain:
