@@ -1,0 +1,72 @@
+task: TASK-007
+title: Agent Registry
+mode: implementation
+status: SELF_APPROVED
+approval: autonomous_project_mode
+decided_on: 2026-09-14
+
+selection_rationale: >
+  AUTONOMOUS_LOOP.md sezione 4, livello 4. Livelli 1-3 vuoti dopo TASK-005
+  e TASK-006. Dipendenza della target architecture: skills, tools, MCP
+  registry, model gateway e planner si appoggiano tutti agli agenti.
+
+baseline:
+  branch: task-007-agent-registry
+  base: autonomous/phase-1-foundations
+  head_at_start: d72cf19
+  suite_at_start: 137
+  schema_at_start: V3
+
+invariants:
+  - "V4 additiva: nessuna colonna rimossa, nessuna tabella creata, nessuna riga persa"
+  - "nessuna relazione fra Agent e Project o Task"
+  - "il ciclo di vita resta sul boolean active (TD-31 dichiarato)"
+  - "status e' derivato, non esiste nel database"
+  - "le decisioni di ADR-004 si applicano identiche e non si ridiscutono"
+  - "il protocollo di lock si applica (L7): L1 sulle transizioni, L6 sulle letture"
+  - "ogni errore nuovo ha il suo ApiProblem enumerato"
+  - "contratto di errore unico (ADR-007): nessun advice nuovo"
+
+forbidden:
+  - agent_project_relation
+  - agent_task_relation
+  - agent_status_enum_column
+  - dropping_the_active_column
+  - task_assignment
+  - planner
+  - routing
+  - authentication
+  - cors
+  - pagination
+  - frontend
+  - merge_to_master
+  - push
+
+debt_accounting_at_close:
+  TD-31: >
+    OPEN nuovo. Agent esprime il ciclo di vita con un booleano, Project
+    con un enum chiuso. Unificarli richiede di eliminare una colonna,
+    migrazione irreversibile che il charter mette dietro una decisione
+    umana. Da fare quando servira' un terzo stato: a quel punto la
+    migrazione va fatta comunque.
+
+hard_stop_considered:
+  what: "Portare active a uno status enum eliminando la colonna"
+  why_not: >
+    AUTONOMOUS_CHARTER.md hard stop 3 riguarda una migrazione distruttiva
+    SENZA alternativa ragionevole. L'alternativa esiste e funziona: il
+    ciclo di vita gira identico su un booleano e nessuna regola di dominio
+    cambia. Quindi non serve fermarsi a chiedere, serve non farlo.
+    Registrato come TD-31.
+
+git_constraints:
+  work_branch: task-007-agent-registry
+  integration_branch: autonomous/phase-1-foundations
+  forbidden_operations:
+    - merge_to_master
+    - push
+    - remote_configuration
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - history_rewrite
