@@ -13,18 +13,48 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 `master` è il gate umano finale e non si tocca.
 
 ## Status
-PHASE 1 in corso. **TASK-006 completata e integrata in `autonomous/phase-1-foundations`**
-(2026-09-14). Suite **137 test verdi**. Nessun failure aperto.
+**PHASE 1 — Foundations: COMPLETA.** TASK-004, TASK-005, TASK-006 e TASK-007 completate e
+integrate in `autonomous/phase-1-foundations` (2026-09-14). Suite **158 test verdi**,
+schema **`V4`**, nessun failure aperto.
+
+`FINAL_HANDOFF.md` è pronto per la review umana. **Niente è stato integrato in `master`**: quello
+resta il gate umano finale.
 
 ## Current phase
-PHASE 1 — Foundations (persistenza, primo dominio, prima relazione, **prima invariante di
-concorrenza**)
+**PHASE 1 — Foundations, completa.** Persistenza riproducibile, due registri di dominio con
+ciclo di vita, la prima relazione, la prima invariante di concorrenza, un contratto di errore
+unico, e una storia di test delle migrazioni che copre da sola le migrazioni future.
 
 ## Current task
-**Nessuna in corso.** La prossima è **TASK-007 — Agent Registry**, scelta autonomamente;
-motivazione nel «Prossimo passo».
+**Nessuna.** La fase è chiusa e il lavoro è in attesa di review umana. I candidati per PHASE 2
+sono nel «Prossimo passo».
 
 ## Last completed task
+
+**TASK-007 — Agent Registry** (2026-09-14).
+
+`Agent` era la tabella più vecchia e la meno curata: cinque colonne, nessun timestamp, nessuna
+unicità, nessuna validazione, un solo `GET`. Adesso è un registro allo stesso standard di
+`Project`: `POST`, `GET [?active=]`, `GET /{id}`, `PUT /{id}`, `activate`, `deactivate`, nessun
+`DELETE`.
+
+Le decisioni di ADR-004 sono state **applicate, non ridiscusse**. Una sola divergenza, e
+dichiarata: il ciclo di vita resta su `boolean active` invece dell'enum chiuso di `Project`,
+perché unificarlo richiederebbe di eliminare una colonna — migrazione irreversibile che il
+charter mette dietro una decisione umana quando un'alternativa ragionevole esiste, e esiste.
+**TD-31.** La divergenza è nascosta al client e non al registro: `AgentResponse` espone
+`status` **derivato**, e un test asserisce che non sia una colonna.
+
+`V4` è additiva, e ha richiesto una cosa che il piano non aveva previsto: un `DEFAULT now()` sui
+timestamp, perché il seed di sviluppo è una migrazione già applicata che inserisce senza
+fornirli, e modificarla ne cambierebbe il checksum. **Trovato dalla suite, non dal progetto.**
+
+Il protocollo di lock si applica perché **L7 dice che si applica**: due `deactivate` concorrenti
+sono un `200` e un `409`, cioè il difetto di TD-19 che arriva già chiuso sulla terza entità.
+
+Artefatti: `tasks/TASK-007/*`, `docs/adr/ADR-008-agent-registry.md`.
+
+## Task precedenti (dettaglio)
 
 **TASK-006 — Migration Test Coverage** (2026-09-14).
 
@@ -46,8 +76,6 @@ Verifica per mutazione: una `V3` che cancella righe, e una che elimina `agents`,
 il test.
 
 Artefatti: `tasks/TASK-006/*`.
-
-## Task precedenti (dettaglio)
 
 **TASK-005 — Uniform Error Contract** (2026-09-14).
 
@@ -104,9 +132,12 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 ## Stato del sistema
 
 - Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`.
-- Schema: di proprietà di **Flyway**, oggi a **`V3`**. Hibernate in `validate`.
-  **TASK-004 non ha aggiunto migrazioni.**
+- Schema: di proprietà di **Flyway**, oggi a **`V4`**. Hibernate in `validate`.
 - Tabelle: `agents`, `tasks`, `projects`. `tasks.project_id` nullable con FK senza `ON DELETE`.
+  Da `V4`: `agents.created_at` / `updated_at` (`TIMESTAMPTZ`, `NOT NULL`, `DEFAULT now()`) e
+  indice unico `agents_name_unique_idx` su `lower(name)`.
+- **Due registri di dominio** con ciclo di vita esplicito: `Project` (enum `ACTIVE`/`ARCHIVED`)
+  e `Agent` (`boolean active`, divergenza dichiarata → TD-31).
 - Seed di sviluppo: stream Flyway separato (`db/dev/V1`), profilo `dev` (ADR-003).
 - Profili: `dev` (default), `test` (Testcontainers), `prod`.
 - **Concorrenza**: protocollo di lock L0–L7 su `tasks` e `projects` (ADR-006 §4). Lock
@@ -114,15 +145,16 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 - Contratto di errore: **uno solo** (ADR-007). Ogni risposta di errore è un `ProblemDetail`
   con `type` stabile `urn:ai-company-os:problem:<slug>`, enumerato in `ApiProblem`. Un advice
   globale, `ApiExceptionHandler`. Nessuna policy di timeout o retry.
-- Test: **137** (erano 109 in `master`). `./mvnw -B clean test` → BUILD SUCCESS.
+- Test: **158** (erano 109 in `master`). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
 ## Stato Git (verificato il 2026-09-14)
 
 - **`master`**: fermo a `d5ff121`. **Gate umano finale, nessun merge autonomo.**
-- **Integration branch**: `autonomous/phase-1-foundations`, HEAD **`5d0ad8d`**.
+- **Integration branch**: `autonomous/phase-1-foundations`, HEAD **`ed8d615`** + la chiusura di TASK-007.
 - Branch di lavoro integrati in fast-forward: `task-004-archival-consistency`,
-  `task-005-uniform-error-contract`, `task-006-migration-test-coverage`.
+  `task-005-uniform-error-contract`, `task-006-migration-test-coverage`,
+  `task-007-agent-registry`.
 - **Nessun remote configurato, nessun push eseguito.**
 - Storia lineare, mai riscritta.
 
@@ -159,34 +191,33 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 - **ADR-003** — Il seed di sviluppo è uno stream Flyway separato. *Accettata*.
 - **ADR-004** — Project Registry: stati chiusi imposti due volte, si archivia invece di cancellare, transizione illegale → `409`, unicità del nome nel database, un archiviato non è modificabile (§8). *Accettata*.
 - **ADR-005** — Relazione `Task` → `Project`: `project_id` nullable, i task preesistenti non si migrano, associare a un `ARCHIVED` è `409`, relazione unidirezionale, FK senza `ON DELETE`. *Accettata*.
+- **ADR-008** — Agent Registry: le decisioni di ADR-004 si applicano identiche; il ciclo di vita resta su `boolean active` invece dell'enum, perché unificarlo richiederebbe una migrazione irreversibile che il charter mette dietro una decisione umana (TD-31); `status` è **derivato** nel contratto, così il client vede un vocabolario solo e il database un solo stato; `V4` additiva; nessuna relazione con `Project` né con `Task`; il protocollo di lock si applica per L7. *Accettata e implementata*.
 - **ADR-007** — Un solo contratto di errore per tutta l'API: advice globale che estende `ResponseEntityExceptionHandler`, `type` stabile e enumerato (`urn:ai-company-os:problem:<slug>`) come parte machine-readable del contratto, `errors` ovunque, catch-all con `detail` fisso e stack loggato, nessuna policy di timeout o retry. **Supera ADR-004 §6 e ADR-005 §8**. *Accettata e implementata*.
 - **ADR-006** — Coerenza archiviazione → task **derivata** (nessuna scrittura sui figli, `restore` inverso per costruzione), congelamento in scrittura con letture aperte, `PUT` idempotente `200` no-op, protocollo di lock **L0–L7** con ordine globale `tasks` → `projects`, nessuna migrazione, contratto invariato, nessun `503`. *Accettata e **implementata**.*
 
 ## Prossimo passo autonomo
 
-**TASK-007 — Agent Registry.**
+**Nessuno: la fase è chiusa e il gate è umano.**
 
-`AUTONOMOUS_LOOP.md` §4. I livelli 1, 2 e 3 sono vuoti: nessun invariante promesso è falso,
-nessun blocker architetturale, e il debito che il passo successivo tocca è stato chiuso da
-TASK-005 e TASK-006. Si scende al **livello 4** — dipendenze necessarie alla target
-architecture.
+`FINAL_HANDOFF.md` è pronto. Il merge in `master` non viene eseguito da nessun agente: è il
+gesto con cui un umano accetta il lavoro (`AUTONOMOUS_CHARTER.md` §8).
 
-`Agent` è oggi una tabella piatta con un solo `GET /api/agents`: nessuna validazione, nessun
-ciclo di vita, nessuna scrittura. La target architecture ci appoggia sopra Skills, Rules,
-Subagents, Tools, MCP Registry, Model Gateway e Planner — tutto quello che viene dopo assume un
-registro di agenti che oggi non esiste.
+Candidati per PHASE 2, **nessuno scelto** — la scelta spetta alla review:
 
-Portarlo allo standard di `Project` significa: migrazione `V4`, entità con ciclo di vita
-esplicito, CRUD con validazione, e nessuna relazione con `Project` — che resta una decisione a
-sé, esattamente come TASK-002 ha preceduto TASK-003.
-
-Primo passo: branch `task-007-agent-registry` dall'integration branch.
+| Candidato | Livello di priorità | Nota |
+|---|---|---|
+| **Relazione `Task` → `Agent`** | 4 | Il nodo naturale dopo il registro, come TASK-003 lo fu dopo TASK-002. Richiede prima le tre domande di dominio, come ADR-005 fece per le sue |
+| **TD-14 — CI** | 3 | 158 test, invarianti di concorrenza e guardie verificate per mutazione, e nulla che li esegua automaticamente. Richiede però un remote, che è un hard stop |
+| **TD-04 / TD-11 — sicurezza e CORS** | 3 | Tre registri con scritture e nessuna autenticazione. La superficie cresce a ogni task |
+| **TD-28 / TD-30** | 3 | Rilevazione dell'intento stantio su `Project` e su `Task`. Si chiudono insieme, con `ETag`/`If-Match` |
+| **TD-31** | — | Unificare il ciclo di vita di `Agent`. **Richiede una decisione umana**: la migrazione elimina una colonna |
 
 ## Debito aperto rilevante
 
 **Chiusi da TASK-004**: TD-19 (componente ciclo di vita), **TD-24**, **TD-25**.
 **Chiusi da TASK-005**: **TD-07**, **TD-20**, **TD-21**, **TD-27**, **TD-29**.
 **Chiusi da TASK-006**: **TD-22**, **TD-23**.
+**TASK-007** non chiude nulla e **apre TD-31**.
 
 ### Alto valore
 
@@ -194,6 +225,7 @@ Primo passo: branch `task-007-agent-registry` dall'integration branch.
 |---|---|
 | **TD-28** | `PUT /api/projects/{id}` esposto alla sovrascrittura con dati stantii. Il lock serializza ma non rileva. Richiede `ETag`/`If-Match` nel contratto HTTP |
 | **TD-30** | *(MINOR, ristretto)* Riassegnazioni concorrenti dello stesso task: last-write-wins **su stato fresco**. L0 le serializza e ciascuna applica le regole ai dati che trova; manca la **rilevazione** dell'intento stantio. Gemello di TD-28 sull'altra entità |
+| **TD-31** | *(nuovo)* `Agent` esprime il ciclo di vita con un booleano, `Project` con un enum chiuso. Unificarli richiede di **eliminare una colonna**: migrazione irreversibile, dietro una decisione umana. Nel frattempo il contratto pubblico è già uniforme, perché `status` è derivato |
 | **TD-14** | Nessuna CI. Con 136 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
 
 ### Qualità dei test e migrazioni
@@ -204,8 +236,14 @@ Primo passo: branch `task-007-agent-registry` dall'integration branch.
 
 ### Preesistente
 
-TD-04 sicurezza, TD-08 `MasterOrchestrator`, TD-11 CORS, TD-12/TD-13 dominio,
-TD-15 Lombok inutilizzato, TD-17/TD-18 `README.md`.
+TD-04 sicurezza, TD-08 `MasterOrchestrator`, TD-12/TD-13 dominio, TD-15 Lombok inutilizzato,
+TD-17/TD-18 `README.md`.
+
+**TD-11 (CORS) — superficie cambiata.** Il `@CrossOrigin` senza origine su `AgentController` è
+stato **rimosso** da TASK-007: era già TD-11, ma quel controller adesso non legge soltanto, e
+riportarlo avrebbe aperto creazione, modifica e transizioni a qualunque origine come effetto
+collaterale. Non chiude TD-11 — la policy CORS resta una decisione da prendere — ma la superficie
+oggi è più stretta di quanto il debito descrivesse.
 
 Rilievi della review TASK-001 ancora aperti: **R3** (`.env` non configura il processo Maven),
 **R5** (`server.address` non vincolato a loopback), **R6** (tag immagine mobile), **R7**
