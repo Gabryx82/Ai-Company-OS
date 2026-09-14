@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ApiProblemCoverageTest {
 
     private static final List<String> DOMAIN_EXCEPTION_PACKAGES = List.of(
+            "com.aicompany.backend.agent.exception",
             "com.aicompany.backend.project.exception",
             "com.aicompany.backend.task.exception");
 
@@ -90,6 +91,10 @@ class ApiProblemCoverageTest {
                         "unsupported-media-type",
                         "method-not-allowed",
                         "resource-not-found",
+                        "agent-not-found",
+                        "agent-name-conflict",
+                        "inactive-agent-is-immutable",
+                        "illegal-agent-state-transition",
                         "project-not-found",
                         "project-name-conflict",
                         "archived-project-is-immutable",

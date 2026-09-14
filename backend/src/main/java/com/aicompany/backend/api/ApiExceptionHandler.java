@@ -1,5 +1,9 @@
 package com.aicompany.backend.api;
 
+import com.aicompany.backend.agent.exception.AgentNameConflictException;
+import com.aicompany.backend.agent.exception.AgentNotFoundException;
+import com.aicompany.backend.agent.exception.IllegalAgentStateTransitionException;
+import com.aicompany.backend.agent.exception.InactiveAgentIsImmutableException;
 import com.aicompany.backend.project.exception.ArchivedProjectIsImmutableException;
 import com.aicompany.backend.project.exception.IllegalProjectStateTransitionException;
 import com.aicompany.backend.project.exception.ProjectNameConflictException;
@@ -82,6 +86,28 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(IllegalProjectStateTransitionException.class)
     ResponseEntity<ProblemDetail> handleIllegalTransition(IllegalProjectStateTransitionException e) {
         return respond(ApiProblem.ILLEGAL_PROJECT_STATE_TRANSITION, e.getMessage());
+    }
+
+    // --- the agent registry -----------------------------------------------
+
+    @ExceptionHandler(AgentNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleAgentNotFound(AgentNotFoundException e) {
+        return respond(ApiProblem.AGENT_NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(AgentNameConflictException.class)
+    ResponseEntity<ProblemDetail> handleAgentNameConflict(AgentNameConflictException e) {
+        return respond(ApiProblem.AGENT_NAME_CONFLICT, e.getMessage());
+    }
+
+    @ExceptionHandler(InactiveAgentIsImmutableException.class)
+    ResponseEntity<ProblemDetail> handleInactiveAgent(InactiveAgentIsImmutableException e) {
+        return respond(ApiProblem.INACTIVE_AGENT_IS_IMMUTABLE, e.getMessage());
+    }
+
+    @ExceptionHandler(IllegalAgentStateTransitionException.class)
+    ResponseEntity<ProblemDetail> handleIllegalAgentTransition(IllegalAgentStateTransitionException e) {
+        return respond(ApiProblem.ILLEGAL_AGENT_STATE_TRANSITION, e.getMessage());
     }
 
     // --- tasks and their project ------------------------------------------

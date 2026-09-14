@@ -64,6 +64,20 @@ public enum ApiProblem {
     ILLEGAL_PROJECT_STATE_TRANSITION("illegal-project-state-transition", HttpStatus.CONFLICT,
             "Illegal project state transition", "The project is not in a state that allows this"),
 
+    // --- the agent registry -----------------------------------------------
+
+    AGENT_NOT_FOUND("agent-not-found", HttpStatus.NOT_FOUND,
+            "Agent not found", "No agent with that identifier"),
+
+    AGENT_NAME_CONFLICT("agent-name-conflict", HttpStatus.CONFLICT,
+            "Agent name already in use", "Another agent already has that name"),
+
+    INACTIVE_AGENT_IS_IMMUTABLE("inactive-agent-is-immutable", HttpStatus.CONFLICT,
+            "Inactive agent is immutable", "Activate the agent before editing it"),
+
+    ILLEGAL_AGENT_STATE_TRANSITION("illegal-agent-state-transition", HttpStatus.CONFLICT,
+            "Illegal agent state transition", "The agent is not in a state that allows this"),
+
     // --- tasks and their project ------------------------------------------
 
     TASK_NOT_FOUND("task-not-found", HttpStatus.NOT_FOUND,

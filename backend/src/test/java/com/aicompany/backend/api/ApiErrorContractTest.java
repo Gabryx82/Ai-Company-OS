@@ -185,13 +185,25 @@ class ApiErrorContractTest extends AbstractPostgresTest {
                 409, "archived-project-task-is-immutable");
     }
 
-    /** AC-6. The oldest endpoint in the codebase is inside the contract too. */
+    /**
+     * AC-6. The oldest endpoint in the codebase is inside the contract too --
+     * validation, a missing resource, and the method the registry refuses.
+     *
+     * <p>Until TASK-007 this asserted 405 on POST, because the agent API had no
+     * POST at all. The registry gave it one; what it still refuses is DELETE, for
+     * the reason ADR-004 §3 gave for projects.
+     */
     @Test
     void theAgentApiIsInsideTheContract() throws Exception {
 
         problem(mockMvc.perform(post("/api/agents")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")), 405, "method-not-allowed");
+                        .content("{}")), 400, "validation-failed")
+                .andExpect(jsonPath("$.errors.name").exists());
+
+        problem(mockMvc.perform(get("/api/agents/424242")), 404, "agent-not-found");
+
+        problem(mockMvc.perform(delete("/api/agents/1")), 405, "method-not-allowed");
     }
 
     // --- helpers -----------------------------------------------------------

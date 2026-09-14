@@ -250,12 +250,18 @@ class MigrationStreamTest {
                 + "(name, description, status, created_at, updated_at) "
                 + "VALUES (?, ?, 'ACTIVE', now(), now())", "Project written before V3", null);
 
-        // 2. The upgrade under test. One migration, nothing else pending.
-        MigrateResult toV3 = schemaFlyway(schema).migrate();
+        // 2. The upgrade under test: V3 and only V3.
+        //
+        //    This used to say "migrate to head", which meant the same thing while
+        //    V3 was the head and silently stopped meaning it when V4 arrived. The
+        //    step this test is about is named now, so a later migration cannot
+        //    quietly widen what it covers. Every other step, including V3 to V4,
+        //    is covered by everyConsecutiveUpgradePreservesWhatWasAlreadyThere.
+        MigrateResult toV3 = schemaFlywayUpTo(schema, "3").migrate();
 
         assertThat(toV3.success).isTrue();
         assertThat(toV3.migrationsExecuted).isEqualTo(1);
-        assertThat(appliedSchemaVersions(schema)).isEqualTo(resolvedSchemaVersions());
+        assertThat(appliedSchemaVersions(schema)).containsExactly("1", "2", "3");
 
         // 3. The relation exists, and the rows that predate it are untouched --
         //    same values, and explicitly no project rather than an invented one
@@ -291,10 +297,72 @@ class MigrationStreamTest {
                 "task written before V3"))
                 .isInstanceOf(DataIntegrityViolationException.class);
 
-        // 5. And the stream can still move past its new head.
-        assertThat(schemaFlyway(schema, NEXT_MIGRATION_FIXTURE).migrate().migrationsExecuted)
-                .isEqualTo(1);
+        // 5. And the stream can still move forward from here: everything after
+        //    V3, plus the probe. The count is derived rather than written down,
+        //    so a V5 does not turn this into a failure about the wrong thing.
+        MigrateResult onwards = schemaFlyway(schema, NEXT_MIGRATION_FIXTURE).migrate();
+
+        assertThat(onwards.migrationsExecuted)
+                .isEqualTo(schemaVersionsPlusProbe().size() - 3);
         assertThat(appliedSchemaVersions(schema)).isEqualTo(schemaVersionsPlusProbe());
+    }
+
+    /**
+     * TASK-007, invariant I-2 -- the real V3 to V4 upgrade on a populated
+     * database, with the part the generic step test cannot see.
+     *
+     * <p>{@code everyConsecutiveUpgradePreservesWhatWasAlreadyThere} already
+     * covers this step for row and table survival, and covers it without anybody
+     * adding a case, which was the point of writing it that way. What it counts
+     * is rows; what it cannot tell is whether a backfilled column actually got a
+     * value, or whether the unique index the same migration creates would have
+     * rejected the data already there.
+     *
+     * <p>Both of those are specific to V4, so they are asserted here rather than
+     * being pushed into a test that must stay true of every migration.
+     */
+    @Test
+    void agentRegistryColumnsAreBackfilledOnAPopulatedV3Database() {
+
+        String schema = "task007_v3_to_v4";
+
+        // A database at V3, with agents that predate the new columns.
+        schemaFlywayUpTo(schema, "3").migrate();
+        assertThat(columnsOf(schema, "agents")).doesNotContain("created_at", "updated_at");
+
+        DevSeedFlyway.apply(dataSource(), schema);
+        jdbc().update("INSERT INTO \"" + schema + "\".agents (name, role, specialization, active) "
+                + "VALUES (?, ?, ?, TRUE)", "Written before V4", "Engineer", "legacy");
+
+        MigrateResult toV4 = schemaFlywayUpTo(schema, "4").migrate();
+
+        assertThat(toV4.migrationsExecuted).isEqualTo(1);
+        assertThat(columnsOf(schema, "agents")).contains("created_at", "updated_at");
+
+        // Every pre-existing row got a value. NOT NULL guarantees they are not
+        // null; what this asserts is that the backfill ran before the constraint
+        // did, rather than the migration having failed on an empty table.
+        assertThat(agentNames(schema)).contains("Written before V4").containsAll(SEEDED_AGENTS);
+        assertThat(jdbc().queryForObject(
+                "SELECT count(*) FROM \"" + schema + "\".agents "
+                        + "WHERE created_at IS NULL OR updated_at IS NULL", Integer.class))
+                .isZero();
+
+        // The timestamps carry a zone. An Instant written to a column without one
+        // loses its offset silently and comes back plausible and wrong, which is
+        // why ADR-004 section 7 asserts the type rather than trusting validate mode.
+        assertThat(jdbc().queryForObject(
+                "SELECT data_type FROM information_schema.columns "
+                        + "WHERE table_schema = ? AND table_name = 'agents' AND column_name = 'created_at'",
+                String.class, schema))
+                .isEqualTo("timestamp with time zone");
+
+        // And the index the same migration creates is real: a name differing only
+        // by case is refused from here on.
+        assertThatThrownBy(() -> jdbc().update(
+                "INSERT INTO \"" + schema + "\".agents (name, role, specialization, active) "
+                        + "VALUES (?, ?, ?, TRUE)", "WRITTEN BEFORE V4", "Engineer", "x"))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     /**
