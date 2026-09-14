@@ -1,21 +1,35 @@
-# TASK-004 — Implementation Plan (APPROVED, non eseguito)
+# TASK-004 — Implementation Plan (APPROVED)
 
-> **Piano approvato il 2026-09-12. Nessuna riga è stata eseguita.**
-> Revisione 3. Diventa un `IMPLEMENTATION.md` nel senso di `AGENT_PROTOCOL.md` §5 — cioè un
-> resoconto — solo dopo l'esecuzione. Decisioni in
+> **Piano approvato il 2026-09-12; delta L0 approvato il 2026-09-14.**
+> Revisione 4, in esecuzione su `task-004-archival-consistency`. Diventa un
+> `IMPLEMENTATION.md` nel senso di `AGENT_PROTOCOL.md` §5 — cioè un resoconto — a esecuzione
+> finita. Decisioni in
 > `docs/adr/ADR-006-archival-consistency-and-project-serialization.md` (**Stato: Accettata**);
 > scope, invarianti e acceptance criteria in `TASK.md`.
 
 ## Forma della soluzione in una frase
 
 Non si aggiunge un dato e non si allarga il contratto: si aggiunge una **regola** (un task il
-cui progetto è `ARCHIVED` non si sposta) e un **protocollo di lock** (L1–L7, sulla riga
-`projects`), e la stessa riga di database che rende la regola vera rende impossibile aggirarla
-in concorrenza.
+cui progetto è `ARCHIVED` non si sposta) e un **protocollo di lock** (L0–L7: la riga del task
+per prima, poi le righe dei progetti), e le stesse righe di database che rendono la regola vera
+rendono impossibile aggirarla in concorrenza.
 
 ## Superficie toccata
 
-Sei file di produzione. Nessuna migrazione, nessun file di configurazione, **nessun DTO**.
+Sette file di produzione. Nessuna migrazione, nessun file di configurazione, **nessun DTO**.
+
+### 0. `task/repository/TaskRepository.java` — la ricerca con lock esclusivo (L0)
+
+```java
+@Lock(LockModeType.PESSIMISTIC_WRITE)   // L0 — SELECT … FOR UPDATE
+@Query("SELECT t FROM Task t LEFT JOIN FETCH t.project WHERE t.id = :id")
+Optional<Task> findByIdForUpdate(@Param("id") Long id);
+```
+
+Il `join fetch` non è un'ottimizzazione qui: la guardia deve leggere l'origine, e il lock deve
+già essere preso quando lo fa. Il `FOR UPDATE` si applica alla sola riga di `tasks` — il
+progetto arriva dalla join ma non è bloccato da questa query, ed è corretto: il lock sul
+progetto è un'altra regola (L2) e arriva dopo.
 
 ### 1. `project/repository/ProjectRepository.java` — le due ricerche con lock
 
@@ -97,21 +111,26 @@ agire.
 
 - `create(…, projectId)` → **L3**: un solo `findByIdForShare` sulla destinazione. Senza
   `projectId`, nessun lock.
-- `assignToProject(taskId, targetId)` → **L4 + L5**:
-  1. si carica il task con il progetto risolto (`join fetch`), per leggere l'origine senza una
-     seconda query;
-  2. si costruisce l'insieme delle righe da bloccare: `{origine se presente, destinazione}`;
-  3. lo si **deduplica** (A == B è un lock solo) e lo si **ordina per `id` crescente**;
-  4. si acquisiscono i lock in quell'ordine, poi si decide.
+- `assignToProject(taskId, targetId)` → **L0 + L4 + L5**:
+  1. si carica il task con `findByIdForUpdate` — **lock esclusivo sulla riga del task, prima di
+     leggerne l'associazione**. Da qui in poi nessun'altra transazione può cambiarla sotto di
+     noi, ed è l'unica ragione per cui i passi successivi decidono su dati veri;
+  2. si legge l'origine **dalla riga appena bloccata**;
+  3. si costruisce l'insieme dei progetti da bloccare: `{origine se presente, destinazione}`;
+  4. lo si **deduplica** (A == B è un lock solo) e lo si **ordina per `id` crescente**;
+  5. si acquisiscono quei lock in quell'ordine, poi si decide.
+
+  L'ordine dei passi **è** il protocollo: invertire 1 e 3 non è un dettaglio di stile, è il
+  difetto che L0 esiste per chiudere.
 
   L'ordinamento è esplicito e isolato in un punto solo, perché AC-13 lo osserva e perché è la
   riga che un lettore futuro deve poter trovare.
 
-  **Limite da non mascherare nel codice.** Il lock è sulle righe di `projects`, non sul task:
-  due riassegnazioni concorrenti dello stesso task restano last-write-wins (ADR-006 §8, TD-30).
-  Il commento su questo metodo deve dirlo — che cosa il protocollo garantisce e che cosa no —
-  perché il prossimo lettore non concluda dalla presenza dei lock che il task sia protetto.
-  Nessun `@Version` su `Task`, nessun `If-Match`: sarebbe fuori scope.
+  **Limite da non mascherare nel codice.** L0 serializza le scritture sullo stesso task, quindi
+  ciascuna decide su stato fresco — ma **non rileva l'intento stantio**: il primo chiamante non
+  viene informato che la sua scrittura è stata sostituita (ADR-006 §8, TD-30 ristretto). Il
+  commento su questo metodo deve dire che cosa il protocollo garantisce e che cosa no. Nessun
+  `@Version` su `Task`, nessun `If-Match`: quella è la rilevazione, ed è fuori scope.
 - `findAllByProject` e `findAll` → **L6**: nessun lock. Un `GET` non ritarda mai un `archive`
   (AC-12).
 
@@ -143,7 +162,7 @@ esattamente il livello su cui il ragionamento di ADR-006 §4 è costruito — un
 | 1 | I test di concorrenza **prima** del codice, e si guarda che falliscano sul comportamento di oggi | AC-9 e AC-10 devono fallire su `master` così com'è. Se passano subito, è sbagliato il test, non il codice |
 | 2 | Repository: le due ricerche con lock | È il protocollo intero |
 | 3 | `ProjectService` → L1. AC-10 diventa verde (TD-19 componente a) | Transizioni serializzate |
-| 4 | `TaskService` → L2–L6, con l'ordinamento di L5. AC-9, AC-11, AC-13 verdi (TD-25) | Assegnazione serializzata con le transizioni, non con le altre assegnazioni |
+| 4 | `TaskService` → **L0**, poi L2–L6 con l'ordinamento di L5. AC-9, AC-11, AC-13, AC-19, AC-20 verdi | Serializzata con le transizioni e con le altre scritture sullo stesso task, non con le assegnazioni ad altri task |
 | 5 | Guardia sull'entità + eccezione + advice → AC-4, AC-5, AC-6 | La regola, una volta che la concorrenza non può più aggirarla |
 | 6 | Test di invariante I-1 / I-2 → AC-1, AC-2 | Dimostra che la cascata non scrive |
 | 7 | AC-18: test strutturale su TD-24 e sua mutazione | Decide se TD-24 si chiude o resta aperto |
@@ -211,6 +230,8 @@ Per ciascun test nuovo si dimostra il fallimento togliendo esattamente una cosa:
 | AC-11 | `findByIdForShare` → `findByIdForUpdate` |
 | AC-12 | aggiungere un lock a un percorso di lettura |
 | AC-13 | bloccare un solo progetto, oppure ordinare per ruolo invece che per id |
+| AC-19 | `findByIdForUpdate` sul task → `findById` |
+| AC-20 | invertire l'ordine: progetti prima del task |
 | AC-4, AC-5 | togliere la guardia sull'origine in `Task.assignTo` |
 | AC-6 | togliere il ramo no-op, così il `PUT` idempotente diventa `409` |
 | AC-1 | far scrivere una riga di `tasks` dentro `archive` |
@@ -229,14 +250,16 @@ il posto dove un falso verde è più facile da produrre e più difficile da nota
 | AC-18 non scrivibile in forma che fallisca | **TD-24 resta aperto e lo si dichiara.** Non è un fallimento della task |
 | Il lock rallenta un `archive` su un progetto molto usato | Dichiarato in ADR-006 §4. Transazioni brevi, una riga sola |
 | Un deadlock o una cancellazione amministrativa arriva al client con la forma di errore di default | Dichiarato e tracciato come **TD-29, MINOR subordinato a TD-07**. Nessun timeout, retry o `503` in questa task |
-| Si crede, leggendo i lock, che anche il task sia protetto in concorrenza | **TD-30** dichiarato in ADR-006 §8, in `TASK.md` e nel commento del metodo di riassegnazione |
+| Si crede, leggendo i lock, che il chiamante venga avvisato di essere stato preceduto | **TD-30 ristretto**, dichiarato in ADR-006 §8, in `TASK.md` e nel commento del metodo di riassegnazione |
+| L0 preso dopo aver letto l'associazione invece che prima | AC-19 e AC-20 lo rilevano: è l'errore esatto che il test sulla baseline ha riprodotto |
 | Emerge la necessità di una migrazione | **Stop e ritorno in approvazione.** Sarebbe il segno che una decisione di ADR-006 era sbagliata |
 
 ## Che cosa questo piano **non** fa
 
 Nessuna colonna nuova, nessun flag di archiviazione sui task, **nessun campo nuovo in
 `TaskResponse`**, nessuna `@OneToMany`, **nessun `@Version` né su `Project` né su `Task`**,
-nessun `ETag`, nessun `If-Match`, **nessun `503`, nessun timeout, nessun retry**, nessun advice
+nessun `ETag`, nessun `If-Match`, nessuna **rilevazione** dell'intento stantio, **nessun `503`,
+nessun timeout, nessun retry**, nessun advice
 globale, nessun enum di dominio, nessun `DELETE /api/tasks/{id}/project`, nessuna migrazione,
 nessun merge, nessun push.
 

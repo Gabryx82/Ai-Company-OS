@@ -1,7 +1,7 @@
 # TASK-004 — Archival Consistency & Project Lock Protocol
 
-> **Stato: APPROVED — scope approvato dall'umano il 2026-09-12. Implementazione non avviata.**
-> Revisione 3. Nessuna riga di codice scritta, nessun branch creato.
+> **Stato: APPROVED — scope approvato il 2026-09-12; delta L0 approvato il 2026-09-14.**
+> Revisione 4. In implementazione su `task-004-archival-consistency`.
 > Da qui in avanti il perimetro è vincolante: quello che è fuori scope resta fuori, e le
 > condizioni di stop valgono come scritte.
 
@@ -43,7 +43,8 @@ Motivazioni complete in `docs/adr/ADR-006-archival-consistency-and-project-seria
 | 3 | **Un task in un progetto `ARCHIVED` è congelato in scrittura** | ADR-006 §2 |
 | 4 | **Le letture restano consentite** su task e progetti archiviati | ADR-006 §2 |
 | 5 | **`PUT` idempotente verso lo stesso progetto archiviato → `200` no-op**: il congelamento riguarda le mutazioni, e una conferma non muta niente | ADR-006 §2 |
-| 6 | **Locking pessimistico sulla riga `projects`**, formalizzato come protocollo L1–L7 | ADR-006 §4 |
+| 6 | **Locking pessimistico**, formalizzato come protocollo **L0–L7**: riga `tasks` esclusiva prima, righe `projects` dopo, ordine globale per id crescente | ADR-006 §4 |
+| 7 | **L0 e l'ordine globale** (approvati il 2026-09-14, dopo che un test ha riprodotto un bypass della regola di congelamento per staleness) | ADR-006 §4, §8 |
 
 ## Comportamento esatto dei Task su archive/restore
 
@@ -89,6 +90,7 @@ l'origine**: il task è congelato prima ancora che si guardi dove sta andando.
 | **I-8** | Lo schema resta a `V3`: nessuna migrazione nuova | `SchemaMigrationTest` invariato |
 | **I-9** | **Ogni percorso di scrittura che dipende da `Project.status` applica il protocollo, e acquisisce le righe in ordine di `id` crescente** (L2, L5, L7) | Test unitario sull'ordine di acquisizione + tabella dei percorsi in ADR-006 §4 |
 | **I-10** | Il contratto pubblico non cambia: `TaskResponse` è identico a quello di TASK-003 | Asserzione sulla forma della risposta |
+| **I-11** | **Nessuna scrittura su un task committa contro uno stato che un'altra transazione ha già cambiato**: la regola di congelamento è valutata sull'associazione vera al commit, non su una letta prima (L0) | Test a due transazioni con riassegnazione stantia |
 
 ## Protocollo di lock — formalizzato
 
@@ -96,11 +98,12 @@ Regola unica per TD-19 (componente ciclo di vita) e TD-25. Enunciato completo in
 
 | Regola | Contenuto |
 |---|---|
+| **L0** | Chi **muta un task esistente** prende `PESSIMISTIC_WRITE` (`FOR UPDATE`) sulla riga del task **prima** di leggerne l'associazione, e la tiene fino al commit. L'insieme dei progetti si **deriva dopo**, dalla riga letta sotto lock |
 | **L1** | Chi **scrive** una riga di `projects` prende `PESSIMISTIC_WRITE` (`FOR UPDATE`) su quella riga prima di leggerne lo stato, e la tiene fino al commit |
 | **L2** | Ogni percorso di **scrittura** la cui correttezza dipende da `Project.status` prende `PESSIMISTIC_READ` (`FOR SHARE`) su **ogni** riga di progetto da cui dipende, prima di deciderlo, e la tiene fino al commit |
 | **L3** | **Creazione / assegnazione da `NULL`**: un solo progetto in gioco, la destinazione → un `FOR SHARE` sulla destinazione. `POST /api/tasks` senza `projectId`: nessun lock |
 | **L4** | **Riassegnazione A → B**: `FOR SHARE` su **entrambi**, origine A (congelamento) e destinazione B (non riceve lavoro nuovo). Se A == B, una riga sola |
-| **L5** | **Ordine deterministico**: l'insieme delle righe da bloccare si costruisce, si deduplica, si ordina per **`id` crescente** e si blocca in quell'ordine — sempre, qualunque sia il ruolo di ciascuna riga |
+| **L5** | **Ordine globale**: prima `tasks` per `id` crescente, poi `projects` per `id` crescente. Dentro ogni classe l'insieme si costruisce, si deduplica, si ordina e si blocca in quell'ordine, qualunque sia il ruolo di ciascuna riga. L'ordine fra le classi non è una convenzione: quali progetti servano lo dice la riga del task |
 | **L6** | Le **letture** non prendono lock |
 | **L7** | **Clausola di chiusura**: il protocollo è universale. Ogni percorso di scrittura, presente o futuro, che dipende da `Project.status` lo applica. Nessuna eccezione «tanto questo caso è innocuo» — è il ragionamento che ha prodotto TD-25 |
 
@@ -115,18 +118,26 @@ per caso:
 | `POST /api/projects/{id}/restore` | sì | L1 | `{id}` `FOR UPDATE` |
 | `POST /api/tasks` senza `projectId` | no | L6 | nessuna |
 | `POST /api/tasks` con `projectId` | sì | L2, L3 | `{target}` `FOR SHARE` |
-| `PUT /api/tasks/{id}/project`, task senza progetto | sì | L2, L3 | `{target}` `FOR SHARE` |
-| `PUT /api/tasks/{id}/project`, A → B | sì | L2, L4, L5 | `{A, B}` `FOR SHARE`, id crescente |
-| `PUT /api/tasks/{id}/project`, A → A | sì | L2, L4 | `{A}` `FOR SHARE` |
+| `PUT /api/tasks/{id}/project`, task senza progetto | sì | **L0**, L2, L3 | `tasks{id}` `FOR UPDATE` → `projects{target}` `FOR SHARE` |
+| `PUT /api/tasks/{id}/project`, A → B | sì | **L0**, L2, L4, L5 | `tasks{id}` `FOR UPDATE` → `projects{A, B}` `FOR SHARE`, id crescente |
+| `PUT /api/tasks/{id}/project`, A → A | sì | **L0**, L2, L4 | `tasks{id}` `FOR UPDATE` → `projects{A}` `FOR SHARE` |
 | Ogni `GET` | — | L6 | nessuna |
 
 Perché pessimistico e non `@Version`: `@Version` **non chiude TD-25** (l'assegnazione non
 scrive la riga del progetto, non c'è versione da confrontare), richiede una migrazione, e
 trasformerebbe in `409` due assegnazioni concorrenti che non sono in conflitto. ADR-006 §4.
 
-L5 non ha un fallimento da prevenire oggi — due lock condivisi non conflittano fra loro — ed è
-stabilito adesso perché il primo percorso futuro che prenderà due lock esclusivi lo trovi già
-scritto, invece di scoprirlo dopo un deadlock.
+**Perché L0.** Senza, il protocollo protegge le righe da cui si legge lo stato ma non l'input
+della decisione — quale progetto contiene il task. Una transazione può leggere «il task è in A,
+A è `ACTIVE`», restare aperta mentre un'altra lo sposta in C e C viene archiviato, e poi
+committare su un task che in quell'istante appartiene a un progetto archiviato. Nessun lock sui
+progetti la intercetta: lo scrittore stantio tiene `{A, B}` e l'archive tocca `C`, insiemi
+disgiunti. Riprodotto da un test deterministico sulla baseline prima di scrivere il codice.
+
+**Perché non c'è ciclo.** I percorsi che toccano i task vanno `tasks → projects`; quelli che
+toccano solo i progetti non prendono mai un lock su un task, quindi nessuno va
+`projects → tasks`. È una conseguenza della consistenza derivata (ADR-006 §1): vale finché
+`archive`/`restore` non scrivono righe di `tasks`.
 
 ## Contabilità del debito
 
@@ -137,37 +148,32 @@ scritto, invece di scoprirlo dopo un deadlock.
 | **TD-28** | **OPEN — nuovo** | Componente (b) di TD-19, estratta: `PUT /api/projects/{id}` resta esposto alla sovrascrittura con dati stantii. Il lock di riga lo serializza ma non lo rileva. Richiede `ETag`/`If-Match` o un numero di versione **nel contratto HTTP** — decisione sull'API, non sul database |
 | **TD-24** | **RESOLVED oppure OPEN**, secondo l'esito di **AC-18** | Si chiude solo se il self-invocation di un metodo `readOnly` è eliminato *e* la cosa è verificata. Altrimenti resta aperto e lo si dichiara |
 | **TD-29** | **OPEN — MINOR, subordinato a TD-07** | Assenza di un **contratto API normalizzato** per gli errori infrastrutturali di concorrenza e locking: un deadlock o una cancellazione amministrativa affiora con la forma di errore di default, come ogni altro errore infrastrutturale oggi. **Non implica timeout, retry o `503`** — è una questione di forma della risposta, non di policy. Si chiude dentro TD-07, insieme a TD-20 e TD-27 |
-| **TD-30** | **OPEN — nuovo, MINOR** | Limite dichiarato del modello: due riassegnazioni concorrenti **dello stesso task** restano last-write-wins. Vedi la sezione «Limiti dichiarati» |
+| **TD-30** | **OPEN — MINOR, ristretto** | Due riassegnazioni concorrenti dello stesso task restano last-write-wins, **ma su stato fresco**: L0 le serializza e ciascuna applica le regole ai dati che trova. Manca solo la *rilevazione* dell'intento stantio verso il chiamante. Gemello di TD-28 sull'altra entità |
 | TD-07, TD-20, TD-21, TD-22, TD-23, TD-26, TD-27 | **invariati** | Nessuno è sulla strada di questa task |
 
 TD-19 non risulta «chiuso a metà»: le sue due componenti erano problemi di natura diversa —
 coerenza fra entità contro contratto HTTP — e vengono tracciate separatamente. Dettaglio in
 ADR-006 §5.
 
-## Limiti dichiarati del modello
+## Limite dichiarato, ristretto
 
-Il protocollo serializza il **progetto**, non il **task**. Una conseguenza va detta per intero,
-perché è facile crederla coperta:
+La revisione 3 affermava che due riassegnazioni concorrenti dello stesso task sono
+last-write-wins e che «lo stato finale è comunque valido». **La seconda metà era falsa**, e un
+test l'ha dimostrata falsa prima che il codice esistesse: senza L0 una transazione stantia
+committava una scrittura su un task che in quell'istante apparteneva a un progetto archiviato,
+violando I-3. Quello era un difetto, non un limite, e L0 lo chiude.
 
-> Due riassegnazioni concorrenti **dello stesso task** — `A → B` e `A → C` — restano
-> **last-write-wins**. Entrambe superano il protocollo correttamente: prendono `FOR SHARE` su
-> `A` e sulla propria destinazione, e nessuno dei due lock conflitta con l'altro. Il task finisce
-> in `B` o in `C` secondo chi committa per ultimo, e nessuno dei due chiamanti riceve un errore.
+Il limite che **resta** è più stretto:
 
-**Non è TD-25, e la differenza non è una sfumatura.** TD-25 era una violazione di invariante: un
-task poteva finire attaccato a un progetto `ARCHIVED` al commit, cioè uno stato che il dominio
-dichiara impossibile. Qui nessun invariante è violato — `B` e `C` sono entrambi attivi, entrambe
-le destinazioni sono legali, lo stato finale è valido. È una **corsa fra due chiamanti che
-vogliono cose diverse**, non un buco nelle regole.
+> Due riassegnazioni concorrenti dello stesso task restano last-write-wins, **ma ciascuna decide
+> su stato fresco**. L0 le serializza: la seconda aspetta il commit della prima, rilegge la riga
+> e applica tutte le regole allo stato che trova. Il chiamante della prima non viene informato
+> che la sua scrittura è stata sostituita.
 
-**Che cosa TASK-004 garantisce, esattamente:** la coerenza fra `Project.status` e le scritture
-sui task. **Non** garantisce concorrenza ottimistica o pessimistica **sul task stesso** — che
-richiederebbe `@Version` su `Task` o un `If-Match` sull'associazione, cioè su `Task` lo stesso
-meccanismo che ADR-006 §4 ha deliberatamente rifiutato su `Project`.
-
-Tracciato come **TD-30 (MINOR)**, perché questo repository traccia i limiti noti invece di
-scoprirli dopo. Parente di TD-28: si chiude con un controllo di concorrenza sull'entità o sul
-contratto, quando esisterà più di un client concorrente reale. Dettaglio in ADR-006 §8.
+Nessun invariante è violato: ogni scrittura ha committato su stato letto sotto lock e ancora
+vero al commit, e lo stato finale è raggiungibile da una sequenza legale di richieste. Manca
+solo la **rilevazione dell'intento stantio** — che è esattamente TD-28 sull'altra entità, e si
+chiude con concorrenza ottimistica nel contratto HTTP, non con un lock. Dettaglio in ADR-006 §8.
 
 ## Failure semantics
 
@@ -222,8 +228,9 @@ TD-27 non si toccano.
 - **`503`, `Retry-After`, `lock_timeout` applicativo, qualunque contratto di retry o policy di
   timeout.** La forma della risposta agli errori infrastrutturali di locking → TD-29, dentro
   TD-07.
-- **Concorrenza sull'entità `Task`**: nessun `@Version` su `Task`, nessun `If-Match`
-  sull'associazione → TD-30, non qui.
+- **Rilevazione dell'intento stantio**: nessun `@Version` su `Task`, nessun `If-Match`
+  sull'associazione → TD-30, non qui. Il **lock** sulla riga del task (L0) è invece in scope: non
+  è rilevazione, è prevenzione di una violazione di invariante.
 - **`@OneToMany` su `Project`**: la relazione resta unidirezionale (ADR-005 §4).
 - **`@Version` / `ETag` / `If-Match`** → TD-28, non qui.
 - **TD-07 / advice globale**, e con lui **TD-20** e **TD-27**.
@@ -275,6 +282,15 @@ controllate a mano
   chiamate. Deve fallire se un solo lock viene preso, o se l'ordine segue il ruolo invece
   dell'id.
 
+- **AC-19** (I-11, L0) — **Riassegnazione stantia.** Un task T è in A; una transazione inizia a
+  spostarlo in B leggendo A come origine e resta aperta; un'altra lo sposta in C e committa; C
+  viene archiviato e committa; solo allora la prima committa. La sua scrittura deve essere
+  **rifiutata** e il task deve restare in C. Senza L0 la scrittura passa: riprodotto sulla
+  baseline, deterministicamente, prima di scrivere il codice.
+- **AC-20** (L5) — **Ordine globale.** I lock vengono presi `tasks` prima di `projects`. Test
+  unitario con un doppio del repository che registra la sequenza: deve fallire se l'ordine si
+  inverte o se il lock sul task manca.
+
 **Regressione**
 - **AC-14** — Lo schema resta a `V3`; `SchemaMigrationTest`, `MigrationStreamTest` e
   `DevSeedMigrationTest` passano **senza modifiche** (I-8).
@@ -303,8 +319,8 @@ controllate a mano
 |---|---|
 | `TaskProjectAssociationApiTest` (esistente, esteso) | AC-4, AC-5, AC-6, AC-7, AC-8 |
 | `ProjectArchivalConsistencyTest` (nuovo) | AC-1, AC-2, AC-3 |
-| `ProjectConcurrencyTest` (nuovo) | AC-9, AC-10, AC-11, AC-12 |
-| `ProjectLockProtocolTest` (nuovo, unitario) | AC-13, AC-18 |
+| `ProjectConcurrencyTest` (nuovo) | AC-9, AC-10, AC-11, AC-12, AC-19 |
+| `ProjectLockProtocolTest` (nuovo, unitario) | AC-13, AC-18, AC-20 |
 | `TaskExceptionHandlerScopeTest` (esistente) | AC-15, esteso al solo `409` nuovo |
 | `SchemaMigrationTest`, `MigrationStreamTest`, `DevSeedMigrationTest` | AC-14, **invariati** |
 

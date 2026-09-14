@@ -4,16 +4,17 @@ mode: implementation
 status: APPROVED
 approval: approved_by_human
 approved_on: 2026-09-12
-revision: 3
+revision: 4
 parent: none
 
 note: >
-  Scope approvato. Implementazione non avviata: nessun codice scritto,
-  nessun branch creato. Il perimetro e vincolante - forbidden e
-  stop_conditions valgono come scritti.
+  Scope approvato, in implementazione sul branch task-004-archival-consistency.
+  Revisione 4: aggiunta di L0 e dell'ordine globale dei lock, dopo che un test
+  ha riprodotto un bypass della regola di congelamento per staleness.
+  Il perimetro e vincolante - forbidden e stop_conditions valgono come scritti.
 
 baseline:
-  branch_proposed: task-004-archival-consistency
+  branch: task-004-archival-consistency
   base: master
   head_at_proposal: d5ff121
   remote: none
@@ -61,21 +62,23 @@ invariants:
   - "al commit di un'assegnazione, ogni progetto da cui dipendeva era nello stato su cui la decisione e stata presa"
   - "un task in un progetto ARCHIVED e immutabile in scrittura e leggibile"
   - "PUT verso lo stesso progetto archiviato: 200 no-op, nessuna scrittura"
-  - "ogni write path che dipende da Project.status applica il protocollo L1-L7, con acquisizione multi-riga in ordine di id crescente"
+  - "ogni write path che dipende da Project.status applica il protocollo L0-L7, con acquisizione ordinata: tasks per id crescente, poi projects per id crescente"
   - "le letture non prendono lock"
   - "TaskResponse identico a TASK-003: nessun campo nuovo"
-  - "il protocollo serializza il progetto, non il task: due riassegnazioni concorrenti dello stesso task restano last-write-wins (TD-30)"
+  - "nessuna scrittura su un task committa contro uno stato che un'altra transazione ha gia cambiato: la regola di congelamento e' valutata sull'associazione vera al commit (L0)"
+  - "due riassegnazioni concorrenti dello stesso task restano last-write-wins ma su stato fresco: manca solo la rilevazione dell'intento stantio (TD-30 ristretto)"
   - "relazione unidirezionale: nessuna @OneToMany su Project"
   - "POST /api/tasks {} -> 400 con la forma preesistente di Spring"
   - "contratto di errore limitato ai due advice di modulo"
   - "nessun H2"
 
 lock_protocol:
+  L0: "chi muta un task esistente prende PESSIMISTIC_WRITE (FOR UPDATE) sulla riga del task prima di leggerne l'associazione, e la tiene fino al commit; l'insieme dei progetti si deriva dopo, dalla riga letta sotto lock"
   L1: "chi scrive una riga di projects prende PESSIMISTIC_WRITE (FOR UPDATE) su quella riga prima di leggerne lo stato, fino al commit"
   L2: "ogni write path la cui correttezza dipende da Project.status prende PESSIMISTIC_READ (FOR SHARE) su ogni riga da cui dipende, prima di deciderlo, fino al commit"
   L3: "creazione e assegnazione da NULL: un solo progetto, la destinazione. POST /api/tasks senza projectId: nessun lock"
   L4: "riassegnazione A -> B: FOR SHARE su entrambi, origine e destinazione. Se A == B, una riga sola"
-  L5: "acquisizione multi-riga: insieme costruito, deduplicato, ordinato per id crescente, bloccato in quell'ordine, qualunque sia il ruolo"
+  L5: "ordine globale: prima tasks per id crescente, poi projects per id crescente; dentro ogni classe insieme costruito, deduplicato, ordinato. L'ordine fra le classi e' imposto dai dati, non scelto"
   L6: "le letture non prendono lock"
   L7: "clausola di chiusura: il protocollo e universale, ogni write path presente o futuro che dipende da Project.status lo applica"
 
@@ -91,13 +94,13 @@ decisions_approved_by_human:
   - id: idempotent_noop
     decision: "PUT idempotente verso lo stesso progetto archiviato: 200 no-op. ADR-006 §2"
   - id: concurrency_strategy
-    decision: "Locking pessimistico sulla riga Project, formalizzato come protocollo L1-L7. ADR-006 §4"
+    decision: "Locking pessimistico formalizzato come protocollo L0-L7: riga tasks esclusiva prima, righe projects dopo. ADR-006 §4"
   - id: td29_registration
     decision: "TD-29 registrato come MINOR subordinato a TD-07: riguarda solo l'assenza di un contratto API normalizzato per gli errori infrastrutturali di concorrenza e locking. Nessun timeout, retry o 503. ADR-006 §5 §7"
   - id: frozen_discoverability
     decision: "Scopribilita dello stato frozen FUORI SCOPE, definitivo. Nessun projectStatus ne campo equivalente in TaskResponse. ADR-006 §3"
   - id: task_level_concurrency_limit
-    decision: "Limite dichiarato: due riassegnazioni concorrenti dello stesso task restano last-write-wins. Distinto da TD-25, che era violazione di invariante. Tracciato come TD-30 MINOR. ADR-006 §8"
+    decision: "L0 e ordine globale approvati il 2026-09-14: un test ha riprodotto un bypass della regola di congelamento per staleness, che i soli lock sui progetti non intercettano. TD-30 ristretto al residuo last-write-wins su stato fresco. ADR-006 §4 §8"
 
 decisions_still_open: []
 
@@ -112,7 +115,7 @@ debt_accounting_at_close:
   TD-19: "RESOLVED solo componente (a) ciclo di vita; il testo del debito va aggiornato dichiarando che (b) e uscita verso TD-28"
   TD-28: "OPEN nuovo: PUT /api/projects/{id} esposto alla sovrascrittura con dati stantii. Richiede ETag/If-Match nel contratto HTTP"
   TD-29: "OPEN nuovo MINOR, subordinato a TD-07: assenza di un contratto API normalizzato per gli errori infrastrutturali di concorrenza e locking. Non implica timeout, retry o 503"
-  TD-30: "OPEN nuovo MINOR: due riassegnazioni concorrenti dello stesso task restano last-write-wins. Parente di TD-28, distinto da TD-25"
+  TD-30: "OPEN MINOR ristretto: last-write-wins su stato fresco. L0 serializza e ciascuna scrittura applica le regole ai dati che trova; manca la rilevazione dell'intento stantio verso il chiamante. Gemello di TD-28 sull'altra entita"
   TD-24: "vedi conditional_outcomes"
   TD-07: unchanged
   TD-20: unchanged
@@ -133,7 +136,7 @@ forbidden:
   - project_status_in_task_response
   - lock_timeout_policy
   - retry_after_503
-  - task_level_concurrency_control
+  - task_level_optimistic_concurrency
   - one_to_many_on_project
   - optimistic_version_column
   - etag_if_match
