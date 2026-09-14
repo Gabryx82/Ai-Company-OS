@@ -1,0 +1,112 @@
+task: TASK-005
+title: Uniform Error Contract
+mode: implementation
+status: SELF_APPROVED
+approval: autonomous_project_mode
+decided_on: 2026-09-14
+parent: none
+
+note: >
+  Scope deciso dall'agente in Autonomous Project Mode, secondo le cinque
+  condizioni di AUTONOMOUS_CHARTER.md sezione 2. Chiude TD-07 e con lui
+  TD-20, TD-21, TD-27, TD-29.
+
+selection_rationale: >
+  AUTONOMOUS_LOOP.md sezione 4, livello 3. Livelli 1 e 2 vuoti: nessun
+  invariante promesso e' falso, nessun blocker architetturale. TD-07
+  peggiora a ogni task perche' ogni endpoint nuovo deve scegliere fra tre
+  dialetti o aggiungerne un quarto, e assorbe tre altri debiti.
+
+baseline:
+  branch: task-005-uniform-error-contract
+  base: autonomous/phase-1-foundations
+  head_at_start: 1ddeee3
+  suite_at_start: 126
+  remote: none
+
+required:
+  - .company-os/PROJECT_STATE.md
+  - .company-os/AUTONOMOUS_CHARTER.md
+  - .company-os/AUTONOMOUS_LOOP.md
+  - docs/adr/ADR-007-uniform-error-contract.md
+  - tasks/TASK-004/HANDOFF.md
+
+repository_scan:
+  allowed: false
+  reason: "Superficie nota: i tre controller, i due advice, le eccezioni di dominio."
+
+files_in_play:
+  - backend/src/main/java/com/aicompany/backend/api/**
+  - backend/src/main/java/com/aicompany/backend/project/controller/**
+  - backend/src/main/java/com/aicompany/backend/task/controller/**
+  - backend/src/test/**
+
+writes_allowed:
+  - backend/src/main/java/com/aicompany/backend/api/**
+  - backend/src/main/java/com/aicompany/backend/project/controller/**
+  - backend/src/main/java/com/aicompany/backend/task/controller/**
+  - backend/src/test/**
+  - docs/adr/ADR-007-uniform-error-contract.md
+  - tasks/TASK-005/**
+  - .company-os/PROJECT_STATE.md
+
+invariants:
+  - "ogni risposta di errore e' un ProblemDetail con type, title, status, detail"
+  - "il type e' stabile ed enumerato: nessun handler ne inventa uno"
+  - "due problemi diversi non condividono uno slug"
+  - "nessuno stato HTTP cambia: cambiano solo i corpi"
+  - "il detail di un 500 non contiene nulla dell'eccezione interna"
+  - "ogni eccezione di dominio dichiarata ha una mappatura"
+  - "schema fermo a V3: nessuna migrazione"
+  - "nessuna policy di timeout, retry o 503 (ADR-006 sezione 7 resta valida)"
+  - "protocollo di lock L0-L7 invariato"
+
+supersedes:
+  - "ADR-004 sezione 6: contratto di errore limitato al modulo project"
+  - "ADR-005 sezione 8: advice limitato alle eccezioni di TASK-003"
+
+breaking_change_declared: >
+  I corpi di errore di /api/agents e delle risposte preesistenti di
+  /api/tasks cambiano forma. Nessuno stato HTTP cambia. E' il lavoro della
+  task, non un effetto collaterale.
+
+forbidden:
+  - status_code_changes
+  - any_database_migration
+  - entity_or_service_changes
+  - lock_timeout_policy
+  - retry_after_503
+  - i18n_of_messages
+  - etag_if_match
+  - new_endpoints
+  - get_task_by_id
+  - task_filters
+  - authentication
+  - cors
+  - pagination
+  - ci
+  - documentation_debt
+  - stack_change
+  - general_refactoring
+  - repository_audit
+  - merge_to_master
+
+debt_accounting_at_close:
+  TD-07: CLOSED
+  TD-20: "CLOSED, assorbito"
+  TD-21: "CLOSED, l'asserzione debole sparisce col test che la conteneva"
+  TD-27: "CLOSED, assorbito"
+  TD-29: "CLOSED, assorbito come forma e non come policy"
+
+git_constraints:
+  work_branch: task-005-uniform-error-contract
+  integration_branch: autonomous/phase-1-foundations
+  forbidden_operations:
+    - merge_to_master
+    - push
+    - remote_configuration
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - branch_deletion
+    - history_rewrite
