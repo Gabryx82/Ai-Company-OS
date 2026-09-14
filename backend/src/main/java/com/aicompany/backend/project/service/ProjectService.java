@@ -44,6 +44,13 @@ public class ProjectService {
                 : repository.findAllByStatusOrderByIdAsc(status);
     }
 
+    /**
+     * Read-only lookup, for reads. No lock: a GET never delays a lifecycle
+     * transition and a transition never delays a GET (rule L6).
+     *
+     * <p>Not called from the write paths in this class -- they use
+     * {@link #lockForWrite}, see TD-24 there.
+     */
     @Transactional(readOnly = true)
     public Project findById(Long id) {
         return repository.findById(id).orElseThrow(() -> new ProjectNotFoundException(id));
@@ -51,7 +58,7 @@ public class ProjectService {
 
     public Project update(Long id, String name, String description) {
 
-        Project project = findById(id);
+        Project project = lockForWrite(id);
 
         if (repository.existsByNormalisedNameAndIdNot(name, id)) {
             throw new ProjectNameConflictException(name);
@@ -63,15 +70,38 @@ public class ProjectService {
     }
 
     public Project archive(Long id) {
-        Project project = findById(id);
+        Project project = lockForWrite(id);
         project.archive();
         return repository.save(project);
     }
 
     public Project restore(Long id) {
-        Project project = findById(id);
+        Project project = lockForWrite(id);
         project.restore();
         return repository.save(project);
+    }
+
+    /**
+     * The lookup every write path uses: rule L1 of ADR-006 §4, an exclusive lock
+     * on the project row taken before its state is read and held to commit.
+     *
+     * <p>Two concurrent archives now serialise here. The second one is let
+     * through only after the first commits and -- under READ COMMITTED, where a
+     * blocked {@code FOR UPDATE} re-reads the latest committed row -- finds
+     * ARCHIVED, so {@link Project#archive()} raises the illegal transition that
+     * ADR-004 §4 asks for. Before this lock existed both reported success, which
+     * is what TD-19 recorded.
+     *
+     * <p><strong>Private, and with no {@code @Transactional} of its own, on
+     * purpose.</strong> The write paths used to call the public
+     * {@code readOnly = true} {@link #findById} through {@code this.}, and worked
+     * only because self-invocation bypasses the proxy and with it the read-only
+     * flag -- TD-24. A private method cannot carry a transactional attribute at
+     * all, so that failure mode is no longer expressible here, not merely absent.
+     * A structural test asserts it.
+     */
+    private Project lockForWrite(Long id) {
+        return repository.findByIdForUpdate(id).orElseThrow(() -> new ProjectNotFoundException(id));
     }
 
     /**

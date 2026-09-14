@@ -2,6 +2,7 @@ package com.aicompany.backend.task.controller;
 
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
+import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
 import com.aicompany.backend.task.exception.TaskNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -48,6 +49,21 @@ class TaskExceptionHandler {
     @ExceptionHandler(ArchivedProjectCannotReceiveTasksException.class)
     ProblemDetail handleArchivedProject(ArchivedProjectCannotReceiveTasksException e) {
         return problem(HttpStatus.CONFLICT, "Archived project cannot receive tasks", e.getMessage());
+    }
+
+    /**
+     * The other half of the archival rule, from ADR-006 §2: a task inside an
+     * archived project does not move.
+     *
+     * <p>A separate title from the one above, on the same status code, because
+     * the two refusals ask the caller to restore <em>different</em> projects --
+     * the destination in one case, the one the task is sitting in here. Folding
+     * them into one message would leave a client knowing it has to restore
+     * something without knowing what.
+     */
+    @ExceptionHandler(ArchivedProjectTaskIsImmutableException.class)
+    ProblemDetail handleFrozenTask(ArchivedProjectTaskIsImmutableException e) {
+        return problem(HttpStatus.CONFLICT, "Task in an archived project cannot be modified", e.getMessage());
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, String detail) {

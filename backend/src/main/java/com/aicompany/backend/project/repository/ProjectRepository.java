@@ -2,13 +2,47 @@ package com.aicompany.backend.project.repository;
 
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.model.ProjectStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProjectRepository extends JpaRepository<Project, Long> {
+
+    /**
+     * The project row, locked exclusively. Rule L1 of ADR-006 section 4: whoever
+     * <em>changes</em> a project's lifecycle state takes this before reading that
+     * state, and holds it to commit.
+     *
+     * <p>Under READ COMMITTED a blocked {@code FOR UPDATE} re-reads the latest
+     * committed row once it is let through, which is the whole mechanism: the
+     * second of two concurrent archives finds ARCHIVED and raises the illegal
+     * transition ADR-004 section 4 asks for, instead of reporting a second
+     * success.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Project p WHERE p.id = :id")
+    Optional<Project> findByIdForUpdate(@Param("id") Long id);
+
+    /**
+     * The project row, locked shared. Rule L2: whoever <em>reads</em> a project's
+     * lifecycle state in order to act on it takes this on every project row the
+     * decision depends on, and holds it to commit.
+     *
+     * <p>Shared and not exclusive because two tasks being assigned to the same
+     * active project are not in conflict with each other; only a lifecycle
+     * transition conflicts with them. That distinction is the distinction between
+     * the two roles, not an optimisation -- an exclusive lock here would
+     * serialise every assignment per project and invent a conflict that does not
+     * exist.
+     */
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("SELECT p FROM Project p WHERE p.id = :id")
+    Optional<Project> findByIdForShare(@Param("id") Long id);
 
     /**
      * Name of the functional unique index created by {@code V2__create_projects.sql}.
