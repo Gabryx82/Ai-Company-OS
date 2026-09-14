@@ -1,0 +1,40 @@
+task: TASK-006
+title: Migration Test Coverage
+mode: implementation
+status: SELF_APPROVED
+approval: autonomous_project_mode
+decided_on: 2026-09-14
+
+selection_rationale: >
+  AUTONOMOUS_LOOP.md sezione 4, livello 3. Il passo successivo (Agent
+  Registry) porta una V4, e la storia di test delle migrazioni ha due
+  buchi su quel percorso. Debito che il passo successivo tocca.
+
+baseline:
+  branch: task-006-migration-test-coverage
+  base: autonomous/phase-1-foundations
+  head_at_start: 39225e3
+  suite_at_start: 136
+
+files_in_play:
+  - backend/src/test/java/com/aicompany/backend/persistence/MigrationStreamTest.java
+
+invariants:
+  - "nessuna migrazione perde righe"
+  - "nessuna migrazione elimina una tabella che esisteva prima"
+  - "ogni passo applica esattamente una migrazione"
+  - "l'elenco delle tabelle e' una dichiarazione esplicita, non un automatismo"
+  - "nessun comportamento dell'applicazione cambia"
+
+forbidden:
+  - new_migrations
+  - schema_changes
+  - entity_or_service_changes
+  - api_changes
+  - agent_registry
+  - merge_to_master
+  - push
+
+debt_accounting_at_close:
+  TD-22: "CLOSED, e piu' di quanto chiedesse: non il solo V1 a V2 ma ogni coppia consecutiva"
+  TD-23: CLOSED
