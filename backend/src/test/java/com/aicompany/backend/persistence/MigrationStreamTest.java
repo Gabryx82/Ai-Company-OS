@@ -15,7 +15,9 @@ import org.testcontainers.utility.DockerImageName;
 
 import javax.sql.DataSource;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,6 +52,20 @@ class MigrationStreamTest {
     private static final List<String> SEEDED_AGENTS =
             List.of("Code Architect", "Database Specialist", "Frontend Developer");
 
+    /**
+     * The tables the schema stream is expected to have created by its current
+     * head. Written by hand, and that is the decision rather than an oversight:
+     * a migration that creates a table is a fact about the system, and whoever
+     * adds one should have to say so here. The versions above are read from
+     * Flyway; this is not, and the difference is deliberate.
+     *
+     * <p>What TD-23 recorded was not this list but the sentence that used to sit
+     * next to it, which described the test as adapting to new tables on its own.
+     * It does not, and a wrong explanation is what somebody reasons from later.
+     */
+    private static final List<String> TABLES_AT_HEAD =
+            List.of("agents", "flyway_schema_history", "projects", "tasks");
+
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>(DockerImageName.parse("postgres:17-alpine"));
@@ -69,7 +85,7 @@ class MigrationStreamTest {
         // into it any more, whatever the current head happens to be.
         assertThat(appliedSchemaVersions(schema)).isEqualTo(resolvedSchemaVersions());
         assertThat(tablesIn(schema))
-                .containsExactly("agents", "flyway_schema_history", "projects", "tasks")
+                .containsExactlyElementsOf(TABLES_AT_HEAD)
                 .doesNotContain(DevSeedFlyway.HISTORY_TABLE);
 
         // Nothing seeded it: the schema stream carries no data.
@@ -281,6 +297,82 @@ class MigrationStreamTest {
         assertThat(appliedSchemaVersions(schema)).isEqualTo(schemaVersionsPlusProbe());
     }
 
+    /**
+     * TASK-006, TD-22 -- every consecutive step of the stream, on a database that
+     * already holds data.
+     *
+     * <p>Every other test here builds the schema in one go. A migration that
+     * silently depended on an empty table, or that dropped rows while rewriting
+     * one, would pass all of them. TASK-003 wrote the equivalent of this for the
+     * single step it introduced; what was missing was the same guarantee for the
+     * other steps, and for the ones not written yet.
+     *
+     * <p>It walks the pairs Flyway resolves rather than a list written here, so a
+     * V4 is covered the day it exists and nobody has to remember to add a case.
+     * Three things are asserted at each step, and they are the three ways a
+     * migration destroys something without failing: a row disappears, a table
+     * disappears, or more than the expected migration runs.
+     *
+     * <p>What it deliberately does not assert is that the schema afterwards looks
+     * a particular way. That belongs to the test for the migration that made it
+     * so; this one is about what must survive every step, whatever each step does.
+     */
+    @Test
+    void everyConsecutiveUpgradePreservesWhatWasAlreadyThere() {
+
+        List<String> versions = resolvedSchemaVersions();
+        assertThat(versions)
+                .as("a stream with fewer than two versions has no step to check, "
+                        + "and this test would be silently vacuous")
+                .hasSizeGreaterThan(1);
+
+        for (int step = 0; step < versions.size() - 1; step++) {
+
+            String from = versions.get(step);
+            String to = versions.get(step + 1);
+            String schema = "td22_v" + from + "_to_v" + to;
+
+            schemaFlywayUpTo(schema, from).migrate();
+            assertThat(appliedSchemaVersions(schema))
+                    .as("step %s -> %s: the fixture must really stop at %s", from, to, from)
+                    .containsExactlyElementsOf(versions.subList(0, step + 1));
+
+            // Rows a running installation would have at this point. The seed
+            // covers agents; tasks are written directly, with the columns every
+            // version of that table has carried.
+            DevSeedFlyway.apply(dataSource(), schema);
+            jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, status, priority) "
+                    + "VALUES (?, ?, ?)", "written at V" + from, "OPEN", "HIGH");
+
+            Map<String, Integer> before = rowCountsIn(schema);
+
+            MigrateResult upgrade = schemaFlywayUpTo(schema, to).migrate();
+
+            assertThat(upgrade.migrationsExecuted)
+                    .as("step %s -> %s: exactly one migration should run", from, to)
+                    .isEqualTo(1);
+
+            Map<String, Integer> after = rowCountsIn(schema);
+
+            assertThat(after.keySet())
+                    .as("step %s -> %s: a migration must not drop a table that already existed",
+                            from, to)
+                    .containsAll(before.keySet());
+
+            before.forEach((table, count) -> assertThat(after.get(table))
+                    .as("step %s -> %s: rows in '%s' must survive the upgrade", from, to, table)
+                    .isGreaterThanOrEqualTo(count));
+
+            assertThat(taskTitles(schema))
+                    .as("step %s -> %s: the task written before the upgrade is still there",
+                            from, to)
+                    .contains("written at V" + from);
+            assertThat(agentNames(schema))
+                    .as("step %s -> %s: the seeded agents are still there", from, to)
+                    .isEqualTo(SEEDED_AGENTS);
+        }
+    }
+
     @Test
     void removingLegacyHistoryIsANoOpWhenThereIsNothingToRemove() {
 
@@ -300,9 +392,12 @@ class MigrationStreamTest {
 
     /**
      * The versions the schema stream resolves right now, read from Flyway
-     * itself rather than hard-coded. Every migration a later task adds extends
-     * this list automatically, so these regressions keep testing the migration
-     * strategy instead of the current head.
+     * itself rather than hard-coded, so every migration a later task adds extends
+     * this list on its own and these regressions keep testing the migration
+     * strategy rather than the current head.
+     *
+     * <p>That applies to versions only. The table list is declared by hand in
+     * {@link #TABLES_AT_HEAD}, on purpose; claiming otherwise was TD-23.
      */
     private static List<String> resolvedSchemaVersions() {
         return Arrays.stream(Flyway.configure()
@@ -386,6 +481,24 @@ class MigrationStreamTest {
                 "SELECT version FROM \"" + schema + "\".\"" + table + "\" "
                         + "WHERE success = TRUE AND version IS NOT NULL ORDER BY installed_rank",
                 String.class);
+    }
+
+    /**
+     * Row counts for every table in the schema, Flyway's own history tables
+     * excluded: those legitimately grow as migrations are applied, and counting
+     * them would turn "nothing was lost" into "nothing changed".
+     */
+    private Map<String, Integer> rowCountsIn(String schema) {
+
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String table : tablesIn(schema)) {
+            if (table.endsWith("_history")) {
+                continue;
+            }
+            counts.put(table, jdbc().queryForObject(
+                    "SELECT count(*) FROM \"" + schema + "\".\"" + table + "\"", Integer.class));
+        }
+        return counts;
     }
 
     private List<String> tablesIn(String schema) {
