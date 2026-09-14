@@ -143,52 +143,51 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 
 ## Prossimo passo autonomo
 
-**TASK-005 — Uniform Error Contract (TD-07).**
+**TASK-006 — Migration Test Coverage (TD-22, TD-23).**
 
-Scelta secondo `AUTONOMOUS_LOOP.md` §4. I livelli 1 e 2 sono vuoti — nessun invariante promesso
-è falso, nessun blocker architetturale aperto. Il livello 3 seleziona TD-07:
+`AUTONOMOUS_LOOP.md` §4, livello 3. I livelli 1 e 2 restano vuoti.
 
-- è **debito che peggiora a ogni task**: oggi l'API parla tre dialetti di errore, e ogni
-  endpoint nuovo deve sceglierne uno o aggiungerne un quarto;
-- **assorbe TD-20, TD-27 e TD-29**, che sono tutti aspetti dello stesso contratto mancante;
-- ogni pezzo della target architecture che seguirà (Agent Registry, Planner, Model Gateway)
-  aggiunge superficie API: farlo dopo costa più che farlo adesso.
+Il passo successivo dopo questo è l'**Agent Registry**, che porterà una `V4`. La storia di test
+delle migrazioni ha però due buchi proprio su quel percorso:
 
-Primo passo: branch `task-005-uniform-error-contract` dall'integration branch, artefatti di
-scope e ADR-007, poi i test che dimostrano le tre forme oggi coesistenti.
+- **TD-22** — nessun test porta un database da `V1` a `V2` verificando che `agents` e `tasks`
+  restino intatte. Il modello esiste già — `MigrationStreamTest.taskProjectRelationIsAddedToAPopulatedV2Database`
+  usa `Flyway.target` per fermarsi a una versione e poi migrare — quindi applicarlo è meccanico,
+  e averlo per **ogni** passo rende gratuito tenerlo per `V4`;
+- **TD-23** — `MigrationStreamTest` legge le versioni da Flyway ma fissa a mano l'elenco delle
+  **tabelle**: la prossima migrazione che ne crea una lo rompe comunque.
+
+È debito che il passo successivo tocca, non debito in generale. Piccolo e mirato.
+
+Primo passo: branch `task-006-migration-test-coverage` dall'integration branch.
+
+**Dopo**: TASK-007 — Agent Registry, livello 4 (dipendenza della target architecture: Skills,
+Tools, MCP Registry, Model Gateway e Planner si appoggiano tutti agli agenti).
 
 ## Debito aperto rilevante
 
 **Chiusi da TASK-004**: TD-19 (componente ciclo di vita), **TD-24**, **TD-25**.
+**Chiusi da TASK-005**: **TD-07**, **TD-20**, **TD-21**, **TD-27**, **TD-29**.
 
 ### Alto valore
 
 | ID | Contenuto |
 |---|---|
-| **TD-07** | Contratto di errore non uniforme: tre forme convivono. **Assorbe TD-20, TD-27, TD-29.** Prossima task |
 | **TD-28** | `PUT /api/projects/{id}` esposto alla sovrascrittura con dati stantii. Il lock serializza ma non rileva. Richiede `ETag`/`If-Match` nel contratto HTTP |
 | **TD-30** | *(MINOR, ristretto)* Riassegnazioni concorrenti dello stesso task: last-write-wins **su stato fresco**. L0 le serializza e ciascuna applica le regole ai dati che trova; manca la **rilevazione** dell'intento stantio. Gemello di TD-28 sull'altra entità |
-
-### Assorbiti da TD-07
-
-| ID | Contenuto |
-|---|---|
-| **TD-20** | JSON malformato o `Content-Type` mancante su `/api/projects` non producono `ProblemDetail` |
-| **TD-27** | Path variable non numerico: due forme di errore sulla stessa rotta |
-| **TD-29** | *(MINOR)* Nessun contratto API normalizzato per gli errori infrastrutturali di concorrenza e locking. **Non implica timeout, retry o `503`** |
+| **TD-14** | Nessuna CI. Con 136 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
 
 ### Qualità dei test e migrazioni
 
 | ID | Contenuto |
 |---|---|
-| **TD-21** | Asserzione debole in `theProjectErrorContractDoesNotLeakIntoTheTaskApi` |
-| **TD-22** | Nessun test di upgrade incrementale `V1` → `V2`. Il modello esiste già in `MigrationStreamTest` |
-| **TD-23** | `MigrationStreamTest` fissa ancora l'elenco delle tabelle |
+| **TD-22** | Nessun test di upgrade incrementale `V1` → `V2`. Il modello esiste già in `MigrationStreamTest`. **Prossima task** |
+| **TD-23** | `MigrationStreamTest` fissa ancora l'elenco delle tabelle. **Prossima task** |
 | **TD-26** | Il path lazy non è esercitato fuori transazione. **Parzialmente coperto** da TASK-004: un test pinna che leggere `projectId` non inizializzi il proxy |
 
 ### Preesistente
 
-TD-04 sicurezza, TD-08 `MasterOrchestrator`, TD-11 CORS, TD-12/TD-13 dominio, TD-14 CI assente,
+TD-04 sicurezza, TD-08 `MasterOrchestrator`, TD-11 CORS, TD-12/TD-13 dominio,
 TD-15 Lombok inutilizzato, TD-17/TD-18 `README.md`.
 
 Rilievi della review TASK-001 ancora aperti: **R3** (`.env` non configura il processo Maven),
