@@ -13,18 +13,41 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 `master` è il gate umano finale e non si tocca.
 
 ## Status
-PHASE 1 in corso. **TASK-005 completata e integrata in `autonomous/phase-1-foundations`**
-(2026-09-14). Suite **136 test verdi**. Nessun failure aperto.
+PHASE 1 in corso. **TASK-006 completata e integrata in `autonomous/phase-1-foundations`**
+(2026-09-14). Suite **137 test verdi**. Nessun failure aperto.
 
 ## Current phase
 PHASE 1 — Foundations (persistenza, primo dominio, prima relazione, **prima invariante di
 concorrenza**)
 
 ## Current task
-**Nessuna in corso.** La prossima è **TASK-006 — Migration Test Coverage (TD-22, TD-23)**,
-scelta autonomamente; motivazione nel «Prossimo passo».
+**Nessuna in corso.** La prossima è **TASK-007 — Agent Registry**, scelta autonomamente;
+motivazione nel «Prossimo passo».
 
 ## Last completed task
+
+**TASK-006 — Migration Test Coverage** (2026-09-14).
+
+Chiude **TD-22** e **TD-23**. Un solo file di test toccato, nessun cambiamento
+all'applicazione.
+
+TD-22 chiedeva il test incrementale `V1 → V2`. È stato scritto invece un test su **ogni coppia
+consecutiva** che Flyway risolve: porta un database a `N`, ci scrive righe, migra a `N+1` e
+verifica le tre cose che una migrazione può distruggere senza fallire — una riga sparisce, una
+tabella sparisce, viene applicato più del previsto. Il test specifico avrebbe chiuso il buco di
+ieri riaprendo quello di domani; leggere le coppie dallo stream copre `V4` il giorno in cui
+esiste, senza che nessuno se ne ricordi.
+
+TD-23 mantiene la decisione — l'elenco delle tabelle è dichiarato a mano, perché una migrazione
+che crea una tabella è un fatto che qualcuno deve affermare — e perde la frase che descriveva il
+test come capace di adattarsi da solo. Il difetto era la spiegazione, non l'elenco.
+
+Verifica per mutazione: una `V3` che cancella righe, e una che elimina `agents`, rendono rosso
+il test.
+
+Artefatti: `tasks/TASK-006/*`.
+
+## Task precedenti (dettaglio)
 
 **TASK-005 — Uniform Error Contract** (2026-09-14).
 
@@ -44,8 +67,6 @@ dialetti di errore; adesso ne parla uno.
 preesistenti di `/api/tasks`. **Nessuno stato HTTP cambia.**
 
 Artefatti: `tasks/TASK-005/*`, `docs/adr/ADR-007-uniform-error-contract.md`.
-
-## Task precedenti (dettaglio)
 
 **TASK-004 — Archival Consistency & Project Lock Protocol** (2026-09-14).
 
@@ -93,15 +114,15 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 - Contratto di errore: **uno solo** (ADR-007). Ogni risposta di errore è un `ProblemDetail`
   con `type` stabile `urn:ai-company-os:problem:<slug>`, enumerato in `ApiProblem`. Un advice
   globale, `ApiExceptionHandler`. Nessuna policy di timeout o retry.
-- Test: **136** (erano 109 in `master`). `./mvnw -B clean test` → BUILD SUCCESS.
+- Test: **137** (erano 109 in `master`). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
 ## Stato Git (verificato il 2026-09-14)
 
 - **`master`**: fermo a `d5ff121`. **Gate umano finale, nessun merge autonomo.**
-- **Integration branch**: `autonomous/phase-1-foundations`, HEAD **`d3faeae`**.
+- **Integration branch**: `autonomous/phase-1-foundations`, HEAD **`5d0ad8d`**.
 - Branch di lavoro integrati in fast-forward: `task-004-archival-consistency`,
-  `task-005-uniform-error-contract`.
+  `task-005-uniform-error-contract`, `task-006-migration-test-coverage`.
 - **Nessun remote configurato, nessun push eseguito.**
 - Storia lineare, mai riscritta.
 
@@ -143,31 +164,29 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 
 ## Prossimo passo autonomo
 
-**TASK-006 — Migration Test Coverage (TD-22, TD-23).**
+**TASK-007 — Agent Registry.**
 
-`AUTONOMOUS_LOOP.md` §4, livello 3. I livelli 1 e 2 restano vuoti.
+`AUTONOMOUS_LOOP.md` §4. I livelli 1, 2 e 3 sono vuoti: nessun invariante promesso è falso,
+nessun blocker architetturale, e il debito che il passo successivo tocca è stato chiuso da
+TASK-005 e TASK-006. Si scende al **livello 4** — dipendenze necessarie alla target
+architecture.
 
-Il passo successivo dopo questo è l'**Agent Registry**, che porterà una `V4`. La storia di test
-delle migrazioni ha però due buchi proprio su quel percorso:
+`Agent` è oggi una tabella piatta con un solo `GET /api/agents`: nessuna validazione, nessun
+ciclo di vita, nessuna scrittura. La target architecture ci appoggia sopra Skills, Rules,
+Subagents, Tools, MCP Registry, Model Gateway e Planner — tutto quello che viene dopo assume un
+registro di agenti che oggi non esiste.
 
-- **TD-22** — nessun test porta un database da `V1` a `V2` verificando che `agents` e `tasks`
-  restino intatte. Il modello esiste già — `MigrationStreamTest.taskProjectRelationIsAddedToAPopulatedV2Database`
-  usa `Flyway.target` per fermarsi a una versione e poi migrare — quindi applicarlo è meccanico,
-  e averlo per **ogni** passo rende gratuito tenerlo per `V4`;
-- **TD-23** — `MigrationStreamTest` legge le versioni da Flyway ma fissa a mano l'elenco delle
-  **tabelle**: la prossima migrazione che ne crea una lo rompe comunque.
+Portarlo allo standard di `Project` significa: migrazione `V4`, entità con ciclo di vita
+esplicito, CRUD con validazione, e nessuna relazione con `Project` — che resta una decisione a
+sé, esattamente come TASK-002 ha preceduto TASK-003.
 
-È debito che il passo successivo tocca, non debito in generale. Piccolo e mirato.
-
-Primo passo: branch `task-006-migration-test-coverage` dall'integration branch.
-
-**Dopo**: TASK-007 — Agent Registry, livello 4 (dipendenza della target architecture: Skills,
-Tools, MCP Registry, Model Gateway e Planner si appoggiano tutti agli agenti).
+Primo passo: branch `task-007-agent-registry` dall'integration branch.
 
 ## Debito aperto rilevante
 
 **Chiusi da TASK-004**: TD-19 (componente ciclo di vita), **TD-24**, **TD-25**.
 **Chiusi da TASK-005**: **TD-07**, **TD-20**, **TD-21**, **TD-27**, **TD-29**.
+**Chiusi da TASK-006**: **TD-22**, **TD-23**.
 
 ### Alto valore
 
@@ -181,8 +200,6 @@ Tools, MCP Registry, Model Gateway e Planner si appoggiano tutti agli agenti).
 
 | ID | Contenuto |
 |---|---|
-| **TD-22** | Nessun test di upgrade incrementale `V1` → `V2`. Il modello esiste già in `MigrationStreamTest`. **Prossima task** |
-| **TD-23** | `MigrationStreamTest` fissa ancora l'elenco delle tabelle. **Prossima task** |
 | **TD-26** | Il path lazy non è esercitato fuori transazione. **Parzialmente coperto** da TASK-004: un test pinna che leggere `projectId` non inizializzi il proxy |
 
 ### Preesistente
