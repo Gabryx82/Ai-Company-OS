@@ -13,18 +13,39 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 `master` è il gate umano finale e non si tocca.
 
 ## Status
-PHASE 1 in corso. **TASK-004 completata e integrata in `autonomous/phase-1-foundations`**
-(2026-09-14). Suite **126 test verdi**. Nessun failure aperto.
+PHASE 1 in corso. **TASK-005 completata e integrata in `autonomous/phase-1-foundations`**
+(2026-09-14). Suite **136 test verdi**. Nessun failure aperto.
 
 ## Current phase
 PHASE 1 — Foundations (persistenza, primo dominio, prima relazione, **prima invariante di
 concorrenza**)
 
 ## Current task
-**Nessuna in corso.** La prossima è **TASK-005 — Uniform Error Contract (TD-07)**, scelta
-autonomamente; motivazione nel «Prossimo passo».
+**Nessuna in corso.** La prossima è **TASK-006 — Migration Test Coverage (TD-22, TD-23)**,
+scelta autonomamente; motivazione nel «Prossimo passo».
 
 ## Last completed task
+
+**TASK-005 — Uniform Error Contract** (2026-09-14).
+
+Chiude **TD-07**, e con lui **TD-20**, **TD-21**, **TD-27** e **TD-29**. L'API parlava tre
+dialetti di errore; adesso ne parla uno.
+
+| Decisione | Contenuto |
+|---|---|
+| Un advice globale | `ApiExceptionHandler`, che estende `ResponseEntityExceptionHandler`: le eccezioni che Spring solleva prima del nostro codice entrano nel contratto senza essere rincorse a ogni upgrade. Erano esattamente TD-20 e TD-27 |
+| **`type` stabile** | `urn:ai-company-os:problem:<slug>`, enumerato in `ApiProblem`. **Il `type` è il contratto, il `title` è la prosa**: prima l'unico modo di distinguere due `409` era confrontarne la frase inglese |
+| Validazione | `errors` con l'elenco dei campi, **ovunque** |
+| Catch-all | `500` con `detail` fisso e stack loggato per intero: nessun nome di tabella, SQL o percorso raggiunge il chiamante |
+| Locking | Prende quella forma. **Nessuna policy**: niente timeout, retry o `503`. ADR-006 §7 resta valida, e TD-29 era la forma, non la policy |
+| I due advice di modulo | Rimossi: un contratto con due punti di definizione dipende da una precedenza che nessuno ha scelto |
+
+**Rottura dichiarata**: cambiano i corpi di errore di `/api/agents` e delle risposte
+preesistenti di `/api/tasks`. **Nessuno stato HTTP cambia.**
+
+Artefatti: `tasks/TASK-005/*`, `docs/adr/ADR-007-uniform-error-contract.md`.
+
+## Task precedenti (dettaglio)
 
 **TASK-004 — Archival Consistency & Project Lock Protocol** (2026-09-14).
 
@@ -49,8 +70,6 @@ tocca `C`, insiemi disgiunti. Da lì **L0**, approvato il 2026-09-14.
 
 Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-project-serialization.md`.
 
-## Task precedenti
-
 - **TASK-003 — Task → Project Association Foundation** (merged in `master`, 2026-09-12).
   Prima relazione persistente: `Task` → `Project`, chiave esterna da `V3`, mapping JPA
   unidirezionale, API di assegnazione e listato per progetto. ADR-005.
@@ -71,17 +90,18 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 - Profili: `dev` (default), `test` (Testcontainers), `prod`.
 - **Concorrenza**: protocollo di lock L0–L7 su `tasks` e `projects` (ADR-006 §4). Lock
   bloccanti ordinari: nessun `lock_timeout`, nessuna policy di retry, nessun `503`.
-- Contratto di errore: **tre forme convivono** — `ProblemDetail` sotto `/api/projects`,
-  `ProblemDetail` sulle sole risposte di errore introdotte da TASK-003 e TASK-004 sotto
-  `/api/tasks`, il default di Spring altrove. Disomogeneità nota, si chiude con **TD-07**.
-- Test: **126** (erano 109 in `master`). `./mvnw -B clean test` → BUILD SUCCESS.
+- Contratto di errore: **uno solo** (ADR-007). Ogni risposta di errore è un `ProblemDetail`
+  con `type` stabile `urn:ai-company-os:problem:<slug>`, enumerato in `ApiProblem`. Un advice
+  globale, `ApiExceptionHandler`. Nessuna policy di timeout o retry.
+- Test: **136** (erano 109 in `master`). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
 ## Stato Git (verificato il 2026-09-14)
 
 - **`master`**: fermo a `d5ff121`. **Gate umano finale, nessun merge autonomo.**
-- **Integration branch**: `autonomous/phase-1-foundations`, HEAD **`b1274d1`**.
-- Branch di lavoro: `task-004-archival-consistency`, integrato in fast-forward.
+- **Integration branch**: `autonomous/phase-1-foundations`, HEAD **`d3faeae`**.
+- Branch di lavoro integrati in fast-forward: `task-004-archival-consistency`,
+  `task-005-uniform-error-contract`.
 - **Nessun remote configurato, nessun push eseguito.**
 - Storia lineare, mai riscritta.
 
@@ -97,6 +117,15 @@ Commit di TASK-004, ora nell'integration branch:
 | `736a22d` | `feat(project,task)` — implementazione |
 | `77c2071` | `test(project,task)` — protocollo, regola, ragionamento |
 | `b1274d1` | `docs(task-004)` — chiusura, artefatti, stato per una sessione fredda |
+| `1ddeee3` | `docs(project-state)` — correzione dell'integration HEAD |
+
+Commit di TASK-005:
+
+| Hash | Contenuto |
+|---|---|
+| `40c3578` | `test(api)` — i tre dialetti, 9 test deliberatamente rossi |
+| `2f77f47` | `feat(api)` — il contratto unico |
+| `d3faeae` | `docs(task-005)` — artefatti e review del proprio diff |
 
 Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 `task-002-project-registry-foundation`, `task-003-task-project-association`,
@@ -109,6 +138,7 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 - **ADR-003** — Il seed di sviluppo è uno stream Flyway separato. *Accettata*.
 - **ADR-004** — Project Registry: stati chiusi imposti due volte, si archivia invece di cancellare, transizione illegale → `409`, unicità del nome nel database, un archiviato non è modificabile (§8). *Accettata*.
 - **ADR-005** — Relazione `Task` → `Project`: `project_id` nullable, i task preesistenti non si migrano, associare a un `ARCHIVED` è `409`, relazione unidirezionale, FK senza `ON DELETE`. *Accettata*.
+- **ADR-007** — Un solo contratto di errore per tutta l'API: advice globale che estende `ResponseEntityExceptionHandler`, `type` stabile e enumerato (`urn:ai-company-os:problem:<slug>`) come parte machine-readable del contratto, `errors` ovunque, catch-all con `detail` fisso e stack loggato, nessuna policy di timeout o retry. **Supera ADR-004 §6 e ADR-005 §8**. *Accettata e implementata*.
 - **ADR-006** — Coerenza archiviazione → task **derivata** (nessuna scrittura sui figli, `restore` inverso per costruzione), congelamento in scrittura con letture aperte, `PUT` idempotente `200` no-op, protocollo di lock **L0–L7** con ordine globale `tasks` → `projects`, nessuna migrazione, contratto invariato, nessun `503`. *Accettata e **implementata**.*
 
 ## Prossimo passo autonomo
