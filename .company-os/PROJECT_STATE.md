@@ -80,7 +80,7 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 ## Stato Git (verificato il 2026-09-14)
 
 - **`master`**: fermo a `d5ff121`. **Gate umano finale, nessun merge autonomo.**
-- **Integration branch**: `autonomous/phase-1-foundations`, HEAD **`77c2071`**.
+- **Integration branch**: `autonomous/phase-1-foundations`, HEAD **`b1274d1`**.
 - Branch di lavoro: `task-004-archival-consistency`, integrato in fast-forward.
 - **Nessun remote configurato, nessun push eseguito.**
 - Storia lineare, mai riscritta.
@@ -96,6 +96,7 @@ Commit di TASK-004, ora nell'integration branch:
 | `6d0f23d` | `docs(task-004)` — L0, ordine globale, TD-30 ristretto |
 | `736a22d` | `feat(project,task)` — implementazione |
 | `77c2071` | `test(project,task)` — protocollo, regola, ragionamento |
+| `b1274d1` | `docs(task-004)` — chiusura, artefatti, stato per una sessione fredda |
 
 Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 `task-002-project-registry-foundation`, `task-003-task-project-association`,
