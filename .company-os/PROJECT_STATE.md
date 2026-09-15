@@ -13,21 +13,27 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 `master` è il gate umano finale e non si tocca.
 
 ## Status
-**PHASE 1 — Foundations: COMPLETA.** TASK-004, TASK-005, TASK-006 e TASK-007 completate e
-integrate in `autonomous/phase-1-foundations` (2026-09-14). Suite **158 test verdi**,
-schema **`V4`**, nessun failure aperto.
+**PHASE 1 — Foundations: COMPLETA.** Integrata in `autonomous/phase-1-foundations` (`0a35ac0`,
+2026-09-14), in attesa di review umana: `FINAL_HANDOFF.md`. **Niente in `master`.**
 
-`FINAL_HANDOFF.md` è pronto per la review umana. **Niente è stato integrato in `master`**: quello
-resta il gate umano finale.
+**PHASE 2 — Assignment: in corso** dal 2026-09-15, su `autonomous/phase-2-assignment`, creato da
+`autonomous/phase-1-foundations`. Baseline riverificata prima di aprirla: **158 test verdi**,
+schema **`V4`**, nessun failure aperto, nessun remote.
 
 ## Current phase
-**PHASE 1 — Foundations, completa.** Persistenza riproducibile, due registri di dominio con
-ciclo di vita, la prima relazione, la prima invariante di concorrenza, un contratto di errore
-unico, e una storia di test delle migrazioni che copre da sola le migrazioni future.
+**PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
+chiusura: **`.company-os/PHASE_2_PLAN.md`**. In una riga: *il Company OS sa dire chi lavora su
+che cosa, e due client non possono sovrascriversi in silenzio mentre lo dicono.*
+
+PHASE 1 resta com'è: `master` è ancora il gate di quella fase, e PHASE 2 ci si costruisce sopra
+senza mergiarla.
 
 ## Current task
-**Nessuna.** La fase è chiusa e il lavoro è in attesa di review umana. I candidati per PHASE 2
-sono nel «Prossimo passo».
+**TASK-008 — Optimistic concurrency nel contratto HTTP.** Chiude **TD-28** e **TD-30**.
+Scelta come livello 3 di `AUTONOMOUS_LOOP.md` §4 — debito che il passo successivo tocca — e non
+come livello 4: TASK-009 aggiunge un secondo asse di assegnazione alla riga `tasks`, e
+costruirci sopra la rilevazione dell'intento stantio dopo significherebbe pubblicare un
+contratto che dovrà cambiare. Dettaglio in `PHASE_2_PLAN.md` §3.
 
 ## Last completed task
 
@@ -197,20 +203,24 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 
 ## Prossimo passo autonomo
 
-**Nessuno: la fase è chiusa e il gate è umano.**
+**TASK-008 — Optimistic concurrency nel contratto HTTP.** Artefatti in `tasks/TASK-008/`, branch
+`task-008-optimistic-concurrency` creato da `autonomous/phase-2-assignment`.
 
-`FINAL_HANDOFF.md` è pronto. Il merge in `master` non viene eseguito da nessun agente: è il
-gesto con cui un umano accetta il lavoro (`AUTONOMOUS_CHARTER.md` §8).
+Il piano completo della fase, con l'ordine delle task e perché è quello, sta in
+**`.company-os/PHASE_2_PLAN.md`**. In sintesi:
 
-Candidati per PHASE 2, **nessuno scelto** — la scelta spetta alla review:
+| # | Task | Livello | Stato |
+|---|---|---|---|
+| **TASK-008** | Optimistic concurrency (`ETag`/`If-Match`). Chiude TD-28, TD-30 | 3 | **in corso** |
+| **TASK-009** | Relazione `Task` → `Agent` | 4 | pianificata |
+| **TASK-010** | Da definire quando ci si arriva — TASK-009 può derivarne il contenuto | 5 | pianificata |
+| **TASK-011** | Collisione di identificatori nel registro del debito; `docs/RUNNING.md` | 6 | pianificata |
 
-| Candidato | Livello di priorità | Nota |
-|---|---|---|
-| **Relazione `Task` → `Agent`** | 4 | Il nodo naturale dopo il registro, come TASK-003 lo fu dopo TASK-002. Richiede prima le tre domande di dominio, come ADR-005 fece per le sue |
-| **TD-14 — CI** | 3 | 158 test, invarianti di concorrenza e guardie verificate per mutazione, e nulla che li esegua automaticamente. Richiede però un remote, che è un hard stop |
-| **TD-04 / TD-11 — sicurezza e CORS** | 3 | Tre registri con scritture e nessuna autenticazione. La superficie cresce a ogni task |
-| **TD-28 / TD-30** | 3 | Rilevazione dell'intento stantio su `Project` e su `Task`. Si chiudono insieme, con `ETag`/`If-Match` |
-| **TD-31** | — | Unificare il ciclo di vita di `Agent`. **Richiede una decisione umana**: la migrazione elimina una colonna |
+Fuori da PHASE 2 e dichiarato tale: **TD-14** (CI: richiede un remote, hard stop #4), **TD-31**
+(elimina una colonna, hard stop #3), **TD-04** (autenticazione: primo candidato di PHASE 3).
+
+Il merge di PHASE 1 in `master` resta il gesto con cui un umano accetta il lavoro
+(`AUTONOMOUS_CHARTER.md` §8), e nessun agente lo esegue.
 
 ## Debito aperto rilevante
 
@@ -226,7 +236,7 @@ Candidati per PHASE 2, **nessuno scelto** — la scelta spetta alla review:
 | **TD-28** | `PUT /api/projects/{id}` esposto alla sovrascrittura con dati stantii. Il lock serializza ma non rileva. Richiede `ETag`/`If-Match` nel contratto HTTP |
 | **TD-30** | *(MINOR, ristretto)* Riassegnazioni concorrenti dello stesso task: last-write-wins **su stato fresco**. L0 le serializza e ciascuna applica le regole ai dati che trova; manca la **rilevazione** dell'intento stantio. Gemello di TD-28 sull'altra entità |
 | **TD-31** | *(nuovo)* `Agent` esprime il ciclo di vita con un booleano, `Project` con un enum chiuso. Unificarli richiede di **eliminare una colonna**: migrazione irreversibile, dietro una decisione umana. Nel frattempo il contratto pubblico è già uniforme, perché `status` è derivato |
-| **TD-14** | Nessuna CI. Con 136 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
+| **TD-14** | Nessuna CI. Con 158 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
 
 ### Qualità dei test e migrazioni
 
@@ -252,7 +262,7 @@ da applicare. `docs/RUNNING.md` non documenta `/api/projects` né gli endpoint d
 
 ## Failure aperti
 
-**Nessuno.** 126/126 verdi.
+**Nessuno.** 158/158 verdi (`./mvnw -B clean test`, 2026-09-15).
 
 ## Domande di contratto aperte
 
