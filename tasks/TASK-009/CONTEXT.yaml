@@ -1,0 +1,163 @@
+task: TASK-009
+title: Assegnazione Task -> Agent
+mode: implementation
+status: SELF_APPROVED
+approval: autonomous_project_mode
+decided_on: 2026-09-17
+
+selection_rationale: >
+  AUTONOMOUS_LOOP.md sezione 4, livello 4. Il livello 3 si e' svuotato quando
+  TASK-008 ha chiuso TD-28 e TD-30. Agent e' un registro senza relazioni, e
+  Planner, Subagents, Model Gateway e la sostituzione di MasterOrchestrator
+  poggiano tutti sul fatto che il sistema oggi non sa esprimere: chi lavora su
+  che cosa.
+
+baseline:
+  branch: task-009-task-agent-assignment
+  base: autonomous/phase-2-assignment
+  head_at_start: da0bd0e
+  suite_at_start: 179
+  schema_at_start: V5
+
+decisions_ref: docs/adr/ADR-010-task-agent-assignment.md
+briefing_ref: tasks/TASK-008/HANDOFF.md
+
+domain_questions:
+  D1:
+    question: "un task puo' essere assegnato a un agente disattivato?"
+    answer: "no, 409 inactive-agent-cannot-receive-tasks"
+    same_as_project: outcome_yes_argument_no
+    argument: >
+      Non e' l'argomento di contenimento di ADR-005 sezione 3. E' un argomento
+      di responsabilita': assegnare lavoro a un agente spento crea
+      un'obbligazione che nessuno puo' assolvere, e senza semantica di coda
+      "assegnato a chi e' spento" e' indistinguibile da "dimenticato".
+      Rifiutare e' reversibile dal chiamante; permettere non lo e'.
+  D2:
+    question: "un task in un progetto archiviato puo' cambiare agente?"
+    answer: "no, 409 archived-project-task-is-immutable (type esistente)"
+    same_as_project: yes
+    argument: >
+      Prima verifica della frase generale di ADR-006 sezione 2. Regge per il
+      suo argomento originale: un contenitore fuori dal registro che lascia
+      comunque riassegnare il proprio contenuto non e' fuori da niente.
+      ATTENZIONE: "per costruzione" non e' automatico. Vale perche' la guardia
+      sta sull'entita' Task e il percorso nuovo la attraversa. Da qui la
+      conseguenza sul lock graph: il percorso dell'agente deve bloccare la riga
+      del progetto del task.
+  D3:
+    question: "disattivare un agente fa qualcosa ai suoi task?"
+    answer: >
+      Nessuna scrittura sui figli, come archive. Ma la regola derivata e'
+      L'OPPOSTA di quella dei progetti: un task il cui agente e' inattivo NON
+      e' congelato, ed e' pienamente riassegnabile.
+    same_as_project: no
+    argument: >
+      Il momento in cui si disattiva un agente e' esattamente il momento in cui
+      bisogna poter riassegnare il suo lavoro. Congelare i suoi task lo
+      intrappolerebbe con un lavoratore che non puo' eseguirlo, e l'unica via
+      d'uscita sarebbe riattivare l'agente, cioe' annullare la ragione per cui
+      lo si e' spento.
+  D3bis:
+    question: "e se invece deactivate rifiutasse finche' ha lavoro assegnato?"
+    answer: no
+    argument: >
+      Due ragioni nella stessa direzione. Richiederebbe di leggere i task sotto
+      lock tenendo gia' il lock esclusivo sull'agente, cioe' l'arco
+      agents -> tasks, che chiude un ciclo nel lock graph. E impedirebbe di
+      togliere dal servizio un agente guasto proprio quando e' guasto.
+
+lock_graph:
+  global_order: "tasks -> projects -> agents; id crescente dentro ogni classe, dedup"
+  edge_nature:
+    tasks_to_projects: "imposto dai dati: quali progetti servano lo dice la riga del task"
+    tasks_to_agents: "imposto per l'origine, scelto per la destinazione; l'inverso creerebbe agents -> tasks"
+    projects_to_agents: "convenzione, fissata per dichiarazione: nessun dato la impone"
+  new_paths:
+    put_task_agent:
+      tasks: "{id} WRITE (L0)"
+      projects: "{progetto del task} SHARE, se ne ha uno -- discende da D2"
+      agents: "{target} SHARE -- discende da D1"
+      source_agent: "NON bloccato -- discende da D3: nessuna regola dipende dal suo stato"
+    post_task_with_agent:
+      agents: "{target} SHARE"
+  acyclicity:
+    edges: ["tasks->projects", "tasks->agents", "projects->agents"]
+    topological_order: ["tasks", "projects", "agents"]
+    absent_edges_verified:
+      projects_to_tasks: "archive/restore non toccano tasks -- ADR-006 sezione 1"
+      agents_to_tasks: "il ciclo di vita dell'agente non dipende dai suoi task -- D3"
+      agents_to_projects: "i due registri non si conoscono -- ADR-008 sezione 5"
+    conclusion: >
+      L'aciclicita' e' una CONSEGUENZA di ADR-006 sezione 1 e di D3, non una
+      proprieta' indipendente. Un percorso futuro che violasse una delle due non
+      va aggiunto aggirando l'ordine.
+
+versioning:
+  rule: >
+    agent_id e' una colonna di tasks. Assegnare scrive la riga del task, quindi
+    incrementa tasks.version e consuma l'ETag del task. NESSUN versionamento
+    separato dell'associazione: due contatori sulla stessa riga sarebbero due
+    verita' sullo stesso fatto.
+  observable: >
+    chi cambia il progetto invalida il tag di chi sta per cambiare l'agente:
+    200 e 412, non due 200.
+  P3: "assegnare NON incrementa agents.version; OPTIMISTIC_FORCE_INCREMENT resta vietato"
+  P4: "If-Match obbligatorio per costruzione; PreconditionCoverageTest pinna il percorso nuovo"
+
+invariants:
+  - "I-1: agente inattivo -> 409, nulla scritto"
+  - "I-2: task in progetto archiviato -> 409; con entrambi i rifiuti vince quello sul task"
+  - "I-3: deactivate/activate non scrivono righe di tasks"
+  - "I-4: un task con agente inattivo e' riassegnabile"
+  - "I-5: 428 senza If-Match, 412 con tag stantio, nulla scritto"
+  - "I-6: una sola versione -- il cambio di progetto invalida il tag per il cambio di agente"
+  - "I-7: assegnare non incrementa agents.version"
+  - "I-8: progetto e agente concorrenti sullo stesso task -> 200 e 412"
+  - "I-9: deactivate concorrente con assegnazione -> commit prima, oppure 409"
+  - "I-10: archive concorrente con cambio di agente -> la regola decide su stato vero"
+  - "I-11: V6 additiva"
+  - "I-12: ogni type nuovo enumerato"
+  - "I-13: P4 -- il percorso nuovo e' nell'insieme pinnato"
+
+forbidden:
+  - freezing_tasks_of_an_inactive_agent
+  - failing_deactivate_when_tasks_are_assigned
+  - locking_the_source_agent
+  - separate_association_version
+  - optimistic_force_increment
+  - agent_status_in_task_response
+  - bidirectional_relation
+  - delete_task_agent_association
+  - planner
+  - routing
+  - master_orchestrator_replacement
+  - authentication
+  - cors
+  - pagination
+  - frontend
+  - merge_to_master
+  - push
+
+debt_accounting_at_close:
+  TD-13: "RESOLVED (numerazione dell'audit): Agent e Task adesso si conoscono"
+  TD-34: >
+    OPEN nuovo, MINOR. Un task puo' puntare a un agente inattivo -- stato legale
+    e necessario per D3 -- e non c'e' modo di chiedere "i task fermi su agenti
+    inattivi" senza incrociare due liste lato client.
+  TD-35: >
+    OPEN nuovo, MINOR. Nessun DELETE dell'associazione: un task assegnato non
+    torna non assegnato, si riassegna soltanto. Gemello di quello che ADR-005
+    sezione 5 lascio' aperto sul progetto, con piu' pressione.
+
+git_constraints:
+  work_branch: task-009-task-agent-assignment
+  integration_branch: autonomous/phase-2-assignment
+  forbidden_operations:
+    - merge_to_master
+    - push
+    - remote_configuration
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - history_rewrite
