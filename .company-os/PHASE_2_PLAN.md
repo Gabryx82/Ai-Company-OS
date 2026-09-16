@@ -56,9 +56,10 @@ quale meccanismo si chiude: concorrenza ottimistica **nel contratto HTTP**, non 
 
 ## 3. Task pianificate
 
-### TASK-008 — Optimistic concurrency nel contratto HTTP
+### TASK-008 — Optimistic concurrency nel contratto HTTP ✅
 
-**Livello 3. Chiude TD-28 e TD-30.**
+**Livello 3. Completata il 2026-09-16. Chiude TD-28 e TD-30, apre TD-32 e TD-33.**
+Suite 158 → 179, schema `V4` → `V5`. Chiusura in `tasks/TASK-008/ARTIFACT.md`.
 
 Il problema, nelle parole che il repository usa già: i lock **serializzano ma non rilevano**. Due
 scritture concorrenti sulla stessa risorsa producono entrambe uno stato legale, e il primo
@@ -89,7 +90,7 @@ ADR-009 §2 lo dice per esteso, perché letto di sfuggita sembra una contraddizi
 
 ### TASK-009 — Task → Agent assignment
 
-**Livello 4.**
+**Livello 4. Prossima.** Briefing operativo in `tasks/TASK-008/HANDOFF.md`.
 
 Come TASK-003 fece per `Project`, e con le stesse tre domande di dominio da porre **prima** del
 codice: un task può essere assegnato a un agente disattivato? Un task in un progetto archiviato

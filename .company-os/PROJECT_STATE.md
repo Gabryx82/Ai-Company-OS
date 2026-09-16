@@ -17,8 +17,8 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 2026-09-14), in attesa di review umana: `FINAL_HANDOFF.md`. **Niente in `master`.**
 
 **PHASE 2 — Assignment: in corso** dal 2026-09-15, su `autonomous/phase-2-assignment`, creato da
-`autonomous/phase-1-foundations`. Baseline riverificata prima di aprirla: **158 test verdi**,
-schema **`V4`**, nessun failure aperto, nessun remote.
+`autonomous/phase-1-foundations`. **TASK-008 completata** (2026-09-16). Suite **179 test verdi**,
+schema **`V5`**, nessun failure aperto, nessun remote.
 
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
@@ -29,13 +29,63 @@ PHASE 1 resta com'è: `master` è ancora il gate di quella fase, e PHASE 2 ci si
 senza mergiarla.
 
 ## Current task
-**TASK-008 — Optimistic concurrency nel contratto HTTP.** Chiude **TD-28** e **TD-30**.
-Scelta come livello 3 di `AUTONOMOUS_LOOP.md` §4 — debito che il passo successivo tocca — e non
-come livello 4: TASK-009 aggiunge un secondo asse di assegnazione alla riga `tasks`, e
-costruirci sopra la rilevazione dell'intento stantio dopo significherebbe pubblicare un
-contratto che dovrà cambiare. Dettaglio in `PHASE_2_PLAN.md` §3.
+**TASK-009 — Relazione `Task` → `Agent`.** Livello 4 di `AUTONOMOUS_LOOP.md` §4: il livello 3 è
+vuoto da quando TASK-008 ha chiuso TD-28 e TD-30. Non ancora avviata.
+
+Eredita il protocollo di precondizione **per costruzione** (P4): `PUT /api/tasks/{id}/agent` nasce
+con `If-Match`, e `PreconditionCoverageTest` non lascia aggiungere un write path senza dichiararlo.
+Le tre domande di dominio da porre prima del codice e il punto sull'aciclicità dei lock sono in
+`tasks/TASK-008/HANDOFF.md`.
 
 ## Last completed task
+
+**TASK-008 — Optimistic concurrency nel contratto HTTP** (2026-09-16).
+
+Chiude **TD-28** e **TD-30**, apre **TD-32** e **TD-33**. Suite **158 → 179**, schema **`V5`**.
+
+I lock di ADR-006 serializzano ma non rilevano. Adesso il sistema fa entrambe le cose, con due
+meccanismi che **non si sostituiscono**: L0–L7 è consistenza interna, `ETag`/`If-Match` è intento
+stantio del client. Il lock rende **atomico** il confronto, il confronto rende **visibile** la
+staleness.
+
+| Decisione | Contenuto |
+|---|---|
+| **`@Version` è il contatore, non il rilevatore** | Dopo l'attesa su `PESSIMISTIC_WRITE` l'entità è caricata **già alla versione nuova**, quindi `OptimisticLockException` non arriva mai. **Nessun handler per essa**, e non va aggiunto: sarebbe un `412` che non scatta |
+| Protocollo **P0–P4** | `If-Match` obbligatorio su ogni mutazione di risorsa esistente; confronto **dentro la transazione, dopo il lock, prima delle regole**; la versione conta la propria riga; clausola di chiusura ereditaria |
+| `428` / `412` / `400` | Assente / stantio / illeggibile o `*`. Tre `type` nuovi, dentro ADR-007 senza eccezioni |
+| Percorso canonico | **`GET /api/tasks/{id}`**, introdotto perché non esisteva. `ETag` anche su creazioni e mutazioni. Mai sui listati (TD-33), mai nei corpi JSON |
+| `V5` additiva | `version BIGINT NOT NULL DEFAULT 0` su tutte e tre le tabelle. Il `DEFAULT` è la lezione di `V4` |
+| Tutte e tre le risorse | Non solo le due rotte del debito: una precondizione con buchi non è una precondizione (L7 è il precedente) |
+| **P4 eseguibile** | `PreconditionCoverageTest` pinna l'insieme dei write path: aggiungerne uno obbliga a decidere sulla precondizione |
+
+**Rotture dichiarate.** Ogni mutazione senza `If-Match` passa da `200` a `428` — la rottura più
+grande della fase, e deliberata: con `If-Match` facoltativo il debito non si chiude, si rende
+*evitabile*. Il `PUT` idempotente con tag stantio passa da `200` a `412`. `DELETE /api/tasks/{id}`
+da `404` a `405`.
+
+**Una rottura che il piano non aveva previsto**, trovata dai test di concorrenza di TASK-004 e
+TASK-007: il **perdente di due transizioni concorrenti vede `412` dove vedeva `409`**. La
+transizione illegale resta ciò che riceve un chiamante **aggiornato**, esercitata sequenzialmente.
+ADR-009 §8.
+
+**La verifica per mutazione ha smentito due affermazioni dei documenti**, e sono state corrette, non
+difese:
+
+1. spostare il confronto **sotto** le regole **non** rende rosso il caso idempotente —
+   `Task.assignTo` esce presto da **sé**, non dal service. Il test di I-3 non discriminava niente.
+   Ciò che la posizione decide è **quale rifiuto** riceve un chiamante stantio, e c'è un test nuovo
+   che lo asserisce;
+2. spostarlo **sopra** il lock non perde la riga: Hibernate solleva `StaleObjectStateException`.
+   Perde la **risposta** — `500` invece di `412`. Registrato in ADR-009 §2.3 come rete, non come
+   meccanismo.
+
+Artefatti: `tasks/TASK-008/*`, `docs/adr/ADR-009-optimistic-concurrency-http-contract.md`.
+
+## Task precedenti di PHASE 2
+
+Nessuna prima di TASK-008.
+
+## Task di PHASE 1 (dettaglio)
 
 **TASK-007 — Agent Registry** (2026-09-14).
 
@@ -59,8 +109,6 @@ Il protocollo di lock si applica perché **L7 dice che si applica**: due `deacti
 sono un `200` e un `409`, cioè il difetto di TD-19 che arriva già chiuso sulla terza entità.
 
 Artefatti: `tasks/TASK-007/*`, `docs/adr/ADR-008-agent-registry.md`.
-
-## Task precedenti (dettaglio)
 
 **TASK-006 — Migration Test Coverage** (2026-09-14).
 
@@ -138,10 +186,11 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 ## Stato del sistema
 
 - Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`.
-- Schema: di proprietà di **Flyway**, oggi a **`V4`**. Hibernate in `validate`.
+- Schema: di proprietà di **Flyway**, oggi a **`V5`**. Hibernate in `validate`.
 - Tabelle: `agents`, `tasks`, `projects`. `tasks.project_id` nullable con FK senza `ON DELETE`.
   Da `V4`: `agents.created_at` / `updated_at` (`TIMESTAMPTZ`, `NOT NULL`, `DEFAULT now()`) e
   indice unico `agents_name_unique_idx` su `lower(name)`.
+  Da `V5`: `version BIGINT NOT NULL DEFAULT 0` su **tutte e tre** le tabelle.
 - **Due registri di dominio** con ciclo di vita esplicito: `Project` (enum `ACTIVE`/`ARCHIVED`)
   e `Agent` (`boolean active`, divergenza dichiarata → TD-31).
 - Seed di sviluppo: stream Flyway separato (`db/dev/V1`), profilo `dev` (ADR-003).
@@ -151,13 +200,19 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 - Contratto di errore: **uno solo** (ADR-007). Ogni risposta di errore è un `ProblemDetail`
   con `type` stabile `urn:ai-company-os:problem:<slug>`, enumerato in `ApiProblem`. Un advice
   globale, `ApiExceptionHandler`. Nessuna policy di timeout o retry.
-- Test: **158** (erano 109 in `master`). `./mvnw -B clean test` → BUILD SUCCESS.
+- **Concorrenza ottimistica nel contratto HTTP**: protocollo **P0–P4** (ADR-009). `If-Match`
+  obbligatorio su ogni mutazione di risorsa esistente, confrontato **dentro la transazione, dopo
+  il lock esclusivo, prima delle regole**. `@Version` è il contatore, non il rilevatore: nessun
+  handler per `OptimisticLockException`, e non va aggiunto.
+- Test: **179** (erano 109 in `master`, 158 a fine PHASE 1). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
 ## Stato Git (verificato il 2026-09-14)
 
 - **`master`**: fermo a `d5ff121`. **Gate umano finale, nessun merge autonomo.**
-- **Integration branch**: `autonomous/phase-1-foundations`, HEAD **`ed8d615`** + la chiusura di TASK-007.
+- **Integration branch di PHASE 2**: `autonomous/phase-2-assignment`, creato da
+  `autonomous/phase-1-foundations` (`0a35ac0`). Contiene il piano di fase e TASK-008.
+- **Integration branch di PHASE 1**: `autonomous/phase-1-foundations`, HEAD **`0a35ac0`**, fermo.
 - Branch di lavoro integrati in fast-forward: `task-004-archival-consistency`,
   `task-005-uniform-error-contract`, `task-006-migration-test-coverage`,
   `task-007-agent-registry`.
@@ -199,20 +254,21 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 - **ADR-005** — Relazione `Task` → `Project`: `project_id` nullable, i task preesistenti non si migrano, associare a un `ARCHIVED` è `409`, relazione unidirezionale, FK senza `ON DELETE`. *Accettata*.
 - **ADR-008** — Agent Registry: le decisioni di ADR-004 si applicano identiche; il ciclo di vita resta su `boolean active` invece dell'enum, perché unificarlo richiederebbe una migrazione irreversibile che il charter mette dietro una decisione umana (TD-31); `status` è **derivato** nel contratto, così il client vede un vocabolario solo e il database un solo stato; `V4` additiva; nessuna relazione con `Project` né con `Task`; il protocollo di lock si applica per L7. *Accettata e implementata*.
 - **ADR-007** — Un solo contratto di errore per tutta l'API: advice globale che estende `ResponseEntityExceptionHandler`, `type` stabile e enumerato (`urn:ai-company-os:problem:<slug>`) come parte machine-readable del contratto, `errors` ovunque, catch-all con `detail` fisso e stack loggato, nessuna policy di timeout o retry. **Supera ADR-004 §6 e ADR-005 §8**. *Accettata e implementata*.
+- **ADR-009** — Concorrenza ottimistica nel contratto HTTP: due meccanismi distinti e complementari (lock = consistenza interna, `ETag`/`If-Match` = intento stantio); `@Version` è un contatore persistente e **non** il rilevatore, perché dopo l'attesa su `PESSIMISTIC_WRITE` l'entità è già alla versione nuova; protocollo **P0–P4**; `If-Match` obbligatorio su tutte e tre le risorse; `428`/`412`/`400`; `GET /api/tasks/{id}` introdotto come percorso canonico dell'ETag; `V5` additiva. **Completa ADR-006 §8.** *Accettata e implementata*.
 - **ADR-006** — Coerenza archiviazione → task **derivata** (nessuna scrittura sui figli, `restore` inverso per costruzione), congelamento in scrittura con letture aperte, `PUT` idempotente `200` no-op, protocollo di lock **L0–L7** con ordine globale `tasks` → `projects`, nessuna migrazione, contratto invariato, nessun `503`. *Accettata e **implementata**.*
 
 ## Prossimo passo autonomo
 
-**TASK-008 — Optimistic concurrency nel contratto HTTP.** Artefatti in `tasks/TASK-008/`, branch
-`task-008-optimistic-concurrency` creato da `autonomous/phase-2-assignment`.
+**TASK-009 — Relazione `Task` → `Agent`.** Branch `task-009-task-agent-assignment` da
+`autonomous/phase-2-assignment`. Il briefing operativo — le tre domande di dominio e il punto
+sull'aciclicità dei lock — è in `tasks/TASK-008/HANDOFF.md`, e non va riscoperto.
 
-Il piano completo della fase, con l'ordine delle task e perché è quello, sta in
-**`.company-os/PHASE_2_PLAN.md`**. In sintesi:
+Il piano completo della fase sta in **`.company-os/PHASE_2_PLAN.md`**. In sintesi:
 
 | # | Task | Livello | Stato |
 |---|---|---|---|
-| **TASK-008** | Optimistic concurrency (`ETag`/`If-Match`). Chiude TD-28, TD-30 | 3 | **in corso** |
-| **TASK-009** | Relazione `Task` → `Agent` | 4 | pianificata |
+| **TASK-008** | Optimistic concurrency (`ETag`/`If-Match`). Chiude TD-28, TD-30 | 3 | **completata** 2026-09-16 |
+| **TASK-009** | Relazione `Task` → `Agent` | 4 | **prossima** |
 | **TASK-010** | Da definire quando ci si arriva — TASK-009 può derivarne il contenuto | 5 | pianificata |
 | **TASK-011** | Collisione di identificatori nel registro del debito; `docs/RUNNING.md` | 6 | pianificata |
 
@@ -228,15 +284,21 @@ Il merge di PHASE 1 in `master` resta il gesto con cui un umano accetta il lavor
 **Chiusi da TASK-005**: **TD-07**, **TD-20**, **TD-21**, **TD-27**, **TD-29**.
 **Chiusi da TASK-006**: **TD-22**, **TD-23**.
 **TASK-007** non chiude nulla e **apre TD-31**.
+**Chiusi da TASK-008**: **TD-28**, **TD-30**. **TASK-008 apre TD-32 e TD-33.**
 
 ### Alto valore
 
 | ID | Contenuto |
 |---|---|
-| **TD-28** | `PUT /api/projects/{id}` esposto alla sovrascrittura con dati stantii. Il lock serializza ma non rileva. Richiede `ETag`/`If-Match` nel contratto HTTP |
-| **TD-30** | *(MINOR, ristretto)* Riassegnazioni concorrenti dello stesso task: last-write-wins **su stato fresco**. L0 le serializza e ciascuna applica le regole ai dati che trova; manca la **rilevazione** dell'intento stantio. Gemello di TD-28 sull'altra entità |
 | **TD-31** | *(nuovo)* `Agent` esprime il ciclo di vita con un booleano, `Project` con un enum chiuso. Unificarli richiede di **eliminare una colonna**: migrazione irreversibile, dietro una decisione umana. Nel frattempo il contratto pubblico è già uniforme, perché `status` è derivato |
 | **TD-14** | Nessuna CI. Con 158 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
+
+### Nuovi, minori (TASK-008)
+
+| ID | Contenuto |
+|---|---|
+| **TD-32** | L'entity-tag è forte ma deriva dalla versione della riga, non dai byte della rappresentazione: un cambio di forma della risposta senza cambio di stato darebbe lo stesso ETag a due rappresentazioni diverse. Nessun effetto su `If-Match`; effetto sulla cache HTTP, che il progetto non usa |
+| **TD-33** | I listati non portano ETag, quindi mutare N risorse costa N letture singole. Non motivato finché non esiste un client che muta in blocco |
 
 ### Qualità dei test e migrazioni
 
@@ -262,7 +324,7 @@ da applicare. `docs/RUNNING.md` non documenta `/api/projects` né gli endpoint d
 
 ## Failure aperti
 
-**Nessuno.** 158/158 verdi (`./mvnw -B clean test`, 2026-09-15).
+**Nessuno.** 179/179 verdi (`./mvnw -B clean test`, 2026-09-16).
 
 ## Domande di contratto aperte
 
@@ -284,7 +346,7 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 
 ## Target architecture
 - Project Registry ✅ *fondazione (TASK-002), relazione con i task (TASK-003), coerenza di archiviazione e concorrenza (TASK-004)*
-- Agent Registry
+- Agent Registry ✅ *fondazione (TASK-007). Relazione con i task: TASK-009*
 - Skills / Rules / Subagents / Tools / MCP Registry
 - Model Gateway and local/cloud routing
 - Context / Prompt / Harness / Loop / Graph Engineering
@@ -295,5 +357,6 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 - Voice Interaction Layer, Payments / quota monitoring, 3D Omniverse integration
 
 ## Immediate goal
-Completare PHASE 1 in modo autonomo sull'integration branch, poi preparare `FINAL_HANDOFF.md`
-per la review umana. **Nessun merge in `master`.**
+Completare **PHASE 2** in modo autonomo su `autonomous/phase-2-assignment`, poi aggiornare
+l'handoff per la review umana. **Nessun merge in `master`**, che resta fermo a `d5ff121` con
+PHASE 1 ancora in attesa di accettazione.
