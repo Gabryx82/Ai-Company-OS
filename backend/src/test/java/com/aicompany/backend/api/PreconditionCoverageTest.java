@@ -88,9 +88,12 @@ class PreconditionCoverageTest {
     void theSetOfWritePathsIsExactAndEachOneSaysWhetherItTakesAPrecondition() {
 
         assertThat(writePaths(TaskService.class))
+                .as("""
+                    Rule P4 on the path TASK-009 added. assignToAgent mutates the same tasks row                     that assignToProject does, so it carries the same precondition and consumes                     the same tag. Dropping the parameter, or adding a write path without listing                     it here, fails this assertion -- which is the only thing that makes P4 a rule                     rather than an intention.""")
                 .containsExactlyInAnyOrder(
                         "create",                      // exempt: no earlier state to be stale about
-                        "assignToProject:Precondition");
+                        "assignToProject:Precondition",
+                        "assignToAgent:Precondition");
 
         assertThat(writePaths(ProjectService.class))
                 .containsExactlyInAnyOrder(
