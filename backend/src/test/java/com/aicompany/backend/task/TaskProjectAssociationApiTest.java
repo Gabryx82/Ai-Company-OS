@@ -8,6 +8,7 @@ import com.aicompany.backend.task.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -126,7 +127,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
         Long taskId = unassignedTask("created before the relation existed");
         Long projectId = activeProject("Company OS");
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(projectId)))
@@ -146,7 +147,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
 
         assignTo(taskId, first);
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(second)))
@@ -169,7 +170,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
 
         // Unlike a repeated archive, this is not a caller mistake to expose: the
         // requested end state is already the current one. ADR-005 section 5.
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(projectId)))
@@ -182,7 +183,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
 
         Long projectId = activeProject("Company OS");
 
-        mockMvc.perform(put("/api/tasks/987654/project")
+        mockMvc.perform(put("/api/tasks/987654/project").header(HttpHeaders.IF_MATCH, "\"0\"")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(projectId)))
@@ -197,7 +198,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
 
         Long taskId = unassignedTask("t");
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":987654}"""))
@@ -211,7 +212,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
         Long taskId = unassignedTask("t");
         Long archived = archivedProject("Retired");
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(archived)))
@@ -229,16 +230,16 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
         Long projectId = archivedProject("Retired");
 
         // 409 rather than 403 because the caller can lift the refusal itself.
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(projectId)))
                 .andExpect(status().isConflict());
 
-        mockMvc.perform(post("/api/projects/" + projectId + "/restore"))
+        mockMvc.perform(post("/api/projects/" + projectId + "/restore").header(HttpHeaders.IF_MATCH, projectEtag(projectId)))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(projectId)))
@@ -250,7 +251,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
 
         Long taskId = unassignedTask("t");
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
@@ -308,7 +309,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
         Long taskId = unassignedTask("t");
         assignTo(taskId, projectId);
 
-        mockMvc.perform(post("/api/projects/" + projectId + "/archive"))
+        mockMvc.perform(post("/api/projects/" + projectId + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(projectId)))
                 .andExpect(status().isOk());
 
         // Archiving takes a project out of the working registry. It does not make
@@ -332,7 +333,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
         Long taskId = unassignedTask("t");
         assignTo(taskId, projectId);
 
-        mockMvc.perform(post("/api/projects/" + projectId + "/archive"))
+        mockMvc.perform(post("/api/projects/" + projectId + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(projectId)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/tasks"))
@@ -378,9 +379,9 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
         Long taskId = unassignedTask("Wire the planner");
         assignTo(taskId, source);
 
-        mockMvc.perform(post("/api/projects/" + source + "/archive")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + source + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(source))).andExpect(status().isOk());
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(destination)))
@@ -390,7 +391,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
 
         assertThat(projectIdOf(taskId)).isEqualTo(source);
 
-        mockMvc.perform(post("/api/projects/" + source + "/restore")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + source + "/restore").header(HttpHeaders.IF_MATCH, projectEtag(source))).andExpect(status().isOk());
         assignTo(taskId, destination);
 
         assertThat(projectIdOf(taskId)).isEqualTo(destination);
@@ -407,11 +408,11 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
         Long source = activeProject("Company OS");
         Long taskId = unassignedTask("Wire the planner");
         assignTo(taskId, source);
-        mockMvc.perform(post("/api/projects/" + source + "/archive")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + source + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(source))).andExpect(status().isOk());
 
         Long destination = archivedProject("Planner");
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(destination)))
@@ -431,9 +432,9 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
         Long projectId = activeProject("Company OS");
         Long taskId = unassignedTask("Wire the planner");
         assignTo(taskId, projectId);
-        mockMvc.perform(post("/api/projects/" + projectId + "/archive")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + projectId + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(projectId))).andExpect(status().isOk());
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(projectId)))
@@ -467,6 +468,35 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$[0].projectStatus").doesNotExist());
     }
 
+    // --- preconditions ------------------------------------------------------
+
+    /**
+     * The entity-tag a caller would have read before writing.
+     *
+     * <p>Every mutation in this file carries one, because since ADR-009 there is no
+     * other way in: a request without {@code If-Match} is refused with 428 before
+     * anything is looked up. Reading it here, at the point of the call, is what a
+     * client does -- and it means these tests assert the domain rules against a
+     * <em>fresh</em> tag, so a 409 that turned into a 412 would show up as a
+     * failure rather than pass unnoticed.
+     */
+    private String etagOf(String path) throws Exception {
+
+        String etag = mockMvc.perform(get(path))
+                .andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+
+        assertThat(etag).as("%s must carry an entity-tag".formatted(path)).isNotNull();
+        return etag;
+    }
+
+    private String projectEtag(Long id) throws Exception {
+        return etagOf("/api/projects/" + id);
+    }
+
+    private String taskEtag(Long id) throws Exception {
+        return etagOf("/api/tasks/" + id);
+    }
+
     // --- helpers -----------------------------------------------------------
 
     private Long projectIdOf(Long taskId) {
@@ -493,7 +523,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
     }
 
     private void assignTo(Long taskId, Long projectId) throws Exception {
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"projectId":%d}""".formatted(projectId)))

@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.time.Instant;
 
@@ -52,6 +53,26 @@ public class Project {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    /**
+     * The row version of ADR-009: a counter the persistence layer increments on
+     * every UPDATE of <em>this</em> row, and nothing else touches (rule P3).
+     *
+     * <p>It is what gives the entity-tag a value, and it is deliberately not the
+     * detector. JPA's own optimistic check compares the version loaded into the
+     * persistence context with the one in the database at flush, and every write
+     * path loads this entity under a pessimistic lock -- so a transaction that
+     * waited re-reads the newest committed row, the two versions agree, and
+     * nothing is ever raised. The comparison that detects a stale caller is
+     * {@link com.aicompany.backend.api.Precondition}, made under that same lock.
+     *
+     * <p>{@code OPTIMISTIC_FORCE_INCREMENT} is never used against it: writing a
+     * related row must not move this counter, or two operations the domain does
+     * not consider to be in conflict would start refusing each other.
+     */
+    @Version
+    @Column(nullable = false)
+    private long version;
 
     protected Project() {
         // for JPA
@@ -122,6 +143,11 @@ public class Project {
 
     public Long getId() {
         return id;
+    }
+
+    /** The current row version. See {@link #version}. */
+    public long getVersion() {
+        return version;
     }
 
     public String getName() {

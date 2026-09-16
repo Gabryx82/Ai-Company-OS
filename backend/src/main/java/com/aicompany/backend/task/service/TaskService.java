@@ -1,5 +1,7 @@
 package com.aicompany.backend.task.service;
 
+import com.aicompany.backend.api.Precondition;
+import com.aicompany.backend.api.Versioned;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
@@ -46,6 +48,15 @@ public class TaskService {
     }
 
     /**
+     * One task, with its version, so a client can learn the entity-tag it will
+     * need in order to write. No lock: rule L6.
+     */
+    @Transactional(readOnly = true)
+    public Versioned<TaskResponse> findById(Long id) {
+        return versioned(repository.findById(id).orElseThrow(() -> new TaskNotFoundException(id)));
+    }
+
+    /**
      * The tasks of one project, oldest first.
      *
      * <p>The project is looked up first so that an unknown identifier is a 404
@@ -71,11 +82,11 @@ public class TaskService {
      * insert, in the same transaction, so a client never has to clean up a task
      * that was created and then failed to be placed.
      */
-    public TaskResponse create(String title,
-                               String description,
-                               String status,
-                               String priority,
-                               Long projectId) {
+    public Versioned<TaskResponse> create(String title,
+                                          String description,
+                                          String status,
+                                          String priority,
+                                          Long projectId) {
 
         Task task = new Task(title, description, status, priority);
 
@@ -87,7 +98,7 @@ public class TaskService {
             task.assignTo(requireProjectForDecision(projectId));
         }
 
-        return TaskResponse.from(repository.save(task));
+        return versioned(repository.saveAndFlush(task));
     }
 
     /**
@@ -123,18 +134,35 @@ public class TaskService {
      * and it is already true. There is no caller mistake to expose, which is what
      * made a repeated {@code archive} worth a 409 (ADR-004 §4).
      *
-     * <p><strong>What this does not do.</strong> L0 serialises writes to the same
-     * task, so each of them decides on fresh state -- it does not <em>report</em>
-     * a stale intent. Two callers reassigning the same task still resolve
-     * last-write-wins, and the first is not told it was overtaken. Detecting that
-     * needs optimistic concurrency in the HTTP contract, not a lock, and it is
-     * TD-30, the twin of TD-28 on the other entity.
+     * <p><strong>What the lock does not do, and what does.</strong> L0 serialises
+     * writes to the same task so that each decides on fresh state; it does not
+     * <em>report</em> a stale intent, and on its own it left two callers resolving
+     * last-write-wins with the first never told it had been overtaken. That was
+     * TD-30, and it is closed here by {@code precondition} rather than by a
+     * stronger lock. The two are not alternatives: the lock is what makes the
+     * comparison atomic, the comparison is what makes the staleness visible.
+     * ADR-009 section 1.
      */
-    public TaskResponse assignToProject(Long taskId, Long projectId) {
+    public Versioned<TaskResponse> assignToProject(Long taskId, Long projectId,
+                                                  Precondition precondition) {
 
         // L0. Before anything is read about where this task lives.
         Task task = repository.findByIdForUpdate(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+        // P1 and P2. Neither direction is free.
+        //
+        // Above the lock it is a check-then-act: two callers holding the same
+        // still-valid tag both pass it and then race. Verified by mutation on
+        // 2026-09-16 -- moving it up turns PreconditionConcurrencyTest red, and
+        // turns nothing else red, which is the point of that test existing.
+        //
+        // Below the rules it stops being the first refusal: a caller that is out of
+        // date gets told what is wrong with the state it did not know it was
+        // looking at -- a 409 about an archived destination -- instead of being told
+        // it is out of date. The same mutation pinned that: see
+        // aStaleCallerIsToldItIsStaleAndNotWhatIsWrongWithTheNewState.
+        precondition.requireSatisfiedBy(task.getVersion());
 
         Long sourceId = task.getProjectId();
 
@@ -160,7 +188,12 @@ public class TaskService {
         // Rules on the entity, not here.
         task.assignTo(target);
 
-        return TaskResponse.from(repository.save(task));
+        // saveAndFlush and not save: this response is composed inside the
+        // transaction, because Task.project is lazy -- and the version is
+        // incremented at flush, which by default is the commit. Without the flush
+        // the caller would be handed the version from *before* its own write, and
+        // its next request would be refused for a change it made itself.
+        return versioned(repository.saveAndFlush(task));
     }
 
     /** Unlocked lookup, for reads only (L6). */
@@ -183,6 +216,19 @@ public class TaskService {
     private Project requireProjectForDecision(Long projectId) {
         return projectRepository.findByIdForShare(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
+    }
+
+    /**
+     * The record plus the version of the row it came from. Built here, inside the
+     * transaction, for the same reason the record itself is: reading
+     * {@code projectId} initialises a lazy reference.
+     *
+     * <p>Called only after a flush on the write paths -- the version is incremented
+     * when the row is written, and a response composed before that would hand the
+     * caller the version from before its own change.
+     */
+    private static Versioned<TaskResponse> versioned(Task task) {
+        return new Versioned<>(TaskResponse.from(task), task.getVersion());
     }
 
     private static List<TaskResponse> toResponses(List<Task> tasks) {

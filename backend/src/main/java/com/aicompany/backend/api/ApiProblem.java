@@ -50,6 +50,35 @@ public enum ApiProblem {
     RESOURCE_NOT_FOUND("resource-not-found", HttpStatus.NOT_FOUND,
             "Resource not found", "There is nothing at this path"),
 
+    // --- the precondition protocol (ADR-009) ------------------------------
+
+    /**
+     * Rule P0. A 428 and not a 400 because it tells the caller what to do about
+     * it: read the resource, take its ETag, send the request again.
+     */
+    PRECONDITION_REQUIRED("precondition-required", HttpStatus.PRECONDITION_REQUIRED,
+            "Precondition required",
+            "This request must carry an If-Match header with the ETag you last read"),
+
+    /**
+     * The detection itself. Distinct from every 409 in this enum on purpose: those
+     * say the current state forbids the request, this says the caller did not know
+     * what the current state was. A client retries one of them and re-reads before
+     * the other.
+     */
+    PRECONDITION_FAILED("precondition-failed", HttpStatus.PRECONDITION_FAILED,
+            "Precondition failed",
+            "The resource changed since the ETag you supplied; re-read it and try again"),
+
+    /**
+     * Unreadable, weak, or {@code *}. One identifier for all three because they
+     * are one problem -- the If-Match value cannot be evaluated -- and the detail
+     * says which. ADR-007 §2 forbids telling two <em>different</em> problems apart
+     * by their English sentence; it does not ask for one problem to be split.
+     */
+    INVALID_PRECONDITION("invalid-precondition", HttpStatus.BAD_REQUEST,
+            "Invalid precondition", "The If-Match header could not be interpreted"),
+
     // --- the project registry ---------------------------------------------
 
     PROJECT_NOT_FOUND("project-not-found", HttpStatus.NOT_FOUND,

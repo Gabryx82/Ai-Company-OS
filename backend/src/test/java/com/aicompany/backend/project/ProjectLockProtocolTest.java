@@ -1,6 +1,8 @@
 package com.aicompany.backend.project;
 
+import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.project.model.Project;
+import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.project.service.ProjectService;
 import com.aicompany.backend.task.model.Task;
@@ -70,9 +72,9 @@ class ProjectLockProtocolTest {
         when(taskRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(task));
         when(projectRepository.findByIdForShare(7L)).thenReturn(Optional.of(source));
         when(projectRepository.findByIdForShare(3L)).thenReturn(Optional.of(destination));
-        when(taskRepository.save(any(Task.class))).thenAnswer(call -> call.getArgument(0));
+        when(taskRepository.saveAndFlush(any(Task.class))).thenAnswer(call -> call.getArgument(0));
 
-        taskService.assignToProject(1L, 3L);
+        taskService.assignToProject(1L, 3L, Preconditions.at(0));
 
         InOrder protocolOrder = inOrder(taskRepository, projectRepository);
         protocolOrder.verify(taskRepository).findByIdForUpdate(1L);
@@ -102,9 +104,9 @@ class ProjectLockProtocolTest {
         when(taskRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(task));
         when(projectRepository.findByIdForShare(7L)).thenReturn(Optional.of(source));
         when(projectRepository.findByIdForShare(3L)).thenReturn(Optional.of(destination));
-        when(taskRepository.save(any(Task.class))).thenAnswer(call -> call.getArgument(0));
+        when(taskRepository.saveAndFlush(any(Task.class))).thenAnswer(call -> call.getArgument(0));
 
-        taskService.assignToProject(1L, 3L);
+        taskService.assignToProject(1L, 3L, Preconditions.at(0));
 
         verify(projectRepository).findByIdForShare(7L);
         verify(projectRepository).findByIdForShare(3L);
@@ -127,9 +129,9 @@ class ProjectLockProtocolTest {
 
         when(taskRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(task));
         when(projectRepository.findByIdForShare(7L)).thenReturn(Optional.of(project));
-        when(taskRepository.save(any(Task.class))).thenAnswer(call -> call.getArgument(0));
+        when(taskRepository.saveAndFlush(any(Task.class))).thenAnswer(call -> call.getArgument(0));
 
-        taskService.assignToProject(1L, 7L);
+        taskService.assignToProject(1L, 7L, Preconditions.at(0));
 
         verify(projectRepository).findByIdForShare(7L);
     }
@@ -156,9 +158,9 @@ class ProjectLockProtocolTest {
 
         Project project = project(7L, "Company OS");
         when(repository.findByIdForUpdate(7L)).thenReturn(Optional.of(project));
-        when(repository.save(any(Project.class))).thenAnswer(call -> call.getArgument(0));
+        when(repository.saveAndFlush(any(Project.class))).thenAnswer(call -> call.getArgument(0));
 
-        service.archive(7L);
+        service.archive(7L, Preconditions.at(0));
 
         verify(repository).findByIdForUpdate(7L);
         verify(repository, never()).findById(anyLong());
@@ -176,7 +178,8 @@ class ProjectLockProtocolTest {
     @Test
     void theProjectWriteLookupIsPrivateAndCarriesNoTransactionalAttribute() throws Exception {
 
-        Method lookup = ProjectService.class.getDeclaredMethod("lockForWrite", Long.class);
+        Method lookup = ProjectService.class.getDeclaredMethod(
+                "lockForWrite", Long.class, Precondition.class);
 
         assertThat(Modifier.isPrivate(lookup.getModifiers()))
                 .as("a private lookup cannot carry a transactional attribute, so TD-24 is not "

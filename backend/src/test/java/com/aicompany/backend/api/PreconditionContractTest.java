@@ -335,6 +335,63 @@ class PreconditionContractTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.type").value(PRECONDITION_FAILED));
     }
 
+    /**
+     * I-3 again, and this is the one that discriminates.
+     *
+     * <p>The test above does not, and finding that out is what a mutation is for:
+     * moving the comparison below {@code task.assignTo(...)} left the whole suite
+     * green. {@code Task.assignTo} returns early from <em>itself</em> when the task
+     * is already where it is being sent -- it does not return from the service --
+     * so the comparison still ran, and the 412 still arrived. The claim that it
+     * would not was wrong, and the sentence that made it has been corrected.
+     *
+     * <p>What placement really decides is <strong>which refusal a stale caller
+     * gets</strong>. Here the request is stale <em>and</em> would be refused on its
+     * merits: the destination is archived. With the comparison first, the answer is
+     * 412 -- you are out of date. With the comparison after the rules, it is 409 --
+     * the destination is archived -- which answers a question this caller did not
+     * ask. It does not know the task has moved at all, and telling it about the
+     * state of a destination it chose under different information is telling it
+     * the wrong thing.
+     *
+     * <p>Verified by mutation on 2026-09-16: moving the line below
+     * {@code assignTo} turns this test, and only this test, red with a 409.
+     */
+    @Test
+    void aStaleCallerIsToldItIsStaleAndNotWhatIsWrongWithTheNewState() throws Exception {
+
+        Long active = project("Active");
+        Long archived = project("Archived");
+        Long taskId = task("Wire the planner");
+
+        String whatTheStaleCallerRead = etagOfTask(taskId);
+
+        // Somebody else moves the task, so the tag above stops describing the row.
+        mockMvc.perform(put("/api/tasks/{id}/project", taskId)
+                        .header(HttpHeaders.IF_MATCH, whatTheStaleCallerRead)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"projectId":%d}""".formatted(active)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/projects/{id}/archive", archived)
+                        .header(HttpHeaders.IF_MATCH, etagOfProject(archived)))
+                .andExpect(status().isOk());
+
+        // Stale, and also refusable on its merits. Staleness is the answer.
+        mockMvc.perform(put("/api/tasks/{id}/project", taskId)
+                        .header(HttpHeaders.IF_MATCH, whatTheStaleCallerRead)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"projectId":%d}""".formatted(archived)))
+                .andExpect(status().isPreconditionFailed())
+                .andExpect(jsonPath("$.type").value(PRECONDITION_FAILED));
+
+        assertThat(projectIdOf(taskId))
+                .as("nothing moved: the refusal came before any rule and before any write")
+                .isEqualTo(active);
+    }
+
     // ------------------------------------------------------------------
     // P3 -- a version counts its own row. I-5, I-6
     // ------------------------------------------------------------------

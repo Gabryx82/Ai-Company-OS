@@ -92,6 +92,22 @@ nascere dal confronto fra **ciò che il client ha visto l'ultima volta** e **ci�
 e quel confronto ha un solo posto corretto: **dopo che L0/L1 ha preso la riga, e prima che
 qualunque regola la legga.**
 
+### 2.3 Quello che `@Version` fa comunque, e che non è la rilevazione
+
+Trovato per mutazione, non previsto. Spostando il confronto **sopra** il lock — la costruzione
+check-then-act che P1 esiste per vietare — il risultato non è una scrittura persa: è
+`StaleObjectStateException` di Hibernate al momento della lettura bloccante, perché la riga
+arriva a una versione diversa da quella che il persistence context tiene già, letta senza lock
+un attimo prima.
+
+Quindi il mutante **non perde la riga: perde la risposta.** Il chiamante riceve un errore interno
+al posto di «sei stato preceduto, rileggi e riprova» — un `500` dove va un `412`.
+
+Vale la pena dirlo perché non contraddice §2.2 e non va confuso con essa: su un percorso
+*ordinato correttamente* il controllo automatico continua a non rilevare niente. Ma siccome il
+contatore è una vera versione JPA, **sbagliare l'ordine fallisce rumorosamente invece di perdere
+una scrittura in silenzio.** È una rete, non il meccanismo.
+
 Da cui la decisione: **`@Version` è un contatore persistente della riga, non il rilevatore.**
 Serve a dare all'ETag un valore che cambia a ogni scrittura della riga e che il database mantiene
 per noi. Il rilevatore è il confronto esplicito di §3.
@@ -113,10 +129,20 @@ interpretarlo.
 > riporterebbe a essere un check-then-act; valutarla dopo le guardie significherebbe applicare
 > regole a nome di un'intenzione già scaduta.
 >
-> **P2 — La precondizione si valuta prima di ogni scorciatoia idempotente.**
-> Un `PUT` che risulterebbe un no-op è comunque una richiesta di scrittura. Il fatto che *contro
-> lo stato nuovo* non cambierebbe niente è una coincidenza, non una conferma: l'intenzione era
-> stata formata contro uno stato che non esiste più.
+> **P2 — La precondizione si valuta prima di ogni regola di dominio e di ogni scorciatoia
+> idempotente.**
+> Un `PUT` che risulterebbe un no-op è comunque una richiesta di scrittura: il fatto che *contro
+> lo stato nuovo* non cambierebbe niente è una coincidenza, non una conferma. E una richiesta
+> stantia che **sarebbe rifiutata anche nel merito** riceve `412`, non il `409` della regola: il
+> chiamante non sa che la risorsa si è mossa, e rispondergli sullo stato nuovo — «la destinazione
+> è archiviata» — è rispondere a una domanda che non ha posto, scelta sotto informazioni diverse.
+>
+> *La prima formulazione di P2 era più debole di così, e la verifica per mutazione l'ha
+> mostrato.* Diceva che spostare il confronto sotto `assignTo` avrebbe reso rosso il caso
+> idempotente. **Non lo rende rosso**: `Task.assignTo` esce presto da **sé**, non dal service, e
+> il confronto gira comunque. Ciò che la posizione decide davvero è **quale rifiuto** riceve un
+> chiamante stantio, ed è quello che P2 adesso dice e che un test asserisce
+> (`aStaleCallerIsToldItIsStaleAndNotWhatIsWrongWithTheNewState`).
 >
 > **P3 — La versione è il contatore della propria riga, e di nessun'altra.**
 > Incrementata dal livello di persistenza a ogni `UPDATE` di quella riga, e da niente altro. La
@@ -285,6 +311,33 @@ smette di funzionare e riceve `428`.
 | Risposte `200`/`201` delle mutazioni e delle creazioni | nessun header | header **`ETag`** |
 | `GET /api/{risorsa}/{id}` | nessun header | header **`ETag`** |
 | `GET /api/tasks/{id}` | **non esiste** (`405`) | `200` + `ETag`, o `404` |
+
+### Una conseguenza che il piano non aveva previsto: quale rifiuto vede il perdente di una corsa
+
+Trovata implementando, dai test di concorrenza di TASK-004 e TASK-007, e non dal progetto.
+
+Due `archive` concorrenti sullo stesso progetto producevano **`200` + `409`**: il secondo si
+serializzava su L1, rileggeva `ARCHIVED` e `Project.archive()` sollevava la transizione illegale
+di ADR-004 §4. Adesso producono **`200` + `412`**: entrambi i chiamanti hanno letto il progetto
+alla stessa versione e l'hanno dichiarata, il commit del vincitore l'ha mossa, e il perdente si
+ferma a **P1** prima che `Project.archive()` venga raggiunto. Lo stesso vale per due `deactivate`
+concorrenti su un agente.
+
+*Non si perde niente, e va detto perché.* La transizione illegale resta **esattamente** ciò che
+riceve un chiamante **aggiornato** che chiede una transizione che lo stato vieta — archiviare un
+progetto già archiviato avendone letto lo stato corrente è ancora `409`, ed è esercitato
+sequenzialmente da `ProjectLifecycleTest`, `ProjectApiTest`, `AgentLifecycleTest` e
+`AgentRegistryApiTest`. Cambia solo quale dei due vede il perdente di una corsa.
+
+*E `412` è il più veritiero dei due.* Quel chiamante non ha chiesto una transizione impossibile:
+ne ha chiesta una possibile, contro uno stato che nel frattempo si era mosso, e **non può sapere**
+se la vorrebbe ancora sapendo com'è adesso. Dirgli «rileggi» è l'informazione giusta; dirgli
+«transizione illegale» sarebbe rispondere a una domanda che non ha posto.
+
+*L'invariante che TD-19 proteggeva regge identica*: **esattamente uno dei due riesce**, e i test
+continuano ad asserirlo. Il lock resta ciò che lo garantisce, e §2.3 ne è la prova per mutazione
+sull'altra entità: senza la serializzazione il confronto non diventa permissivo, diventa un
+fallimento di locking ottimistico — che non è nessuno dei due esiti attesi, e quindi resta rosso.
 
 *Perché obbligatorio e non «onorato quando presente».* Era l'alternativa ovvia e non chiude il
 debito. Con `If-Match` facoltativo, TD-28 e TD-30 restano aperti per ogni client che non lo

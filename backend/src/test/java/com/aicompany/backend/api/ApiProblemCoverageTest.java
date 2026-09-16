@@ -33,6 +33,18 @@ class ApiProblemCoverageTest {
             "com.aicompany.backend.task.exception");
 
     /**
+     * The precondition refusals of ADR-009. They live in {@code api} rather than in
+     * a domain package, because none of them is about a domain: they are about what
+     * the caller knew, or about a header it sent. Named here so the same "somebody
+     * added an exception and nobody decided what it looks like" failure is caught
+     * for them too -- the package scan above cannot see them.
+     */
+    private static final List<Class<?>> PROTOCOL_EXCEPTIONS = List.of(
+            PreconditionRequiredException.class,
+            PreconditionFailedException.class,
+            InvalidPreconditionException.class);
+
+    /**
      * AC-10, invariant I-6. Every domain exception that exists has a mapping.
      *
      * <p>Adding one without deciding what it looks like from the outside is the
@@ -57,6 +69,11 @@ class ApiProblemCoverageTest {
                     reported as an internal error, which tells a caller nothing and hides a \
                     decision nobody took.""")
                 .containsAll(declared);
+
+        assertThat(mapped)
+                .as("""
+                    and so does every refusal of the precondition protocol. An unmapped \n                    412 would surface as a 500 -- the one answer that tells a client \n                    neither what went wrong nor what to do about it.""")
+                .containsAll(PROTOCOL_EXCEPTIONS);
     }
 
     /**
@@ -91,6 +108,9 @@ class ApiProblemCoverageTest {
                         "unsupported-media-type",
                         "method-not-allowed",
                         "resource-not-found",
+                        "precondition-required",
+                        "precondition-failed",
+                        "invalid-precondition",
                         "agent-not-found",
                         "agent-name-conflict",
                         "inactive-agent-is-immutable",

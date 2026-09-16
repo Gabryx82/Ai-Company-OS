@@ -1,6 +1,8 @@
 package com.aicompany.backend.project;
 
+import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.project.model.Project;
+import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.project.service.ProjectService;
 import com.aicompany.backend.support.AbstractPostgresTest;
@@ -16,6 +18,7 @@ import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,7 +97,7 @@ class ProjectArchivalConsistencyTest extends AbstractPostgresTest {
         List<Map<String, Object>> before = taskRows();
         long writesBefore = taskUpdateCount();
 
-        projectService.archive(projectId);
+        projectService.archive(projectId, projectPrecondition(projectId));
 
         assertThat(taskUpdateCount() - writesBefore)
                 .as("""
@@ -110,10 +113,10 @@ class ProjectArchivalConsistencyTest extends AbstractPostgresTest {
         // Positive control. A counter that never moves proves nothing about the
         // archive: it could just as well mean the instrument is dead. Restoring
         // and then writing a task on purpose has to move it.
-        projectService.restore(projectId);
+        projectService.restore(projectId, projectPrecondition(projectId));
         long writesBeforeARealOne = taskUpdateCount();
         taskService.assignToProject(second, projectRepository
-                .saveAndFlush(new Project("Planner", null)).getId());
+                .saveAndFlush(new Project("Planner", null)).getId(), taskPrecondition(second));
 
         assertThat(taskUpdateCount() - writesBeforeARealOne)
                 .as("the statistic does move when a task really is written")
@@ -191,10 +194,10 @@ class ProjectArchivalConsistencyTest extends AbstractPostgresTest {
         List<Map<String, Object>> beforeArchive = taskRows();
         long writesBefore = taskUpdateCount();
 
-        projectService.archive(projectId);
+        projectService.archive(projectId, projectPrecondition(projectId));
         List<Map<String, Object>> whileArchived = taskRows();
 
-        projectService.restore(projectId);
+        projectService.restore(projectId, projectPrecondition(projectId));
         List<Map<String, Object>> afterRestore = taskRows();
 
         assertThat(whileArchived).isEqualTo(beforeArchive);
@@ -217,7 +220,7 @@ class ProjectArchivalConsistencyTest extends AbstractPostgresTest {
         Long projectId = projectRepository.saveAndFlush(new Project("Company OS", null)).getId();
         taskIn(projectId, "Wire the planner");
 
-        projectService.archive(projectId);
+        projectService.archive(projectId, projectPrecondition(projectId));
 
         mockMvc.perform(get("/api/projects/" + projectId + "/tasks"))
                 .andExpect(status().isOk())
@@ -229,15 +232,53 @@ class ProjectArchivalConsistencyTest extends AbstractPostgresTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].projectId").value(projectId));
 
-        mockMvc.perform(post("/api/projects/" + projectId + "/archive"))
+        mockMvc.perform(post("/api/projects/" + projectId + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(projectId)))
                 .andExpect(status().isConflict());
+    }
+
+    // --- preconditions ------------------------------------------------------
+
+    /**
+     * The entity-tag a caller would have read before writing.
+     *
+     * <p>Every mutation in this file carries one, because since ADR-009 there is no
+     * other way in: a request without {@code If-Match} is refused with 428 before
+     * anything is looked up. Reading it here, at the point of the call, is what a
+     * client does -- and it means these tests assert the domain rules against a
+     * <em>fresh</em> tag, so a 409 that turned into a 412 would show up as a
+     * failure rather than pass unnoticed.
+     */
+    private String etagOf(String path) throws Exception {
+
+        String etag = mockMvc.perform(get(path))
+                .andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+
+        assertThat(etag).as("%s must carry an entity-tag".formatted(path)).isNotNull();
+        return etag;
+    }
+
+    private String projectEtag(Long id) throws Exception {
+        return etagOf("/api/projects/" + id);
     }
 
     // --- helpers -----------------------------------------------------------
 
+    /**
+     * The precondition a caller would send: read the resource, take its
+     * entity-tag, then write. Rule P0 leaves no other way in, and these tests go
+     * through the same door a client does rather than around it.
+     */
+    private Precondition projectPrecondition(Long id) {
+        return Preconditions.at(projectRepository.findById(id).orElseThrow().getVersion());
+    }
+
+    private Precondition taskPrecondition(Long id) {
+        return Preconditions.at(taskRepository.findById(id).orElseThrow().getVersion());
+    }
+
     private Long taskIn(Long projectId, String title) {
         Long taskId = taskRepository.saveAndFlush(new Task(title, null, "OPEN", "HIGH")).getId();
-        taskService.assignToProject(taskId, projectId);
+        taskService.assignToProject(taskId, projectId, taskPrecondition(taskId));
         return taskId;
     }
 

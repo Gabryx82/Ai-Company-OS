@@ -1,0 +1,146 @@
+package com.aicompany.backend.api;
+
+import com.aicompany.backend.agent.service.AgentService;
+import com.aicompany.backend.project.service.ProjectService;
+import com.aicompany.backend.task.service.TaskService;
+import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Rule P4, the closure clause, as a property of the code rather than of a
+ * promise.
+ *
+ * <p>ADR-009 §3 says every write path that mutates an existing resource applies
+ * the protocol, present or future, TASK-009 included. A sentence in a document
+ * cannot enforce that: the way it fails is that somebody adds a write path, does
+ * not think about preconditions, and nothing anywhere goes red. The protocol then
+ * holds wherever it was remembered, which is the same as not holding -- a client
+ * has no way to know which routes it covers.
+ *
+ * <p>So the rule is checked by reflection: a public service method that can write
+ * to a row that already exists must take a {@link Precondition}. Creation is the
+ * only exemption, and it is an exemption on the merits -- there is no earlier
+ * state a caller could have seen.
+ *
+ * <p>The same clause that L7 needed, for the same reason, and one level up: this
+ * is what stops "tanto questo caso è innocuo" from being available as a decision.
+ */
+class PreconditionCoverageTest {
+
+    private static final List<Class<?>> SERVICES =
+            List.of(TaskService.class, ProjectService.class, AgentService.class);
+
+    /**
+     * Creation, and only creation. A row nobody has seen has no state a caller
+     * could be stale about, which is the same argument ADR-006 §4 used to keep
+     * {@code POST /api/tasks} out of rule L0.
+     */
+    private static final List<String> CREATION_METHODS = List.of("create");
+
+    @Test
+    void everyWritePathOnAnExistingRowTakesAPrecondition() {
+
+        List<Method> unprotected = SERVICES.stream()
+                .flatMap(service -> Arrays.stream(service.getDeclaredMethods()))
+                .filter(PreconditionCoverageTest::isPublicInstanceMethod)
+                .filter(method -> !isReadOnly(method))
+                .filter(method -> !CREATION_METHODS.contains(method.getName()))
+                .filter(method -> !takesAPrecondition(method))
+                .toList();
+
+        assertThat(unprotected)
+                .as("""
+                    Rule P4. A write path that does not take a Precondition cannot enforce one, \
+                    and the way this rule breaks is silent: somebody adds a method, nobody \
+                    thinks about staleness, and no test anywhere notices. If one of these is \
+                    deliberately exempt, the exemption belongs in this test with its reason -- \
+                    not in whoever happens to read the service next.""")
+                .isEmpty();
+    }
+
+    /**
+     * The other half, and the one that would rot first: the exemption has to keep
+     * describing the code.
+     *
+     * <p>The first version of this test tried to infer "really is creation" from
+     * the signature -- a creator takes no {@code Long} -- and it was wrong on the
+     * first method it looked at. {@code TaskService.create} takes a
+     * {@code projectId}: the identifier of a <em>different</em> row, which it reads
+     * and does not mutate. Reflection cannot tell those two apart, and a heuristic
+     * that cannot is worse than none, because it fails on correct code and teaches
+     * whoever meets it to edit the test until it passes.
+     *
+     * <p>So the set is pinned instead, the way {@code ApiProblemCoverageTest} pins
+     * the problems. Nothing is inferred: adding a write path fails this test until
+     * somebody writes it down here, next to whether it takes a precondition and
+     * why. That is the whole mechanism -- P4 asks for a decision, and this is what
+     * makes one unavoidable.
+     */
+    @Test
+    void theSetOfWritePathsIsExactAndEachOneSaysWhetherItTakesAPrecondition() {
+
+        assertThat(writePaths(TaskService.class))
+                .containsExactlyInAnyOrder(
+                        "create",                      // exempt: no earlier state to be stale about
+                        "assignToProject:Precondition");
+
+        assertThat(writePaths(ProjectService.class))
+                .containsExactlyInAnyOrder(
+                        "create",                      // exempt
+                        "update:Precondition",
+                        "archive:Precondition",
+                        "restore:Precondition");
+
+        assertThat(writePaths(AgentService.class))
+                .containsExactlyInAnyOrder(
+                        "create",                      // exempt
+                        "update:Precondition",
+                        "activate:Precondition",
+                        "deactivate:Precondition");
+    }
+
+    /**
+     * Each write path as {@code name} or {@code name:Precondition}. Read paths --
+     * the ones that declare {@code readOnly = true} -- are not write paths and are
+     * not listed.
+     */
+    private static List<String> writePaths(Class<?> service) {
+        return Arrays.stream(service.getDeclaredMethods())
+                .filter(PreconditionCoverageTest::isPublicInstanceMethod)
+                .filter(method -> !isReadOnly(method))
+                .map(method -> takesAPrecondition(method)
+                        ? method.getName() + ":Precondition"
+                        : method.getName())
+                .sorted()
+                .toList();
+    }
+
+    private static boolean isPublicInstanceMethod(Method method) {
+        return Modifier.isPublic(method.getModifiers())
+                && !Modifier.isStatic(method.getModifiers())
+                && method.getDeclaringClass() != Object.class;
+    }
+
+    /**
+     * A read path declares itself: {@code @Transactional(readOnly = true)}. That
+     * annotation is not decoration here -- it is what the class-level
+     * {@code @Transactional} is being narrowed from, and TD-24 is the record of
+     * what happens when a write path is allowed to go through one of these.
+     */
+    private static boolean isReadOnly(Method method) {
+        Transactional transactional = method.getAnnotation(Transactional.class);
+        return transactional != null && transactional.readOnly();
+    }
+
+    private static boolean takesAPrecondition(Method method) {
+        return Stream.of(method.getParameterTypes()).anyMatch(Precondition.class::equals);
+    }
+}

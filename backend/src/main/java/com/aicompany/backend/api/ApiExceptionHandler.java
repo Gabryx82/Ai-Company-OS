@@ -61,6 +61,31 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
+    // --- the precondition protocol (ADR-009) ------------------------------
+
+    @ExceptionHandler(PreconditionRequiredException.class)
+    ResponseEntity<ProblemDetail> handlePreconditionRequired(PreconditionRequiredException e) {
+        return respond(ApiProblem.PRECONDITION_REQUIRED, e.getMessage());
+    }
+
+    /**
+     * The one refusal in this class that is not about the state of a resource but
+     * about what the caller knew of it. There is deliberately <strong>no</strong>
+     * handler for {@code OptimisticLockException} next to it: on every write path
+     * the entity is loaded under a pessimistic lock and therefore already carries
+     * the newest version, so that exception cannot arrive. A handler for it would
+     * be a piece of contract that never runs -- untestable except by absence.
+     */
+    @ExceptionHandler(PreconditionFailedException.class)
+    ResponseEntity<ProblemDetail> handlePreconditionFailed(PreconditionFailedException e) {
+        return respond(ApiProblem.PRECONDITION_FAILED, e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidPreconditionException.class)
+    ResponseEntity<ProblemDetail> handleInvalidPrecondition(InvalidPreconditionException e) {
+        return respond(ApiProblem.INVALID_PRECONDITION, e.getMessage());
+    }
+
     // --- the project registry ---------------------------------------------
 
     @ExceptionHandler(ProjectNotFoundException.class)

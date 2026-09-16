@@ -3,14 +3,19 @@ package com.aicompany.backend.agent.controller;
 import com.aicompany.backend.agent.dto.AgentCreateRequest;
 import com.aicompany.backend.agent.dto.AgentResponse;
 import com.aicompany.backend.agent.dto.AgentUpdateRequest;
+import com.aicompany.backend.agent.model.Agent;
 import com.aicompany.backend.agent.service.AgentService;
+import com.aicompany.backend.api.ETags;
+import com.aicompany.backend.api.Precondition;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -61,34 +66,58 @@ public class AgentController {
     }
 
     @GetMapping("/{id}")
-    public AgentResponse getAgent(@PathVariable Long id) {
-        return AgentResponse.from(service.findById(id));
+    public ResponseEntity<AgentResponse> getAgent(@PathVariable Long id) {
+        return ok(service.findById(id));
     }
 
     @PostMapping
     public ResponseEntity<AgentResponse> createAgent(@Valid @RequestBody AgentCreateRequest request) {
 
-        AgentResponse created = AgentResponse.from(
-                service.create(request.name(), request.role(), request.specialization()));
+        Agent created = service.create(request.name(), request.role(), request.specialization());
 
-        return ResponseEntity.created(URI.create("/api/agents/" + created.id())).body(created);
+        return ResponseEntity.created(URI.create("/api/agents/" + created.getId()))
+                .eTag(ETags.of(created.getVersion()))
+                .body(AgentResponse.from(created));
     }
 
     @PutMapping("/{id}")
-    public AgentResponse updateAgent(@PathVariable Long id,
-                                     @Valid @RequestBody AgentUpdateRequest request) {
+    public ResponseEntity<AgentResponse> updateAgent(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+            @Valid @RequestBody AgentUpdateRequest request) {
 
-        return AgentResponse.from(
-                service.update(id, request.name(), request.role(), request.specialization()));
+        return ok(service.update(id, request.name(), request.role(), request.specialization(),
+                Precondition.fromHeader(ifMatch)));
     }
 
     @PostMapping("/{id}/deactivate")
-    public AgentResponse deactivateAgent(@PathVariable Long id) {
-        return AgentResponse.from(service.deactivate(id));
+    public ResponseEntity<AgentResponse> deactivateAgent(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+
+        return ok(service.deactivate(id, Precondition.fromHeader(ifMatch)));
     }
 
     @PostMapping("/{id}/activate")
-    public AgentResponse activateAgent(@PathVariable Long id) {
-        return AgentResponse.from(service.activate(id));
+    public ResponseEntity<AgentResponse> activateAgent(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+
+        return ok(service.activate(id, Precondition.fromHeader(ifMatch)));
+    }
+
+    /**
+     * The agent registry adopts the precondition protocol for the reason ADR-009
+     * §4 gives: it has no registered debt for stale overwrites only because
+     * TASK-007 arrived after TD-28 was written down, not because its write surface
+     * is any different. A precondition with holes is a promise that holds wherever
+     * somebody remembered it, and a client cannot tell where that is.
+     *
+     * <p>{@code required = false} is deliberate -- see {@link Precondition#fromHeader}.
+     */
+    private static ResponseEntity<AgentResponse> ok(Agent agent) {
+        return ResponseEntity.ok()
+                .eTag(ETags.of(agent.getVersion()))
+                .body(AgentResponse.from(agent));
     }
 }

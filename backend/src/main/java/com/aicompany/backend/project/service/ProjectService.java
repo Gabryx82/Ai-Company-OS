@@ -1,5 +1,6 @@
 package com.aicompany.backend.project.service;
 
+import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.project.exception.ProjectNameConflictException;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.project.model.Project;
@@ -56,9 +57,9 @@ public class ProjectService {
         return repository.findById(id).orElseThrow(() -> new ProjectNotFoundException(id));
     }
 
-    public Project update(Long id, String name, String description) {
+    public Project update(Long id, String name, String description, Precondition precondition) {
 
-        Project project = lockForWrite(id);
+        Project project = lockForWrite(id, precondition);
 
         if (repository.existsByNormalisedNameAndIdNot(name, id)) {
             throw new ProjectNameConflictException(name);
@@ -69,16 +70,16 @@ public class ProjectService {
         return saveGuardingUniqueName(project, name);
     }
 
-    public Project archive(Long id) {
-        Project project = lockForWrite(id);
+    public Project archive(Long id, Precondition precondition) {
+        Project project = lockForWrite(id, precondition);
         project.archive();
-        return repository.save(project);
+        return repository.saveAndFlush(project);
     }
 
-    public Project restore(Long id) {
-        Project project = lockForWrite(id);
+    public Project restore(Long id, Precondition precondition) {
+        Project project = lockForWrite(id, precondition);
         project.restore();
-        return repository.save(project);
+        return repository.saveAndFlush(project);
     }
 
     /**
@@ -100,8 +101,17 @@ public class ProjectService {
      * all, so that failure mode is no longer expressible here, not merely absent.
      * A structural test asserts it.
      */
-    private Project lockForWrite(Long id) {
-        return repository.findByIdForUpdate(id).orElseThrow(() -> new ProjectNotFoundException(id));
+    private Project lockForWrite(Long id, Precondition precondition) {
+
+        Project project = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ProjectNotFoundException(id));
+
+        // P1: after the lock, before any rule reads the row. Taking the
+        // precondition as a parameter rather than fetching it from somewhere is
+        // what makes it unskippable -- a write path that forgot it would not
+        // compile.
+        precondition.requireSatisfiedBy(project.getVersion());
+        return project;
     }
 
     /**

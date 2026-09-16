@@ -3,6 +3,7 @@ package com.aicompany.backend.agent.service;
 import com.aicompany.backend.agent.exception.AgentNameConflictException;
 import com.aicompany.backend.agent.exception.AgentNotFoundException;
 import com.aicompany.backend.agent.model.Agent;
+import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.agent.repository.AgentRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -54,9 +55,10 @@ public class AgentService {
         return repository.findById(id).orElseThrow(() -> new AgentNotFoundException(id));
     }
 
-    public Agent update(Long id, String name, String role, String specialization) {
+    public Agent update(Long id, String name, String role, String specialization,
+                        Precondition precondition) {
 
-        Agent agent = lockForWrite(id);
+        Agent agent = lockForWrite(id, precondition);
 
         if (repository.existsByNormalisedNameAndIdNot(name, id)) {
             throw new AgentNameConflictException(name);
@@ -67,16 +69,16 @@ public class AgentService {
         return saveGuardingUniqueName(agent, name);
     }
 
-    public Agent deactivate(Long id) {
-        Agent agent = lockForWrite(id);
+    public Agent deactivate(Long id, Precondition precondition) {
+        Agent agent = lockForWrite(id, precondition);
         agent.deactivate();
-        return repository.save(agent);
+        return repository.saveAndFlush(agent);
     }
 
-    public Agent activate(Long id) {
-        Agent agent = lockForWrite(id);
+    public Agent activate(Long id, Precondition precondition) {
+        Agent agent = lockForWrite(id, precondition);
         agent.activate();
-        return repository.save(agent);
+        return repository.saveAndFlush(agent);
     }
 
     /**
@@ -88,8 +90,14 @@ public class AgentService {
      * transactional attribute, so a write path cannot come to depend on
      * self-invocation quietly discarding a read-only flag.
      */
-    private Agent lockForWrite(Long id) {
-        return repository.findByIdForUpdate(id).orElseThrow(() -> new AgentNotFoundException(id));
+    private Agent lockForWrite(Long id, Precondition precondition) {
+
+        Agent agent = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> new AgentNotFoundException(id));
+
+        // P1: after the lock, before any rule reads the row. ADR-009 section 3.
+        precondition.requireSatisfiedBy(agent.getVersion());
+        return agent;
     }
 
     /**

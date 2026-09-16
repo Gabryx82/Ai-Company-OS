@@ -3,6 +3,9 @@ package com.aicompany.backend.agent;
 import com.aicompany.backend.agent.exception.AgentNameConflictException;
 import com.aicompany.backend.agent.exception.IllegalAgentStateTransitionException;
 import com.aicompany.backend.agent.model.Agent;
+import com.aicompany.backend.api.Precondition;
+import com.aicompany.backend.api.PreconditionFailedException;
+import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.agent.repository.AgentRepository;
 import com.aicompany.backend.agent.service.AgentService;
 import com.aicompany.backend.support.AbstractPostgresTest;
@@ -80,9 +83,14 @@ class AgentConcurrencyAndConflictTest extends AbstractPostgresTest {
      * and waiting for somebody to notice.
      */
     @Test
-    void twoConcurrentDeactivationsProduceOneSuccessAndOneConflict() throws Exception {
+    void twoConcurrentDeactivationsProduceOneSuccessAndOneRefusal() throws Exception {
 
         Long agentId = repository.saveAndFlush(new Agent("Code Architect", "Engineer", "x")).getId();
+
+        // Both callers read the agent at the same version and declare it. One of
+        // them is going to be overtaken, and since TASK-008 it is told so.
+        Precondition bothRead = Preconditions.at(
+                repository.findById(agentId).orElseThrow().getVersion());
 
         CountDownLatch firstHasDecided = new CountDownLatch(1);
         CountDownLatch secondHasFinished = new CountDownLatch(1);
@@ -92,7 +100,7 @@ class AgentConcurrencyAndConflictTest extends AbstractPostgresTest {
         Future<?> first = threads.submit(() -> {
             try {
                 newTransaction().execute(status -> {
-                    service.deactivate(agentId);
+                    service.deactivate(agentId, bothRead);
                     firstHasDecided.countDown();
                     awaitAtMost(secondHasFinished);
                     return null;
@@ -105,7 +113,7 @@ class AgentConcurrencyAndConflictTest extends AbstractPostgresTest {
         Future<?> second = threads.submit(() -> {
             awaitAtMost(firstHasDecided);
             try {
-                newTransaction().execute(status -> service.deactivate(agentId));
+                newTransaction().execute(status -> service.deactivate(agentId, bothRead));
             } catch (Throwable failure) {
                 secondFailure.set(failure);
             }
@@ -125,8 +133,15 @@ class AgentConcurrencyAndConflictTest extends AbstractPostgresTest {
                     TD-19 recorded for projects, on a third entity.""")
                 .isEqualTo(1);
 
-        assertThat(firstFailure.get() != null ? firstFailure.get() : secondFailure.get())
-                .isInstanceOf(IllegalAgentStateTransitionException.class);
+        assertThat(unwrapPreconditionFailure(
+                firstFailure.get() != null ? firstFailure.get() : secondFailure.get()))
+                .as("""
+                    Since TASK-008 the loser is refused at the precondition rather than at the \
+                    transition: it read the agent at a version the winner has moved, so it is \
+                    stopped by rule P1 before Agent.deactivate() is reached. The illegal \
+                    transition is still what an up-to-date caller gets -- AgentLifecycleTest \
+                    and AgentRegistryApiTest exercise it sequentially. ADR-009 section 8.""")
+                .isInstanceOf(PreconditionFailedException.class);
 
         assertThat(jdbc.queryForObject("SELECT active FROM agents WHERE id = ?", Boolean.class, agentId))
                 .isFalse();
@@ -190,4 +205,18 @@ class AgentConcurrencyAndConflictTest extends AbstractPostgresTest {
             throw new IllegalStateException("interrupted while waiting for the other transaction", interrupted);
         }
     }
+
+    /** Spring wraps what a transaction callback throws; the assertion wants the cause. */
+    private static Throwable unwrapPreconditionFailure(Throwable failure) {
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof PreconditionFailedException) {
+                return cause;
+            }
+            if (cause.getCause() == cause) {
+                break;
+            }
+        }
+        return failure;
+    }
+
 }

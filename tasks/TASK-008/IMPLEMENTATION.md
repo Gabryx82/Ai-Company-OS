@@ -59,12 +59,13 @@ assegnare un task inciderebbe sulla versione del progetto e I-5 diventerebbe fal
 
 ## 4. Il codice
 
-### 4.1 `api/EntityVersion` e `api/Precondition`
+### 4.1 Il pacchetto `api`
 
 ```
 api/
-  EntityVersion.java   // il valore e la sua forma come entity-tag:  7  <->  "7"
+  ETags.java           // la versione resa come entity-tag forte:  7  ->  "7"
   Precondition.java    // le versioni che il chiamante dichiara di aver visto
+  Versioned.java       // corpo + versione, per il solo percorso dei task (vedi 4.4)
   PreconditionRequiredException.java
   PreconditionFailedException.java
   InvalidPreconditionException.java
@@ -127,11 +128,13 @@ public TaskResponse assignToProject(Long taskId, Long projectId, Precondition pr
 }
 ```
 
-Le due righe **non** sono invertibili e **non** sono spostabili:
+Le due righe **non** sono invertibili e **non** sono spostabili — ma le due ragioni non sono
+quelle che questo documento diceva prima della verifica per mutazione (§6):
 
-- **prima** del lock → check-then-act: due richieste con lo stesso ETag valido passano entrambe;
-- **dopo** `assignTo` → la scorciatoia idempotente ha già restituito `200` a un chiamante che
-  aveva letto uno stato che non esiste più (**P2**, e I-3 lo asserisce).
+- **prima** del lock → check-then-act: due richieste con lo stesso ETag valido lo superano
+  entrambe, e il refuso che ne segue è un `500` di Hibernate al posto di un `412`;
+- **dopo** le guardie → un chiamante stantio riceve il `409` della regola di dominio invece del
+  `412`: gli si risponde sullo stato nuovo, che è precisamente ciò che non sa (**P2**).
 
 Lo stesso innesto, dopo `lockForWrite`, in `ProjectService.update/archive/restore` e in
 `AgentService.update/activate/deactivate`.
@@ -174,7 +177,8 @@ Prima del codice, e rossi **per la ragione attesa**. Un test che passa subito è
 |---|---|
 | `mutationWithoutIfMatchIsRejected` (×7 rotte) | Oggi è `200`: la precondizione non esiste |
 | `mutationWithStaleIfMatchIsRejected` (×7) | Oggi è `200` **e la scrittura passa** — il lost update di TD-28/TD-30, osservabile |
-| `stalePreconditionIsCheckedBeforeTheIdempotentNoOp` | Oggi è `200` no-op |
+| `aStalePreconditionIsRefusedEvenWhenTheRequestWouldChangeNothing` | Oggi è `200` no-op |
+| `aStaleCallerIsToldItIsStaleAndNotWhatIsWrongWithTheNewState` | Scritto **dopo**, per la ragione in §6: il test qui sopra non distingue le posizioni |
 | `twoConcurrentReassignmentsWithTheSameEtagProduceOneSuccessAndOneFailure` | Oggi sono due `200`: **è TD-30** |
 | `assigningATaskDoesNotChangeTheProjectVersion` | Oggi non c'è versione da confrontare |
 | `theEtagOfAMutationIsTheEtagOfTheNextRead` | Oggi non c'è ETag |
@@ -189,14 +193,41 @@ sincronizzazione a latch, **mai** `sleep`.
 
 Tre mutazioni, una per proprietà portante. Ciascuna toglie **esattamente una cosa**.
 
-| Mutazione | Test che deve diventare rosso |
-|---|---|
-| Rimuovere `precondition.requireSatisfiedBy(...)` | I-1, I-2 |
-| Spostarla **prima** di `findByIdForUpdate` | I-4 — il test di concorrenza, e solo quello: è la prova che il lock serve al confronto |
-| Spostarla **dopo** `task.assignTo(...)` | I-3 — la precondizione contro il no-op |
+Eseguite il 2026-09-16. **Due delle tre hanno smentito quello che questo documento diceva**, e
+le righe qui sotto dicono cosa è successo, non cosa era previsto.
 
-La seconda è la più informativa: se I-4 restasse verde con la precondizione fuori dal lock,
-significherebbe che il test non sta osservando l'interleaving che dichiara.
+| Mutazione | Esito |
+|---|---|
+| Il confronto smette di confrontare (`requireSatisfiedBy` neutralizzato) | **Rosso**, 4 test: i tre `412` di `PreconditionContractTest` e il test di concorrenza |
+| Il confronto **sopra** `findByIdForUpdate` | **Rosso**, e **solo** `PreconditionConcurrencyTest`: `PreconditionContractTest` resta 17 verdi. È la prova che quel test paga il proprio tempo di esecuzione |
+| Il confronto **sotto** `task.assignTo(...)` | **Verde alla prima esecuzione.** Il test che doveva coprirlo non copriva niente |
+
+**La terza è la scoperta della task.** Questo documento affermava che sotto `assignTo` il
+confronto «non girerebbe mai sul percorso idempotente, perché quel metodo esce presto».
+**Falso**: `Task.assignTo` esce presto da **sé**, non da `assignToProject`, quindi il confronto
+gira comunque e il `412` arriva lo stesso. Il test di I-3 stava asserendo qualcosa che è vero in
+entrambi i mondi.
+
+Ciò che la posizione decide davvero è **quale rifiuto** riceve un chiamante stantio. Con il
+confronto prima delle regole: `412`. Dopo: il `409` della regola di dominio — una risposta sullo
+stato nuovo, a un chiamante che non sa nemmeno che la risorsa si è mossa. Da qui il test
+`aStaleCallerIsToldItIsStaleAndNotWhatIsWrongWithTheNewState`, che con la mutazione diventa rosso
+con `expected:<412> but was:<409>`, e P2 riformulata in ADR-009 §3.
+
+**La seconda ha aggiunto un fatto.** Con il confronto sopra il lock il mutante non perde la riga:
+Hibernate solleva `StaleObjectStateException` alla lettura bloccante, perché il persistence
+context tiene già la versione letta senza lock. Il mutante perde la **risposta** — `500` invece di
+`412`. Registrato in ADR-009 §2.3: siccome il contatore è una vera versione JPA, sbagliare
+l'ordine fallisce rumorosamente invece di perdere una scrittura in silenzio. È una rete, non il
+meccanismo.
+
+**Una mutazione ha anche rotto un test appena scritto, ed era il test a essere sbagliato.**
+`PreconditionCoverageTest` tentava di dedurre «è davvero una creazione» dalla firma — un creatore
+non prende `Long` — e falliva sul primo metodo che guardava: `TaskService.create` prende un
+`projectId`, cioè l'identificatore di **un'altra** riga, che legge e non muta. La riflessione non
+sa distinguere i due casi, e un'euristica che non sa distinguere è peggio di nessuna: fallisce su
+codice corretto e insegna a chi la incontra a modificare il test finché passa. Sostituita da un
+insieme **pinnato**, come `ApiProblemCoverageTest` fa con i problemi.
 
 ## 7. Rischi
 

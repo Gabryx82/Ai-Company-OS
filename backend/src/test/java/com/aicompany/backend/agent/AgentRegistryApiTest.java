@@ -6,6 +6,7 @@ import com.aicompany.backend.support.AbstractPostgresTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -97,7 +98,7 @@ class AgentRegistryApiTest extends AbstractPostgresTest {
 
         Long active = activeAgent("Code Architect");
         Long inactive = activeAgent("Retired Specialist");
-        mockMvc.perform(post("/api/agents/" + inactive + "/deactivate")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/agents/" + inactive + "/deactivate").header(HttpHeaders.IF_MATCH, agentEtag(inactive))).andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agents"))
                 .andExpect(status().isOk())
@@ -134,20 +135,20 @@ class AgentRegistryApiTest extends AbstractPostgresTest {
     void anInactiveAgentIsImmutableUntilItIsActivated() throws Exception {
 
         Long id = activeAgent("Code Architect");
-        mockMvc.perform(post("/api/agents/" + id + "/deactivate")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/agents/" + id + "/deactivate").header(HttpHeaders.IF_MATCH, agentEtag(id))).andExpect(status().isOk());
 
         String body = """
                 {"name":"Renamed","role":"Engineer","specialization":"architecture"}""";
 
-        mockMvc.perform(put("/api/agents/" + id).contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(put("/api/agents/" + id).header(HttpHeaders.IF_MATCH, agentEtag(id)).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type")
                         .value("urn:ai-company-os:problem:inactive-agent-is-immutable"));
 
         assertThat(nameOf(id)).isEqualTo("Code Architect");
 
-        mockMvc.perform(post("/api/agents/" + id + "/activate")).andExpect(status().isOk());
-        mockMvc.perform(put("/api/agents/" + id).contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/agents/" + id + "/activate").header(HttpHeaders.IF_MATCH, agentEtag(id))).andExpect(status().isOk());
+        mockMvc.perform(put("/api/agents/" + id).header(HttpHeaders.IF_MATCH, agentEtag(id)).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Renamed"));
     }
@@ -157,14 +158,14 @@ class AgentRegistryApiTest extends AbstractPostgresTest {
 
         Long id = activeAgent("Code Architect");
 
-        mockMvc.perform(post("/api/agents/" + id + "/deactivate")).andExpect(status().isOk());
-        mockMvc.perform(post("/api/agents/" + id + "/deactivate"))
+        mockMvc.perform(post("/api/agents/" + id + "/deactivate").header(HttpHeaders.IF_MATCH, agentEtag(id))).andExpect(status().isOk());
+        mockMvc.perform(post("/api/agents/" + id + "/deactivate").header(HttpHeaders.IF_MATCH, agentEtag(id)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type")
                         .value("urn:ai-company-os:problem:illegal-agent-state-transition"));
 
-        mockMvc.perform(post("/api/agents/" + id + "/activate")).andExpect(status().isOk());
-        mockMvc.perform(post("/api/agents/" + id + "/activate"))
+        mockMvc.perform(post("/api/agents/" + id + "/activate").header(HttpHeaders.IF_MATCH, agentEtag(id))).andExpect(status().isOk());
+        mockMvc.perform(post("/api/agents/" + id + "/activate").header(HttpHeaders.IF_MATCH, agentEtag(id)))
                 .andExpect(status().isConflict());
     }
 
@@ -206,9 +207,34 @@ class AgentRegistryApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.active").value(true))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
-        mockMvc.perform(post("/api/agents/" + id + "/deactivate"))
+        mockMvc.perform(post("/api/agents/" + id + "/deactivate").header(HttpHeaders.IF_MATCH, agentEtag(id)))
                 .andExpect(jsonPath("$.active").value(false))
                 .andExpect(jsonPath("$.status").value("INACTIVE"));
+    }
+
+    // --- preconditions ------------------------------------------------------
+
+    /**
+     * The entity-tag a caller would have read before writing.
+     *
+     * <p>Every mutation in this file carries one, because since ADR-009 there is no
+     * other way in: a request without {@code If-Match} is refused with 428 before
+     * anything is looked up. Reading it here, at the point of the call, is what a
+     * client does -- and it means these tests assert the domain rules against a
+     * <em>fresh</em> tag, so a 409 that turned into a 412 would show up as a
+     * failure rather than pass unnoticed.
+     */
+    private String etagOf(String path) throws Exception {
+
+        String etag = mockMvc.perform(get(path))
+                .andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+
+        assertThat(etag).as("%s must carry an entity-tag".formatted(path)).isNotNull();
+        return etag;
+    }
+
+    private String agentEtag(Long id) throws Exception {
+        return etagOf("/api/agents/" + id);
     }
 
     // --- helpers -----------------------------------------------------------

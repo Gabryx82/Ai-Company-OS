@@ -8,10 +8,12 @@ import com.aicompany.backend.task.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -156,30 +158,30 @@ class ApiErrorContractTest extends AbstractPostgresTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Company OS\"}")), 409, "project-name-conflict");
 
-        problem(mockMvc.perform(post("/api/projects/" + archived + "/archive")),
+        problem(mockMvc.perform(post("/api/projects/" + archived + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(archived))),
                 409, "illegal-project-state-transition");
 
-        problem(mockMvc.perform(put("/api/projects/" + archived)
+        problem(mockMvc.perform(put("/api/projects/" + archived).header(HttpHeaders.IF_MATCH, projectEtag(archived))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Renamed\"}")), 409, "archived-project-is-immutable");
 
-        problem(mockMvc.perform(put("/api/tasks/424242/project")
+        problem(mockMvc.perform(put("/api/tasks/424242/project").header(HttpHeaders.IF_MATCH, "\"0\"")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"projectId\":%d}".formatted(active))), 404, "task-not-found");
 
-        problem(mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        problem(mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"projectId\":%d}".formatted(archived))),
                 409, "archived-project-cannot-receive-tasks");
 
-        mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"projectId\":%d}".formatted(active)))
                 .andExpect(status().isOk());
-        mockMvc.perform(post("/api/projects/" + active + "/archive")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + active + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(active))).andExpect(status().isOk());
 
         Long elsewhere = activeProject("Planner");
-        problem(mockMvc.perform(put("/api/tasks/" + taskId + "/project")
+        problem(mockMvc.perform(put("/api/tasks/" + taskId + "/project").header(HttpHeaders.IF_MATCH, taskEtag(taskId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"projectId\":%d}".formatted(elsewhere))),
                 409, "archived-project-task-is-immutable");
@@ -204,6 +206,35 @@ class ApiErrorContractTest extends AbstractPostgresTest {
         problem(mockMvc.perform(get("/api/agents/424242")), 404, "agent-not-found");
 
         problem(mockMvc.perform(delete("/api/agents/1")), 405, "method-not-allowed");
+    }
+
+    // --- preconditions ------------------------------------------------------
+
+    /**
+     * The entity-tag a caller would have read before writing.
+     *
+     * <p>Every mutation in this file carries one, because since ADR-009 there is no
+     * other way in: a request without {@code If-Match} is refused with 428 before
+     * anything is looked up. Reading it here, at the point of the call, is what a
+     * client does -- and it means these tests assert the domain rules against a
+     * <em>fresh</em> tag, so a 409 that turned into a 412 would show up as a
+     * failure rather than pass unnoticed.
+     */
+    private String etagOf(String path) throws Exception {
+
+        String etag = mockMvc.perform(get(path))
+                .andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+
+        assertThat(etag).as("%s must carry an entity-tag".formatted(path)).isNotNull();
+        return etag;
+    }
+
+    private String projectEtag(Long id) throws Exception {
+        return etagOf("/api/projects/" + id);
+    }
+
+    private String taskEtag(Long id) throws Exception {
+        return etagOf("/api/tasks/" + id);
     }
 
     // --- helpers -----------------------------------------------------------

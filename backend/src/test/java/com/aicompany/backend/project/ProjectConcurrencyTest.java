@@ -1,10 +1,13 @@
 package com.aicompany.backend.project;
 
+import com.aicompany.backend.api.Precondition;
+import com.aicompany.backend.api.PreconditionFailedException;
 import com.aicompany.backend.project.exception.IllegalProjectStateTransitionException;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.project.service.ProjectService;
 import com.aicompany.backend.support.AbstractPostgresTest;
+import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
 import com.aicompany.backend.task.model.Task;
@@ -147,6 +150,14 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
         Long projectId = projectRepository.saveAndFlush(new Project("Company OS", null)).getId();
         Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
 
+        // Both callers read before they act, which is what the protocol asks of a
+        // client and what makes the interleaving below a race between two informed
+        // writers rather than between two guesses. Neither tag goes stale here: the
+        // assignment writes the task row, the archive writes the project row, and a
+        // version counts its own row only (rule P3).
+        Precondition taskAsRead = taskPrecondition(taskId);
+        Precondition projectAsRead = projectPrecondition(projectId);
+
         CountDownLatch assignmentHasDecided = new CountDownLatch(1);
         CountDownLatch archiveHasCommitted = new CountDownLatch(1);
 
@@ -161,7 +172,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
 
                     // Reads the project and decides. On the baseline this is an
                     // unlocked read; under the protocol it is SELECT ... FOR SHARE.
-                    taskService.assignToProject(taskId, projectId);
+                    taskService.assignToProject(taskId, projectId, taskAsRead);
 
                     assignmentHasDecided.countDown();
 
@@ -180,7 +191,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
             awaitAtMost(assignmentHasDecided);
             newTransaction().execute(status -> {
                 stampCommitOrder(archiveCommit);
-                projectService.archive(projectId);
+                projectService.archive(projectId, projectAsRead);
                 return null;
             });
             archiveHasCommitted.countDown();
@@ -236,6 +247,9 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
         Long projectId = projectRepository.saveAndFlush(new Project("Company OS", null)).getId();
         Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
 
+        Precondition taskAsRead = taskPrecondition(taskId);
+        Precondition projectAsRead = projectPrecondition(projectId);
+
         CountDownLatch archiveHasCommitted = new CountDownLatch(1);
 
         AtomicInteger assignmentCommit = new AtomicInteger();
@@ -245,7 +259,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
         Future<?> archiving = threads.submit(() -> {
             newTransaction().execute(status -> {
                 stampCommitOrder(archiveCommit);
-                projectService.archive(projectId);
+                projectService.archive(projectId, projectAsRead);
                 return null;
             });
             archiveHasCommitted.countDown();
@@ -256,7 +270,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
             try {
                 newTransaction().execute(status -> {
                     stampCommitOrder(assignmentCommit);
-                    taskService.assignToProject(taskId, projectId);
+                    taskService.assignToProject(taskId, projectId, taskAsRead);
                     return null;
                 });
             } catch (Throwable failure) {
@@ -297,14 +311,38 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
      * unverifiable.
      *
      * <p>Under L1 the second archive's {@code SELECT ... FOR UPDATE} waits for the
-     * first to commit and then reads ARCHIVED, so {@code Project.archive()} raises
-     * the illegal-transition exception it is supposed to raise. Exactly one
-     * success, exactly one conflict.
+     * first to commit and then re-reads the row it was blocked on. Exactly one
+     * success, exactly one refusal.
+     *
+     * <h2>What the refusal is, since TASK-008</h2>
+     *
+     * <p>It used to be the illegal transition of ADR-004 §4, and it is now the
+     * precondition of ADR-009. Both callers read the project at the same version
+     * and declared it; the winner's commit moved that version, so the loser is
+     * refused at rule P1 before {@code Project.archive()} is ever reached.
+     *
+     * <p>This is a real change to the contract and it is recorded in ADR-009 §8.
+     * It loses nothing: the illegal transition is still what a caller gets when it
+     * is <em>up to date</em> and asks for a transition the state forbids -- see
+     * {@code ProjectLifecycleTest} and {@code ProjectApiTest}, which exercise it
+     * sequentially. What changes is which of the two a concurrent loser sees, and
+     * 412 is the more truthful of the pair: this caller did not ask for an
+     * impossible transition, it asked for a possible one against a state that had
+     * already moved, and it cannot know whether it would still want to.
+     *
+     * <p>The lock is still what this test guards. Take L1 away and the two
+     * transactions both pass the precondition on a row neither has locked, and the
+     * second flush fails as an optimistic-locking failure instead -- which is
+     * neither of the two outcomes asserted below.
      */
     @Test
-    void twoConcurrentArchivesProduceOneSuccessAndOneConflict() throws Exception {
+    void twoConcurrentArchivesProduceOneSuccessAndOneRefusal() throws Exception {
 
         Long projectId = projectRepository.saveAndFlush(new Project("Company OS", null)).getId();
+
+        // Both callers read the same state and say so. Neither is guessing; one of
+        // them is simply going to be overtaken.
+        Precondition bothRead = projectPrecondition(projectId);
 
         CountDownLatch firstHasDecided = new CountDownLatch(1);
         CountDownLatch secondHasFinished = new CountDownLatch(1);
@@ -318,7 +356,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
             try {
                 newTransaction().execute(status -> {
                     stampCommitOrder(firstCommit);
-                    projectService.archive(projectId);
+                    projectService.archive(projectId, bothRead);
                     firstHasDecided.countDown();
                     awaitAtMost(secondHasFinished);
                     return null;
@@ -333,7 +371,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
             try {
                 newTransaction().execute(status -> {
                     stampCommitOrder(secondCommit);
-                    projectService.archive(projectId);
+                    projectService.archive(projectId, bothRead);
                     return null;
                 });
             } catch (Throwable failure) {
@@ -346,19 +384,20 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
         second.get(TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         long succeeded = countOfNulls(firstFailure, secondFailure);
-        long conflicted = countOfIllegalTransitions(firstFailure, secondFailure);
 
         assertThat(succeeded)
                 .as("""
-                    ADR-004 section 4: archiving an already archived project is a caller mistake \
-                    and must be a 409. Two concurrent archives that both report success \
-                    mean nothing serialised the transition -- the state machine cannot be \
-                    verified by anybody, including its own tests (TD-19, lifecycle).""")
+                    Two concurrent archives that both report success mean nothing serialised \
+                    the transition -- the state machine cannot be verified by anybody, \
+                    including its own tests (TD-19, lifecycle). L1 is what makes this one.""")
                 .isEqualTo(1);
 
-        assertThat(conflicted)
-                .as("the archive that lost the race must have raised the illegal transition")
-                .isEqualTo(1);
+        assertThat(firstFailure.get() != null ? firstFailure.get() : secondFailure.get())
+                .as("""
+                    The loser read the project at a version the winner has since moved, so it \
+                    is refused at the precondition rather than at the transition: it asked for \
+                    something possible against a state that no longer exists. ADR-009 section 8.""")
+                .isInstanceOf(PreconditionFailedException.class);
 
         assertThat(statusOf(projectId)).isEqualTo("ARCHIVED");
         assertThat(firstCommit.get() + secondCommit.get())
@@ -410,7 +449,11 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
         Long projectC = projectRepository.saveAndFlush(new Project("Model Gateway", null)).getId();
 
         Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
-        newTransaction().execute(status -> taskService.assignToProject(taskId, projectA));
+        newTransaction().execute(status ->
+                taskService.assignToProject(taskId, projectA, taskPrecondition(taskId)));
+
+        // What the stale writer knows. Everything it decides is decided against this.
+        Precondition whatTheStaleWriterRead = taskPrecondition(taskId);
 
         CountDownLatch staleWriterHasDecided = new CountDownLatch(1);
         CountDownLatch theWorldHasMovedOn = new CountDownLatch(1);
@@ -425,7 +468,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
 
                     // Reads T, sees its project is A, sees A is ACTIVE, decides.
                     // Everything this transaction knows about the world is fixed here.
-                    taskService.assignToProject(taskId, projectB);
+                    taskService.assignToProject(taskId, projectB, whatTheStaleWriterRead);
 
                     staleWriterHasDecided.countDown();
                     awaitAtMost(theWorldHasMovedOn);
@@ -438,11 +481,36 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
 
         awaitOrFail(staleWriterHasDecided, "the stale writer to decide against project A");
 
-        // The world moves on underneath it, in two committed steps.
-        newTransaction().execute(status -> taskService.assignToProject(taskId, projectC));
+        // The world tries to move on underneath it, and finds out that it cannot.
+        //
+        // This is the step TASK-008 changed. The move to C parks behind the stale
+        // writer's L0 lock; when the stale writer commits and lets it through, the
+        // tag it read before waiting no longer describes the row, and it is refused.
+        // That is the protocol working: the world was overtaken and is told so
+        // rather than writing over a change it never saw.
+        Precondition whatTheWorldReadFirst = taskPrecondition(taskId);
+        AtomicReference<Throwable> worldRefusedOnce = new AtomicReference<>();
+        try {
+            newTransaction().execute(status ->
+                    taskService.assignToProject(taskId, projectC, whatTheWorldReadFirst));
+        } catch (Throwable failure) {
+            worldRefusedOnce.set(unwrap(failure));
+        }
+
+        assertThat(worldRefusedOnce.get())
+                .as("""
+                    The world read the task, then waited on the stale writer's lock. By the \
+                    time it was let through, its tag described a row that had moved. Rule P1 \
+                    refuses it there -- and this is exactly the report TD-30 said was \
+                    missing.""")
+                .isInstanceOf(PreconditionFailedException.class);
+
+        // So it does what a client is supposed to do: read again, decide again.
+        newTransaction().execute(status ->
+                taskService.assignToProject(taskId, projectC, taskPrecondition(taskId)));
         newTransaction().execute(status -> {
             stampCommitOrder(archiveCommit);
-            return projectService.archive(projectC);
+            return projectService.archive(projectC, projectPrecondition(projectC));
         });
 
         Long projectAfterTheWorldMovedOn = assignedProjectIdOf(taskId);
@@ -545,6 +613,19 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
      * from a persistence context that might still be holding the objects the test
      * itself wrote.
      */
+    /**
+     * The precondition a caller would hold after reading the resource. Taken at
+     * the point in the story where that caller would have read it -- which is the
+     * whole difference between a fresh tag and a stale one.
+     */
+    private Precondition taskPrecondition(Long id) {
+        return Preconditions.at(taskRepository.findById(id).orElseThrow().getVersion());
+    }
+
+    private Precondition projectPrecondition(Long id) {
+        return Preconditions.at(projectRepository.findById(id).orElseThrow().getVersion());
+    }
+
     private Long assignedProjectIdOf(Long taskId) {
         return jdbc.queryForObject("SELECT project_id FROM tasks WHERE id = ?", Long.class, taskId);
     }

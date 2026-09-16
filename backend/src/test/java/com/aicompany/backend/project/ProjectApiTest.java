@@ -8,6 +8,7 @@ import com.aicompany.backend.task.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -206,7 +207,7 @@ class ProjectApiTest extends AbstractPostgresTest {
 
         Long active = createProject("Active one");
         Long archived = createProject("Archived one");
-        mockMvc.perform(post("/api/projects/" + archived + "/archive")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + archived + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(archived))).andExpect(status().isOk());
 
         mockMvc.perform(get("/api/projects"))
                 .andExpect(status().isOk())
@@ -238,7 +239,7 @@ class ProjectApiTest extends AbstractPostgresTest {
 
         Long id = createProject("Company OS");
 
-        mockMvc.perform(put("/api/projects/" + id)
+        mockMvc.perform(put("/api/projects/" + id).header(HttpHeaders.IF_MATCH, projectEtag(id))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Company OS renamed","description":"now with a description"}"""))
@@ -253,7 +254,7 @@ class ProjectApiTest extends AbstractPostgresTest {
 
         Long id = createProject("Company OS");
 
-        mockMvc.perform(put("/api/projects/" + id)
+        mockMvc.perform(put("/api/projects/" + id).header(HttpHeaders.IF_MATCH, projectEtag(id))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Company OS","description":"only the description changed"}"""))
@@ -266,7 +267,7 @@ class ProjectApiTest extends AbstractPostgresTest {
         createProject("Company OS");
         Long second = createProject("Second project");
 
-        mockMvc.perform(put("/api/projects/" + second)
+        mockMvc.perform(put("/api/projects/" + second).header(HttpHeaders.IF_MATCH, projectEtag(second))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"COMPANY OS"}"""))
@@ -277,9 +278,9 @@ class ProjectApiTest extends AbstractPostgresTest {
     void updatingAnArchivedProjectIsAConflict() throws Exception {
 
         Long id = createProject("Company OS");
-        mockMvc.perform(post("/api/projects/" + id + "/archive")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + id + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(id))).andExpect(status().isOk());
 
-        mockMvc.perform(put("/api/projects/" + id)
+        mockMvc.perform(put("/api/projects/" + id).header(HttpHeaders.IF_MATCH, projectEtag(id))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Renamed while archived"}"""))
@@ -296,10 +297,10 @@ class ProjectApiTest extends AbstractPostgresTest {
     void restoringMakesTheSameUpdateSucceed() throws Exception {
 
         Long id = createProject("Company OS");
-        mockMvc.perform(post("/api/projects/" + id + "/archive")).andExpect(status().isOk());
-        mockMvc.perform(post("/api/projects/" + id + "/restore")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + id + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(id))).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + id + "/restore").header(HttpHeaders.IF_MATCH, projectEtag(id))).andExpect(status().isOk());
 
-        mockMvc.perform(put("/api/projects/" + id)
+        mockMvc.perform(put("/api/projects/" + id).header(HttpHeaders.IF_MATCH, projectEtag(id))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Renamed after restore"}"""))
@@ -310,7 +311,7 @@ class ProjectApiTest extends AbstractPostgresTest {
     @Test
     void updateOfAnUnknownProjectIsNotFound() throws Exception {
 
-        mockMvc.perform(put("/api/projects/404404")
+        mockMvc.perform(put("/api/projects/404404").header(HttpHeaders.IF_MATCH, "\"0\"")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"ghost"}"""))
@@ -322,7 +323,7 @@ class ProjectApiTest extends AbstractPostgresTest {
 
         Long id = createProject("Company OS");
 
-        mockMvc.perform(put("/api/projects/" + id)
+        mockMvc.perform(put("/api/projects/" + id).header(HttpHeaders.IF_MATCH, projectEtag(id))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
@@ -337,7 +338,7 @@ class ProjectApiTest extends AbstractPostgresTest {
 
         Long id = createProject("Company OS");
 
-        mockMvc.perform(post("/api/projects/" + id + "/archive"))
+        mockMvc.perform(post("/api/projects/" + id + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(id)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ARCHIVED"));
 
@@ -350,9 +351,9 @@ class ProjectApiTest extends AbstractPostgresTest {
     void archivingTwiceIsAConflict() throws Exception {
 
         Long id = createProject("Company OS");
-        mockMvc.perform(post("/api/projects/" + id + "/archive")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + id + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(id))).andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/projects/" + id + "/archive"))
+        mockMvc.perform(post("/api/projects/" + id + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(id)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Illegal project state transition"));
 
@@ -363,9 +364,9 @@ class ProjectApiTest extends AbstractPostgresTest {
     void restoreBringsAnArchivedProjectBack() throws Exception {
 
         Long id = createProject("Company OS");
-        mockMvc.perform(post("/api/projects/" + id + "/archive")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/" + id + "/archive").header(HttpHeaders.IF_MATCH, projectEtag(id))).andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/projects/" + id + "/restore"))
+        mockMvc.perform(post("/api/projects/" + id + "/restore").header(HttpHeaders.IF_MATCH, projectEtag(id)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
@@ -375,14 +376,14 @@ class ProjectApiTest extends AbstractPostgresTest {
 
         Long id = createProject("Company OS");
 
-        mockMvc.perform(post("/api/projects/" + id + "/restore"))
+        mockMvc.perform(post("/api/projects/" + id + "/restore").header(HttpHeaders.IF_MATCH, projectEtag(id)))
                 .andExpect(status().isConflict());
     }
 
     @Test
     void archivingAnUnknownProjectIsNotFound() throws Exception {
 
-        mockMvc.perform(post("/api/projects/404404/archive"))
+        mockMvc.perform(post("/api/projects/404404/archive").header(HttpHeaders.IF_MATCH, "\"0\""))
                 .andExpect(status().isNotFound());
     }
 
@@ -423,4 +424,30 @@ class ProjectApiTest extends AbstractPostgresTest {
                 .characterEncoding(StandardCharsets.UTF_8)
                 .content(("{\"name\":\"" + name + "\"}").getBytes(StandardCharsets.UTF_8)));
     }
+
+    // --- preconditions ------------------------------------------------------
+
+    /**
+     * The entity-tag a caller would have read before writing.
+     *
+     * <p>Every mutation in this file carries one, because since ADR-009 there is no
+     * other way in: a request without {@code If-Match} is refused with 428 before
+     * anything is looked up. Reading it here, at the point of the call, is what a
+     * client does -- and it means these tests assert the domain rules against a
+     * <em>fresh</em> tag, so a 409 that turned into a 412 would show up as a
+     * failure rather than pass unnoticed.
+     */
+    private String etagOf(String path) throws Exception {
+
+        String etag = mockMvc.perform(get(path))
+                .andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+
+        assertThat(etag).as("%s must carry an entity-tag".formatted(path)).isNotNull();
+        return etag;
+    }
+
+    private String projectEtag(Long id) throws Exception {
+        return etagOf("/api/projects/" + id);
+    }
+
 }

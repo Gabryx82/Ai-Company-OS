@@ -1,6 +1,7 @@
 package com.aicompany.backend.project;
 
 import com.aicompany.backend.project.exception.ArchivedProjectIsImmutableException;
+import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.project.exception.ProjectNameConflictException;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
@@ -82,7 +83,7 @@ class ProjectServiceConflictTest {
         when(repository.saveAndFlush(any(Project.class)))
                 .thenThrow(integrityViolation(ProjectRepository.NAME_UNIQUE_INDEX));
 
-        assertThatThrownBy(() -> service.update(1L, "Renamed", null))
+        assertThatThrownBy(() -> service.update(1L, "Renamed", null, Preconditions.at(0)))
                 .isInstanceOf(ProjectNameConflictException.class);
     }
 
@@ -95,7 +96,7 @@ class ProjectServiceConflictTest {
         when(repository.findByIdForUpdate(anyLong())).thenReturn(Optional.of(archived));
         when(repository.existsByNormalisedNameAndIdNot(anyString(), anyLong())).thenReturn(false);
 
-        assertThatThrownBy(() -> service.update(1L, "Renamed", "new description"))
+        assertThatThrownBy(() -> service.update(1L, "Renamed", "new description", Preconditions.at(0)))
                 .isInstanceOf(ArchivedProjectIsImmutableException.class);
 
         verify(repository, never()).saveAndFlush(any(Project.class));
