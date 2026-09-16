@@ -1,0 +1,111 @@
+task: TASK-008
+title: Optimistic concurrency nel contratto HTTP (ETag / If-Match)
+mode: implementation
+status: SELF_APPROVED
+approval: autonomous_project_mode
+decided_on: 2026-09-15
+scope_refined_by_human_on: 2026-09-16
+
+selection_rationale: >
+  AUTONOMOUS_LOOP.md sezione 4, livello 3: debito che il passo successivo
+  tocca. TASK-009 aggiunge un secondo asse di assegnazione alla riga tasks,
+  ed e' esattamente cio' su cui TD-30 e' un limite. Farlo dopo significa
+  costruire il meccanismo su due endpoint invece che su uno, e pubblicare
+  nel frattempo un contratto che dovra' cambiare.
+
+human_refinement:
+  received_on: 2026-09-16
+  summary: >
+    La distinzione fra i due meccanismi, la ragione per cui @Version da sola
+    non basta, il flusso obbligatorio, e sette vincoli di contratto. Recepiti
+    senza riformularli. Tracciamento per esteso in ADR-009 sezione 0.
+  constraints:
+    - "If-Match obbligatorio per i write su Task esistente"
+    - "ETag stantio -> 412 Precondition Failed"
+    - "If-Match assente -> 428 Precondition Required"
+    - "precondizione verificata anche prima di un eventuale no-op idempotente"
+    - "percorso canonico per l'ETag corrente: GET /api/tasks/{id}, piu' ETag su create/update"
+    - "@Version come contatore persistente del Task; migrazione additiva"
+    - "ogni write path futuro del Task, TASK-009 incluso, eredita il protocollo"
+
+baseline:
+  branch: task-008-optimistic-concurrency
+  base: autonomous/phase-2-assignment
+  head_at_start: f2e9b9b
+  suite_at_start: 158
+  schema_at_start: V4
+
+decisions_ref: docs/adr/ADR-009-optimistic-concurrency-http-contract.md
+
+key_technical_point: >
+  Il controllo automatico di @Version non scatta mai sui nostri write path.
+  JPA confronta la versione caricata nel persistence context con quella nel
+  database al flush; l'entita' e' caricata con PESSIMISTIC_WRITE, e sotto
+  READ COMMITTED un SELECT ... FOR UPDATE che ha atteso rilegge l'ultima
+  versione committata. Carica gia' N+1, scrive N+1 -> N+2, le versioni
+  coincidono, nessuna eccezione. Il lock ha reso il controllo ottimistico
+  banalmente soddisfatto. La rilevazione deve quindi confrontare cio' che il
+  CLIENT ha visto con cio' che c'e' adesso, dopo il lock e prima delle guardie.
+
+invariants:
+  - "I-1: mutazione senza If-Match -> 428, e nulla cambia"
+  - "I-2: mutazione con If-Match stantio -> 412, e nulla cambia"
+  - "I-3: la precondizione precede il no-op idempotente"
+  - "I-4: due riassegnazioni concorrenti con lo stesso ETag -> un 200 e un 412, mai due 200"
+  - "I-5: la versione di una riga cambia solo quando quella riga viene scritta"
+  - "I-6: un no-op non incrementa la versione"
+  - "I-7: l'ETag di una mutazione e' quello che la GET successiva restituisce"
+  - "I-8: V5 additiva, nessuna riga persa, righe preesistenti a version = 0"
+  - "I-9: If-Match: * rifiutato con 400"
+  - "I-10: ogni type nuovo enumerato in ApiProblem"
+  - "I-11: il protocollo di lock di ADR-006 non si indebolisce"
+
+protocol_P:
+  P0: "ogni mutazione di risorsa esistente richiede If-Match; assente -> 428"
+  P1: "precondizione valutata in transazione, dopo il lock esclusivo, prima di ogni guardia"
+  P2: "precondizione valutata prima di ogni scorciatoia idempotente"
+  P3: "la versione e' il contatore della propria riga e di nessun'altra; OPTIMISTIC_FORCE_INCREMENT vietato"
+  P4: "clausola di chiusura: ogni write path futuro eredita P0-P3, TASK-009 incluso"
+
+forbidden:
+  - task_agent_relation
+  - version_in_json_body
+  - etag_on_collections
+  - shallow_etag_header_filter
+  - optimistic_lock_exception_as_detector
+  - optimistic_force_increment
+  - weakening_the_L_protocol
+  - if_match_optional
+  - wildcard_if_match
+  - authentication
+  - cors
+  - pagination
+  - frontend
+  - merge_to_master
+  - push
+
+debt_accounting_at_close:
+  TD-28: CLOSED
+  TD-30: CLOSED
+  TD-32: >
+    OPEN nuovo, MINOR. L'entity-tag e' forte ma deriva dalla versione della
+    riga, non dai byte della rappresentazione. Un cambio di forma della
+    risposta senza cambio di stato darebbe lo stesso ETag a due
+    rappresentazioni diverse. Nessun effetto su If-Match; effetto sulla cache
+    HTTP, che il progetto non usa.
+  TD-33: >
+    OPEN nuovo, MINOR. I listati non portano ETag, quindi mutare N risorse
+    costa N letture singole. Non motivato finche' non esiste un client che
+    muta in blocco.
+
+git_constraints:
+  work_branch: task-008-optimistic-concurrency
+  integration_branch: autonomous/phase-2-assignment
+  forbidden_operations:
+    - merge_to_master
+    - push
+    - remote_configuration
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - history_rewrite

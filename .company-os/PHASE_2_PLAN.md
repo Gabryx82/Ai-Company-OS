@@ -64,15 +64,28 @@ Il problema, nelle parole che il repository usa già: i lock **serializzano ma n
 scritture concorrenti sulla stessa risorsa producono entrambe uno stato legale, e il primo
 chiamante non viene informato di essere stato preceduto.
 
-Da decidere nell'ADR, non qui: dove sta il numero di versione e se è una colonna nuova; se
-`If-Match` è obbligatorio o onorato-quando-presente; quali endpoint lo adottano, e perché non un
-sottoinsieme scelto a sentimento — L7 di ADR-006 è il precedente, un protocollo con eccezioni
-«tanto questo caso è innocuo» è il ragionamento che ha prodotto TD-25.
+**Deciso in `docs/adr/ADR-009-optimistic-concurrency-http-contract.md`**, la cui forma è stata
+fissata da una precisazione umana del 2026-09-16 (ADR-009 §0 traccia chi ha deciso che cosa).
+In sintesi:
 
-Vincolo noto da dichiarare: ADR-006 §4 ha **scartato `@Version` su `Project`** come soluzione di
-TD-25. Non è una contraddizione — lì era proposto *al posto* del protocollo di lock, qui è il
-meccanismo che ADR-006 §8 indica esso stesso per TD-28/TD-30 — ma l'ADR di TASK-008 deve dirlo
-per esteso, perché letto di sfuggita sembra tale.
+- **due meccanismi distinti e complementari** — L0/L1/L2 è consistenza interna, `ETag`/`If-Match`
+  è intento stantio del client; il lock rende atomico il confronto, il confronto rende visibile
+  la staleness;
+- **`@Version` è un contatore persistente, non il rilevatore.** Dopo l'attesa su
+  `PESSIMISTIC_WRITE` l'entità è caricata **già alla versione nuova** — sotto `READ COMMITTED` un
+  `FOR UPDATE` sbloccato rilegge l'ultima versione committata — quindi `OptimisticLockException`
+  non arriva mai. Affidarsi a essa sarebbe un `412` che non scatta;
+- protocollo **P0–P4**: `If-Match` obbligatorio su ogni mutazione di risorsa esistente (`428` se
+  assente, `412` se stantio, `400` se illeggibile o `*`), valutato **dentro la transazione, dopo
+  il lock, prima delle guardie e prima di ogni no-op idempotente**;
+- percorso canonico dell'ETag: **`GET /api/{risorsa}/{id}`**, con `GET /api/tasks/{id}` introdotto
+  perché non esisteva; ETag anche su creazioni e mutazioni;
+- `V5` additiva, e il protocollo adottato da **tutte e tre** le risorse, non solo dalle due rotte
+  del debito: una precondizione con buchi non è una precondizione.
+
+ADR-006 §4 aveva **scartato `@Version` su `Project`** — ma come sostituto del protocollo di lock
+per TD-25, non come rilevatore di intento stantio, che è quello che ADR-006 §8 indica esso stesso.
+ADR-009 §2 lo dice per esteso, perché letto di sfuggita sembra una contraddizione.
 
 ### TASK-009 — Task → Agent assignment
 
@@ -83,6 +96,9 @@ codice: un task può essere assegnato a un agente disattivato? Un task in un pro
 può cambiare agente — ADR-006 §2 dice già di sì alla forma della risposta, «qualunque scrittura
 futura su quel task → `409`, per costruzione»? Disattivare un agente fa qualcosa ai suoi task, o
 la coerenza è **derivata** come in ADR-006 §1?
+
+Nasce con la precondizione di TASK-008 già addosso: **P4** di ADR-009 la rende ereditaria, e
+`PUT /api/tasks/{id}/agent` non la acquista dopo.
 
 Conseguenza nota sul protocollo di lock: l'ordine globale L5 (`tasks` → `projects`) acquista una
 terza classe di righe, e l'aciclicità va **ridimostrata**, non assunta. ADR-006 §4 lo dice a
