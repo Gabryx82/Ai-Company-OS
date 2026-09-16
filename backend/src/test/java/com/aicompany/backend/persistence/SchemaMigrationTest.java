@@ -32,7 +32,7 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // Schema versions only, in order. The development seed is a separate
         // Flyway stream and must never appear here, otherwise the next schema
         // migration becomes out of order (R1).
-        assertThat(versions).containsExactly("1", "2", "3", "4");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5");
     }
 
     @Test
@@ -69,6 +69,12 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         assertThat(nullabilityOf("projects", "status")).isEqualTo("NO");
         assertThat(nullabilityOf("projects", "created_at")).isEqualTo("NO");
         assertThat(nullabilityOf("projects", "updated_at")).isEqualTo("NO");
+
+        // The row version of ADR-009. Not nullable, because Hibernate maps it to a
+        // primitive: a null on a pre-V5 row would fail to load rather than default.
+        assertThat(nullabilityOf("tasks", "version")).isEqualTo("NO");
+        assertThat(nullabilityOf("projects", "version")).isEqualTo("NO");
+        assertThat(nullabilityOf("agents", "version")).isEqualTo("NO");
 
         // description stays optional on purpose
         assertThat(nullabilityOf("tasks", "description")).isEqualTo("YES");
