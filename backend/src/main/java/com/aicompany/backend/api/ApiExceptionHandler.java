@@ -10,6 +10,7 @@ import com.aicompany.backend.project.exception.ProjectNameConflictException;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
+import com.aicompany.backend.task.exception.InactiveAgentCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.TaskNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -155,6 +156,11 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ArchivedProjectTaskIsImmutableException.class)
     ResponseEntity<ProblemDetail> handleFrozenTask(ArchivedProjectTaskIsImmutableException e) {
         return respond(ApiProblem.ARCHIVED_PROJECT_TASK_IS_IMMUTABLE, e.getMessage());
+    }
+
+    @ExceptionHandler(InactiveAgentCannotReceiveTasksException.class)
+    ResponseEntity<ProblemDetail> handleInactiveDestination(InactiveAgentCannotReceiveTasksException e) {
+        return respond(ApiProblem.INACTIVE_AGENT_CANNOT_RECEIVE_TASKS, e.getMessage());
     }
 
     // --- what the caller sent, as Spring sees it --------------------------

@@ -14,6 +14,12 @@ import jakarta.validation.constraints.Size;
  * not enums yet: defining the allowed values and their transitions is a domain
  * decision left to a later task.
  *
+ * <p>{@code agentId} is optional in the same way, and for the same reason
+ * ADR-005 gave for the project: a rejected agent means no task at all, so a
+ * client never has to clean up one that was created and then failed to be
+ * staffed. An inactive agent is a 409 and an unknown one a 404, and in neither
+ * case does the task come into existence.
+ *
  * <p>{@code projectId} is optional, and omitting it creates an unassigned task.
  * That is what keeps this an additive change: a client written against the
  * pre-relation contract keeps working unchanged. An unknown project is a 404 and
@@ -37,6 +43,8 @@ public record TaskCreateRequest(
         String priority,
 
         @Positive(message = "projectId must be a positive identifier")
-        Long projectId
+        Long projectId,
+        @Positive(message = "agentId must be a positive identifier")
+        Long agentId
 ) {
 }

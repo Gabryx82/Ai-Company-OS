@@ -1,5 +1,6 @@
 package com.aicompany.backend.project;
 
+import com.aicompany.backend.agent.repository.AgentRepository;
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.support.Preconditions;
@@ -43,7 +44,9 @@ class ProjectLockProtocolTest {
 
     private final TaskRepository taskRepository = mock(TaskRepository.class);
     private final ProjectRepository projectRepository = mock(ProjectRepository.class);
-    private final TaskService taskService = new TaskService(taskRepository, projectRepository);
+    private final AgentRepository agentRepository = mock(AgentRepository.class);
+    private final TaskService taskService =
+            new TaskService(taskRepository, projectRepository, agentRepository);
 
     /**
      * AC-13 and AC-20, rules L0, L4 and L5.

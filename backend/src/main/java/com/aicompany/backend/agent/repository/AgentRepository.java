@@ -40,6 +40,27 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
     Optional<Agent> findByIdForUpdate(@Param("id") Long id);
 
     /**
+     * The agent row, locked shared. Rule L2: whoever <em>reads</em> an agent's
+     * lifecycle state in order to act on it takes this, and holds it to commit.
+     *
+     * <p>Shared and not exclusive for the reason the project side gives: two
+     * tasks being given to the same active agent are not in conflict with each
+     * other, and an exclusive lock here would serialise every assignment per
+     * agent and invent a conflict that does not exist. What it does exclude is a
+     * deactivation running alongside the decision, which is what makes the
+     * guarantee "at the commit of this assignment, the agent <em>was</em> active"
+     * rather than "was checked at some point".
+     *
+     * <p>Only the <strong>destination</strong> agent is taken this way. The agent
+     * a task is leaving is not locked at all, because no rule depends on its
+     * state -- ADR-010 D3 -- and a lock that protects nothing would only invent
+     * another conflict.
+     */
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("SELECT a FROM Agent a WHERE a.id = :id")
+    Optional<Agent> findByIdForShare(@Param("id") Long id);
+
+    /**
      * Case-insensitive existence check, written with {@code lower(...)} on
      * purpose. The derived {@code IgnoreCase} keyword generates
      * {@code upper(name) = upper(?)}, and {@code upper} is not the inverse of

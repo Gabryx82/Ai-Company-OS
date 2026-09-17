@@ -1,5 +1,8 @@
 package com.aicompany.backend.task.service;
 
+import com.aicompany.backend.agent.exception.AgentNotFoundException;
+import com.aicompany.backend.agent.model.Agent;
+import com.aicompany.backend.agent.repository.AgentRepository;
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.api.Versioned;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
@@ -36,15 +39,20 @@ public class TaskService {
 
     private final TaskRepository repository;
     private final ProjectRepository projectRepository;
+    private final AgentRepository agentRepository;
 
-    public TaskService(TaskRepository repository, ProjectRepository projectRepository) {
+    public TaskService(TaskRepository repository,
+                       ProjectRepository projectRepository,
+                       AgentRepository agentRepository) {
+
         this.repository = repository;
         this.projectRepository = projectRepository;
+        this.agentRepository = agentRepository;
     }
 
     @Transactional(readOnly = true)
     public List<TaskResponse> findAll() {
-        return toResponses(repository.findAllWithProject());
+        return toResponses(repository.findAllWithAssociations());
     }
 
     /**
@@ -53,7 +61,8 @@ public class TaskService {
      */
     @Transactional(readOnly = true)
     public Versioned<TaskResponse> findById(Long id) {
-        return versioned(repository.findById(id).orElseThrow(() -> new TaskNotFoundException(id)));
+        return versioned(repository.findByIdWithAssociations(id)
+                .orElseThrow(() -> new TaskNotFoundException(id)));
     }
 
     /**
@@ -76,6 +85,23 @@ public class TaskService {
     }
 
     /**
+     * The tasks of one agent, oldest first.
+     *
+     * <p>Same two decisions the project listing made, for the same reasons: the
+     * agent is resolved first so that an unknown identifier is a 404 rather than
+     * an empty list -- "this agent has no tasks" and "there is no such agent" are
+     * different answers -- and an inactive agent answers normally, because
+     * deactivation restricts writes and not reads.
+     */
+    @Transactional(readOnly = true)
+    public List<TaskResponse> findAllByAgent(Long agentId) {
+
+        // No lock: rule L6.
+        agentRepository.findById(agentId).orElseThrow(() -> new AgentNotFoundException(agentId));
+        return toResponses(repository.findAllByAgentId(agentId));
+    }
+
+    /**
      * Creates a task, optionally inside a project.
      *
      * <p>A rejected project means no task: the assignment happens before the
@@ -86,16 +112,27 @@ public class TaskService {
                                           String description,
                                           String status,
                                           String priority,
-                                          Long projectId) {
+                                          Long projectId,
+                                          Long agentId) {
 
         Task task = new Task(title, description, status, priority);
 
+        // Rule L5': projects before agents. Neither lock is L0 and that is not an
+        // exception to it -- L0 protects an existing row's association, and a row
+        // nobody else can see yet has none to protect.
+        Project lockedProject = null;
+
         if (projectId != null) {
-            // Rule L3: one project is involved, the destination, and it is locked
-            // shared before its state decides anything. No L0 here and that is not
-            // an exception to it -- L0 protects an existing row's association, and
-            // a row nobody else can see yet has none to protect.
-            task.assignTo(requireProjectForDecision(projectId));
+            // Rule L3: one project is involved, the destination, locked shared
+            // before its state decides anything.
+            lockedProject = requireProjectForDecision(projectId);
+            task.assignTo(lockedProject);
+        }
+
+        if (agentId != null) {
+            // Rule L2, on the destination agent. The project goes in as the
+            // instance locked above, never off the entity's own proxy.
+            task.assignTo(requireAgentForDecision(agentId), lockedProject);
         }
 
         return versioned(repository.saveAndFlush(task));
@@ -196,6 +233,77 @@ public class TaskService {
         return versioned(repository.saveAndFlush(task));
     }
 
+    /**
+     * Puts an existing task in the hands of an agent, or moves it to a different
+     * one.
+     *
+     * <p>The order below is the lock protocol of ADR-006 §4 as ADR-010 §3
+     * extended it, and it is not interchangeable:
+     *
+     * <ol>
+     *   <li><strong>L0</strong> -- the task row, exclusively, before anything is
+     *       read about its associations;</li>
+     *   <li><strong>P1</strong> -- the precondition, against the version of the row
+     *       just locked, before any rule reads it (ADR-009);</li>
+     *   <li><strong>L2 on the project</strong>, shared, <em>if the task has one</em>.
+     *       This is here because of ADR-010 D2: whether the task is frozen depends
+     *       on {@code Project.status}, so that row is read under a lock held to
+     *       commit. Without it the freezing rule would be evaluated against a state
+     *       a concurrent archive is already changing -- TD-25 again, on a new
+     *       path;</li>
+     *   <li><strong>L2 on the destination agent</strong>, shared, because the
+     *       decision depends on whether it is active (D1);</li>
+     *   <li>the rules, on the entity.</li>
+     * </ol>
+     *
+     * <p>Steps 3 and 4 are in that order and not the other because of rule L5':
+     * {@code tasks} → {@code projects} → {@code agents}. Nothing in the data forces
+     * projects before agents here -- the two sets are independent -- so it is a
+     * convention, and it works because ADR-010 §3.1 declares it rather than leaving
+     * each path to pick.
+     *
+     * <p><strong>The agent the task is leaving is not locked, and that is a
+     * decision.</strong> No rule depends on its state: an inactive agent does not
+     * freeze anything (ADR-010 D3). Locking it would protect nothing and would
+     * serialise two reassignments that both leave the same agent, which are not in
+     * conflict.
+     *
+     * <p>The project is resolved through the same persistence context that holds
+     * the task's proxy, so the guard on the entity reads the locked state rather
+     * than a snapshot.
+     */
+    public Versioned<TaskResponse> assignToAgent(Long taskId, Long agentId,
+                                                 Precondition precondition) {
+
+        // L0.
+        Task task = repository.findByIdForUpdate(taskId)
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+        // P1, before any rule reads the row. See TaskService#assignToProject for
+        // why neither neighbouring line may swap with this one.
+        precondition.requireSatisfiedBy(task.getVersion());
+
+        // L2 on the project the task lives in, if any. Reading the identifier off
+        // the proxy does not initialise it; this lookup does, under the lock.
+        //
+        // The result is handed to the entity rather than discarded. Either form
+        // takes the lock -- Hibernate keeps one instance per id per session, so the
+        // guard would read the locked state either way -- but passing it means the
+        // rule reads what this line locked instead of what the entity happens to
+        // hold, and it removes a call whose value goes nowhere and that a later
+        // reader could take for dead code.
+        Long projectId = task.getProjectId();
+        Project lockedProject = projectId == null ? null : requireProjectForDecision(projectId);
+
+        // L2 on the destination agent. L5': after the project.
+        Agent target = requireAgentForDecision(agentId);
+
+        // Rules on the entity, not here.
+        task.assignTo(target, lockedProject);
+
+        return versioned(repository.saveAndFlush(task));
+    }
+
     /** Unlocked lookup, for reads only (L6). */
     private Project requireProject(Long projectId) {
         return projectRepository.findById(projectId)
@@ -216,6 +324,21 @@ public class TaskService {
     private Project requireProjectForDecision(Long projectId) {
         return projectRepository.findByIdForShare(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
+    }
+
+    /**
+     * The agent counterpart: rule L2, a shared lock held to commit, taken on the
+     * <em>destination</em> only.
+     *
+     * <p>It buys the same guarantee the project version buys, worded the same way
+     * because it is the same guarantee: at the commit of this assignment, the
+     * agent <em>was</em> active -- not "was checked at some point". A concurrent
+     * deactivation either commits first, and this assignment is refused, or waits,
+     * and takes effect on a task that is already assigned.
+     */
+    private Agent requireAgentForDecision(Long agentId) {
+        return agentRepository.findByIdForShare(agentId)
+                .orElseThrow(() -> new AgentNotFoundException(agentId));
     }
 
     /**

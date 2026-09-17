@@ -445,13 +445,18 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
     }
 
     /**
-     * AC-8 / I-10. The public shape is exactly the one TASK-003 published. The
-     * discoverability of the frozen state was deliberately left out of TASK-004
-     * (ADR-006 section 3), and this is what says so in a way that fails if somebody
-     * adds a field without deciding to.
+     * AC-8 / I-10. The public shape, pinned exactly, so that a field cannot arrive
+     * without somebody deciding it should.
+     *
+     * <p>It has moved once, and only once: TASK-009 added {@code agentId} by the
+     * decision in ADR-010 §2. Everything this test was protecting is still
+     * protected, and the two absences below are the point of it -- neither the
+     * frozen state of the task's project (ADR-006 §3) nor the lifecycle state of
+     * its agent (ADR-010 D3) is published as a derived field. Both are questions
+     * the resource that owns them already answers.
      */
     @Test
-    void theTaskResponseShapeIsUnchanged() throws Exception {
+    void theTaskResponseShapeIsExactlyWhatWasDecided() throws Exception {
 
         Long projectId = activeProject("Company OS");
         Long taskId = unassignedTask("Wire the planner");
@@ -459,13 +464,16 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
 
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].*", org.hamcrest.Matchers.hasSize(6)))
+                .andExpect(jsonPath("$[0].*", org.hamcrest.Matchers.hasSize(7)))
                 .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].title").exists())
                 .andExpect(jsonPath("$[0].status").exists())
                 .andExpect(jsonPath("$[0].priority").exists())
                 .andExpect(jsonPath("$[0].projectId").value(projectId))
-                .andExpect(jsonPath("$[0].projectStatus").doesNotExist());
+                .andExpect(jsonPath("$[0].agentId").doesNotExist())
+                .andExpect(jsonPath("$[0].projectStatus").doesNotExist())
+                .andExpect(jsonPath("$[0].agentStatus").doesNotExist())
+                .andExpect(jsonPath("$[0].agentActive").doesNotExist());
     }
 
     // --- preconditions ------------------------------------------------------
@@ -500,7 +508,7 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
     // --- helpers -----------------------------------------------------------
 
     private Long projectIdOf(Long taskId) {
-        return taskRepository.findAllWithProject().stream()
+        return taskRepository.findAllWithAssociations().stream()
                 .filter(task -> task.getId().equals(taskId))
                 .findFirst()
                 .orElseThrow()

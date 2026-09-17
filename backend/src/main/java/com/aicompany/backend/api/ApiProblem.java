@@ -118,6 +118,16 @@ public enum ApiProblem {
     ARCHIVED_PROJECT_TASK_IS_IMMUTABLE("archived-project-task-is-immutable", HttpStatus.CONFLICT,
             "Task in an archived project cannot be modified", "Restore the project that holds it first"),
 
+    /**
+     * Distinct from {@link #ARCHIVED_PROJECT_CANNOT_RECEIVE_TASKS} on the same
+     * status, because the two refusals ask the caller for different things: there,
+     * restore a project; here, activate an agent. They also rest on different
+     * arguments -- containment against responsibility, ADR-010 D1 -- which is why
+     * one identifier could not have served both.
+     */
+    INACTIVE_AGENT_CANNOT_RECEIVE_TASKS("inactive-agent-cannot-receive-tasks", HttpStatus.CONFLICT,
+            "Inactive agent cannot be given work", "Activate the agent first"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

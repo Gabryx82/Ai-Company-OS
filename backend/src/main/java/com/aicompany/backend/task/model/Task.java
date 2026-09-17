@@ -1,8 +1,10 @@
 package com.aicompany.backend.task.model;
 
+import com.aicompany.backend.agent.model.Agent;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
+import com.aicompany.backend.task.exception.InactiveAgentCannotReceiveTasksException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -58,6 +60,33 @@ public class Task {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
     private Project project;
+
+    /**
+     * The agent responsible for this task, or {@code null} for one nobody has
+     * been given yet.
+     *
+     * <p>Nullable for the reason {@code project} is: every task that existed
+     * before the relation has no agent, and there is no correct agent to point it
+     * at (ADR-010 §5).
+     *
+     * <p>Unidirectional, like the project side and for the same reason -- a
+     * mapped collection on {@code Agent} would turn what deactivation does to a
+     * task into a cascade flag, and ADR-010 D3 is a domain decision, not a
+     * configuration one.
+     *
+     * <p><strong>An inactive agent here is a legal state, and it has to be.</strong>
+     * A task whose agent is switched off is not frozen: it stays writable so that
+     * it can be given to somebody else, which is the whole recovery path the
+     * relation exists for (ADR-010 D3). The alternative -- refusing to deactivate
+     * an agent that still holds work -- would also have made the lock graph
+     * cyclic, so the domain answer and the concurrency answer agree.
+     *
+     * <p>Lazy, with {@code spring.jpa.open-in-view=false}: nothing outside a
+     * transaction may touch this reference.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "agent_id")
+    private Agent agent;
 
     /**
      * The row version of ADR-009: a counter the persistence layer increments on
@@ -139,15 +168,95 @@ public class Task {
             return;
         }
 
-        if (project != null && project.isArchived()) {
-            throw new ArchivedProjectTaskIsImmutableException(project.getId());
-        }
+        requireNotFrozen(project);
 
         if (target.isArchived()) {
             throw new ArchivedProjectCannotReceiveTasksException(target.getId());
         }
 
         this.project = target;
+    }
+
+    /**
+     * Puts this task in the hands of an agent, or moves it to a different one.
+     *
+     * <p>Three rules, in this order, and the order is the decision -- the same
+     * shape {@link #assignTo(Project)} has, because the questions are the same
+     * ones asked of a different relation:
+     *
+     * <ol>
+     *   <li><strong>Asking for the agent the task already has changes
+     *       nothing</strong>, so there is nothing to refuse -- not even once that
+     *       agent has been switched off. ADR-005 §5 settled that a PUT declaring
+     *       an end state that is already true has it right, and here the
+     *       consequence is useful rather than merely consistent: a client
+     *       re-stating what it just read is not punished for a deactivation that
+     *       does not concern it.</li>
+     *   <li><strong>A frozen task does not change hands.</strong> Same guard as
+     *       the project side, called from the same method, because a container out
+     *       of the working registry that still lets its contents be re-staffed is
+     *       not out of anything (ADR-006 §2, ADR-010 D2).</li>
+     *   <li><strong>An inactive agent receives no work</strong> -- and for its own
+     *       reason, not by analogy with the archived project. See
+     *       {@link InactiveAgentCannotReceiveTasksException}.</li>
+     * </ol>
+     *
+     * <p>Task before destination, so that when both refusals apply the answer is
+     * deterministic and names the task: it is frozen before anybody looks at who
+     * it is being given to. ADR-006 §7 made the same choice for source before
+     * destination.
+     *
+     * <p><strong>What is deliberately absent:</strong> no rule about the agent the
+     * task is <em>leaving</em>. None depends on its state, which is what ADR-010
+     * D3 decided, and it is why the service does not lock that row.
+     *
+     * <p>Like the project side, this cannot guarantee on its own that
+     * {@code this.agent} and {@code this.project} are still true. That is rule L0:
+     * the task row is locked before its associations are read.
+     */
+    public void assignTo(Agent target, Project projectItLivesIn) {
+
+        if (agent != null && target.getId() != null
+                && Objects.equals(agent.getId(), target.getId())) {
+            return;
+        }
+
+        requireNotFrozen(projectItLivesIn);
+
+        if (!target.isActive()) {
+            throw new InactiveAgentCannotReceiveTasksException(target.getId());
+        }
+
+        this.agent = target;
+    }
+
+    /**
+     * The freezing rule of ADR-006 §2, in one place.
+     *
+     * <p>It used to live inline in {@link #assignTo(Project)}, where it read as a
+     * rule about the association. It is not: it is a rule about <em>the task</em>,
+     * and ADR-006 §2 wrote it in general terms -- "any future write to that task".
+     * TASK-009 is the first time that sentence was tested, and it only held
+     * because this method was extracted and the new path calls it. Nothing
+     * extends the rule automatically; an {@code assignTo(Agent)} written without
+     * this call would have punched a hole in ADR-006 §2 without turning anything
+     * red.
+     *
+     * <p><strong>Why the project arrives as a parameter.</strong> Not because
+     * reading {@code this.project} was wrong -- Hibernate keeps one instance per id
+     * per session, so the proxy resolves to the row the caller locked either way,
+     * and a test was briefly thought to prove otherwise before the real cause
+     * turned out to be a mutation left un-reverted in the working tree. The reason
+     * is narrower and it is about the reader: passing the locked instance makes the
+     * rule read what the caller <em>decided</em> to lock rather than what the entity
+     * happens to hold, and it means a caller cannot reach this rule without having
+     * answered the question "where does that state come from". The alternative left
+     * a lookup whose value went nowhere, which is a line the next person deletes.
+     */
+    private void requireNotFrozen(Project projectItLivesIn) {
+        if (projectItLivesIn != null && projectItLivesIn.isArchived()) {
+            throw new ArchivedProjectTaskIsImmutableException(projectItLivesIn.getId());
+        }
     }
 
     public Long getId() {
@@ -189,5 +298,18 @@ public class Task {
      */
     public Long getProjectId() {
         return project == null ? null : project.getId();
+    }
+
+    /**
+     * The responsible agent, or {@code null}. Lazily loaded: call it inside a
+     * transaction.
+     */
+    public Agent getAgent() {
+        return agent;
+    }
+
+    /** Identifier of the responsible agent, or {@code null}. Same rule as above. */
+    public Long getAgentId() {
+        return agent == null ? null : agent.getId();
     }
 }

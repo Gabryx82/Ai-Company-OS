@@ -158,6 +158,18 @@ class TaskAgentAssignmentApiTest extends AbstractPostgresTest {
         assertThat(titles())
                 .as("the refused creation must not have left a task behind")
                 .doesNotContain("never born");
+
+        // The other refusal on the same path, asserted here because the symmetry
+        // between creating with an agent and assigning one afterwards is worth
+        // covering route by route rather than assumed.
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"never born either","status":"OPEN","priority":"HIGH","agentId":987654}"""))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:agent-not-found"));
+
+        assertThat(titles()).doesNotContain("never born either");
     }
 
     // ------------------------------------------------------------------

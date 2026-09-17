@@ -2,6 +2,7 @@ package com.aicompany.backend.task.controller;
 
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.api.Versioned;
+import com.aicompany.backend.task.dto.TaskAgentAssignmentRequest;
 import com.aicompany.backend.task.dto.TaskCreateRequest;
 import com.aicompany.backend.task.dto.TaskProjectAssignmentRequest;
 import com.aicompany.backend.task.dto.TaskResponse;
@@ -66,7 +67,8 @@ public class TaskController {
                 request.description(),
                 request.status(),
                 request.priority(),
-                request.projectId());
+                request.projectId(),
+                request.agentId());
 
         return ResponseEntity
                 .created(URI.create("/api/tasks/" + created.body().id()))
@@ -89,6 +91,29 @@ public class TaskController {
             @Valid @RequestBody TaskProjectAssignmentRequest request) {
 
         return ok(service.assignToProject(id, request.projectId(), Precondition.fromHeader(ifMatch)));
+    }
+
+    /**
+     * Puts a task in the hands of an agent, or moves it to a different one.
+     *
+     * <p>A sub-resource for the same reason the project assignment is one, and
+     * deliberately the mirror of it: the two associations of a task are two
+     * resources, and a client that has learned one route has learned both.
+     *
+     * <p>{@code If-Match} is required here from the day the route exists, rather
+     * than added afterwards: rule P4 of ADR-009 makes the protocol hereditary, and
+     * {@code PreconditionCoverageTest} is what makes that a rule rather than an
+     * intention. The tag is the <strong>task's</strong> -- {@code agent_id} is a
+     * column of that row, so there is one version and one tag for both
+     * associations (ADR-010 §4).
+     */
+    @PutMapping("/{id}/agent")
+    public ResponseEntity<TaskResponse> assignToAgent(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+            @Valid @RequestBody TaskAgentAssignmentRequest request) {
+
+        return ok(service.assignToAgent(id, request.agentId(), Precondition.fromHeader(ifMatch)));
     }
 
     /**

@@ -150,7 +150,7 @@ class PreconditionConcurrencyTest extends AbstractPostgresTest {
         });
 
         Future<?> second = threads.submit(() -> {
-            awaitAtMost(firstIsInsideTheLock);
+            awaitOrFail(firstIsInsideTheLock, "the first writer to take the task row");
             try {
                 newTransaction().execute(status ->
                         taskService.assignToProject(taskId, destinationB, bothRead));
@@ -204,6 +204,32 @@ class PreconditionConcurrencyTest extends AbstractPostgresTest {
 
     private TransactionTemplate newTransaction() {
         return new TransactionTemplate(transactionManager);
+    }
+
+    /**
+     * Waits for the other thread to have <em>decided</em>, and fails if it has
+     * not. Distinct from {@link #awaitAtMost} on purpose, and the distinction is
+     * not cosmetic -- getting it wrong is what made
+     * {@code anArchiveCannotCommitBetweenAnAgentChangesDecisionAndItsCommit}
+     * flaky before it was fixed.
+     *
+     * <p>{@code awaitAtMost} exists for one situation only: waiting on a thread
+     * that is parked on a row lock and therefore <em>cannot</em> signal. Giving up
+     * and committing is the mechanism there. Everywhere else, a latch that does
+     * not fire means the interleaving the test describes never happened, and
+     * proceeding anyway produces an answer about a different schedule than the one
+     * being asserted -- in both directions: a green that proves nothing, or a red
+     * that blames the implementation for a slow machine.
+     */
+    private static void awaitOrFail(CountDownLatch latch, String what) {
+        try {
+            if (!latch.await(TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("timed out waiting for " + what);
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("interrupted while waiting for " + what, interrupted);
+        }
     }
 
     private static void awaitAtMost(CountDownLatch latch) {

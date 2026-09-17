@@ -88,28 +88,36 @@ class SchemaMigrationTest extends AbstractPostgresTest {
     }
 
     @Test
-    void taskProjectRelationIsEnforcedByTheDatabase() {
+    void theRelationsOfATaskAreEnforcedByTheDatabase() {
 
-        // The service check is what makes the error readable; this is what makes
-        // it true. A task row cannot point at a project that is not there,
-        // whoever writes it.
+        // The service checks are what make the errors readable; this is what makes
+        // them true. A task row cannot point at a project or an agent that is not
+        // there, whoever writes it.
+        //
+        // The list is exact, and gained its second entry in TASK-009 by decision:
+        // a foreign key appearing here that nobody chose is the failure this
+        // assertion exists to catch.
         List<String> foreignKeys = jdbc.queryForList(
                 "SELECT constraint_name FROM information_schema.table_constraints "
                         + "WHERE table_name = 'tasks' AND constraint_type = 'FOREIGN KEY' "
                         + "ORDER BY constraint_name",
                 String.class);
 
-        assertThat(foreignKeys).containsExactly("tasks_project_id_fkey");
+        assertThat(foreignKeys).containsExactly("tasks_agent_id_fkey", "tasks_project_id_fkey");
 
-        // Deleting a project out from under its tasks must be refused rather than
-        // cascade: the Company OS archives projects, it does not delete them
-        // (ADR-004 §3), so NO ACTION is the deliberate choice here.
-        String deleteRule = jdbc.queryForObject(
+        // Deleting a project or an agent out from under its tasks must be refused
+        // rather than cascade: the Company OS archives projects and deactivates
+        // agents, it does not delete either (ADR-004 §3, ADR-008, ADR-010 §5), so
+        // NO ACTION is the deliberate choice on both.
+        assertThat(deleteRuleOf("tasks_project_id_fkey")).isEqualTo("NO ACTION");
+        assertThat(deleteRuleOf("tasks_agent_id_fkey")).isEqualTo("NO ACTION");
+    }
+
+    private String deleteRuleOf(String constraintName) {
+        return jdbc.queryForObject(
                 "SELECT rc.delete_rule FROM information_schema.referential_constraints rc "
-                        + "WHERE rc.constraint_name = 'tasks_project_id_fkey'",
-                String.class);
-
-        assertThat(deleteRule).isEqualTo("NO ACTION");
+                        + "WHERE rc.constraint_name = ?",
+                String.class, constraintName);
     }
 
     @Test

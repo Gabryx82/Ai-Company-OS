@@ -11,6 +11,13 @@ import com.aicompany.backend.task.model.Task;
  * not drag a second entity along, and the client that needs the project can ask
  * {@code GET /api/projects/{id}} for it.
  *
+ * <p>{@code agentId} is null for a task nobody has been given yet, and it is
+ * deliberately the <em>only</em> thing this record says about the agent. No
+ * derived {@code agentActive} or {@code agentStatus}: a task pointing at an
+ * inactive agent is a legal state (ADR-010 D3), and whether the agent is active
+ * is a question {@code GET /api/agents/{id}} already answers. Publishing a field
+ * is irreversible; not publishing one is not (ADR-006 §3).
+ *
  * <p>Built by the service, inside the transaction, because reading
  * {@code projectId} initialises a lazy reference.
  */
@@ -20,7 +27,8 @@ public record TaskResponse(
         String description,
         String status,
         String priority,
-        Long projectId
+        Long projectId,
+        Long agentId
 ) {
 
     public static TaskResponse from(Task task) {
@@ -30,7 +38,8 @@ public record TaskResponse(
                 task.getDescription(),
                 task.getStatus(),
                 task.getPriority(),
-                task.getProjectId()
+                task.getProjectId(),
+                task.getAgentId()
         );
     }
 }

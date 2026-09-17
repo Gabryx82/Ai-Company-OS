@@ -38,16 +38,46 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     /**
      * The tasks of one project, oldest first.
      *
-     * <p>The join is fetched rather than lazy because every row is about to be
-     * mapped to a response that carries the project identifier: without it this
-     * is one query per task. {@code left join} keeps the semantics of an inner
-     * join here -- the filter already excludes null projects -- while staying
-     * correct if the filter ever moves.
+     * <p>Both associations are fetched rather than lazy because every row is
+     * about to be mapped to a response that carries both identifiers: without it
+     * this is two queries per task. {@code left join} keeps the semantics of an
+     * inner join for the project -- the filter already excludes null ones -- while
+     * staying correct if the filter ever moves, and it is the only correct join
+     * for the agent, which is null on most rows.
      */
-    @Query("SELECT t FROM Task t LEFT JOIN FETCH t.project p WHERE p.id = :projectId ORDER BY t.id ASC")
+    @Query("SELECT t FROM Task t LEFT JOIN FETCH t.project p LEFT JOIN FETCH t.agent "
+            + "WHERE p.id = :projectId ORDER BY t.id ASC")
     List<Task> findAllByProjectId(@Param("projectId") Long projectId);
 
-    /** Every task, oldest first, with the project resolved in the same query. */
-    @Query("SELECT t FROM Task t LEFT JOIN FETCH t.project ORDER BY t.id ASC")
-    List<Task> findAllWithProject();
+    /**
+     * The tasks of one agent, oldest first.
+     *
+     * <p>An inactive agent answers this normally. Deactivation takes an agent out
+     * of the working registry; it does not make the work it did unreadable, and
+     * reads are not what any rule here restricts (rule L6).
+     */
+    @Query("SELECT t FROM Task t LEFT JOIN FETCH t.project LEFT JOIN FETCH t.agent a "
+            + "WHERE a.id = :agentId ORDER BY t.id ASC")
+    List<Task> findAllByAgentId(@Param("agentId") Long agentId);
+
+    /**
+     * Every task, oldest first, with both associations resolved in the same query.
+     *
+     * <p>Renamed from {@code findAllWithProject} by TASK-009 rather than quietly
+     * widened: a name that says "with project" while fetching two associations is
+     * a comment that has stopped being true.
+     */
+    @Query("SELECT t FROM Task t LEFT JOIN FETCH t.project LEFT JOIN FETCH t.agent ORDER BY t.id ASC")
+    List<Task> findAllWithAssociations();
+
+    /**
+     * One task with both associations resolved, for the single read.
+     *
+     * <p>{@code findById} would work and would cost two extra queries: the record
+     * carries both identifiers, and reading them off lazy proxies means loading
+     * each one. That was a LOW finding of the TASK-008 review, closed here because
+     * the second association made it twice as expensive.
+     */
+    @Query("SELECT t FROM Task t LEFT JOIN FETCH t.project LEFT JOIN FETCH t.agent WHERE t.id = :id")
+    Optional<Task> findByIdWithAssociations(@Param("id") Long id);
 }
