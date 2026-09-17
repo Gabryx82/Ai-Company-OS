@@ -88,9 +88,15 @@ ADR-006 §4 aveva **scartato `@Version` su `Project`** — ma come sostituto del
 per TD-25, non come rilevatore di intento stantio, che è quello che ADR-006 §8 indica esso stesso.
 ADR-009 §2 lo dice per esteso, perché letto di sfuggita sembra una contraddizione.
 
-### TASK-009 — Task → Agent assignment
+### TASK-009 — Task → Agent assignment ✅
 
-**Livello 4. Prossima.** Briefing operativo in `tasks/TASK-008/HANDOFF.md`.
+**Livello 4. Completata il 2026-09-17. Risolve TD-13, apre TD-34 e TD-35.**
+Suite 179 → 201, schema `V5` → `V6`. Chiusura in `tasks/TASK-009/ARTIFACT.md`.
+
+Le tre domande hanno avuto risposte proprie: D1 stesso esito con argomento diverso, D2 coincide,
+**D3 diverge** — un agente disattivato non congela i suoi task, perché congelarli chiuderebbe la
+via di recupero. Il lock graph è stato **ridimostrato** su tre classi (L5′), e l'aciclicità è
+risultata essere una **conseguenza** di ADR-006 §1 e di D3, non una proprietà indipendente.
 
 Come TASK-003 fece per `Project`, e con le stesse tre domande di dominio da porre **prima** del
 codice: un task può essere assegnato a un agente disattivato? Un task in un progetto archiviato
@@ -108,9 +114,18 @@ progetto, l'ordine globale va rivisto, non aggirato».
 
 ### TASK-010 — da definire
 
-**Livello 5.** Si sceglie quando ci si arriva, con i criteri di `AUTONOMOUS_LOOP.md` §4, e non
-prima: TASK-009 può derivare interamente la coerenza del ciclo di vita dell'agente, e in quel
-caso questa task ha un contenuto diverso da quello che oggi sembrerebbe ovvio.
+**Livello 5. Prossima.** La previsione si è avverata nel modo che il piano ammetteva: TASK-009 ha
+**derivato interamente** la coerenza del ciclo di vita dell'agente (D3), quindi questa task non ha
+il contenuto che sarebbe sembrato ovvio a inizio fase.
+
+Candidato più forte: **TD-12**, il vocabolario chiuso di `Task.status` e `Task.priority`. Un task
+adesso sa *dove* sta e *di chi* è; quello che ancora non sa è **in che stato** è, in un modo che
+qualcosa possa verificare — e senza quello il Task Engine e il Planner non hanno niente da
+guidare, il che rende TD-12 il prerequisito di TD-08 e non il contrario.
+
+Avvertimento registrato in `tasks/TASK-009/HANDOFF.md`: stringere `status` a un vocabolario chiuso
+**non è additivo** se i dati esistenti contengono valori fuori vocabolario, e cosa farne tocca gli
+hard stop #2 e #3 del charter. Guardare i dati prima di scrivere l'ADR.
 
 ### TASK-011 — Registro del debito e documentazione
 

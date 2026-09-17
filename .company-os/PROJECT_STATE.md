@@ -17,8 +17,12 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 2026-09-14), in attesa di review umana: `FINAL_HANDOFF.md`. **Niente in `master`.**
 
 **PHASE 2 — Assignment: in corso** dal 2026-09-15, su `autonomous/phase-2-assignment`, creato da
-`autonomous/phase-1-foundations`. **TASK-008 completata** (2026-09-16). Suite **179 test verdi**,
-schema **`V5`**, nessun failure aperto, nessun remote.
+`autonomous/phase-1-foundations`. **TASK-008 e TASK-009 completate.** Suite **201 test verdi**,
+schema **`V6`**, nessun failure aperto, nessun remote.
+
+L'obiettivo della fase — *il Company OS sa dire chi lavora su che cosa, e due client non possono
+sovrascriversi in silenzio mentre lo dicono* — è **raggiunto in entrambe le metà**. Restano
+TASK-010 e TASK-011.
 
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
@@ -29,15 +33,65 @@ PHASE 1 resta com'è: `master` è ancora il gate di quella fase, e PHASE 2 ci si
 senza mergiarla.
 
 ## Current task
-**TASK-009 — Relazione `Task` → `Agent`.** Livello 4 di `AUTONOMOUS_LOOP.md` §4: il livello 3 è
-vuoto da quando TASK-008 ha chiuso TD-28 e TD-30. Non ancora avviata.
-
-Eredita il protocollo di precondizione **per costruzione** (P4): `PUT /api/tasks/{id}/agent` nasce
-con `If-Match`, e `PreconditionCoverageTest` non lascia aggiungere un write path senza dichiararlo.
-Le tre domande di dominio da porre prima del codice e il punto sull'aciclicità dei lock sono in
-`tasks/TASK-008/HANDOFF.md`.
+**TASK-010 — da scegliere.** Livelli 1, 2 e 3 vuoti alla chiusura di TASK-009. Il candidato più
+forte è **livello 5: TD-12**, il vocabolario chiuso di `Task.status` e `Task.priority` — un task
+sa dove sta e di chi è, non *in che stato* è in un modo verificabile, e senza quello il Task
+Engine e il Planner non hanno niente da guidare. Motivazione, vincoli ereditati e un avvertimento
+sulla migrazione in `tasks/TASK-009/HANDOFF.md`.
 
 ## Last completed task
+
+**TASK-009 — Assegnazione `Task` → `Agent`** (2026-09-17).
+
+Risolve **TD-13** (numerazione dell'audit), apre **TD-34** e **TD-35**. Suite **179 → 201**, schema
+**`V6`**. Da oggi il sistema sa dire **chi lavora su che cosa**.
+
+**Le tre domande di dominio, e dove il dominio ha divergito.** Nessuna risposta copiata da
+`Task` → `Project`:
+
+| # | Domanda | Risposta |
+|---|---|---|
+| **D1** | Assegnare a un agente disattivato? | **`409`** — stesso esito, **argomento diverso**: non contenimento ma responsabilità, un'obbligazione che nessuno può assolvere |
+| **D2** | Cambiare agente a un task in un progetto archiviato? | **`409`**. Prima verifica della frase generale di ADR-006 §2, e regge — ma «per costruzione» **non è automatico**: vale perché la guardia è stata estratta in `Task.requireNotFrozen()` e il percorso nuovo la chiama |
+| **D3** | Disattivare un agente fa qualcosa ai suoi task? | **Nessuna scrittura sui figli, e la regola derivata è l'OPPOSTA di quella dei progetti.** Un task il cui agente è inattivo **non è congelato**: congelarlo lo intrappolerebbe con chi non può eseguirlo, proprio quando serve riassegnarlo |
+
+**Il lock graph è stato ridimostrato, non esteso.** **L5′**: `tasks` → `projects` → `agents`. Tre
+archi, ordinamento topologico, e i tre archi **assenti** verificati uno per uno — perché è quella
+la metà che può essere sbagliata. Risultato:
+
+> L'aciclicità è **una conseguenza** di ADR-006 §1 e di **D3**, non una proprietà indipendente.
+
+L'alternativa scartata (D3bis: far fallire `deactivate` finché ha lavoro) avrebbe introdotto
+`agents → tasks` e **chiuso un ciclo**. Il dominio e la concorrenza rispondono la stessa cosa.
+
+**Una sola versione.** `agent_id` è una colonna di `tasks`: assegnare consuma l'ETag del task, e
+chi cambia il progetto invalida il tag di chi sta per cambiare l'agente — `200` e `412`, non due
+`200`. Nessun versionamento separato dell'associazione. `P3` nell'altra direzione: assegnare **non**
+muove `agents.version`.
+
+**Quattro mutazioni**, tutte rosse — ma **due hanno dovuto essere riparate prima di provare
+qualcosa**, ed è la parte che vale la pena leggere (`tasks/TASK-009/ARTIFACT.md` §5 e §7):
+
+- quella su P4 fermava la build invece di raggiungere il proprio test. Una mutazione che non
+  compila non è una mutazione;
+- quella sul lock del progetto **non sapeva revertirsi** — sostituiva un blocco con la stringa
+  vuota — e ha lasciato l'albero mutato. Ne sono seguite **due diagnosi sicure e sbagliate** di
+  un'implementazione che era corretta, la seconda costruita su un log SQL vero ma raccolto da un
+  albero corrotto.
+
+La lezione è registrata perché tornerà: quando un test fallisce su codice che si crede pulito, la
+prima ipotesi da verificare è **che l'albero sia pulito davvero** — non che il test sia instabile,
+non che il framework si comporti in modo esotico. L'harness adesso si rifiuta di indovinare.
+
+Corretto lungo la strada e tenuto: `awaitOrFail` distinto da `awaitAtMost` nei test di concorrenza
+(un'attesa limitata dove serve un requisito produce sia rossi falsi sia **verdi falsi**), anche in
+`PreconditionConcurrencyTest`, che aveva ereditato il difetto da TASK-008.
+
+Nessuna rottura di contratto: tutto additivo.
+
+Artefatti: `tasks/TASK-009/*`, `docs/adr/ADR-010-task-agent-assignment.md`.
+
+## Task precedenti di PHASE 2
 
 **TASK-008 — Optimistic concurrency nel contratto HTTP** (2026-09-16).
 
@@ -80,10 +134,6 @@ difese:
    meccanismo.
 
 Artefatti: `tasks/TASK-008/*`, `docs/adr/ADR-009-optimistic-concurrency-http-contract.md`.
-
-## Task precedenti di PHASE 2
-
-Nessuna prima di TASK-008.
 
 ## Task di PHASE 1 (dettaglio)
 
@@ -186,11 +236,12 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 ## Stato del sistema
 
 - Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`.
-- Schema: di proprietà di **Flyway**, oggi a **`V5`**. Hibernate in `validate`.
+- Schema: di proprietà di **Flyway**, oggi a **`V6`**. Hibernate in `validate`.
 - Tabelle: `agents`, `tasks`, `projects`. `tasks.project_id` nullable con FK senza `ON DELETE`.
   Da `V4`: `agents.created_at` / `updated_at` (`TIMESTAMPTZ`, `NOT NULL`, `DEFAULT now()`) e
   indice unico `agents_name_unique_idx` su `lower(name)`.
   Da `V5`: `version BIGINT NOT NULL DEFAULT 0` su **tutte e tre** le tabelle.
+  Da `V6`: `tasks.agent_id` nullable con FK senza `ON DELETE`, e `tasks_agent_id_idx`.
 - **Due registri di dominio** con ciclo di vita esplicito: `Project` (enum `ACTIVE`/`ARCHIVED`)
   e `Agent` (`boolean active`, divergenza dichiarata → TD-31).
 - Seed di sviluppo: stream Flyway separato (`db/dev/V1`), profilo `dev` (ADR-003).
@@ -200,11 +251,17 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 - Contratto di errore: **uno solo** (ADR-007). Ogni risposta di errore è un `ProblemDetail`
   con `type` stabile `urn:ai-company-os:problem:<slug>`, enumerato in `ApiProblem`. Un advice
   globale, `ApiExceptionHandler`. Nessuna policy di timeout o retry.
+- **Due relazioni**: `Task` → `Project` e `Task` → `Agent`, entrambe unidirezionali, entrambe
+  nullable, entrambe con FK senza `ON DELETE`. Un task sa dove sta e di chi è.
+- **Concorrenza**: protocollo di lock **L0–L7** con ordine globale **L5′** su tre classi di righe,
+  `tasks` → `projects` → `agents` (ADR-006 §4, ADR-010 §3). L'aciclicità è **dimostrata** e
+  **condizionata**: regge finché `archive`/`restore` non scrivono task e finché il ciclo di vita
+  di un agente non dipende dai suoi task.
 - **Concorrenza ottimistica nel contratto HTTP**: protocollo **P0–P4** (ADR-009). `If-Match`
   obbligatorio su ogni mutazione di risorsa esistente, confrontato **dentro la transazione, dopo
   il lock esclusivo, prima delle regole**. `@Version` è il contatore, non il rilevatore: nessun
   handler per `OptimisticLockException`, e non va aggiunto.
-- Test: **179** (erano 109 in `master`, 158 a fine PHASE 1). `./mvnw -B clean test` → BUILD SUCCESS.
+- Test: **201** (erano 109 in `master`, 158 a fine PHASE 1). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
 ## Stato Git (verificato il 2026-09-14)
@@ -254,22 +311,30 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 - **ADR-005** — Relazione `Task` → `Project`: `project_id` nullable, i task preesistenti non si migrano, associare a un `ARCHIVED` è `409`, relazione unidirezionale, FK senza `ON DELETE`. *Accettata*.
 - **ADR-008** — Agent Registry: le decisioni di ADR-004 si applicano identiche; il ciclo di vita resta su `boolean active` invece dell'enum, perché unificarlo richiederebbe una migrazione irreversibile che il charter mette dietro una decisione umana (TD-31); `status` è **derivato** nel contratto, così il client vede un vocabolario solo e il database un solo stato; `V4` additiva; nessuna relazione con `Project` né con `Task`; il protocollo di lock si applica per L7. *Accettata e implementata*.
 - **ADR-007** — Un solo contratto di errore per tutta l'API: advice globale che estende `ResponseEntityExceptionHandler`, `type` stabile e enumerato (`urn:ai-company-os:problem:<slug>`) come parte machine-readable del contratto, `errors` ovunque, catch-all con `detail` fisso e stack loggato, nessuna policy di timeout o retry. **Supera ADR-004 §6 e ADR-005 §8**. *Accettata e implementata*.
+- **ADR-010** — Assegnazione `Task` → `Agent`: le tre domande di dominio risolte senza copiarle dalla relazione col progetto (D1 stesso esito e argomento diverso, D2 coincide, **D3 diverge** — un agente disattivato non congela i suoi task); il lock graph **ridimostrato** su tre classi con **L5′** `tasks` → `projects` → `agents` e i tre archi assenti verificati; l'aciclicità come **conseguenza** di ADR-006 §1 e D3; una sola versione, quella del task; `V6` additiva. *Accettata e implementata*.
 - **ADR-009** — Concorrenza ottimistica nel contratto HTTP: due meccanismi distinti e complementari (lock = consistenza interna, `ETag`/`If-Match` = intento stantio); `@Version` è un contatore persistente e **non** il rilevatore, perché dopo l'attesa su `PESSIMISTIC_WRITE` l'entità è già alla versione nuova; protocollo **P0–P4**; `If-Match` obbligatorio su tutte e tre le risorse; `428`/`412`/`400`; `GET /api/tasks/{id}` introdotto come percorso canonico dell'ETag; `V5` additiva. **Completa ADR-006 §8.** *Accettata e implementata*.
 - **ADR-006** — Coerenza archiviazione → task **derivata** (nessuna scrittura sui figli, `restore` inverso per costruzione), congelamento in scrittura con letture aperte, `PUT` idempotente `200` no-op, protocollo di lock **L0–L7** con ordine globale `tasks` → `projects`, nessuna migrazione, contratto invariato, nessun `503`. *Accettata e **implementata**.*
 
 ## Prossimo passo autonomo
 
-**TASK-009 — Relazione `Task` → `Agent`.** Branch `task-009-task-agent-assignment` da
-`autonomous/phase-2-assignment`. Il briefing operativo — le tre domande di dominio e il punto
-sull'aciclicità dei lock — è in `tasks/TASK-008/HANDOFF.md`, e non va riscoperto.
+**TASK-010 — da scegliere quando si comincia**, con i criteri di `AUTONOMOUS_LOOP.md` §4 riletti
+sul posto. Il candidato più forte è **TD-12** (vocabolario chiuso di `Task.status`), e il briefing
+— compreso l'avvertimento che stringere `status` **non è una migrazione additiva** se i dati
+contengono valori fuori vocabolario, il che tocca gli hard stop #2/#3 — è in
+`tasks/TASK-009/HANDOFF.md`.
+
+Ha smesso di essere bloccato, e non è ancora la prossima task: **TD-08**, la sostituzione di
+`MasterOrchestrator`. Finora era impossibile perché nessuno poteva dire «questo task è di
+quell'agente». Adesso si può — ma senza un ciclo di vita verificabile sul task non c'è ancora
+niente da orchestrare, il che rende TD-12 il prerequisito e non il contrario.
 
 Il piano completo della fase sta in **`.company-os/PHASE_2_PLAN.md`**. In sintesi:
 
 | # | Task | Livello | Stato |
 |---|---|---|---|
 | **TASK-008** | Optimistic concurrency (`ETag`/`If-Match`). Chiude TD-28, TD-30 | 3 | **completata** 2026-09-16 |
-| **TASK-009** | Relazione `Task` → `Agent` | 4 | **prossima** |
-| **TASK-010** | Da definire quando ci si arriva — TASK-009 può derivarne il contenuto | 5 | pianificata |
+| **TASK-009** | Relazione `Task` → `Agent`. Risolve TD-13 | 4 | **completata** 2026-09-17 |
+| **TASK-010** | Da scegliere. Candidato: TD-12, ciclo di vita chiuso del task | 5 | **prossima** |
 | **TASK-011** | Collisione di identificatori nel registro del debito; `docs/RUNNING.md` | 6 | pianificata |
 
 Fuori da PHASE 2 e dichiarato tale: **TD-14** (CI: richiede un remote, hard stop #4), **TD-31**
@@ -285,6 +350,8 @@ Il merge di PHASE 1 in `master` resta il gesto con cui un umano accetta il lavor
 **Chiusi da TASK-006**: **TD-22**, **TD-23**.
 **TASK-007** non chiude nulla e **apre TD-31**.
 **Chiusi da TASK-008**: **TD-28**, **TD-30**. **TASK-008 apre TD-32 e TD-33.**
+**Risolto da TASK-009**: **TD-13** dell'audit (`Agent` e `Task` non si conoscevano).
+**TASK-009 apre TD-34 e TD-35.**
 
 ### Alto valore
 
@@ -293,10 +360,12 @@ Il merge di PHASE 1 in `master` resta il gesto con cui un umano accetta il lavor
 | **TD-31** | *(nuovo)* `Agent` esprime il ciclo di vita con un booleano, `Project` con un enum chiuso. Unificarli richiede di **eliminare una colonna**: migrazione irreversibile, dietro una decisione umana. Nel frattempo il contratto pubblico è già uniforme, perché `status` è derivato |
 | **TD-14** | Nessuna CI. Con 158 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
 
-### Nuovi, minori (TASK-008)
+### Nuovi, minori (TASK-008, TASK-009)
 
 | ID | Contenuto |
 |---|---|
+| **TD-34** | Un task può puntare a un agente inattivo — stato **legale e necessario** per ADR-010 D3 — e non c'è modo di chiedere «i task fermi su agenti inattivi» senza incrociare due liste lato client. Si chiude con un filtro su `GET /api/tasks`, il giorno in cui un client lo pone |
+| **TD-35** | Nessun `DELETE` dell'associazione con l'agente: un task assegnato non torna «non assegnato», si riassegna soltanto. Gemello di quello che ADR-005 §5 lasciò aperto sul progetto, con più pressione |
 | **TD-32** | L'entity-tag è forte ma deriva dalla versione della riga, non dai byte della rappresentazione: un cambio di forma della risposta senza cambio di stato darebbe lo stesso ETag a due rappresentazioni diverse. Nessun effetto su `If-Match`; effetto sulla cache HTTP, che il progetto non usa |
 | **TD-33** | I listati non portano ETag, quindi mutare N risorse costa N letture singole. Non motivato finché non esiste un client che muta in blocco |
 
@@ -324,7 +393,7 @@ da applicare. `docs/RUNNING.md` non documenta `/api/projects` né gli endpoint d
 
 ## Failure aperti
 
-**Nessuno.** 179/179 verdi (`./mvnw -B clean test`, 2026-09-16).
+**Nessuno.** 201/201 verdi (`./mvnw -B clean test`, 2026-09-17).
 
 ## Domande di contratto aperte
 
@@ -334,6 +403,9 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 - nessun `DELETE /api/tasks/{id}/project`: `NULL → non NULL` resta a senso unico;
 - nessun filtro «task senza progetto» su `GET /api/tasks`;
 - `archive` non idempotente; `GET /api/projects` senza filtro include gli archiviati;
+- nessun `DELETE /api/tasks/{id}/agent`, e nessun filtro «task su agenti inattivi» (TD-34, TD-35);
+- assegnare in anticipo a un agente temporaneamente spento: rifiutato oggi, richiederebbe semantica
+  di coda (ADR-010 D1);
 - nessuna paginazione; nessuno slug pubblico stabile.
 
 ## Working principles
@@ -346,7 +418,7 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 
 ## Target architecture
 - Project Registry ✅ *fondazione (TASK-002), relazione con i task (TASK-003), coerenza di archiviazione e concorrenza (TASK-004)*
-- Agent Registry ✅ *fondazione (TASK-007). Relazione con i task: TASK-009*
+- Agent Registry ✅ *fondazione (TASK-007), relazione con i task (TASK-009)*
 - Skills / Rules / Subagents / Tools / MCP Registry
 - Model Gateway and local/cloud routing
 - Context / Prompt / Harness / Loop / Graph Engineering
