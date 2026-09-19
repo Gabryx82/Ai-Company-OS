@@ -343,17 +343,29 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
-## Stato Git (verificato il 2026-09-14)
+## Stato Git (verificato il 2026-09-19)
 
 - **`master`**: fermo a `d5ff121`. **Gate umano finale, nessun merge autonomo.**
-- **Integration branch di PHASE 2**: `autonomous/phase-2-assignment`, creato da
-  `autonomous/phase-1-foundations` (`0a35ac0`). Contiene il piano di fase e TASK-008.
+- **Integration branch di PHASE 2**: `autonomous/phase-2-assignment`, HEAD **`81d350d`**, creato
+  da `autonomous/phase-1-foundations` (`0a35ac0`). Contiene il piano di fase, TASK-008, TASK-009
+  e TASK-010.
 - **Integration branch di PHASE 1**: `autonomous/phase-1-foundations`, HEAD **`0a35ac0`**, fermo.
 - Branch di lavoro integrati in fast-forward: `task-004-archival-consistency`,
   `task-005-uniform-error-contract`, `task-006-migration-test-coverage`,
-  `task-007-agent-registry`.
+  `task-007-agent-registry`, `task-008-optimistic-concurrency`,
+  `task-009-task-agent-assignment`, `task-010-task-status-vocabulary`.
 - **Nessun remote configurato, nessun push eseguito.**
 - Storia lineare, mai riscritta.
+
+Commit di TASK-010, ora nell'integration branch:
+
+| Hash | Contenuto |
+|---|---|
+| `472b6dd` | `docs(task-010)` — il censimento, **prima** di qualunque decisione |
+| `33e3160` | `test(task)` — la stringa libera riprodotta, **6 deliberatamente rossi** |
+| `4b275ce` | `feat(task)` — enum, vincolo, `V7`; le tre guardie |
+| `05f8b1d` | `test(task)` — i due rilievi MEDIUM della review, corretti |
+| `81d350d` | `docs(task-010)` — chiusura, e tre correzioni a ciò che il repository diceva di sé |
 
 Commit di TASK-004, ora nell'integration branch:
 
