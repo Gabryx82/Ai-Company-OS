@@ -33,7 +33,7 @@ non è vuoto.
 | **2 — Blocker architetturali** | — | **Vuoto** |
 | **3 — Debito pericoloso per il passo successivo** | **TD-28 / TD-30** | **TASK-008**, vedi sotto |
 | **4 — Dipendenze della target architecture** | Relazione **`Task` → `Agent`** | **TASK-009** |
-| **5 — Valore strutturale** | Coerenza del ciclo di vita dell'agente verso il lavoro assegnato; vocabolario chiuso di `Task.status` | **TASK-010**, da definire quando ci si arriva |
+| **5 — Valore strutturale** | Coerenza del ciclo di vita dell'agente verso il lavoro assegnato; vocabolario chiuso di `Task.status` | **TASK-010**, completata. La prima metà era già stata **derivata** da TASK-009 (D3); è rimasta la seconda |
 | **6 — Cleanup e documentazione** | Collisione di identificatori nel registro del debito; `docs/RUNNING.md` | **TASK-011** |
 
 **Perché TD-28/TD-30 viene prima della relazione, e non dopo.** Non perché il debito vada chiuso
@@ -112,22 +112,52 @@ terza classe di righe, e l'aciclicità va **ridimostrata**, non assunta. ADR-006
 chiare lettere: «se un percorso futuro dovesse bloccare un task tenendo già un lock su un
 progetto, l'ordine globale va rivisto, non aggirato».
 
-### TASK-010 — da definire
+### TASK-010 — Vocabolario chiuso di `Task.status` ✅
 
-**Livello 5. Prossima.** La previsione si è avverata nel modo che il piano ammetteva: TASK-009 ha
-**derivato interamente** la coerenza del ciclo di vita dell'agente (D3), quindi questa task non ha
-il contenuto che sarebbe sembrato ovvio a inizio fase.
+**Livello 5. Completata il 2026-09-19. Chiude la metà `status` di TD-12, apre TD-36 e TD-37.**
+Suite 201 → 216, schema `V6` → `V7`. Chiusura in `tasks/TASK-010/ARTIFACT.md`.
 
-Candidato più forte: **TD-12**, il vocabolario chiuso di `Task.status` e `Task.priority`. Un task
-adesso sa *dove* sta e *di chi* è; quello che ancora non sa è **in che stato** è, in un modo che
-qualcosa possa verificare — e senza quello il Task Engine e il Planner non hanno niente da
-guidare, il che rende TD-12 il prerequisito di TD-08 e non il contrario.
+L'avvertimento di `tasks/TASK-009/HANDOFF.md` — stringere `status` **non è additivo** se i dati
+contengono valori fuori vocabolario, e cosa farne tocca gli hard stop #2 e #3 — è stato preso
+alla lettera: **il censimento viene prima dell'ADR**, è riproducibile, e sta in
+`tasks/TASK-010/CENSUS.md`. Cinque fonti, **un solo valore (`OPEN`)**, zero righe da trasformare,
+nessun hard stop. L'avvertimento era giusto e si è rivelato inapplicabile a questo repository, che
+è una cosa che si può dire solo **dopo** aver contato.
 
-Avvertimento registrato in `tasks/TASK-009/HANDOFF.md`: stringere `status` a un vocabolario chiuso
-**non è additivo** se i dati esistenti contengono valori fuori vocabolario, e cosa farne tocca gli
-hard stop #2 e #3 del charter. Guardare i dati prima di scrivere l'ADR.
+Deciso in `docs/adr/ADR-011-task-status-closed-vocabulary.md`. In sintesi:
 
-### TASK-011 — Registro del debito e documentazione
+- il vocabolario è **`OPEN`, `IN_PROGRESS`, `DONE`**, con `OPEN` preservato verbatim e gli esclusi
+  (`BLOCKED`, `CANCELLED`, `IN_REVIEW`, `DRAFT`, `PAUSED`) dichiarati per l'argomento di ADR-004 §2;
+- **un vocabolario non è una macchina a stati.** Nessuna transizione, nessun gate, `DONE` legale
+  alla creazione — e un test lo pinna, così una task futura non può aggiungerne una credendo di
+  fare pulizia;
+- **tre guardie** invece delle due di ADR-004 §2, perché fra client e dominio c'è un livello che i
+  progetti non avevano: vincolo Jakarta, enum, `tasks_status_check`;
+- il campo della request **resta `String`**: tipizzarlo come enum produrrebbe un
+  `malformed-request` che afferma il falso e perde il nome del campo. **ADR-007 invariato.**
+
+Il censimento ha anche corretto un'affermazione del repository su se stesso: **il database di
+sviluppo locale è a `V3`**, mentre lo stato dichiarava «schema a `V6`» — vero dello stream Flyway,
+falso di quell'installazione.
+
+Quello che questa task **non** ha fatto, e lo dice: non esiste un percorso che muti lo `status` di
+un task esistente (**TD-37**), e `Task.priority` resta una stringa libera (**TD-36**). Introdurre
+il `PUT` *è* il momento in cui le transizioni diventano una domanda obbligatoria, ed è per questo
+che non è stato introdotto di sfuggita.
+
+### TASK-011 — da scegliere fra due candidati
+
+**Il criterio di chiusura della fase (§4) è già soddisfatto in tutte e tre le condizioni**, quindi
+la domanda non è più «cosa manca a PHASE 2» ma «dove finisce PHASE 2».
+
+- **A — TD-37, le transizioni di `status`** (livello 5). Il livello 5 non è vuoto: TD-37 ci sta, e
+  il livello 6 non si tocca finché il 5 è pieno. Ma PHASE 2 si chiama *Assignment*, non
+  *Lifecycle*, e TD-37 è plausibilmente il primo pezzo della fase successiva.
+- **B — il contenuto già pianificato qui sotto** (livello 6).
+
+Argomenti per esteso in `tasks/TASK-010/HANDOFF.md`. Chi sceglie, lo scriva.
+
+#### B — Registro del debito e documentazione
 
 **Livello 6.**
 

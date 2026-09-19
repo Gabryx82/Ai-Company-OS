@@ -17,12 +17,13 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 2026-09-14), in attesa di review umana: `FINAL_HANDOFF.md`. **Niente in `master`.**
 
 **PHASE 2 — Assignment: in corso** dal 2026-09-15, su `autonomous/phase-2-assignment`, creato da
-`autonomous/phase-1-foundations`. **TASK-008 e TASK-009 completate.** Suite **201 test verdi**,
-schema **`V6`**, nessun failure aperto, nessun remote.
+`autonomous/phase-1-foundations`. **TASK-008, TASK-009 e TASK-010 completate.** Suite **216 test
+verdi**, schema **`V7`**, nessun failure aperto, nessun remote.
 
 L'obiettivo della fase — *il Company OS sa dire chi lavora su che cosa, e due client non possono
-sovrascriversi in silenzio mentre lo dicono* — è **raggiunto in entrambe le metà**. Restano
-TASK-010 e TASK-011.
+sovrascriversi in silenzio mentre lo dicono* — è **raggiunto in entrambe le metà**, e il criterio
+di chiusura di `PHASE_2_PLAN.md` §4 è soddisfatto in tutte e tre le condizioni. Resta TASK-011,
+per cui esistono **due candidati e una domanda di confine**: `tasks/TASK-010/HANDOFF.md`.
 
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
@@ -33,13 +34,80 @@ PHASE 1 resta com'è: `master` è ancora il gate di quella fase, e PHASE 2 ci si
 senza mergiarla.
 
 ## Current task
-**TASK-010 — da scegliere.** Livelli 1, 2 e 3 vuoti alla chiusura di TASK-009. Il candidato più
-forte è **livello 5: TD-12**, il vocabolario chiuso di `Task.status` e `Task.priority` — un task
-sa dove sta e di chi è, non *in che stato* è in un modo verificabile, e senza quello il Task
-Engine e il Planner non hanno niente da guidare. Motivazione, vincoli ereditati e un avvertimento
-sulla migrazione in `tasks/TASK-009/HANDOFF.md`.
+**TASK-011 — da scegliere.** Livelli 1, 2 e 3 vuoti alla chiusura di TASK-010. Due candidati, e
+la scelta richiede di decidere un confine di fase, non solo una priorità:
+
+- **A — TD-37** (livello 5): le transizioni di `status`. Il vocabolario è chiuso ma il ciclo di
+  vita **non è percorribile**, perché nessun percorso muta lo `status` di un task esistente. È
+  esattamente ciò che ADR-011 §3 ha evitato di rispondere per inerzia, e arriva con le domande
+  già formulate;
+- **B — TASK-011 come pianificata** (livello 6): collisione di identificatori nel registro del
+  debito, e `docs/RUNNING.md`.
+
+Il livello 6 non si tocca finché il 5 è pieno, e TD-37 lo riempie — ma PHASE 2 si chiama
+*Assignment*, non *Lifecycle*, e TD-37 è plausibilmente il primo pezzo della fase successiva.
+Argomenti per esteso in `tasks/TASK-010/HANDOFF.md`. **Chi sceglie, lo scriva.**
 
 ## Last completed task
+
+**TASK-010 — Vocabolario chiuso di `Task.status`** (2026-09-19).
+
+Chiude **la metà `status` di TD-12**, apre **TD-36** e **TD-37**. Suite **201 → 216**, schema
+**`V7`**. Da oggi un task sa **in che stato è** in un modo che qualcosa può verificare.
+
+**Il censimento ha cambiato la natura della task, e viene prima di tutto il resto.** TASK-009
+aveva avvertito che stringere `status` non è additivo se i dati contengono valori fuori
+vocabolario, e che in quel caso la domanda tocca gli hard stop #2 e #3. Contare prima è ciò che ha
+reso la task eseguibile in autonomia. Cinque fonti — schema, dev seed, fixture, database locale,
+storia git — **un solo valore (`OPEN`), zero righe da trasformare, nessun hard stop**.
+Riproducibile con i comandi in `tasks/TASK-010/CENSUS.md`.
+
+Tre fatti che il censimento ha trovato e che nessun documento diceva:
+
+1. **il database di sviluppo reale è a `V3`**, non alla testa dello stream: non ha mai visto `V4`,
+   `V5` né `V6`. Lo stato lo diceva in modo impreciso, ed è corretto più sotto;
+2. **`Task.status` non ha alcun percorso di mutazione** — un solo scrittore, la creazione, e
+   nessun ramo del codice che legga il valore per decidere. Questo ha ristretto lo scope: la task
+   chiude il **vocabolario**, non il ciclo di vita, e lo dichiara (**TD-37**);
+3. **`MigrationStreamTest` era già l'upgrade test di `V6 → V7`**, scritto da TASK-006 per
+   migrazioni che allora non esistevano. È un vincolo reale sulla scelta: un vocabolario che
+   avesse escluso `OPEN` lo avrebbe reso rosso a ogni coppia.
+
+| Decisione | Contenuto |
+|---|---|
+| **Il vocabolario è `OPEN`, `IN_PROGRESS`, `DONE`** | `OPEN` preservato **verbatim**. Esclusi e dichiarati `BLOCKED`, `CANCELLED`, `IN_REVIEW`, `DRAFT`, `PAUSED` — plausibili, nessuno richiesto: è testualmente l'argomento di ADR-004 §2 |
+| **Un vocabolario non è una macchina a stati** | Nessuna transizione. `DONE` è legale alla creazione, e un test lo pinna, così una task futura non può aggiungere «il lavoro comincia aperto» credendo di fare pulizia |
+| **Il campo della request resta `String`** | Tipizzarlo come enum farebbe fallire Jackson → `malformed-request`, «*the request body could not be read*», che è **falso**, e senza `errors`. Contratto di TASK-005 **invariato**: nessun `type` nuovo, `ApiExceptionHandler` intatto |
+| **Case-sensitive** | `"open"` è fuori quanto `"banana"`. Scelta **opposta** a ADR-008 sui nomi degli agenti: un nome lo digita una persona, uno stato lo manda un programma |
+| **Tre guardie, non due** | ADR-004 §2 ne voleva due; fra client e dominio c'è un livello che i progetti non avevano |
+| **`V7`** | Non additiva **per costruzione** — applica un vincolo a dati esistenti — ma additiva **su questi dati**: zero righe lette, scritte o riscritte |
+
+**Quattro mutazioni, tutte rosse, e due hanno insegnato qualcosa.** Albero verificato pulito prima
+di ogni mutazione e dopo ogni revert, per la lezione di TASK-009.
+
+- **M2** (tolto il `CHECK`) ha **riprodotto empiricamente** la previsione di ADR-004 §2: un `'open'`
+  scritto in SQL grezzo entra in tabella e fa poi fallire **la lettura di ogni task** —
+  `No enum constant ... TaskStatus.open` — dentro un `@BeforeEach`, cioè il più lontano possibile
+  dalla causa;
+- **M4** (`ORDINAL` invece di `STRING`) è più forte di quanto il javadoc dichiarasse: il contesto
+  Spring **non parte**, perché `validate` rifiuta un mapping ordinale su colonna `varchar`.
+
+**La review ha trovato un test che prometteva più di quanto verificasse**, e la mutazione è ciò
+che lo ha smascherato: `theCheckConstraintDeclaresTheSameSetAsTheEnum` confrontava il vincolo con
+una costante, non con l'enum, ed è rimasto **verde** mentre l'enum veniva allargato. Corretto il
+**nome**, non il disegno — confrontare ogni guardia con un insieme scritto indipendentemente è più
+forte che confrontarle fra loro, perché il confronto diretto passerebbe il giorno in cui qualcuno
+cambia entrambe e non decide nessuna delle due.
+
+**Rotture dichiarate**: `status` fuori vocabolario passa da `201` a `400`; `"open"` idem; un
+`INSERT`/`UPDATE` SQL fuori vocabolario è rifiutato dal database; `V7` **fallisce** su un database
+che contenesse valori fuori vocabolario — comportamento voluto, precedente esatto di `V4` con
+`agents_name_unique_idx`, e il test verifica anche che la riga resti **intatta**. **JSON
+invariato.**
+
+Artefatti: `tasks/TASK-010/*`, `docs/adr/ADR-011-task-status-closed-vocabulary.md`.
+
+## Task precedenti di PHASE 2
 
 **TASK-009 — Assegnazione `Task` → `Agent`** (2026-09-17).
 
@@ -90,8 +158,6 @@ Corretto lungo la strada e tenuto: `awaitOrFail` distinto da `awaitAtMost` nei t
 Nessuna rottura di contratto: tutto additivo.
 
 Artefatti: `tasks/TASK-009/*`, `docs/adr/ADR-010-task-agent-assignment.md`.
-
-## Task precedenti di PHASE 2
 
 **TASK-008 — Optimistic concurrency nel contratto HTTP** (2026-09-16).
 
@@ -236,14 +302,26 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 ## Stato del sistema
 
 - Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`.
-- Schema: di proprietà di **Flyway**, oggi a **`V6`**. Hibernate in `validate`.
+- Schema: di proprietà di **Flyway**. Lo **stream** è oggi a **`V7`**; la versione di
+  un'installazione è quella che le sue migrazioni dicono, e **il database di sviluppo locale è a
+  `V3`** — non ha mai visto `V4`, `V5`, `V6`, `V7` (trovato dal censimento di TASK-010; le
+  migrazioni si applicheranno in ordine quando verrà avviato). Hibernate in `validate`.
 - Tabelle: `agents`, `tasks`, `projects`. `tasks.project_id` nullable con FK senza `ON DELETE`.
   Da `V4`: `agents.created_at` / `updated_at` (`TIMESTAMPTZ`, `NOT NULL`, `DEFAULT now()`) e
   indice unico `agents_name_unique_idx` su `lower(name)`.
   Da `V5`: `version BIGINT NOT NULL DEFAULT 0` su **tutte e tre** le tabelle.
   Da `V6`: `tasks.agent_id` nullable con FK senza `ON DELETE`, e `tasks_agent_id_idx`.
+  Da `V7`: `tasks_status_check CHECK (status IN ('OPEN','IN_PROGRESS','DONE'))` — la prima
+  migrazione dello stream che **non è additiva per costruzione**, perché applica un vincolo a dati
+  esistenti. Additiva su questi dati: zero righe lette, scritte o riscritte (`tasks/TASK-010/CENSUS.md`).
 - **Due registri di dominio** con ciclo di vita esplicito: `Project` (enum `ACTIVE`/`ARCHIVED`)
   e `Agent` (`boolean active`, divergenza dichiarata → TD-31).
+- **`Task.status` ha un vocabolario chiuso**: `OPEN`, `IN_PROGRESS`, `DONE` (`TaskStatus`), imposto
+  in **tre** punti — vincolo Jakarta sulla request, `@Enumerated(STRING)` sull'entità,
+  `tasks_status_check` nel database. **È un vocabolario, non una macchina a stati**: nessuna regola
+  di transizione esiste, e `DONE` è legale alla creazione (ADR-011 §3). **Non esiste alcun percorso
+  che muti lo `status` di un task esistente** → TD-37. `Task.priority` resta una stringa libera →
+  TD-36.
 - Seed di sviluppo: stream Flyway separato (`db/dev/V1`), profilo `dev` (ADR-003).
 - Profili: `dev` (default), `test` (Testcontainers), `prod`.
 - **Concorrenza**: protocollo di lock L0–L7 su `tasks` e `projects` (ADR-006 §4). Lock
@@ -261,7 +339,8 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   obbligatorio su ogni mutazione di risorsa esistente, confrontato **dentro la transazione, dopo
   il lock esclusivo, prima delle regole**. `@Version` è il contatore, non il rilevatore: nessun
   handler per `OptimisticLockException`, e non va aggiunto.
-- Test: **201** (erano 109 in `master`, 158 a fine PHASE 1). `./mvnw -B clean test` → BUILD SUCCESS.
+- Test: **216** (erano 109 in `master`, 158 a fine PHASE 1, 201 dopo TASK-009).
+  `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
 ## Stato Git (verificato il 2026-09-14)
@@ -313,20 +392,19 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 - **ADR-007** — Un solo contratto di errore per tutta l'API: advice globale che estende `ResponseEntityExceptionHandler`, `type` stabile e enumerato (`urn:ai-company-os:problem:<slug>`) come parte machine-readable del contratto, `errors` ovunque, catch-all con `detail` fisso e stack loggato, nessuna policy di timeout o retry. **Supera ADR-004 §6 e ADR-005 §8**. *Accettata e implementata*.
 - **ADR-010** — Assegnazione `Task` → `Agent`: le tre domande di dominio risolte senza copiarle dalla relazione col progetto (D1 stesso esito e argomento diverso, D2 coincide, **D3 diverge** — un agente disattivato non congela i suoi task); il lock graph **ridimostrato** su tre classi con **L5′** `tasks` → `projects` → `agents` e i tre archi assenti verificati; l'aciclicità come **conseguenza** di ADR-006 §1 e D3; una sola versione, quella del task; `V6` additiva. *Accettata e implementata*.
 - **ADR-009** — Concorrenza ottimistica nel contratto HTTP: due meccanismi distinti e complementari (lock = consistenza interna, `ETag`/`If-Match` = intento stantio); `@Version` è un contatore persistente e **non** il rilevatore, perché dopo l'attesa su `PESSIMISTIC_WRITE` l'entità è già alla versione nuova; protocollo **P0–P4**; `If-Match` obbligatorio su tutte e tre le risorse; `428`/`412`/`400`; `GET /api/tasks/{id}` introdotto come percorso canonico dell'ETag; `V5` additiva. **Completa ADR-006 §8.** *Accettata e implementata*.
+- **ADR-011** — Vocabolario chiuso di `Task.status`: il censimento **prima** della decisione (cinque fonti, un solo valore, zero righe da trasformare); `OPEN`/`IN_PROGRESS`/`DONE`, con gli esclusi dichiarati per l'argomento di ADR-004 §2; **un vocabolario non è una macchina a stati** e nessuna transizione viene introdotta; il campo della request resta `String` perché tipizzarlo come enum produrrebbe un `malformed-request` che afferma il falso e perde il nome del campo; confronto **case-sensitive**, scelta opposta a ADR-008 sui nomi e per un criterio dichiarato; **tre guardie** invece delle due di ADR-004 §2; `V7` additiva sui dati ma non per costruzione, con il fallimento su valori fuori vocabolario come rischio **dichiarato ed eseguito**. **Non tocca ADR-007.** *Accettata e implementata*.
 - **ADR-006** — Coerenza archiviazione → task **derivata** (nessuna scrittura sui figli, `restore` inverso per costruzione), congelamento in scrittura con letture aperte, `PUT` idempotente `200` no-op, protocollo di lock **L0–L7** con ordine globale `tasks` → `projects`, nessuna migrazione, contratto invariato, nessun `503`. *Accettata e **implementata**.*
 
 ## Prossimo passo autonomo
 
-**TASK-010 — da scegliere quando si comincia**, con i criteri di `AUTONOMOUS_LOOP.md` §4 riletti
-sul posto. Il candidato più forte è **TD-12** (vocabolario chiuso di `Task.status`), e il briefing
-— compreso l'avvertimento che stringere `status` **non è una migrazione additiva** se i dati
-contengono valori fuori vocabolario, il che tocca gli hard stop #2/#3 — è in
-`tasks/TASK-009/HANDOFF.md`.
+**TASK-011 — da scegliere quando si comincia**, con i criteri di `AUTONOMOUS_LOOP.md` §4 riletti
+sul posto. Due candidati e una domanda di confine (A: TD-37, le transizioni; B: la TASK-011 già
+pianificata al livello 6), argomentati in `tasks/TASK-010/HANDOFF.md`. **Chi sceglie, lo scriva.**
 
-Ha smesso di essere bloccato, e non è ancora la prossima task: **TD-08**, la sostituzione di
-`MasterOrchestrator`. Finora era impossibile perché nessuno poteva dire «questo task è di
-quell'agente». Adesso si può — ma senza un ciclo di vita verificabile sul task non c'è ancora
-niente da orchestrare, il che rende TD-12 il prerequisito e non il contrario.
+**TD-08**, la sostituzione di `MasterOrchestrator`, resta sbloccato ma non ancora eseguibile: un
+task adesso sa dove sta, di chi è e in che stato è — ma non può **cambiare** stato (TD-37), e
+un orchestratore che non può muovere il lavoro attraverso gli stati non ha ancora niente da
+orchestrare. TD-37 è il prerequisito rimasto.
 
 Il piano completo della fase sta in **`.company-os/PHASE_2_PLAN.md`**. In sintesi:
 
@@ -334,8 +412,8 @@ Il piano completo della fase sta in **`.company-os/PHASE_2_PLAN.md`**. In sintes
 |---|---|---|---|
 | **TASK-008** | Optimistic concurrency (`ETag`/`If-Match`). Chiude TD-28, TD-30 | 3 | **completata** 2026-09-16 |
 | **TASK-009** | Relazione `Task` → `Agent`. Risolve TD-13 | 4 | **completata** 2026-09-17 |
-| **TASK-010** | Da scegliere. Candidato: TD-12, ciclo di vita chiuso del task | 5 | **prossima** |
-| **TASK-011** | Collisione di identificatori nel registro del debito; `docs/RUNNING.md` | 6 | pianificata |
+| **TASK-010** | Vocabolario chiuso di `Task.status`. Chiude la metà `status` di TD-12 | 5 | **completata** 2026-09-19 |
+| **TASK-011** | Da scegliere: TD-37 (transizioni) **oppure** debito/`docs/RUNNING.md` | 5 o 6 | **prossima** |
 
 Fuori da PHASE 2 e dichiarato tale: **TD-14** (CI: richiede un remote, hard stop #4), **TD-31**
 (elimina una colonna, hard stop #3), **TD-04** (autenticazione: primo candidato di PHASE 3).
@@ -352,13 +430,21 @@ Il merge di PHASE 1 in `master` resta il gesto con cui un umano accetta il lavor
 **Chiusi da TASK-008**: **TD-28**, **TD-30**. **TASK-008 apre TD-32 e TD-33.**
 **Risolto da TASK-009**: **TD-13** dell'audit (`Agent` e `Task` non si conoscevano).
 **TASK-009 apre TD-34 e TD-35.**
+**Chiuso a metà da TASK-010**: **TD-12** — la metà `status`. **TASK-010 apre TD-36 e TD-37.**
 
 ### Alto valore
 
 | ID | Contenuto |
 |---|---|
 | **TD-31** | *(nuovo)* `Agent` esprime il ciclo di vita con un booleano, `Project` con un enum chiuso. Unificarli richiede di **eliminare una colonna**: migrazione irreversibile, dietro una decisione umana. Nel frattempo il contratto pubblico è già uniforme, perché `status` è derivato |
-| **TD-14** | Nessuna CI. Con 158 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
+| **TD-14** | Nessuna CI. Con 216 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
+
+### Nuovi (TASK-010)
+
+| ID | Contenuto |
+|---|---|
+| **TD-37** | *(nuovo)* Nessun percorso muta lo `status` di un task esistente: creato `OPEN`, resta `OPEN`. Il vocabolario è chiuso, **il ciclo di vita non è percorribile**. Si chiude con la task delle transizioni, dove le regole di transizione sono la domanda centrale e non un effetto collaterale — ed è precisamente la domanda che ADR-011 §3 ha evitato di rispondere per inerzia |
+| **TD-36** | *(nuovo, MINOR)* `Task.priority` resta una stringa libera senza vincolo DB. Stesso difetto di TD-12 e stessa forma di soluzione; **non combinato di proposito**, perché è una normalizzazione adiacente e non la stessa. Se verrà chiuso, il censimento va **rifatto su quel campo**: non si eredita quello di `status` |
 
 ### Nuovi, minori (TASK-008, TASK-009)
 
@@ -393,7 +479,7 @@ da applicare. `docs/RUNNING.md` non documenta `/api/projects` né gli endpoint d
 
 ## Failure aperti
 
-**Nessuno.** 201/201 verdi (`./mvnw -B clean test`, 2026-09-17).
+**Nessuno.** 216/216 verdi (`./mvnw -B clean test`, 2026-09-19).
 
 ## Domande di contratto aperte
 
@@ -406,6 +492,8 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 - nessun `DELETE /api/tasks/{id}/agent`, e nessun filtro «task su agenti inattivi» (TD-34, TD-35);
 - assegnare in anticipo a un agente temporaneamente spento: rifiutato oggi, richiederebbe semantica
   di coda (ADR-010 D1);
+- nessun filtro «task per stato» su `GET /api/tasks`, mentre `GET /api/projects?status=` esiste;
+- nessun modo di **cambiare** lo stato di un task: si sceglie alla creazione e resta (TD-37);
 - nessuna paginazione; nessuno slug pubblico stabile.
 
 ## Working principles
@@ -419,6 +507,7 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 ## Target architecture
 - Project Registry ✅ *fondazione (TASK-002), relazione con i task (TASK-003), coerenza di archiviazione e concorrenza (TASK-004)*
 - Agent Registry ✅ *fondazione (TASK-007), relazione con i task (TASK-009)*
+- Task lifecycle 🟡 *vocabolario chiuso (TASK-010); transizioni assenti → TD-37*
 - Skills / Rules / Subagents / Tools / MCP Registry
 - Model Gateway and local/cloud routing
 - Context / Prompt / Harness / Loop / Graph Engineering
