@@ -1,15 +1,24 @@
 # FINAL HANDOFF — PHASE 2, Assignment
 
-**Per la review umana. Niente è stato integrato in `master`.**
+> ## ✅ ACCETTATA. Integrata in `master` il 2026-09-19.
+>
+> Questo documento è stato scritto **per** la review umana; la review è avvenuta e il lavoro è
+> stato accettato. Il testo che segue è conservato **com'era**, perché è ciò che è stato
+> valutato — tranne questo riquadro e §5, che dicono che cosa è poi realmente successo.
+>
+> `master`: **`d5ff121` → `6dc5989`**, due fast-forward consecutivi (PHASE 1, poi PHASE 2),
+> 41 commit, **nessun merge commit**, nessuna storia riscritta. Suite **158/158** dopo il primo
+> merge e **219/219** dopo il secondo.
 
-- Integration branch: **`autonomous/phase-2-assignment`**
-- `master`: fermo a **`d5ff121`**, intatto
-- Suite: **219 test verdi** contro PostgreSQL reale, schema **`V7`**
+- Integration branch: **`autonomous/phase-2-assignment`** (`6dc5989`, fermo: marcatore storico)
+- `master`: **`6dc5989`** — era `d5ff121`
+- Suite: **219 test verdi** contro PostgreSQL reale, **migration stream a `V7`**
+  (il database di sviluppo locale è a `V3`: sono due numeri diversi, vedi §5)
 - Nessun failure aperto, nessun push, nessun remote configurato
 
-> **Due fasi attendono la stessa accettazione.** PHASE 2 è costruita **sopra** PHASE 1 e la
-> contiene: `autonomous/phase-2-assignment` discende da `autonomous/phase-1-foundations`
-> (`0a35ac0`) in linea retta. Accettare PHASE 2 accetta anche PHASE 1.
+> **Le due fasi sono state accettate insieme**, come questo documento prevedeva: PHASE 2 è
+> costruita **sopra** PHASE 1 e la contiene, perché `autonomous/phase-2-assignment` discende da
+> `autonomous/phase-1-foundations` (`0a35ac0`) in linea retta.
 > L'handoff di PHASE 1 è conservato, non sostituito, in
 > **`docs/handoff/FINAL_HANDOFF_PHASE_1.md`**.
 
@@ -113,31 +122,54 @@ booleano. Unificarli richiede di **eliminare una colonna**: migrazione irreversi
 debito di questa lista il cui costo cresce **a ogni task**, e va deciso prima di PHASE 3, non
 dopo.
 
-## 5. Che cosa succede se si accetta
+## 5. Che cosa è successo quando è stata accettata
 
-Il merge in `master` è il gesto con cui il lavoro è accettato, ed è umano (charter §8).
-
-```bash
-git checkout master
-git merge --ff-only autonomous/phase-2-assignment
-```
-
-La storia è lineare, quindi è un fast-forward. Porta in `master` **PHASE 1 e PHASE 2 insieme**,
-perché la seconda contiene la prima.
-
-Per una conferma indipendente prima di accettare:
+**Eseguito il 2026-09-19**, dopo l'accettazione esplicita della review umana. Due fast-forward, in
+quest'ordine, con la suite completa eseguita dopo ciascuno:
 
 ```bash
-cd backend && ./mvnw -B clean test
+git checkout master                                      # d5ff121
+git merge --ff-only autonomous/phase-1-foundations       # -> 0a35ac0 ... 158/158 verdi
+git merge --ff-only autonomous/phase-2-assignment        # -> 6dc5989 ... 219/219 verdi
 ```
 
-219 verdi. **Docker deve essere in esecuzione**: i test girano contro un PostgreSQL reale via
+Due merge invece del solo `--ff-only` verso PHASE 2 che questo documento suggeriva: l'esito su
+`master` è identico — PHASE 2 contiene PHASE 1 — ma così **l'accettazione di ciascuna fase è un
+passo distinto e verificato**, con la suite della fase eseguita al suo checkpoint.
+
+Verificato dopo i merge:
+
+- **nessun merge commit prodotto**: `git log --merges d5ff121..master` è vuoto. L'unico merge
+  commit della storia è `e8d0286` (TASK-001, 2026-09-11) ed era già in `master`;
+- **nessuna storia riscritta**: `d5ff121` è ancora un antenato di `master`;
+- working tree pulito dopo entrambi i merge;
+- **219/219 verdi**, nessuna regressione.
+
+**Docker deve essere in esecuzione** per riprodurlo: i test girano contro un PostgreSQL reale via
 Testcontainers.
 
-**Una cosa da sapere sul database di sviluppo locale.** È a **`V3`** e non ha mai visto
-`V4`…`V7` — trovato dal censimento di TASK-010, e nessun documento lo diceva prima. Al primo
-avvio in profilo `dev` le quattro migrazioni si applicheranno in ordine. `V7` passerà, perché
-l'unica riga di `tasks` ha `status = 'OPEN'`. **Non serve `docker compose down -v`.**
+### `V3` e `V7` sono due numeri diversi
+
+È l'ambiguità che il censimento di TASK-010 ha trovato nello stato del progetto, e vale la pena
+non ricrearla:
+
+| | Valore | Che cos'è |
+|---|---|---|
+| **Migration stream** | **`V7`** | La migrazione più alta che esiste nel repository. La prossima da scrivere è `V8` |
+| **Live dev DB** | **`V3`** | Ciò che è stato realmente applicato al volume locale `aicompany_postgres_data` |
+
+Sono indipendenti: il primo è una proprietà del **codice**, il secondo di **un'installazione**.
+«Schema a `V7`» senza qualificatore significa **lo stream**, mai un database.
+
+```bash
+ls backend/src/main/resources/db/migration                      # stream -> V7
+docker exec aicompany-postgres psql -U aicompany -d aicompany \
+  -c "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank;"   # dev DB -> 1,2,3
+```
+
+Riverificato dopo i merge: stream `V7`, dev DB `V1,V2,V3`. Al primo avvio in profilo `dev` le
+quattro migrazioni mancanti si applicheranno in ordine; `V7` passerà, perché l'unica riga di
+`tasks` ha `status = 'OPEN'`. **Non serve `docker compose down -v`.**
 
 ## 6. Come riprendere senza questa conversazione
 

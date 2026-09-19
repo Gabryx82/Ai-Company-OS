@@ -205,6 +205,23 @@ dev era alla versione 1000 e una successiva `V2` non era più applicabile
 (`Detected resolved migration not applied to database: 2`). Con due stream lo schema resta
 lineare — `V1`, `V2`, `V3`, … — sia che il database sia stato seminato sia che non lo sia.
 
+### Due numeri diversi: lo stream e il tuo database
+
+Non vanno confusi, ed è un equivoco che è già costato una diagnosi sbagliata:
+
+| | Che cos'è | Come si legge |
+|---|---|---|
+| **Migration stream** | La migrazione più alta che **esiste nel repository**. Proprietà del codice | `ls backend/src/main/resources/db/migration` |
+| **Versione del tuo database** | Ciò che è stato realmente **applicato** a quell'installazione. Proprietà del volume | `docker exec aicompany-postgres psql -U aicompany -d aicompany -c "SELECT version, script FROM flyway_schema_history WHERE success ORDER BY installed_rank;"` |
+
+Al 2026-09-19: lo **stream è a `V7`**; il **database di sviluppo locale è a `V3`** e non ha mai
+visto `V4`…`V7`. Non è un difetto — quel database non viene avviato da un po'. Al primo avvio in
+profilo `dev` le quattro migrazioni si applicheranno in ordine, e `V7` passerà perché l'unica riga
+di `tasks` ha `status = 'OPEN'`. **Non serve `docker compose down -v`.**
+
+Quando un documento dice «schema a `V7`» **senza qualificatore, intende lo stream**, mai un
+database.
+
 **La prossima migrazione di schema prende il numero successivo alla testa dello stream, e va in
 `db/migration`.** Oggi la testa è **`V7`**, quindi la prossima è `V8__....sql`. I numeri del seed
 sono indipendenti e non vanno considerati.

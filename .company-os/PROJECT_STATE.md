@@ -13,23 +13,34 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 `master` è il gate umano finale e non si tocca.
 
 ## Status
-**PHASE 1 — Foundations: COMPLETA.** Integrata in `autonomous/phase-1-foundations` (`0a35ac0`,
-2026-09-14), in attesa di review umana: **`docs/handoff/FINAL_HANDOFF_PHASE_1.md`** — spostato lì
-da TASK-011, e conservato invece di sostituito, quando `FINAL_HANDOFF.md` è passato a PHASE 2.
-**Niente in `master`.**
+**PHASE 1 e PHASE 2: ACCETTATE DALLA REVIEW UMANA e INTEGRATE IN `master` il 2026-09-19.**
 
-**PHASE 2 — Assignment: COMPLETA** il 2026-09-19, su `autonomous/phase-2-assignment`, creato da
-`autonomous/phase-1-foundations`. **TASK-008, TASK-009, TASK-010 e TASK-011 completate.** Suite
-**219 test verdi**, schema **`V7`**, nessun failure aperto, nessun remote.
-**In attesa di review umana: `FINAL_HANDOFF.md`. Niente in `master`.**
+Il gate del charter §8 è stato attraversato: un umano ha accettato il lavoro e ha autorizzato il
+merge. `master` è passato da **`d5ff121`** a **`6dc5989`** con **due fast-forward consecutivi** —
+prima `autonomous/phase-1-foundations` (`0a35ac0`), poi `autonomous/phase-2-assignment`
+(`6dc5989`) — **41 commit, nessun merge commit, nessuna riscrittura di storia**.
+
+| Fase | Integration branch | Merge in `master` | Suite dopo il merge |
+|---|---|---|---|
+| **PHASE 1 — Foundations** | `autonomous/phase-1-foundations` (`0a35ac0`) | ✅ fast-forward | **158/158 verdi** |
+| **PHASE 2 — Assignment** | `autonomous/phase-2-assignment` (`6dc5989`) | ✅ fast-forward | **219/219 verdi** |
+
+Handoff di review: `docs/handoff/FINAL_HANDOFF_PHASE_1.md` (PHASE 1, conservato e non sostituito)
+e `FINAL_HANDOFF.md` (PHASE 2).
+
+Stato corrente: suite **219 test verdi**, **stream di migrazione a `V7`** (per la versione del
+database locale vedi «Stato del sistema»), nessun failure aperto, **nessun remote configurato**.
+
+**I due integration branch restano dove sono**, fermi ai rispettivi tip: sono i marcatori
+storici di che cosa conteneva ciascuna fase, e farli avanzare li renderebbe falsi.
 
 L'obiettivo della fase — *il Company OS sa dire chi lavora su che cosa, e due client non possono
 sovrascriversi in silenzio mentre lo dicono* — è **raggiunto in entrambe le metà**, e il criterio
 di chiusura di `PHASE_2_PLAN.md` §4 è adesso soddisfatto in **tutte e tre** le condizioni: la
 terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 
-**Charter §8: qui ci si ferma.** Il merge in `master` è il gesto con cui un umano accetta il
-lavoro, e nessun agente lo esegue. **PHASE 1 e PHASE 2 attendono entrambe** quella review.
+**Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
+stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
@@ -40,10 +51,11 @@ PHASE 1 resta com'è: `master` è ancora il gate di quella fase, e PHASE 2 ci si
 senza mergiarla.
 
 ## Current task
-**Nessuna. PHASE 2 è chiusa e si attende la review umana** (`FINAL_HANDOFF.md`, charter §8).
+**Nessuna. PHASE 1 e PHASE 2 sono accettate e in `master`; PHASE 3 non è iniziata.**
 
-La prima decisione di **PHASE 3** è quale dei due candidati aprire, ed è una decisione che questa
-sessione **non prende**, perché a fine fase ci si ferma:
+La prima decisione di **PHASE 3** è quale dei due candidati aprire, e **non è stata presa**: la
+review umana ha autorizzato i merge e nient'altro. Restano aperte e **non decise** anche
+**TD-31**, **TD-14**, **TD-04** e **TD-37**.
 
 - **TD-04 — autenticazione.** Già indicato come primo candidato di PHASE 3 da `PHASE_2_PLAN.md`
   §2. Oggi non c'è niente, e ogni endpoint aggiunto è superficie. Costo noto: cambierebbe ogni
@@ -355,10 +367,22 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 ## Stato del sistema
 
 - Database: **PostgreSQL 17** via `docker-compose.yml`, volume `aicompany_postgres_data`.
-- Schema: di proprietà di **Flyway**. Lo **stream** è oggi a **`V7`**; la versione di
-  un'installazione è quella che le sue migrazioni dicono, e **il database di sviluppo locale è a
-  `V3`** — non ha mai visto `V4`, `V5`, `V6`, `V7` (trovato dal censimento di TASK-010; le
-  migrazioni si applicheranno in ordine quando verrà avviato). Hibernate in `validate`.
+- Schema: di proprietà di **Flyway**, e **due numeri diversi che non vanno confusi**:
+
+  | | Valore | Che cos'è | Come si verifica |
+  |---|---|---|---|
+  | **Migration stream** (il codice) | **`V7`** | La migrazione più alta che esiste in `backend/src/main/resources/db/migration`. La prossima da scrivere è `V8` | `ls backend/src/main/resources/db/migration` |
+  | **Live dev DB** (il volume locale) | **`V3`** | Le migrazioni realmente applicate al database di sviluppo `aicompany_postgres_data`. **Non ha mai visto `V4`, `V5`, `V6`, `V7`** | `docker exec aicompany-postgres psql -U aicompany -d aicompany -c "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank;"` |
+
+  Sono **indipendenti per costruzione**: il primo è una proprietà del repository, il secondo di
+  un'installazione. Ogni installazione ha il proprio, e «schema a `V7`» **senza qualificatore
+  significa lo stream**, mai un database. Scoperto dal censimento di TASK-010, che trovò lo stato
+  che dichiarava `V6` per un database che era — ed è tuttora — a `V3`. Riverificato dopo i merge
+  del 2026-09-19: stream `V7`, dev DB `V1,V2,V3`.
+
+  Al primo avvio in profilo `dev` le quattro migrazioni mancanti si applicheranno in ordine.
+  `V7` passerà, perché l'unica riga di `tasks` ha `status = 'OPEN'`. **Non serve
+  `docker compose down -v`.** Hibernate in `validate`.
 - Tabelle: `agents`, `tasks`, `projects`. `tasks.project_id` nullable con FK senza `ON DELETE`.
   Da `V4`: `agents.created_at` / `updated_at` (`TIMESTAMPTZ`, `NOT NULL`, `DEFAULT now()`) e
   indice unico `agents_name_unique_idx` su `lower(name)`.
@@ -396,9 +420,14 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   TASK-010). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
-## Stato Git (verificato il 2026-09-19)
+## Stato Git (verificato il 2026-09-19, dopo i merge)
 
-- **`master`**: fermo a `d5ff121`. **Gate umano finale, nessun merge autonomo.**
+- **`master`**: **`6dc5989`**. Era `d5ff121`; ci sono arrivati **41 commit** con due fast-forward
+  consecutivi, autorizzati dalla review umana del 2026-09-19.
+  - `d5ff121` → `0a35ac0` (PHASE 1), poi `0a35ac0` → `6dc5989` (PHASE 2);
+  - **nessun merge commit prodotto**: `git log --merges d5ff121..master` è vuoto. L'unico merge
+    commit della storia, `e8d0286`, è di TASK-001 (2026-09-11) ed era già in `master`;
+  - `d5ff121` resta raggiungibile: **nessuna storia riscritta**.
 - **Integration branch di PHASE 2**: `autonomous/phase-2-assignment`, creato da
   `autonomous/phase-1-foundations` (`0a35ac0`). Contiene il piano di fase, TASK-008, TASK-009 e
   TASK-010 e TASK-011. **HEAD: l'ultimo commit di questo branch** — deliberatamente non scritto come hash,
@@ -599,9 +628,9 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 - Voice Interaction Layer, Payments / quota monitoring, 3D Omniverse integration
 
 ## Immediate goal
-**Raggiunto.** PHASE 2 è completa su `autonomous/phase-2-assignment`, con `FINAL_HANDOFF.md`
-aggiornato per la review umana.
+**Raggiunto e accettato.** PHASE 1 e PHASE 2 sono in `master` (`6dc5989`), con 219 test verdi e
+nessun failure aperto.
 
-`master` resta fermo a `d5ff121`, e adesso **due fasi** attendono la stessa accettazione: PHASE 1
-su `autonomous/phase-1-foundations` e PHASE 2 su `autonomous/phase-2-assignment`, che la contiene.
-Il merge è il gesto umano, e nessun agente lo esegue (charter §8).
+PHASE 3 **non è iniziata** e la sua prima decisione non è stata presa. `master` è adesso la linea
+principale del progetto: da qui in avanti il gate del charter §8 si applica alla fase successiva,
+non a quella conclusa.

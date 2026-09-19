@@ -2,9 +2,15 @@
 
 > Piano persistente della fase. La fonte primaria dello stato resta `PROJECT_STATE.md`:
 > questo documento dice **dove va la fase e perché**, non dove è arrivata.
+>
+> ✅ **La fase è chiusa e accettata**: PHASE 1 e PHASE 2 sono state integrate in `master` il
+> 2026-09-19, dopo la review umana. Le righe qui sotto descrivono i **vincoli sotto cui la fase è
+> stata eseguita** e sono conservate com'erano: erano vere allora, e riscriverle cancellerebbe il
+> perimetro entro cui le decisioni sono state prese.
 
 - **Integration branch**: `autonomous/phase-2-assignment`, creato da `autonomous/phase-1-foundations` (`0a35ac0`).
 - **`master`**: fermo a `d5ff121`. Non si tocca, non si mergia. Gate umano finale.
+  *(Vincolo valido durante la fase. Dopo l'accettazione del 2026-09-19 `master` è a `6dc5989`.)*
 - **Baseline verificata il 2026-09-15**: `./mvnw -B clean test` → **158 test, 0 failure, BUILD SUCCESS**,
   schema `V4`, nessun remote configurato. Corrisponde a `PROJECT_STATE.md`.
 
@@ -187,7 +193,13 @@ PHASE 2 è completa quando tutte e tre sono vere:
    `master` è ancora a `d5ff121` — **TASK-011**. `FINAL_HANDOFF.md` è adesso quello di PHASE 2;
    quello di PHASE 1 è conservato in `docs/handoff/FINAL_HANDOFF_PHASE_1.md`, non sostituito.
 
-**PHASE 2 è completa dal 2026-09-19.** Charter §8: da qui non si prosegue senza una persona.
+**PHASE 2 è completa dal 2026-09-19**, e il criterio è stato valutato mentre `master` era ancora a
+`d5ff121`, come la condizione 3 richiedeva.
+
+**Accettata dalla review umana lo stesso giorno**, e integrata: `master` `d5ff121` → `0a35ac0`
+(PHASE 1) → `6dc5989` (PHASE 2), due fast-forward, nessun merge commit, 158/158 e poi 219/219
+verdi. Il charter §8 è stato rispettato in entrambe le direzioni — l'agente si è fermato, e la
+persona ha deciso.
 
 ## 5. Correzioni immediate, non task
 

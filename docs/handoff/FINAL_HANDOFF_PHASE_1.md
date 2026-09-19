@@ -1,6 +1,19 @@
 # FINAL HANDOFF — PHASE 1, Foundations
 
+> ## ✅ ACCETTATA. Integrata in `master` il 2026-09-19.
+>
+> Scritto **per** la review umana; la review è avvenuta e il lavoro è stato accettato, insieme a
+> PHASE 2. Il testo che segue è conservato **com'''era**, perché è ciò che è stato valutato.
+>
+> `master` `d5ff121` → **`0a35ac0`** in fast-forward, poi avanti fino a `6dc5989` con PHASE 2.
+> Suite al checkpoint di questa fase: **158/158 verdi**. Nessun merge commit, nessuna storia
+> riscritta.
+>
+> La decisione su **TD-31** (§5), che questo documento lasciava aperta, **resta aperta**: la
+> review ha autorizzato i merge e nient'''altro.
+
 **Per la review umana. Niente è stato integrato in `master`.**
+*(Vero quando è stato scritto. Vedi il riquadro sopra.)*
 
 - Integration branch: **`autonomous/phase-1-foundations`**
 - `master`: fermo a **`d5ff121`**, intatto
