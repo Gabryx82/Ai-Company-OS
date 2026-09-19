@@ -111,6 +111,19 @@ Questa è la sezione da leggere se si sta per costruirci sopra.
 
 ## 4. Le due decisioni che aspettano una persona
 
+> **Aggiornamento 2026-09-19, dopo l'accettazione.** Entrambe sono state affrontate da
+> **TASK-012**, su richiesta umana e prima di PHASE 3:
+>
+> - **TD-31 è CHIUSO.** La decisione è stata presa esplicitamente da una persona, delimitata allo
+>   scope documentato, e `V8` l'ha eseguita: `agents.active` eliminata, backfill biiettivo,
+>   contratto pubblico invariato. ADR-012.
+> - **TD-14 resta APERTO**, e il blocco si è rivelato essere **un dato mancante, non una
+>   decisione**: il repository non contiene alcun URL, owner o nome di repository remoto, nessun
+>   remote è mai stato configurato e `gh` non è installato. Serve l'URL del remote.
+>   `tasks/TASK-012/EVIDENCE_TD14.md`.
+>
+> Il testo qui sotto è quello che è stato sottoposto alla review, conservato com'era.
+
 Sono hard stop del charter, e nessun agente le ha prese.
 
 **1. `TD-31` — unificare il ciclo di vita di `Agent`.** `Project` usa un enum chiuso, `Agent` un

@@ -28,8 +28,10 @@ prima `autonomous/phase-1-foundations` (`0a35ac0`), poi `autonomous/phase-2-assi
 Handoff di review: `docs/handoff/FINAL_HANDOFF_PHASE_1.md` (PHASE 1, conservato e non sostituito)
 e `FINAL_HANDOFF.md` (PHASE 2).
 
-Stato corrente: suite **219 test verdi**, **stream di migrazione a `V7`** (per la versione del
-database locale vedi «Stato del sistema»), nessun failure aperto, **nessun remote configurato**.
+Stato corrente **dopo TASK-012**: suite **223 test verdi**, **stream di migrazione a `V8`** (per
+la versione del database locale vedi «Stato del sistema»), nessun failure aperto, **nessun remote
+configurato**. I numeri nella tabella qui sopra sono quelli **al momento dei merge** e restano
+com'erano.
 
 **I due integration branch restano dove sono**, fermi ai rispettivi tip: sono i marcatori
 storici di che cosa conteneva ciascuna fase, e farli avanzare li renderebbe falsi.
@@ -51,11 +53,19 @@ PHASE 1 resta com'è: `master` è ancora il gate di quella fase, e PHASE 2 ci si
 senza mergiarla.
 
 ## Current task
-**Nessuna. PHASE 1 e PHASE 2 sono accettate e in `master`; PHASE 3 non è iniziata.**
+**Nessuna. PHASE 3 non è iniziata.**
 
-La prima decisione di **PHASE 3** è quale dei due candidati aprire, e **non è stata presa**: la
-review umana ha autorizzato i merge e nient'altro. Restano aperte e **non decise** anche
-**TD-31**, **TD-14**, **TD-04** e **TD-37**.
+**TASK-012** (2026-09-19) ha affrontato i due debiti che precedevano PHASE 3, su richiesta umana:
+
+- **TD-31 — CHIUSO.** Il cambiamento distruttivo è stato autorizzato esplicitamente da un umano,
+  delimitato allo scope documentato. `V8` elimina `agents.active`;
+- **TD-14 — APERTO e bloccato**, non per una decisione ma per **un dato che non esiste nel
+  repository**: l'URL del remote. Verificato, non supposto: nessun remote configurato né mai
+  esistito, nessun URL/owner/repo citato in alcun file, `gh` non installato, nessuna CI presente.
+  Evidenza con i comandi in `tasks/TASK-012/EVIDENCE_TD14.md`.
+
+**TD-04** e **TD-37** restano aperte e **non decise**: sono i due candidati di PHASE 3, e la
+scelta fra loro è la prima decisione di quella fase.
 
 - **TD-04 — autenticazione.** Già indicato come primo candidato di PHASE 3 da `PHASE_2_PLAN.md`
   §2. Oggi non c'è niente, e ogni endpoint aggiunto è superficie. Costo noto: cambierebbe ogni
@@ -67,6 +77,68 @@ review umana ha autorizzato i merge e nient'altro. Restano aperte e **non decise
 Argomenti raccolti in `tasks/TASK-011/HANDOFF.md`.
 
 ## Last completed task
+
+**TASK-012 — TD-31 chiuso, TD-14 bloccato su evidenza** (2026-09-19).
+
+Due debiti indipendenti, due esiti diversi, commit separati. Suite **219 → 223**, schema
+**`V7` → `V8`**. Nessun debito nuovo.
+
+### TD-31 — chiuso
+
+`agents.active BOOLEAN` diventa `agents.status VARCHAR(32)` con `agents_status_check`, e la
+colonna booleana **viene eliminata**. È la **prima migrazione distruttiva** dello stream, ed era
+hard stop #3 del charter: sciolto da una decisione umana esplicita il 2026-09-19, delimitata allo
+scope documentato.
+
+**Chiuso perché qualcuno ha deciso, non perché il costo fosse cresciuto.** ADR-008 §2 aveva
+*sospeso* questo cambiamento, non lo aveva sbagliato, e ADR-012 lo dice invece di riscrivere la
+storia.
+
+| Decisione | Contenuto |
+|---|---|
+| **Il backfill è una biiezione** | `TRUE`↔`ACTIVE`, `FALSE`↔`INACTIVE`. Totale e iniettiva in entrambe le direzioni; `active` è `NOT NULL` da `V1`, quindi **nessun terzo caso da decidere e nessun mapping da inventare**. Irreversibile è la *forma*, non il contenuto |
+| **Il contratto pubblico non cambia di un byte** | `AgentResponse` porta `active` **e** `status` dalla TASK-007: `V8` inverte quale dei due è reale. JSON identico, `?active=` resta booleano |
+| **`INACTIVE`, non `ARCHIVED`** | Invariato da ADR-008 §2. TD-31 unifica la **forma** — enum chiuso più `CHECK` — non il vocabolario |
+| **Niente indice, niente terzo stato, `active` resta nella risposta** | Fuori scope, elencati in ADR-012 §7 |
+
+**La conseguenza che il piano non aveva previsto**: il dev seed **nomina** la colonna che `V8`
+elimina, quindi su un database nuovo sarebbe fallito — e modificarlo cambia il checksum, che
+Flyway valida, quindi ogni database già seminato (**compreso quello di questa macchina**) avrebbe
+rifiutato di avviarsi in `dev`. `V4` aveva evitato la stessa famiglia di collisione con un
+`DEFAULT`, e qui quella via non esiste: un `DEFAULT` non aiuta un `INSERT` che nomina una colonna
+scomparsa. Risolto con `repair()` in `DevSeedFlyway.apply` — solo metadati, e **da non copiare
+sullo stream dello schema**, dove il fallimento rumoroso è voluto (ADR-012 §5).
+
+**Verificato sui dati reali, non solo sui fixture.** Il database di sviluppo di questa macchina
+(a `V3`) è stato **clonato** per non toccarlo, e sul clone è stata avviata l'applicazione: `V1→V8`
+applicate, `active` assente, 3 agenti `t` → 3 `'ACTIVE'`, nessuna riga persa, checksum del seed
+riparato senza ri-eseguirlo, avvio riuscito (quindi Hibernate `validate` passa), e
+`GET /api/agents` che risponde `{"active":true,"status":"ACTIVE"}`. Clone eliminato; **il database
+reale è ancora a `V3`**.
+
+**Due mutazioni, entrambe rosse**, con albero verificato pulito prima e dopo ciascuna. La prima
+conta: un backfill che scrive `'ACTIVE'` incondizionatamente rende rosso il test — che è il motivo
+per cui quel test semina **entrambi** i valori, perché con soli agenti attivi sarebbe passato e la
+biiezione sarebbe stata affermata senza essere verificata. La seconda riproduce esattamente il
+fallimento che il database reale avrebbe avuto senza `repair()`.
+
+### TD-14 — aperto, e il blocco è un dato, non una decisione
+
+Quattro fonti verificate, tutte negative: **nessun remote** configurato né mai esistito (nessun
+`refs/remotes`, nessun `FETCH_HEAD`, `.git/config` senza sezione `[remote]`); **nessun URL, owner
+o nome di repository** in alcun file tracciato o non tracciato; **`gh` non installato**; **nessuna
+CI** presente in alcuna forma.
+
+Le sole occorrenze di «origin» nel repository sono la parola italiana **«origine»** nella prosa su
+CORS e sui lock, più `originalTag` in `Precondition.java`.
+
+**Manca esattamente l'URL del remote**, e non è deducibile. Non è stato scritto nemmeno un
+workflow CI: scegliere GitHub Actions presuppone GitHub, e la piattaforma è parte della
+destinazione mancante.
+
+Artefatti: `tasks/TASK-012/*`, `docs/adr/ADR-012-agent-lifecycle-unification.md`.
+
+## Task precedenti
 
 **TASK-011 — Registro del debito e documentazione operativa** (2026-09-19).
 
@@ -371,16 +443,17 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 
   | | Valore | Che cos'è | Come si verifica |
   |---|---|---|---|
-  | **Migration stream** (il codice) | **`V7`** | La migrazione più alta che esiste in `backend/src/main/resources/db/migration`. La prossima da scrivere è `V8` | `ls backend/src/main/resources/db/migration` |
+  | **Migration stream** (il codice) | **`V8`** | La migrazione più alta che esiste in `backend/src/main/resources/db/migration`. La prossima da scrivere è `V9` | `ls backend/src/main/resources/db/migration` |
   | **Live dev DB** (il volume locale) | **`V3`** | Le migrazioni realmente applicate al database di sviluppo `aicompany_postgres_data`. **Non ha mai visto `V4`, `V5`, `V6`, `V7`** | `docker exec aicompany-postgres psql -U aicompany -d aicompany -c "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank;"` |
 
   Sono **indipendenti per costruzione**: il primo è una proprietà del repository, il secondo di
-  un'installazione. Ogni installazione ha il proprio, e «schema a `V7`» **senza qualificatore
+  un'installazione. Ogni installazione ha il proprio, e «schema a `V8`» **senza qualificatore
   significa lo stream**, mai un database. Scoperto dal censimento di TASK-010, che trovò lo stato
-  che dichiarava `V6` per un database che era — ed è tuttora — a `V3`. Riverificato dopo i merge
-  del 2026-09-19: stream `V7`, dev DB `V1,V2,V3`.
+  che dichiarava `V6` per un database che era — ed è tuttora — a `V3`. Riverificato da TASK-012 il
+  2026-09-19: stream `V8`, dev DB `V1,V2,V3`.
 
-  Al primo avvio in profilo `dev` le quattro migrazioni mancanti si applicheranno in ordine.
+  Al primo avvio in profilo `dev` le **cinque** migrazioni mancanti si applicheranno in ordine.
+  **Verificato su un clone del database reale** da TASK-012, compresa `V8`, che è distruttiva.
   `V7` passerà, perché l'unica riga di `tasks` ha `status = 'OPEN'`. **Non serve
   `docker compose down -v`.** Hibernate in `validate`.
 - Tabelle: `agents`, `tasks`, `projects`. `tasks.project_id` nullable con FK senza `ON DELETE`.
@@ -388,11 +461,17 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   indice unico `agents_name_unique_idx` su `lower(name)`.
   Da `V5`: `version BIGINT NOT NULL DEFAULT 0` su **tutte e tre** le tabelle.
   Da `V6`: `tasks.agent_id` nullable con FK senza `ON DELETE`, e `tasks_agent_id_idx`.
+  Da `V8`: `agents.status VARCHAR(32) NOT NULL` con `agents_status_check`, e **`agents.active`
+  eliminata** — la **prima migrazione distruttiva** dello stream, autorizzata da una decisione
+  umana (ADR-012). Backfill biiettivo, zero righe perse.
   Da `V7`: `tasks_status_check CHECK (status IN ('OPEN','IN_PROGRESS','DONE'))` — la prima
   migrazione dello stream che **non è additiva per costruzione**, perché applica un vincolo a dati
   esistenti. Additiva su questi dati: zero righe lette, scritte o riscritte (`tasks/TASK-010/CENSUS.md`).
-- **Due registri di dominio** con ciclo di vita esplicito: `Project` (enum `ACTIVE`/`ARCHIVED`)
-  e `Agent` (`boolean active`, divergenza dichiarata → TD-31).
+- **Due registri di dominio** con ciclo di vita esplicito, e **dalla stessa forma** da `V8`:
+  `Project` (enum `ACTIVE`/`ARCHIVED`) e `Agent` (enum `ACTIVE`/`INACTIVE`), entrambi con un
+  `CHECK` nel database. La divergenza booleano/enum era **TD-31**, chiusa da TASK-012.
+  `AgentResponse` continua a esporre **sia** `active` **sia** `status`, e `?active=` resta un
+  booleano: è contratto pubblico, e `V8` ha invertito quale dei due è derivato, non la risposta.
 - **`Task.status` ha un vocabolario chiuso**: `OPEN`, `IN_PROGRESS`, `DONE` (`TaskStatus`), imposto
   in **tre** punti — vincolo Jakarta sulla request, `@Enumerated(STRING)` sull'entità,
   `tasks_status_check` nel database. **È un vocabolario, non una macchina a stati**: nessuna regola
@@ -416,8 +495,8 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   obbligatorio su ogni mutazione di risorsa esistente, confrontato **dentro la transazione, dopo
   il lock esclusivo, prima delle regole**. `@Version` è il contatore, non il rilevatore: nessun
   handler per `OptimisticLockException`, e non va aggiunto.
-- Test: **219** (erano 109 in `master`, 158 a fine PHASE 1, 201 dopo TASK-009, 216 dopo
-  TASK-010). `./mvnw -B clean test` → BUILD SUCCESS.
+- Test: **223** (erano 109 in `master`, 158 a fine PHASE 1, 201 dopo TASK-009, 216 dopo
+  TASK-010, 219 dopo TASK-011). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
 ## Stato Git (verificato il 2026-09-19, dopo i merge)
@@ -491,6 +570,7 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 - **ADR-010** — Assegnazione `Task` → `Agent`: le tre domande di dominio risolte senza copiarle dalla relazione col progetto (D1 stesso esito e argomento diverso, D2 coincide, **D3 diverge** — un agente disattivato non congela i suoi task); il lock graph **ridimostrato** su tre classi con **L5′** `tasks` → `projects` → `agents` e i tre archi assenti verificati; l'aciclicità come **conseguenza** di ADR-006 §1 e D3; una sola versione, quella del task; `V6` additiva. *Accettata e implementata*.
 - **ADR-009** — Concorrenza ottimistica nel contratto HTTP: due meccanismi distinti e complementari (lock = consistenza interna, `ETag`/`If-Match` = intento stantio); `@Version` è un contatore persistente e **non** il rilevatore, perché dopo l'attesa su `PESSIMISTIC_WRITE` l'entità è già alla versione nuova; protocollo **P0–P4**; `If-Match` obbligatorio su tutte e tre le risorse; `428`/`412`/`400`; `GET /api/tasks/{id}` introdotto come percorso canonico dell'ETag; `V5` additiva. **Completa ADR-006 §8.** *Accettata e implementata*.
 - **ADR-011** — Vocabolario chiuso di `Task.status`: il censimento **prima** della decisione (cinque fonti, un solo valore, zero righe da trasformare); `OPEN`/`IN_PROGRESS`/`DONE`, con gli esclusi dichiarati per l'argomento di ADR-004 §2; **un vocabolario non è una macchina a stati** e nessuna transizione viene introdotta; il campo della request resta `String` perché tipizzarlo come enum produrrebbe un `malformed-request` che afferma il falso e perde il nome del campo; confronto **case-sensitive**, scelta opposta a ADR-008 sui nomi e per un criterio dichiarato; **tre guardie** invece delle due di ADR-004 §2; `V7` additiva sui dati ma non per costruzione, con il fallimento su valori fuori vocabolario come rischio **dichiarato ed eseguito**. **Non tocca ADR-007.** *Accettata e implementata*.
+- **ADR-012** — Unificazione del ciclo di vita di `Agent`: **supera ADR-008 §2**, che aveva *sospeso* il cambiamento in attesa di una decisione umana, arrivata il 2026-09-19; backfill **biiettivo** (`TRUE`↔`ACTIVE`, `FALSE`↔`INACTIVE`, nessun terzo caso perché `active` è `NOT NULL` da `V1`), quindi irreversibile è la forma e non il contenuto; **il contratto pubblico non cambia di un byte** — `AgentResponse` portava già entrambi i campi e `V8` inverte quale è derivato; `INACTIVE` e non `ARCHIVED`, perché TD-31 unifica la *forma* e non il vocabolario; `repair()` sul solo stream del seed, con le tre condizioni che lo rendono accettabile lì e in nessun altro posto; fuori scope dichiarati: togliere `active` dalla risposta, rinominare `?active=`, indice, terzo stato. *Accettata e implementata*.
 - **ADR-006** — Coerenza archiviazione → task **derivata** (nessuna scrittura sui figli, `restore` inverso per costruzione), congelamento in scrittura con letture aperte, `PUT` idempotente `200` no-op, protocollo di lock **L0–L7** con ordine globale `tasks` → `projects`, nessuna migrazione, contratto invariato, nessun `503`. *Accettata e **implementata**.*
 
 ## Prossimo passo autonomo
@@ -541,13 +621,15 @@ Il merge di PHASE 1 in `master` resta il gesto con cui un umano accetta il lavor
 **TASK-011 non chiude e non apre nulla**: disambigua i due spazi (`docs/DEBT_REGISTRY.md`) e
 corregge `docs/RUNNING.md`. Registrata e **non fatta**: la rivalutazione degli otto debiti che
 esistono solo nell'audit.
+**Chiuso da TASK-012**: **TD-31**. **TASK-012 non apre nulla**, e lascia **TD-14 aperto e
+bloccato** su un dato mancante (`tasks/TASK-012/EVIDENCE_TD14.md`).
 
 ### Alto valore
 
 | ID | Contenuto |
 |---|---|
-| **TD-31** | *(nuovo)* `Agent` esprime il ciclo di vita con un booleano, `Project` con un enum chiuso. Unificarli richiede di **eliminare una colonna**: migrazione irreversibile, dietro una decisione umana. Nel frattempo il contratto pubblico è già uniforme, perché `status` è derivato |
-| **TD-14** | Nessuna CI. Con 219 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
+| **TD-31** | **CHIUSO** il 2026-09-19 da TASK-012. `V8` elimina `agents.active`; decisione umana esplicita, backfill biiettivo, contratto pubblico invariato. ADR-012 |
+| **TD-14** | Nessuna CI. Con 223 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task. **Bloccato su un dato, non su una decisione**: serve l'URL del repository remoto, che TASK-012 ha verificato non esistere in alcun file, configurazione o ref. `tasks/TASK-012/EVIDENCE_TD14.md` |
 
 ### Nuovi (TASK-010)
 
@@ -589,7 +671,7 @@ da applicare. `docs/RUNNING.md` non documenta `/api/projects` né gli endpoint d
 
 ## Failure aperti
 
-**Nessuno.** 219/219 verdi (`./mvnw -B clean test`, 2026-09-19).
+**Nessuno.** 223/223 verdi (`./mvnw -B clean test`, 2026-09-19).
 
 ## Domande di contratto aperte
 
@@ -628,8 +710,8 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 - Voice Interaction Layer, Payments / quota monitoring, 3D Omniverse integration
 
 ## Immediate goal
-**Raggiunto e accettato.** PHASE 1 e PHASE 2 sono in `master` (`6dc5989`), con 219 test verdi e
-nessun failure aperto.
+**Raggiunto e accettato.** PHASE 1 e PHASE 2 sono in `master`, e **TASK-012** vi ha aggiunto la
+chiusura di TD-31: 223 test verdi, schema `V8`, nessun failure aperto.
 
 PHASE 3 **non è iniziata** e la sua prima decisione non è stata presa. `master` è adesso la linea
 principale del progetto: da qui in avanti il gate del charter §8 si applica alla fase successiva,

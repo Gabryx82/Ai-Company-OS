@@ -33,7 +33,7 @@ Sono queste, e sono tutte. Ogni altro identificatore o coincide (§3) o esiste i
 
 | ID | **Audit** (TASK-000) | **Vivo** (`PROJECT_STATE.md`) |
 |---|---|---|
-| **TD-14** | Build non riproducibile offline: `./mvnw -o test` fallisce per plugin assenti dalla cache | **Nessuna CI.** Aperto. Fuori da PHASE 2 perché una CI reale richiede un remote, che è **hard stop #4** |
+| **TD-14** | Build non riproducibile offline: `./mvnw -o test` fallisce per plugin assenti dalla cache. **Non rivalutato** | **Nessuna CI. APERTO, e bloccato su un dato mancante**: TASK-012 ha verificato che il repository non contiene alcun URL, owner o nome di repository remoto, che nessun remote è mai stato configurato e che `gh` non è installato. Serve l'URL del remote. Evidenza e comandi: `tasks/TASK-012/EVIDENCE_TD14.md` |
 | **TD-19** | Metadati `pom.xml` vuoti | Componente del ciclo di vita del progetto. **Chiuso da TASK-004** |
 | **TD-20** | Igiene Git | Le eccezioni che Spring solleva **prima** del nostro codice non entravano nel contratto d'errore. **Chiuso da TASK-005** |
 | **TD-21** | `System.out.println` invece di logging | **Chiuso da TASK-005**, dentro la normalizzazione del contratto d'errore |
@@ -66,7 +66,7 @@ problema non esista.
 
 Debiti che TASK-000 registrò e che la numerazione viva **non ha mai ri-assegnato**. Diversi sono
 con ogni probabilità risolti — H2 è stato rimosso, Flyway possiede lo schema, la validazione
-esiste, i DTO esistono, i test sono 219 — ma **TASK-011 non li ha rivalutati**, e dichiararli
+esiste, i DTO esistono, i test sono 223 — ma **TASK-011 non li ha rivalutati**, e dichiararli
 chiusi senza verificarli sarebbe chiudere un debito perché il codice sembra diverso, che è
 precisamente ciò che il charter vieta.
 
@@ -101,7 +101,7 @@ ferma a `TD-22`.
 | **TD-28** | `PUT /api/projects/{id}` esposto alla sovrascrittura con dati stantii | chiuso | TASK-008 |
 | **TD-29** | Forma della risposta per gli errori di locking | chiuso | TASK-005 |
 | **TD-30** | Due riassegnazioni concorrenti dello stesso task: last-write-wins | chiuso | TASK-008 |
-| **TD-31** | `Agent` usa un booleano dove `Project` usa un enum chiuso. Unificarli elimina una colonna → **hard stop #3** | **aperto** | TASK-007 |
+| **TD-31** | `Agent` usava un booleano dove `Project` usa un enum chiuso. Unificarli eliminava una colonna → era **hard stop #3** | **CHIUSO** 2026-09-19 da **TASK-012**: decisione umana esplicita, `V8`, ADR-012. Backfill biiettivo, contratto pubblico invariato | TASK-007 |
 | **TD-32** | L'entity-tag deriva dalla versione di riga, non dai byte della rappresentazione | **aperto**, MINOR | TASK-008 |
 | **TD-33** | I listati non portano ETag: mutare N risorse costa N letture | **aperto**, MINOR | TASK-008 |
 | **TD-34** | Nessun modo di chiedere «i task fermi su agenti inattivi» | **aperto**, MINOR | TASK-009 |

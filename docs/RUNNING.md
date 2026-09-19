@@ -142,6 +142,11 @@ Il nome è **unico senza distinzione di maiuscole**, imposto dal database. Un ag
 non riceve lavoro nuovo (`409`), ma **le task che già tiene restano pienamente riassegnabili** —
 è deliberato (ADR-010 D3): è proprio il momento in cui bisogna poterle dare a qualcun altro.
 
+La risposta porta **due** campi di ciclo di vita, `active` (booleano) e `status`
+(`ACTIVE`/`INACTIVE`), e continua a portarli entrambi. Da `V8` quello memorizzato è `status` e
+`active` è derivato — prima era l'inverso — ma **il JSON è identico** e il filtro resta
+`?active=true|false`. ADR-012 §4.
+
 ### Orchestrator
 
 | Endpoint | Descrizione |
@@ -214,16 +219,18 @@ Non vanno confusi, ed è un equivoco che è già costato una diagnosi sbagliata:
 | **Migration stream** | La migrazione più alta che **esiste nel repository**. Proprietà del codice | `ls backend/src/main/resources/db/migration` |
 | **Versione del tuo database** | Ciò che è stato realmente **applicato** a quell'installazione. Proprietà del volume | `docker exec aicompany-postgres psql -U aicompany -d aicompany -c "SELECT version, script FROM flyway_schema_history WHERE success ORDER BY installed_rank;"` |
 
-Al 2026-09-19: lo **stream è a `V7`**; il **database di sviluppo locale è a `V3`** e non ha mai
-visto `V4`…`V7`. Non è un difetto — quel database non viene avviato da un po'. Al primo avvio in
-profilo `dev` le quattro migrazioni si applicheranno in ordine, e `V7` passerà perché l'unica riga
-di `tasks` ha `status = 'OPEN'`. **Non serve `docker compose down -v`.**
+Al 2026-09-19: lo **stream è a `V8`**; il **database di sviluppo locale è a `V3`** e non ha mai
+visto `V4`…`V8`. Non è un difetto — quel database non viene avviato da un po'. Al primo avvio in
+profilo `dev` le cinque migrazioni si applicheranno in ordine. **Verificato su un clone di quel
+database**: `V7` passa perché l'unica riga di `tasks` ha `status = 'OPEN'`, e `V8` converte i tre
+agenti da `active = TRUE` a `status = 'ACTIVE'` senza perdere righe. **Non serve
+`docker compose down -v`.**
 
-Quando un documento dice «schema a `V7`» **senza qualificatore, intende lo stream**, mai un
+Quando un documento dice «schema a `V8`» **senza qualificatore, intende lo stream**, mai un
 database.
 
 **La prossima migrazione di schema prende il numero successivo alla testa dello stream, e va in
-`db/migration`.** Oggi la testa è **`V7`**, quindi la prossima è `V8__....sql`. I numeri del seed
+`db/migration`.** Oggi la testa è **`V8`**, quindi la prossima è `V9__....sql`. I numeri del seed
 sono indipendenti e non vanno considerati.
 
 Per leggere la testa invece di fidarsi di questo paragrafo:
@@ -247,6 +254,7 @@ Le migrazioni applicate finora:
 | `V5` | `version` su tutte e tre le tabelle (ADR-009) |
 | `V6` | `tasks.agent_id` + FK + indice |
 | `V7` | `tasks_status_check`: vocabolario chiuso di `Task.status` (ADR-011) |
+| `V8` | `agents.status` + `agents_status_check`, e **`agents.active` eliminata** (ADR-012). **La prima migrazione distruttiva dello stream**: un database che la esegue non torna a `V7` eseguendo SQL al contrario |
 
 Hibernate gira in `validate`: se le entità e le migrazioni divergono, **l'avvio fallisce** con `Schema validation: missing column ...`. È il comportamento voluto — la correzione è una nuova migrazione, mai una modifica automatica dello schema.
 
