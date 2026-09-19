@@ -1,5 +1,29 @@
 # TECHNICAL_DEBT — Debito tecnico e rischi (TASK-000)
 
+> ## ⚠️ Gli identificatori di questo documento non sono quelli vivi
+>
+> Questo file è uno **snapshot datato**: la fotografia che TASK-000 scattò del repository
+> iniziale. I suoi `TD-NN` appartengono a **quello** spazio di identificatori.
+>
+> La numerazione **viva** — quella che ADR, artefatti di task e messaggi di commit citano — sta
+> in `.company-os/PROJECT_STATE.md`, ed è **autoritativa**. Le due si sovrappongono, e **cinque
+> identificatori significano cose diverse nei due spazi**:
+>
+> | ID | Qui significa | Nel registro vivo significa |
+> |---|---|---|
+> | `TD-14` | Build non riproducibile offline | Nessuna CI |
+> | `TD-19` | Metadati `pom.xml` vuoti | Componente del ciclo di vita (chiuso) |
+> | `TD-20` | Igiene Git | Eccezioni sollevate da Spring prima del nostro codice (chiuso) |
+> | `TD-21` | `System.out.println` invece di logging | (chiuso da TASK-005) |
+> | `TD-22` | Configurazione porta e ambiente assenti | Test incrementale `V1 → V2` (chiuso) |
+>
+> **Prima di chiudere o citare un `TD-NN`, leggere `docs/DEBT_REGISTRY.md`**, che mappa i due
+> spazi per intero. Senza quella mappa è possibile chiudere il debito sbagliato credendo di
+> chiudere quello giusto.
+>
+> **Questo file non va rinumerato**: riscriverne gli identificatori significherebbe riscrivere
+> ciò che TASK-000 osservò.
+
 Severità: **CRITICO** (blocca l'evoluzione o causa perdita dati) · **ALTO** (va risolto in Fase 1) · **MEDIO** (va risolto prima della Fase 3) · **BASSO** (igiene).
 
 ## 1. CRITICO
