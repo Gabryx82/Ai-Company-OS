@@ -346,9 +346,12 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 ## Stato Git (verificato il 2026-09-19)
 
 - **`master`**: fermo a `d5ff121`. **Gate umano finale, nessun merge autonomo.**
-- **Integration branch di PHASE 2**: `autonomous/phase-2-assignment`, HEAD **`81d350d`**, creato
-  da `autonomous/phase-1-foundations` (`0a35ac0`). Contiene il piano di fase, TASK-008, TASK-009
-  e TASK-010.
+- **Integration branch di PHASE 2**: `autonomous/phase-2-assignment`, creato da
+  `autonomous/phase-1-foundations` (`0a35ac0`). Contiene il piano di fase, TASK-008, TASK-009 e
+  TASK-010. **HEAD: l'ultimo commit di questo branch** — deliberatamente non scritto come hash,
+  perché il commit che aggiorna questa sezione sposta l'HEAD che la sezione dichiara, e TASK-004
+  dovette correggerlo una volta (`1ddeee3`). L'ultimo commit di *lavoro* di TASK-010 è `81d350d`;
+  quelli successivi su questo branch sono aggiornamenti di stato.
 - **Integration branch di PHASE 1**: `autonomous/phase-1-foundations`, HEAD **`0a35ac0`**, fermo.
 - Branch di lavoro integrati in fast-forward: `task-004-archival-consistency`,
   `task-005-uniform-error-contract`, `task-006-migration-test-coverage`,
