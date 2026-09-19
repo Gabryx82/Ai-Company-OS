@@ -7,6 +7,8 @@ import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableExcept
 import com.aicompany.backend.task.exception.InactiveAgentCannotReceiveTasksException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -32,8 +34,30 @@ public class Task {
     @Column(length = 5000)
     private String description;
 
+    /**
+     * The lifecycle value of this task, from the closed vocabulary of
+     * {@link TaskStatus}.
+     *
+     * <p>Typed rather than free text since TASK-010. It used to be a
+     * {@code String} the database did not constrain, which meant
+     * {@code "banana"} was a legal status and nothing in the system could rely
+     * on the column meaning anything (ADR-011 §1).
+     *
+     * <p><strong>{@code STRING} and never {@code ORDINAL}.</strong> The
+     * database check constraint compares against the names, so the column has to
+     * hold them; and an ordinal would make reordering the members below rewrite
+     * the meaning of every existing row without touching one.
+     *
+     * <p>There is no setter and no transition method, and that absence is the
+     * decision of ADR-011 §3: this task closed the vocabulary, not the lifecycle.
+     * A value is chosen when the task is created and there is no path that
+     * changes it afterwards (TD-37). When that path is added, the transition
+     * rules are the question it has to answer, and they belong here next to the
+     * state -- the way the project and agent lifecycles already do.
+     */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private TaskStatus status;
 
     @Column(nullable = false)
     private String priority;
@@ -113,7 +137,7 @@ public class Task {
 
     public Task(String title,
                 String description,
-                String status,
+                TaskStatus status,
                 String priority) {
 
         this.title = title;
@@ -276,7 +300,7 @@ public class Task {
         return description;
     }
 
-    public String getStatus() {
+    public TaskStatus getStatus() {
         return status;
     }
 

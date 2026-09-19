@@ -1,0 +1,53 @@
+-- The closed vocabulary of tasks.status, owned by the database and not only by
+-- the enum. ADR-011.
+--
+-- This is the twin of projects_status_check, which V2 gave projects on the day
+-- that table was created, with the comment that still applies word for word:
+-- "The allowed set is closed and owned by the database, not only by the enum: a
+-- row written outside the application cannot introduce a status the domain does
+-- not know how to interpret." tasks.status has carried VARCHAR(255) with no
+-- constraint since V1, and nothing has ever narrowed it.
+--
+-- WHY THIS IS SAFE TO APPLY, AND HOW THAT WAS ESTABLISHED
+--
+-- Unlike V3, V4, V5 and V6, this migration is not additive by construction: it
+-- applies a constraint to data that already exists, and PostgreSQL validates
+-- every existing row when it is added. On a table holding a value outside the
+-- set, this migration FAILS.
+--
+-- So the values were counted before it was written, not assumed
+-- (tasks/TASK-010/CENSUS.md). Five sources -- the schema, the dev seed, every
+-- fixture and test, the live development database, and the whole git history of
+-- every branch -- and all five hold exactly one value: OPEN. Zero rows need to
+-- change, and OPEN is in the set below with the same spelling it always had.
+-- The vocabulary was fitted to the data; the data was not rewritten to fit the
+-- vocabulary.
+--
+-- The failure mode above is therefore a declared risk and not a defect, and it
+-- is the precedent V4 set for agents_name_unique_idx in the same words: a
+-- migration that stops is the conversation that makes them. The alternative
+-- would be to silently rewrite values it does not recognise -- inventing a
+-- mapping -- and whoever is in that position needs to make that choice
+-- themselves.
+--
+-- Case matters. 'open' is outside this set exactly as much as 'banana' is, and
+-- that is a decision rather than an oversight: accepting both spellings would
+-- require choosing one to store, which is a normalisation rule nobody asked
+-- for. ADR-011 section 5, and note it is the opposite of the case-insensitive
+-- uniqueness V4 gave agent names -- a name is typed by a person, a status is
+-- sent by a program.
+--
+-- A CHECK constraint covers UPDATE as well as INSERT, which is the half an
+-- application-level validator can never cover: an import, a maintenance script
+-- or a correction made by hand in psql reaches this table without passing
+-- through one.
+--
+-- No column type change. Narrowing VARCHAR(255) is not metadata-only on a
+-- populated table and buys nothing the constraint does not already give.
+--
+-- The set below is written out by hand because SQL cannot read the enum. That
+-- duplication is the one place the two guards can drift apart, so a test asserts
+-- they declare the same values.
+ALTER TABLE tasks
+    ADD CONSTRAINT tasks_status_check
+    CHECK (status IN ('OPEN', 'IN_PROGRESS', 'DONE'));

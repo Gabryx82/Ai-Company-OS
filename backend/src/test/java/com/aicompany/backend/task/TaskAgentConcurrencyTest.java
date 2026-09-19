@@ -13,6 +13,7 @@ import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
 import com.aicompany.backend.task.exception.InactiveAgentCannotReceiveTasksException;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.AfterEach;
@@ -143,7 +144,7 @@ class TaskAgentConcurrencyTest extends AbstractPostgresTest {
         Long projectId = projectRepository.saveAndFlush(new Project("Company OS", null)).getId();
         Long agentId = agentRepository.saveAndFlush(new Agent("Backend", "Engineer", "jvm")).getId();
         Long taskId = taskRepository.saveAndFlush(
-                new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
+                new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH")).getId();
 
         Precondition bothRead = taskPrecondition(taskId);
 
@@ -232,7 +233,7 @@ class TaskAgentConcurrencyTest extends AbstractPostgresTest {
 
         Long agentId = agentRepository.saveAndFlush(new Agent("Backend", "Engineer", "jvm")).getId();
         Long taskId = taskRepository.saveAndFlush(
-                new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
+                new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH")).getId();
 
         Precondition taskAsRead = taskPrecondition(taskId);
         Precondition agentAsRead = agentPrecondition(agentId);
@@ -338,7 +339,7 @@ class TaskAgentConcurrencyTest extends AbstractPostgresTest {
         Long projectId = projectRepository.saveAndFlush(new Project("Company OS", null)).getId();
         Long agentId = agentRepository.saveAndFlush(new Agent("Backend", "Engineer", "jvm")).getId();
         Long taskId = taskRepository.saveAndFlush(
-                new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
+                new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH")).getId();
 
         newTransaction().execute(status ->
                 taskService.assignToProject(taskId, projectId, taskPrecondition(taskId)));

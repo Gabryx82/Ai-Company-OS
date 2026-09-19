@@ -5,6 +5,7 @@ import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.AfterEach;
@@ -121,7 +122,7 @@ class PreconditionConcurrencyTest extends AbstractPostgresTest {
         Long destinationA = projectRepository.saveAndFlush(new Project("Planner", null)).getId();
         Long destinationB = projectRepository.saveAndFlush(new Project("Gateway", null)).getId();
         Long taskId = taskRepository.saveAndFlush(
-                new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
+                new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH")).getId();
 
         // One read, two callers. Both tags are valid at this instant, and exactly
         // one of them is going to stop being valid without its holder knowing.

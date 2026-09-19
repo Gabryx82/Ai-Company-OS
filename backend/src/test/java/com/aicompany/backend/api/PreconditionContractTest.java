@@ -6,6 +6,7 @@ import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -604,7 +605,7 @@ class PreconditionContractTest extends AbstractPostgresTest {
     }
 
     private Long task(String title) {
-        return taskRepository.saveAndFlush(new Task(title, null, "OPEN", "HIGH")).getId();
+        return taskRepository.saveAndFlush(new Task(title, null, TaskStatus.OPEN, "HIGH")).getId();
     }
 
     private Long project(String name) {

@@ -7,6 +7,7 @@ import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.project.service.ProjectService;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.Test;
@@ -68,7 +69,7 @@ class ProjectLockProtocolTest {
         Project source = project(7L, "Company OS");
         Project destination = project(3L, "Planner");
 
-        Task task = new Task("Wire the planner", null, "OPEN", "HIGH");
+        Task task = new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH");
         task.assignTo(source);
         ReflectionTestUtils.setField(task, "id", 1L);
 
@@ -100,7 +101,7 @@ class ProjectLockProtocolTest {
         Project source = project(7L, "Company OS");
         Project destination = project(3L, "Planner");
 
-        Task task = new Task("Wire the planner", null, "OPEN", "HIGH");
+        Task task = new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH");
         task.assignTo(source);
         ReflectionTestUtils.setField(task, "id", 1L);
 
@@ -126,7 +127,7 @@ class ProjectLockProtocolTest {
 
         Project project = project(7L, "Company OS");
 
-        Task task = new Task("Wire the planner", null, "OPEN", "HIGH");
+        Task task = new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH");
         task.assignTo(project);
         ReflectionTestUtils.setField(task, "id", 1L);
 

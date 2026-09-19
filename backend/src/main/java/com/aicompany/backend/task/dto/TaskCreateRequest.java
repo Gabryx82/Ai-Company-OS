@@ -1,5 +1,6 @@
 package com.aicompany.backend.task.dto;
 
+import com.aicompany.backend.task.model.TaskStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -10,9 +11,17 @@ import jakarta.validation.constraints.Size;
  * <p>The identifier is deliberately absent: it is assigned by the database, so a
  * client cannot influence it through the request body.
  *
- * <p>{@code status} and {@code priority} are required free-form strings. They are
- * not enums yet: defining the allowed values and their transitions is a domain
- * decision left to a later task.
+ * <p>{@code status} must be one of {@link com.aicompany.backend.task.model.TaskStatus},
+ * and it stays declared here as a {@code String} on purpose. Typing it as the
+ * enum would turn an unknown value into an unreadable-body 400 that names no
+ * field and asserts something untrue about the request; the constraint keeps it
+ * a validation failure with {@code errors.status}. The reasoning is in
+ * {@link InTaskStatusVocabulary} and ADR-011 §4.
+ *
+ * <p>{@code priority} is still a required free-form string. TD-12 covered both,
+ * and TASK-010 deliberately closed only {@code status}: the other half is
+ * TD-36, left open rather than folded in because it is an adjacent
+ * normalisation and not the same one.
  *
  * <p>{@code agentId} is optional in the same way, and for the same reason
  * ADR-005 gave for the project: a rejected agent means no task at all, so a
@@ -35,7 +44,7 @@ public record TaskCreateRequest(
         String description,
 
         @NotBlank(message = "status is required")
-        @Size(max = 255, message = "status must be at most 255 characters")
+        @InTaskStatusVocabulary
         String status,
 
         @NotBlank(message = "priority is required")
@@ -47,4 +56,25 @@ public record TaskCreateRequest(
         @Positive(message = "agentId must be a positive identifier")
         Long agentId
 ) {
+
+    /**
+     * The status as a domain value.
+     *
+     * <p>The conversion lives here, next to the field and the constraint that
+     * makes it safe, rather than in the controller or the service. It is the same
+     * division {@code Precondition.fromHeader} draws: the wire format is
+     * interpreted at the edge, and nothing below the edge sees a string it has to
+     * trust.
+     *
+     * <p>It is safe because {@link InTaskStatusVocabulary} has already run --
+     * {@code @Valid} on the controller parameter is what sequences the two. That
+     * is a real dependency and not a comfortable assumption: remove the
+     * constraint and this throws {@link IllegalArgumentException}, which the
+     * advice reports as a 500, and {@code TaskStatusVocabularyTest} turns red
+     * expecting a 400. Verified by mutation rather than argued
+     * ({@code tasks/TASK-010/ARTIFACT.md} §5).
+     */
+    public TaskStatus statusValue() {
+        return TaskStatus.valueOf(status);
+    }
 }

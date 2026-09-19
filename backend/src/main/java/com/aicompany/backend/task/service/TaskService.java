@@ -11,6 +11,7 @@ import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.task.dto.TaskResponse;
 import com.aicompany.backend.task.exception.TaskNotFoundException;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,7 +111,7 @@ public class TaskService {
      */
     public Versioned<TaskResponse> create(String title,
                                           String description,
-                                          String status,
+                                          TaskStatus status,
                                           String priority,
                                           Long projectId,
                                           Long agentId) {

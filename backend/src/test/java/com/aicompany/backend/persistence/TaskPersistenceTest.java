@@ -2,6 +2,7 @@ package com.aicompany.backend.persistence;
 
 import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,22 +27,22 @@ class TaskPersistenceTest extends AbstractPostgresTest {
     @Test
     void taskSurvivesAWriteAndReadCycle() {
 
-        Task saved = repository.save(new Task("Persisted task", "with a description", "OPEN", "HIGH"));
+        Task saved = repository.save(new Task("Persisted task", "with a description", TaskStatus.OPEN, "HIGH"));
         assertThat(saved.getId()).isNotNull();
 
         Task reloaded = repository.findById(saved.getId()).orElseThrow();
 
         assertThat(reloaded.getTitle()).isEqualTo("Persisted task");
         assertThat(reloaded.getDescription()).isEqualTo("with a description");
-        assertThat(reloaded.getStatus()).isEqualTo("OPEN");
+        assertThat(reloaded.getStatus()).isEqualTo(TaskStatus.OPEN);
         assertThat(reloaded.getPriority()).isEqualTo("HIGH");
     }
 
     @Test
     void identifiersAreAssignedByTheDatabase() {
 
-        Task first = repository.save(new Task("First", null, "OPEN", "LOW"));
-        Task second = repository.save(new Task("Second", null, "OPEN", "LOW"));
+        Task first = repository.save(new Task("First", null, TaskStatus.OPEN, "LOW"));
+        Task second = repository.save(new Task("Second", null, TaskStatus.OPEN, "LOW"));
 
         assertThat(first.getId()).isNotNull();
         assertThat(second.getId()).isNotNull().isNotEqualTo(first.getId());

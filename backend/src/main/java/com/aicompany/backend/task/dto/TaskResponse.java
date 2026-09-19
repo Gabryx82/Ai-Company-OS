@@ -1,6 +1,7 @@
 package com.aicompany.backend.task.dto;
 
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 
 /**
  * Output contract for a task, so the JPA entity is not the public API shape.
@@ -18,6 +19,11 @@ import com.aicompany.backend.task.model.Task;
  * is a question {@code GET /api/agents/{id}} already answers. Publishing a field
  * is irreversible; not publishing one is not (ADR-006 §3).
  *
+ * <p>{@code status} is the enum rather than a string, and the JSON is unchanged
+ * by that: Jackson writes an enum as its name, which is exactly the text the
+ * column holds and the text clients already receive. What changes is that the
+ * shape can no longer carry a value outside the vocabulary (ADR-011 §6).
+ *
  * <p>Built by the service, inside the transaction, because reading
  * {@code projectId} initialises a lazy reference.
  */
@@ -25,7 +31,7 @@ public record TaskResponse(
         Long id,
         String title,
         String description,
-        String status,
+        TaskStatus status,
         String priority,
         Long projectId,
         Long agentId

@@ -1,6 +1,7 @@
 package com.aicompany.backend.persistence;
 
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.FlywayException;
 import org.flywaydb.core.api.MigrationInfo;
 import org.flywaydb.core.api.MigrationVersion;
 import org.flywaydb.core.api.output.MigrateResult;
@@ -363,6 +364,111 @@ class MigrationStreamTest {
                 "INSERT INTO \"" + schema + "\".agents (name, role, specialization, active) "
                         + "VALUES (?, ?, ?, TRUE)", "WRITTEN BEFORE V4", "Engineer", "x"))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    /**
+     * TASK-010, invariants I-5 and I-6 -- the real V6 to V7 upgrade on a
+     * populated database.
+     *
+     * <p>V7 is the first migration in this stream that is <strong>not additive by
+     * construction</strong>. Every one before it added a column, a table or an
+     * index; this one applies a constraint to rows that already exist, and
+     * PostgreSQL validates every one of them as it does so. That makes the
+     * question "does it apply cleanly to a database that is already in use"
+     * something to answer rather than assume.
+     *
+     * <p>{@code everyConsecutiveUpgradePreservesWhatWasAlreadyThere} already
+     * covers the row and table survival of this step, and covers it without
+     * anybody adding a case -- it writes an {@code OPEN} task at V6 before
+     * migrating to V7, which is exactly this scenario. What it cannot tell is
+     * whether the constraint the migration creates is real afterwards, which is
+     * specific to V7 and therefore asserted here.
+     */
+    @Test
+    void taskStatusVocabularyIsAppliedToAPopulatedV6Database() {
+
+        String schema = "task010_v6_to_v7";
+
+        // A database at V6, with a task that predates the constraint -- and where
+        // a value outside the vocabulary is still perfectly legal.
+        schemaFlywayUpTo(schema, "6").migrate();
+        assertThat(appliedSchemaVersions(schema)).doesNotContain("7");
+
+        DevSeedFlyway.apply(dataSource(), schema);
+        jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, status, priority) "
+                + "VALUES (?, ?, ?)", "written before V7", "OPEN", "HIGH");
+
+        Map<String, Integer> before = rowCountsIn(schema);
+
+        MigrateResult toV7 = schemaFlywayUpTo(schema, "7").migrate();
+
+        assertThat(toV7.success).isTrue();
+        assertThat(toV7.migrationsExecuted).isEqualTo(1);
+
+        // Nothing was rewritten to make the constraint fit. The row is there and
+        // says what it said, with the spelling it had.
+        assertThat(rowCountsIn(schema)).isEqualTo(before);
+        assertThat(taskTitles(schema)).contains("written before V7");
+        assertThat(jdbc().queryForObject(
+                "SELECT status FROM \"" + schema + "\".tasks WHERE title = ?",
+                String.class, "written before V7"))
+                .isEqualTo("OPEN");
+
+        // And the constraint is real from here on, on both the paths a check
+        // covers. Asserting only the insert would leave the row reachable in one
+        // UPDATE while this test still passed.
+        assertThatThrownBy(() -> jdbc().update(
+                "INSERT INTO \"" + schema + "\".tasks (title, status, priority) VALUES (?, ?, ?)",
+                "written after V7", "banana", "HIGH"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> jdbc().update(
+                "UPDATE \"" + schema + "\".tasks SET status = ? WHERE title = ?",
+                "banana", "written before V7"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    /**
+     * TASK-010, invariant I-6 -- the declared risk of V7, made executable.
+     *
+     * <p>On a database holding a status outside the vocabulary, this migration
+     * <strong>fails</strong>. That is the intended behaviour and not a defect,
+     * and it is the precedent V4 set for {@code agents_name_unique_idx}: a
+     * migration that stops is the conversation that makes somebody decide. The
+     * alternative would be to rewrite values it does not recognise, in silence,
+     * which means inventing a mapping on behalf of whoever wrote them.
+     *
+     * <p>The census that preceded this task found no such value anywhere
+     * ({@code tasks/TASK-010/CENSUS.md}), so this case cannot arise from this
+     * repository's own data. It is written because the risk was declared, and a
+     * declared risk that nothing exercises is a sentence in a comment.
+     *
+     * <p>The second half matters as much as the first: the failed migration must
+     * leave the offending row <em>intact</em>. A migration that stopped after
+     * destroying what it could not classify would be worse than one that
+     * succeeded.
+     */
+    @Test
+    void taskStatusVocabularyStopsOnADatabaseThatHoldsAValueOutsideIt() {
+
+        String schema = "task010_v7_refuses";
+
+        schemaFlywayUpTo(schema, "6").migrate();
+
+        jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, status, priority) "
+                + "VALUES (?, ?, ?)", "status nobody declared", "banana", "HIGH");
+
+        assertThatThrownBy(() -> schemaFlywayUpTo(schema, "7").migrate())
+                .isInstanceOf(FlywayException.class);
+
+        // V7 did not record itself as applied ...
+        assertThat(appliedSchemaVersions(schema)).doesNotContain("7");
+
+        // ... and the row it could not classify is untouched.
+        assertThat(jdbc().queryForObject(
+                "SELECT status FROM \"" + schema + "\".tasks WHERE title = ?",
+                String.class, "status nobody declared"))
+                .isEqualTo("banana");
     }
 
     /**

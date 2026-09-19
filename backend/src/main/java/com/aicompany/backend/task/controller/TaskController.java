@@ -65,7 +65,7 @@ public class TaskController {
         Versioned<TaskResponse> created = service.create(
                 request.title(),
                 request.description(),
-                request.status(),
+                request.statusValue(),
                 request.priority(),
                 request.projectId(),
                 request.agentId());

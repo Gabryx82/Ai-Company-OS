@@ -4,6 +4,7 @@ import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -150,7 +151,7 @@ class ApiErrorContractTest extends AbstractPostgresTest {
 
         Long active = activeProject("Company OS");
         Long archived = archivedProject("Retired");
-        Long taskId = taskRepository.saveAndFlush(new Task("t", null, "OPEN", "HIGH")).getId();
+        Long taskId = taskRepository.saveAndFlush(new Task("t", null, TaskStatus.OPEN, "HIGH")).getId();
 
         problem(mockMvc.perform(get("/api/projects/424242")), 404, "project-not-found");
 

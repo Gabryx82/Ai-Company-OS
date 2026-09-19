@@ -11,6 +11,7 @@ import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.AfterEach;
@@ -148,7 +149,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
     void anArchiveCannotCommitBetweenAnAssignmentsDecisionAndItsCommit() throws Exception {
 
         Long projectId = projectRepository.saveAndFlush(new Project("Company OS", null)).getId();
-        Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
+        Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH")).getId();
 
         // Both callers read before they act, which is what the protocol asks of a
         // client and what makes the interleaving below a race between two informed
@@ -245,7 +246,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
     void anAssignmentThatBeginsAfterACommittedArchiveIsRefused() throws Exception {
 
         Long projectId = projectRepository.saveAndFlush(new Project("Company OS", null)).getId();
-        Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
+        Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH")).getId();
 
         Precondition taskAsRead = taskPrecondition(taskId);
         Precondition projectAsRead = projectPrecondition(projectId);
@@ -448,7 +449,7 @@ class ProjectConcurrencyTest extends AbstractPostgresTest {
         Long projectB = projectRepository.saveAndFlush(new Project("Planner", null)).getId();
         Long projectC = projectRepository.saveAndFlush(new Project("Model Gateway", null)).getId();
 
-        Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, "OPEN", "HIGH")).getId();
+        Long taskId = taskRepository.saveAndFlush(new Task("Wire the planner", null, TaskStatus.OPEN, "HIGH")).getId();
         newTransaction().execute(status ->
                 taskService.assignToProject(taskId, projectA, taskPrecondition(taskId)));
 
