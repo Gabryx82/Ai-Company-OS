@@ -59,7 +59,41 @@ public final class DevSeedFlyway {
      */
     public static MigrateResult apply(DataSource dataSource, String schema) {
 
-        return flyway(dataSource, schema).migrate();
+        Flyway seed = flyway(dataSource, schema);
+
+        // Realign the recorded checksums before validating them.
+        //
+        // TD-31 forced an edit to an already-applied seed migration: V8 drops
+        // agents.active, and V1__dev_seed_agents.sql named that column, so on a
+        // fresh database the seed would have failed outright. Editing it changes
+        // its checksum, and Flyway validates checksums on migrate -- so without
+        // this call every database that had already seeded would refuse to start
+        // in the dev profile.
+        //
+        // V4 avoided the same collision by giving the new columns a DEFAULT
+        // instead of teaching this file about them. That escape does not exist
+        // for a dropped column the statement names explicitly.
+        //
+        // WHAT THIS COSTS, AND WHY IT IS ACCEPTABLE HERE AND NOWHERE ELSE.
+        // repair() rewrites the checksums of applied migrations, so it also
+        // accepts an edit nobody meant to make -- it trades a loud failure for a
+        // silent acceptance. That is a bad trade on the schema stream, which is
+        // why this call is NOT there and must not be copied there: production
+        // runs that stream, and a schema migration changing under an applied
+        // database is exactly the accident Flyway's validation exists to catch.
+        //
+        // On this stream the calculus is different in three ways that all have
+        // to hold: it is dev-only (DevSeedFlywayConfiguration binds it to the
+        // dev profile), it carries demonstration data rather than schema or
+        // reference data, and its single statement is idempotent by its own
+        // NOT EXISTS guard -- so the worst case of an unnoticed edit is
+        // different demonstration rows on a developer's machine.
+        //
+        // It touches metadata only: no table, column or application row. A
+        // migration already applied is not re-run.
+        seed.repair();
+
+        return seed.migrate();
     }
 
     /**

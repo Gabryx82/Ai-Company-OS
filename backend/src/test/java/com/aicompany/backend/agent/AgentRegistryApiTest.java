@@ -193,15 +193,32 @@ class AgentRegistryApiTest extends AbstractPostgresTest {
      * the same state twice, which is the alternative ADR-004 rejected for
      * {@code deleted_at} and ADR-006 rejected for the archival cascade.
      */
+    /**
+     * TD-31 (ADR-012) <strong>turned this test around, and the response it checks
+     * did not move.</strong>
+     *
+     * <p>It used to assert that {@code status} was derived and must never become
+     * a column -- "one state, one place". That requirement still holds; what
+     * changed is which of the two fields is the stored one. {@code V8} made
+     * {@code status} the column and {@code active} the derived reader, because
+     * the divergence TD-31 named was between a boolean here and a closed enum on
+     * Project, and the enum is the form both now share.
+     *
+     * <p>The invariant that actually matters is unchanged and is asserted below:
+     * <strong>exactly one of the two exists in the database</strong>, and the JSON
+     * carries both. A client cannot tell this migration happened, which is the
+     * point -- TD-31 was a divergence inside the database, not a promise to
+     * callers.
+     */
     @Test
-    void statusIsDerivedAndNotStored() throws Exception {
+    void oneLifecycleStateIsStoredAndTheOtherFieldIsDerived() throws Exception {
 
         Long id = activeAgent("Code Architect");
 
         assertThat(columnsOfAgents())
-                .as("status must not become a column: one state, one place")
-                .doesNotContain("status")
-                .contains("active", "created_at", "updated_at");
+                .as("one state, one place: the boolean is gone and status replaced it")
+                .contains("status", "created_at", "updated_at")
+                .doesNotContain("active");
 
         mockMvc.perform(get("/api/agents/" + id))
                 .andExpect(jsonPath("$.active").value(true))

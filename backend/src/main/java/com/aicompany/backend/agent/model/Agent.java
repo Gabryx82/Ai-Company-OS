@@ -4,6 +4,8 @@ import com.aicompany.backend.agent.exception.IllegalAgentStateTransitionExceptio
 import com.aicompany.backend.agent.exception.InactiveAgentIsImmutableException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -22,19 +24,22 @@ import java.time.Instant;
  * and the entity decides whether that transition is legal, so an invalid state
  * cannot be reached through the service or the controller.
  *
- * <p><strong>Why the lifecycle is a boolean here and an enum on Project.</strong>
- * Not because agents deserve less. Unifying them means backfilling {@code active}
- * into a status column and then dropping {@code active} -- lossless, but an
- * irreversible migration, and the autonomous charter puts those behind a human
- * decision whenever a reasonable alternative exists. One does: every rule below
- * works identically on a boolean. The divergence is recorded as TD-31 and hidden
- * from callers rather than from the record -- the response exposes a derived
- * status, so a client sees one vocabulary while the database keeps one state.
- * ADR-008 §2.
+ * <p><strong>The lifecycle is an {@link AgentStatus}, as it is on Project.</strong>
+ * It used to be a {@code boolean active}, and ADR-008 §2 kept it that way
+ * deliberately: unifying meant dropping a column, which the autonomous charter
+ * puts behind a human decision whenever a reasonable alternative exists, and one
+ * did. That decision was taken on 2026-09-19 and {@code V8} carried it out --
+ * TD-31, ADR-012. The backfill was a bijection, so nothing was lost.
+ *
+ * <p><strong>{@code isActive()} survives as a derived reader</strong>, and the
+ * direction of the derivation is the whole point of the change: the database now
+ * holds the status and the boolean is computed, where before the database held
+ * the boolean and the status was computed. The API shape did not move.
  *
  * <p>Columns mirror {@code V1__create_agents_and_tasks.sql} plus
- * {@code V4__add_agent_registry_columns.sql} exactly: Hibernate runs in validate
- * mode, so a divergence fails startup instead of altering the schema.
+ * {@code V4__add_agent_registry_columns.sql} and {@code V8__unify_agent_lifecycle.sql}
+ * exactly: Hibernate runs in validate mode, so a divergence fails startup instead
+ * of altering the schema.
  */
 @Entity
 @Table(name = "agents")
@@ -53,8 +58,18 @@ public class Agent {
     @Column(nullable = false)
     private String specialization;
 
+    /**
+     * The lifecycle state. {@code STRING} and never {@code ORDINAL}: the check
+     * constraint {@code agents_status_check} compares against the names, so the
+     * column has to hold them, and an ordinal would let reordering
+     * {@link AgentStatus} rewrite the meaning of every row without touching one.
+     *
+     * <p>No setter, like every other lifecycle in this codebase: a caller asks
+     * for a transition and the entity decides whether it is legal.
+     */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean active;
+    private AgentStatus status;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -90,7 +105,7 @@ public class Agent {
         this.name = name;
         this.role = role;
         this.specialization = specialization;
-        this.active = true;
+        this.status = AgentStatus.ACTIVE;
     }
 
     /**
@@ -104,7 +119,7 @@ public class Agent {
      */
     public void updateDetails(String name, String role, String specialization) {
 
-        if (!active) {
+        if (status != AgentStatus.ACTIVE) {
             throw new InactiveAgentIsImmutableException();
         }
 
@@ -115,18 +130,32 @@ public class Agent {
 
     /** Takes the agent out of the working registry. This is what replaces a delete. */
     public void deactivate() {
-        requireActive(true);
-        this.active = false;
+        requireStatus(AgentStatus.ACTIVE);
+        this.status = AgentStatus.INACTIVE;
     }
 
     /** Brings a deactivated agent back into the working registry. */
     public void activate() {
-        requireActive(false);
-        this.active = true;
+        requireStatus(AgentStatus.INACTIVE);
+        this.status = AgentStatus.ACTIVE;
     }
 
+    /** The lifecycle state, as the database holds it. */
+    public AgentStatus getStatus() {
+        return status;
+    }
+
+    /**
+     * Whether this agent is in the working registry.
+     *
+     * <p>Derived from {@link #status} since {@code V8}. Kept because it is what
+     * every rule elsewhere actually asks -- {@code Task.assignTo} wants to know
+     * whether work can be given, not which of two names the column holds -- and
+     * because removing it would have rippled a rename through call sites that
+     * TD-31 does not concern. ADR-012 §4.
+     */
     public boolean isActive() {
-        return active;
+        return status == AgentStatus.ACTIVE;
     }
 
     /**
@@ -135,9 +164,9 @@ public class Agent {
      * blind retry, a stale local state -- and turning it into a silent no-op
      * hides the bug and makes the state machine unverifiable.
      */
-    private void requireActive(boolean expected) {
-        if (active != expected) {
-            throw new IllegalAgentStateTransitionException(active);
+    private void requireStatus(AgentStatus expected) {
+        if (status != expected) {
+            throw new IllegalAgentStateTransitionException(isActive());
         }
     }
 

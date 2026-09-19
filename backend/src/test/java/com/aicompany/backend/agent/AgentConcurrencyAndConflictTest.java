@@ -143,8 +143,8 @@ class AgentConcurrencyAndConflictTest extends AbstractPostgresTest {
                     and AgentRegistryApiTest exercise it sequentially. ADR-009 section 8.""")
                 .isInstanceOf(PreconditionFailedException.class);
 
-        assertThat(jdbc.queryForObject("SELECT active FROM agents WHERE id = ?", Boolean.class, agentId))
-                .isFalse();
+        assertThat(jdbc.queryForObject("SELECT status FROM agents WHERE id = ?", String.class, agentId))
+                .isEqualTo("INACTIVE");
     }
 
     /**
@@ -160,7 +160,7 @@ class AgentConcurrencyAndConflictTest extends AbstractPostgresTest {
 
         // Straight past the service, to the constraint itself.
         assertThatThrownBy(() -> jdbc.update(
-                "INSERT INTO agents (name, role, specialization, active) VALUES (?, ?, ?, TRUE)",
+                "INSERT INTO agents (name, role, specialization, status) VALUES (?, ?, ?, 'ACTIVE')",
                 "CODE ARCHITECT", "Engineer", "x"))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining(AgentRepository.NAME_UNIQUE_INDEX);

@@ -1,6 +1,7 @@
 package com.aicompany.backend.agent.repository;
 
 import com.aicompany.backend.agent.model.Agent;
+import com.aicompany.backend.agent.model.AgentStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -22,7 +23,15 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
 
     List<Agent> findAllByOrderByIdAsc();
 
-    List<Agent> findAllByActiveOrderByIdAsc(boolean active);
+    /**
+     * The listing filtered by lifecycle state.
+     *
+     * <p>Took a {@code boolean} until {@code V8}; the column it derives from is
+     * now {@link AgentStatus}, so the query is too. The HTTP contract is
+     * unaffected -- {@code ?active=} is still a boolean, and the service is where
+     * the two meet (ADR-012 §4).
+     */
+    List<Agent> findAllByStatusOrderByIdAsc(AgentStatus status);
 
     /**
      * The agent row, locked exclusively. Rule L1 of ADR-006 §4: whoever changes a

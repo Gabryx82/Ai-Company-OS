@@ -32,7 +32,46 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // Schema versions only, in order. The development seed is a separate
         // Flyway stream and must never appear here, otherwise the next schema
         // migration becomes out of order (R1).
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+    }
+
+    /**
+     * TD-31 (ADR-012). {@code agents.active} is gone and {@code agents.status}
+     * replaced it.
+     *
+     * <p>Asserting the absence matters as much as the presence: a migration that
+     * added the column and forgot to drop the old one would leave the same state
+     * recorded twice -- which is the divergence TD-31 existed to remove, only
+     * now inside a single table.
+     */
+    @Test
+    void agentLifecycleIsAStatusColumnAndTheBooleanIsGone() {
+
+        List<String> columns = jdbc.queryForList(
+                "SELECT column_name FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = 'agents' "
+                        + "ORDER BY column_name",
+                String.class);
+
+        assertThat(columns).contains("status").doesNotContain("active");
+    }
+
+    /**
+     * The set is closed by the database and not only by the enum -- the second of
+     * the two guards ADR-004 section 2 established for projects.
+     */
+    @Test
+    void agentStatusIsConstrainedToTheClosedSet() {
+
+        String definition = jdbc.queryForObject(
+                "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = ?",
+                String.class, "agents_status_check");
+
+        assertThat(definition)
+                .as("V8 must have created agents_status_check")
+                .isNotNull()
+                .contains("ACTIVE")
+                .contains("INACTIVE");
     }
 
     @Test
@@ -63,7 +102,7 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         assertThat(nullabilityOf("tasks", "status")).isEqualTo("NO");
         assertThat(nullabilityOf("tasks", "priority")).isEqualTo("NO");
         assertThat(nullabilityOf("agents", "name")).isEqualTo("NO");
-        assertThat(nullabilityOf("agents", "active")).isEqualTo("NO");
+        assertThat(nullabilityOf("agents", "status")).isEqualTo("NO");
 
         assertThat(nullabilityOf("projects", "name")).isEqualTo("NO");
         assertThat(nullabilityOf("projects", "status")).isEqualTo("NO");

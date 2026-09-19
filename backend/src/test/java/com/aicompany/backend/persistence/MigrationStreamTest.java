@@ -243,7 +243,7 @@ class MigrationStreamTest {
         assertThat(appliedSchemaVersions(schema)).containsExactly("1", "2");
         assertThat(columnsOf(schema, "tasks")).doesNotContain("project_id");
 
-        DevSeedFlyway.apply(dataSource(), schema);
+        seedAgentsAt(schema);
 
         jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, description, status, priority) "
                 + "VALUES (?, ?, ?, ?)", "task written before V3", "kept as it was", "OPEN", "HIGH");
@@ -331,9 +331,8 @@ class MigrationStreamTest {
         schemaFlywayUpTo(schema, "3").migrate();
         assertThat(columnsOf(schema, "agents")).doesNotContain("created_at", "updated_at");
 
-        DevSeedFlyway.apply(dataSource(), schema);
-        jdbc().update("INSERT INTO \"" + schema + "\".agents (name, role, specialization, active) "
-                + "VALUES (?, ?, ?, TRUE)", "Written before V4", "Engineer", "legacy");
+        seedAgentsAt(schema);
+        insertAgentAt(schema, "Written before V4", "Engineer", "legacy", true);
 
         MigrateResult toV4 = schemaFlywayUpTo(schema, "4").migrate();
 
@@ -394,7 +393,7 @@ class MigrationStreamTest {
         schemaFlywayUpTo(schema, "6").migrate();
         assertThat(appliedSchemaVersions(schema)).doesNotContain("7");
 
-        DevSeedFlyway.apply(dataSource(), schema);
+        seedAgentsAt(schema);
         jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, status, priority) "
                 + "VALUES (?, ?, ?)", "written before V7", "OPEN", "HIGH");
 
@@ -472,6 +471,115 @@ class MigrationStreamTest {
     }
 
     /**
+     * TD-31 (ADR-012) -- the real V7 to V8 upgrade on a populated database, and
+     * the one property the whole migration rests on: the backfill is a
+     * <strong>bijection</strong>.
+     *
+     * <p>V8 is the first migration in this stream that <strong>destroys</strong>
+     * something: it drops {@code agents.active}. ADR-008 §2 argued the change was
+     * lossless because a boolean maps onto two values injectively and totally,
+     * and this is that argument executed rather than repeated -- both sides of
+     * the bijection are seeded before the upgrade and checked after it.
+     *
+     * <p>Row survival across this step is already covered, without anybody
+     * adding a case, by {@code everyConsecutiveUpgradePreservesWhatWasAlreadyThere}.
+     * What is specific to V8, and therefore here: that each row kept the state it
+     * had, that the old column is gone rather than merely unused, and that the
+     * new one is constrained.
+     */
+    @Test
+    void agentLifecycleIsUnifiedOnAPopulatedV7Database() {
+
+        String schema = "td031_v7_to_v8";
+
+        // A database at V7, where the lifecycle is still a boolean.
+        schemaFlywayUpTo(schema, "7").migrate();
+        assertThat(columnsOf(schema, "agents")).contains("active").doesNotContain("status");
+
+        // Both sides of the bijection, so neither direction can be assumed. A
+        // test with only active agents would pass against a migration that wrote
+        // 'ACTIVE' unconditionally.
+        jdbc().update("INSERT INTO \"" + schema + "\".agents (name, role, specialization, active) "
+                + "VALUES (?, ?, ?, TRUE)", "Still working", "Engineer", "x");
+        jdbc().update("INSERT INTO \"" + schema + "\".agents (name, role, specialization, active) "
+                + "VALUES (?, ?, ?, FALSE)", "Switched off", "Engineer", "y");
+
+        Map<String, Integer> before = rowCountsIn(schema);
+
+        MigrateResult toV8 = schemaFlywayUpTo(schema, "8").migrate();
+
+        assertThat(toV8.success).isTrue();
+        assertThat(toV8.migrationsExecuted).isEqualTo(1);
+
+        // The column TD-31 exists to remove is gone, and the new one is there.
+        assertThat(columnsOf(schema, "agents")).contains("status").doesNotContain("active");
+
+        // No row appeared or vanished while the table was rewritten.
+        assertThat(rowCountsIn(schema)).isEqualTo(before);
+
+        // The bijection, both ways, on the rows written before the migration.
+        assertThat(jdbc().queryForObject(
+                "SELECT status FROM \"" + schema + "\".agents WHERE name = ?",
+                String.class, "Still working"))
+                .isEqualTo("ACTIVE");
+
+        assertThat(jdbc().queryForObject(
+                "SELECT status FROM \"" + schema + "\".agents WHERE name = ?",
+                String.class, "Switched off"))
+                .isEqualTo("INACTIVE");
+
+        // Nothing is left unclassified.
+        assertThat(jdbc().queryForObject(
+                "SELECT count(*) FROM \"" + schema + "\".agents WHERE status IS NULL", Integer.class))
+                .isZero();
+
+        // And the constraint the migration creates is real from here on.
+        assertThatThrownBy(() -> jdbc().update(
+                "INSERT INTO \"" + schema + "\".agents (name, role, specialization, status) "
+                        + "VALUES (?, ?, ?, ?)", "Bad state", "Engineer", "z", "RETIRED"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    /**
+     * TD-31, the consequence that was nearly missed: the dev seed names the
+     * column V8 drops.
+     *
+     * <p>On a database that has <strong>already seeded</strong>, the edited seed
+     * has a different checksum from the one in {@code flyway_dev_seed_history},
+     * and Flyway validates checksums on migrate. Without the {@code repair()}
+     * that {@code DevSeedFlyway.apply} now runs first, every such database would
+     * refuse to start in the dev profile -- which is the single most likely way
+     * this change could have broken a real machine, since the development
+     * database in this repository is one of them.
+     *
+     * <p>The stale checksum is written directly rather than by running an older
+     * copy of the seed: what has to be proven is that {@code apply} survives a
+     * recorded checksum that disagrees with the file, and its value is what makes
+     * it disagree.
+     */
+    @Test
+    void anAlreadySeededDatabaseSurvivesTheSeedBeingEdited() {
+
+        String schema = "td031_seed_checksum";
+
+        schemaFlyway(schema).migrate();
+        DevSeedFlyway.apply(dataSource(), schema);
+        assertThat(agentNames(schema)).isEqualTo(SEEDED_AGENTS);
+
+        // The state a database is in after running a previous version of the
+        // seed file: applied, but recorded against different bytes.
+        jdbc().update("UPDATE \"" + schema + "\".\"" + DevSeedFlyway.HISTORY_TABLE + "\" "
+                + "SET checksum = ? WHERE version = ?", 1, "1");
+
+        // Must not throw, and must not re-run or duplicate anything.
+        MigrateResult afterRepair = DevSeedFlyway.apply(dataSource(), schema);
+
+        assertThat(afterRepair.success).isTrue();
+        assertThat(afterRepair.migrationsExecuted).isZero();
+        assertThat(agentNames(schema)).isEqualTo(SEEDED_AGENTS);
+    }
+
+    /**
      * TASK-006, TD-22 -- every consecutive step of the stream, on a database that
      * already holds data.
      *
@@ -511,10 +619,17 @@ class MigrationStreamTest {
                     .as("step %s -> %s: the fixture must really stop at %s", from, to, from)
                     .containsExactlyElementsOf(versions.subList(0, step + 1));
 
-            // Rows a running installation would have at this point. The seed
-            // covers agents; tasks are written directly, with the columns every
-            // version of that table has carried.
-            DevSeedFlyway.apply(dataSource(), schema);
+            // Rows a running installation would have at this point, written
+            // directly rather than through the seed stream.
+            //
+            // The seed used to be reusable here because agents.active existed at
+            // every version. Since TD-31's V8 replaced it with agents.status the
+            // seed only runs against the head of the stream, so a fixture that
+            // writes an agent at an ARBITRARY version has to ask which column the
+            // schema has -- which is what seedAgentsAt does. The product is
+            // unaffected: DevSeedFlywayConfiguration applies the seed only after
+            // the full schema stream.
+            seedAgentsAt(schema);
             jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, status, priority) "
                     + "VALUES (?, ?, ?)", "written at V" + from, "OPEN", "HIGH");
 
@@ -628,17 +743,56 @@ class MigrationStreamTest {
     }
 
     /**
+     * The three demonstration agents, written directly, at whatever schema
+     * version this database currently is.
+     *
+     * <p>Used where a test needs "a running installation would have agents here"
+     * at an intermediate version. It cannot go through {@link DevSeedFlyway}
+     * because the seed statement names the lifecycle column, and since TD-31 that
+     * column differs before and after {@code V8}.
+     */
+    private void seedAgentsAt(String schema) {
+        for (String name : SEEDED_AGENTS) {
+            insertAgentAt(schema, name, "Engineer", "seeded by the test fixture", true);
+        }
+    }
+
+    /**
+     * Inserts one agent using whichever lifecycle column the schema at this
+     * version actually has: {@code active BOOLEAN} before {@code V8},
+     * {@code status VARCHAR} from {@code V8} on.
+     *
+     * <p>TD-31 made the two mutually exclusive, so a fixture that writes an agent
+     * across the whole stream has to look rather than assume. Reading
+     * {@code information_schema} is the honest way to ask; hard-coding "before 8"
+     * would put the version number in a second place.
+     */
+    private void insertAgentAt(String schema, String name, String role,
+                               String specialization, boolean active) {
+
+        if (columnsOf(schema, "agents").contains("status")) {
+            jdbc().update("INSERT INTO \"" + schema + "\".agents "
+                            + "(name, role, specialization, status) VALUES (?, ?, ?, ?)",
+                    name, role, specialization, active ? "ACTIVE" : "INACTIVE");
+        } else {
+            jdbc().update("INSERT INTO \"" + schema + "\".agents "
+                            + "(name, role, specialization, active) VALUES (?, ?, ?, ?)",
+                    name, role, specialization, active);
+        }
+    }
+
+    /**
      * Runs the seed INSERT a second time outside Flyway, to show the guard in the
      * SQL itself — not only the schema history — is what prevents duplicates.
      */
     private void replaySeedStatement(String schema) {
 
-        jdbc().update("INSERT INTO \"" + schema + "\".agents (name, role, specialization, active) "
-                + "SELECT seed.name, seed.role, seed.specialization, seed.active FROM (VALUES "
-                + "('Code Architect', 'Software Engineer', 'replayed', TRUE), "
-                + "('Frontend Developer', 'Frontend Engineer', 'replayed', TRUE), "
-                + "('Database Specialist', 'Database Engineer', 'replayed', TRUE)"
-                + ") AS seed(name, role, specialization, active) WHERE NOT EXISTS "
+        jdbc().update("INSERT INTO \"" + schema + "\".agents (name, role, specialization, status) "
+                + "SELECT seed.name, seed.role, seed.specialization, seed.status FROM (VALUES "
+                + "('Code Architect', 'Software Engineer', 'replayed', 'ACTIVE'), "
+                + "('Frontend Developer', 'Frontend Engineer', 'replayed', 'ACTIVE'), "
+                + "('Database Specialist', 'Database Engineer', 'replayed', 'ACTIVE')"
+                + ") AS seed(name, role, specialization, status) WHERE NOT EXISTS "
                 + "(SELECT 1 FROM \"" + schema + "\".agents existing WHERE existing.name = seed.name)");
     }
 

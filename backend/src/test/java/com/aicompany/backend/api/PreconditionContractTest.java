@@ -634,6 +634,7 @@ class PreconditionContractTest extends AbstractPostgresTest {
 
     private boolean isAgentActive(Long id) {
         return Boolean.TRUE.equals(
-                jdbc.queryForObject("SELECT active FROM agents WHERE id = ?", Boolean.class, id));
+                "ACTIVE".equals(jdbc.queryForObject(
+                        "SELECT status FROM agents WHERE id = ?", String.class, id)));
     }
 }

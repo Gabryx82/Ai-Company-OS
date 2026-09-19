@@ -3,6 +3,7 @@ package com.aicompany.backend.agent.service;
 import com.aicompany.backend.agent.exception.AgentNameConflictException;
 import com.aicompany.backend.agent.exception.AgentNotFoundException;
 import com.aicompany.backend.agent.model.Agent;
+import com.aicompany.backend.agent.model.AgentStatus;
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.agent.repository.AgentRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -47,7 +48,8 @@ public class AgentService {
     public List<Agent> findAll(Boolean active) {
         return active == null
                 ? repository.findAllByOrderByIdAsc()
-                : repository.findAllByActiveOrderByIdAsc(active);
+                : repository.findAllByStatusOrderByIdAsc(
+                        active ? AgentStatus.ACTIVE : AgentStatus.INACTIVE);
     }
 
     @Transactional(readOnly = true)
