@@ -401,7 +401,7 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 - **`master`**: fermo a `d5ff121`. **Gate umano finale, nessun merge autonomo.**
 - **Integration branch di PHASE 2**: `autonomous/phase-2-assignment`, creato da
   `autonomous/phase-1-foundations` (`0a35ac0`). Contiene il piano di fase, TASK-008, TASK-009 e
-  TASK-010. **HEAD: l'ultimo commit di questo branch** — deliberatamente non scritto come hash,
+  TASK-010 e TASK-011. **HEAD: l'ultimo commit di questo branch** — deliberatamente non scritto come hash,
   perché il commit che aggiorna questa sezione sposta l'HEAD che la sezione dichiara, e TASK-004
   dovette correggerlo una volta (`1ddeee3`). L'ultimo commit di *lavoro* di TASK-010 è `81d350d`;
   quelli successivi su questo branch sono aggiornamenti di stato.
@@ -409,7 +409,8 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
 - Branch di lavoro integrati in fast-forward: `task-004-archival-consistency`,
   `task-005-uniform-error-contract`, `task-006-migration-test-coverage`,
   `task-007-agent-registry`, `task-008-optimistic-concurrency`,
-  `task-009-task-agent-assignment`, `task-010-task-status-vocabulary`.
+  `task-009-task-agent-assignment`, `task-010-task-status-vocabulary`,
+  `task-011-debt-registry-and-docs`.
 - **Nessun remote configurato, nessun push eseguito.**
 - Storia lineare, mai riscritta.
 
