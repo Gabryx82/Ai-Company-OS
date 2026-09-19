@@ -1,0 +1,216 @@
+task: TASK-010
+title: Vocabolario chiuso di Task.status
+mode: implementation
+status: SELF_APPROVED
+approval: autonomous_project_mode
+decided_on: 2026-09-19
+
+selection_rationale: >
+  AUTONOMOUS_LOOP.md sezione 4, livello 5. Livelli 1, 2 e 3 vuoti alla chiusura
+  di TASK-009 e riletti sul posto: 201/201 verdi, nessun failure aperto, TD-28 e
+  TD-30 chiusi da TASK-008. Un task sa dove sta (TASK-003) e di chi e'
+  (TASK-009); non sa in che stato e' in un modo verificabile. TD-12 e' il
+  prerequisito di TD-08 e del Planner, non il contrario.
+
+scope_boundary: >
+  TD-12 copre status E priority. Questa task chiude SOLO status, per istruzione
+  esplicita e perche' priority e' una normalizzazione adiacente, non la stessa.
+  TD-12 resta parzialmente aperto come TD-36.
+
+baseline:
+  branch: task-010-task-status-vocabulary
+  base: autonomous/phase-2-assignment
+  head_at_start: 51586b2
+  suite_at_start: 201
+  schema_at_start: V6
+  working_tree_at_start: clean
+
+decisions_ref: docs/adr/ADR-011-task-status-closed-vocabulary.md
+census_ref: tasks/TASK-010/CENSUS.md
+briefing_ref: tasks/TASK-009/HANDOFF.md
+
+# --- il censimento, in forma verificabile -------------------------------------
+census:
+  executed_before_any_decision: true
+  reason: >
+    TASK-009/HANDOFF.md avverte che stringere status non e' additivo se i dati
+    contengono valori fuori vocabolario, e che in quel caso la domanda tocca gli
+    hard stop 2 e 3. Non si indovina: si conta.
+  sources:
+    schema:
+      finding: "tasks.status VARCHAR(255) NOT NULL, nessun CHECK, nessun DEFAULT"
+      note: "V2..V6 non toccano mai tasks.status; projects.status ha il CHECK dal giorno 1"
+    dev_seed:
+      finding: "zero righe di tasks"
+      consequence: >
+        non contribuisce valori, e non puo' essere rotto da un vincolo su tasks
+        -- a differenza di quanto successe con V4 sugli agenti
+    fixtures:
+      constructors: 26   # 1 main, 25 test
+      json_payloads: 14  # 13 OPEN + 1 ARCHIVED, e quell'uno e' un progetto
+      raw_inserts: 6
+      finding: "OPEN ovunque; un NULL deliberato che asserisce il NOT NULL"
+      hard_constraint: >
+        MigrationStreamTest.everyConsecutiveUpgradePreservesWhatWasAlreadyThere
+        scrive 'OPEN' in tasks a OGNI versione N prima di migrare a N+1. Un
+        vocabolario che escludesse OPEN renderebbe rosso quel test a ogni coppia.
+    local_database:
+      volume: aicompany_postgres_data
+      schema_version: V3
+      note: >
+        FATTO NUOVO, non documentato altrove: l'installazione reale e' a V3.
+        PROJECT_STATE.md dice "schema a V6", vero dello stream Flyway e falso di
+        questa installazione, che non ha mai visto V4, V5, V6.
+      rows: 1
+      values: {OPEN: 1}
+      provenance: "scritta a mano (title='ok'), non dal seed"
+    write_paths:
+      count: 1
+      path: "POST /api/tasks -> TaskService.create -> new Task(...)"
+      mutation_paths: 0
+      note: >
+        non esiste alcun percorso che muti status su un task esistente. Nessun
+        setter, nessun PUT. Un task creato OPEN resta OPEN per sempre.
+      orchestrator: "MasterOrchestrator non tocca i task: stringa -> stringa, nessun repository"
+    read_paths:
+      branches_on_status: 0
+      repository_queries_on_status: 0
+      api_filter: none
+      note: "TaskResponse lo espone come passthrough; nessuna decisione dipende dal valore"
+  contract_promise:
+    declared_vocabulary: none
+    evidence:
+      - "TaskCreateRequest: @NotBlank + @Size(max=255)"
+      - "TaskCreateRequest javadoc: 'free-form strings ... left to a later task'"
+      - "docs/audit/CURRENT_FEATURES.md:51: 'OPEN', 'open', 'banana' tutti accettati"
+      - "docs/RUNNING.md:63 usa OPEN, come esempio d'uso e non come contratto"
+    conclusion: >
+      il contratto non promette un vocabolario: promette esplicitamente la sua
+      assenza, e la dichiara provvisoria in due punti.
+  history:
+    other_values_ever: none
+    verified_by: "git log --all -S IN_PROGRESS / -S COMPLETED -> vuoti"
+  outcome:
+    existing_values: [OPEN]
+    out_of_vocabulary_values: none
+    rows_to_transform: 0
+    hard_stop_triggered: false
+    applicable_rule: >
+      regola 3 del briefing: enum + vincolo DB + migrazione incrementale +
+      upgrade test, senza alcuna trasformazione di dati.
+
+# --- la decisione -------------------------------------------------------------
+vocabulary:
+  values: [OPEN, IN_PROGRESS, DONE]
+  is_state_machine: false
+  transition_rules: none
+  case_sensitive: true
+  rationale:
+    OPEN: >
+      l'unico valore che esiste. Preservato verbatim: stesso spelling, nessun
+      mapping, nessuna riga toccata.
+    IN_PROGRESS: >
+      distingue "assegnato e in lavorazione" da "assegnato e fermo". E' la
+      domanda che TASK-009 ha reso ponibile rendendo esprimibile l'assegnazione,
+      e a cui oggi non si puo' rispondere.
+    DONE: >
+      senza un valore terminale il vocabolario non e' un ciclo di vita, e la sua
+      assenza costringerebbe a una migrazione al primo uso reale.
+  excluded_and_declared: [BLOCKED, CANCELLED, IN_REVIEW, DRAFT, PAUSED]
+  exclusion_argument: >
+    precedente ADR-004 sezione 2, applicato alla lettera: plausibili, nessuno
+    richiesto da un requisito. Allargare costa una migrazione e un valore
+    nell'enum; restringere dopo che qualcuno ci ha scritto sopra costa una
+    migrazione di dati. L'asimmetria dice di stringere.
+  why_not_only_OPEN: >
+    alternativa considerata sul serio, e scartata per una ragione precisa: TD-12
+    motiva il vocabolario con transizioni controllate, e un insieme di un solo
+    valore le rende impossibili PER COSTRUZIONE. Non rimanderebbe lo scopo di
+    TD-12: lo contraddirebbe.
+
+error_contract:
+  decision: "String nel record + vincolo Jakarta; NON enum nel record"
+  rejected_alternative: "campo di tipo TaskStatus nel record"
+  why_rejected: >
+    Jackson fallirebbe la deserializzazione -> HttpMessageNotReadable ->
+    MALFORMED_REQUEST, il cui detail e' "The request body could not be read".
+    E' FALSO: il body e' stato letto. E il campo colpevole non comparirebbe,
+    perche' quel ramo non popola errors. Oggi uno status vuoto da'
+    VALIDATION_FAILED con errors.status: uno status fuori vocabolario deve
+    restare nella stessa famiglia.
+  guarantee: "nessun ApiProblem nuovo, ApiExceptionHandler invariato, ADR-007 invariato"
+
+guards:
+  count: 3
+  application_wire: "vincolo Jakarta sul record -> 400 validation-failed con errors.status"
+  application_domain: "TaskStatus enum + @Enumerated(STRING) sull'entita'"
+  database: "V7 tasks_status_check, gemello di projects_status_check"
+  precedent: "ADR-004 sezione 2, 'due guardie e non una', estesa a tre perche' il bordo e' separato"
+
+migration:
+  version: V7
+  additive_on_data: true
+  rows_touched: 0
+  declared_risk: >
+    su un database che contenesse uno status fuori vocabolario, V7 FALLISCE.
+    E' il comportamento corretto e il precedente e' V4 con agents_name_unique_idx:
+    "a migration that stops is the conversation that makes them".
+  not_done:
+    - "restringere VARCHAR(255): ALTER TYPE non e' metadata-only e non guadagna nulla"
+    - "backfill o UPDATE: non c'e' niente da riscrivere"
+
+invariants:
+  - "I-1: status fuori vocabolario -> 400 validation-failed, errors.status, nessuna riga creata"
+  - "I-2: case-sensitive -- 'open' e' fuori vocabolario quanto 'banana'"
+  - "I-3: i tre valori ammessi -> 201, e tornano identici da GET /api/tasks/{id}"
+  - "I-4: INSERT/UPDATE SQL diretto fuori vocabolario rifiutato DAL DATABASE"
+  - "I-5: V7 su database popolato non perde, altera o aggiunge righe"
+  - "I-6: V7 fallisce su un database con status fuori vocabolario -- voluto"
+  - "I-7: l'insieme dei valori e' pinnato da un test"
+  - "I-8: enum e CHECK dichiarano lo stesso insieme"
+  - "I-9: nessuna regola di transizione -- ogni valore ammesso e' scrivibile alla creazione"
+  - "I-10: contratto di errore invariato; ApiProblemCoverageTest verde senza modifiche"
+  - "I-11: nessun write path nuovo; PreconditionCoverageTest verde SENZA essere modificato"
+
+forbidden:
+  - state_machine
+  - transition_rules
+  - approval_gates
+  - status_mutation_endpoint
+  - priority_normalization
+  - rewriting_legacy_values
+  - inventing_a_mapping
+  - new_api_problem_type
+  - changing_apiexceptionhandler
+  - narrowing_varchar
+  - status_filter_on_listing
+  - planner
+  - master_orchestrator_replacement
+  - authentication
+  - merge_to_master
+  - push
+
+debt_accounting_at_close:
+  TD-12: >
+    PARZIALMENTE CHIUSO. La meta' status e' chiusa: enum, CHECK, tre guardie,
+    verifica per mutazione. La meta' priority resta aperta come TD-36.
+  TD-36: >
+    OPEN nuovo. Task.priority resta una stringa libera senza vincolo DB. Stesso
+    difetto, stessa forma di soluzione, scope deliberatamente non combinato.
+  TD-37: >
+    OPEN nuovo. Non esiste un percorso che muti status su un task esistente: un
+    task creato OPEN resta OPEN. Il vocabolario e' chiuso ma il ciclo di vita non
+    e' percorribile. Si chiude con la task delle transizioni, dove le regole di
+    transizione sono la domanda centrale e non un effetto collaterale.
+
+git_constraints:
+  work_branch: task-010-task-status-vocabulary
+  integration_branch: autonomous/phase-2-assignment
+  forbidden_operations:
+    - merge_to_master
+    - push
+    - remote_configuration
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - history_rewrite
