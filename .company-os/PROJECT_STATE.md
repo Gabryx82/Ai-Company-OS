@@ -14,18 +14,22 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 
 ## Status
 **PHASE 1 — Foundations: COMPLETA.** Integrata in `autonomous/phase-1-foundations` (`0a35ac0`,
-2026-09-14), in attesa di review umana: `FINAL_HANDOFF.md`. **Niente in `master`.**
+2026-09-14), in attesa di review umana: **`docs/handoff/FINAL_HANDOFF_PHASE_1.md`** — spostato lì
+da TASK-011, e conservato invece di sostituito, quando `FINAL_HANDOFF.md` è passato a PHASE 2.
+**Niente in `master`.**
 
-**PHASE 2 — Assignment: in corso** dal 2026-09-15, su `autonomous/phase-2-assignment`, creato da
-`autonomous/phase-1-foundations`. **TASK-008, TASK-009 e TASK-010 completate.** Suite **216 test
-verdi**, schema **`V7`**, nessun failure aperto, nessun remote.
+**PHASE 2 — Assignment: COMPLETA** il 2026-09-19, su `autonomous/phase-2-assignment`, creato da
+`autonomous/phase-1-foundations`. **TASK-008, TASK-009, TASK-010 e TASK-011 completate.** Suite
+**219 test verdi**, schema **`V7`**, nessun failure aperto, nessun remote.
+**In attesa di review umana: `FINAL_HANDOFF.md`. Niente in `master`.**
 
 L'obiettivo della fase — *il Company OS sa dire chi lavora su che cosa, e due client non possono
-sovrascriversi in silenzio mentre lo dicono* — è **raggiunto in entrambe le metà**. Il criterio di
-chiusura di `PHASE_2_PLAN.md` §4 è soddisfatto nelle condizioni **1 e 2**; la **3 no**, e non per
-un dettaglio: chiede «`PROJECT_STATE.md` e un **`FINAL_HANDOFF` aggiornato**», e `FINAL_HANDOFF.md`
-è tuttora quello di **PHASE 1** (`158 test`, schema `V4`). Resta quindi TASK-011, e resta il
-`FINAL_HANDOFF` di fase.
+sovrascriversi in silenzio mentre lo dicono* — è **raggiunto in entrambe le metà**, e il criterio
+di chiusura di `PHASE_2_PLAN.md` §4 è adesso soddisfatto in **tutte e tre** le condizioni: la
+terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
+
+**Charter §8: qui ci si ferma.** Il merge in `master` è il gesto con cui un umano accetta il
+lavoro, e nessun agente lo esegue. **PHASE 1 e PHASE 2 attendono entrambe** quella review.
 
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
@@ -36,27 +40,70 @@ PHASE 1 resta com'è: `master` è ancora il gate di quella fase, e PHASE 2 ci si
 senza mergiarla.
 
 ## Current task
-**TASK-011 — Registro del debito e documentazione**, cioè il contenuto che
-`PHASE_2_PLAN.md` §3 le aveva già assegnato al livello 6. **Scelta il 2026-09-19, e l'argomento
-va scritto perché la scelta non è quella che il criterio dice a prima vista.**
+**Nessuna. PHASE 2 è chiusa e si attende la review umana** (`FINAL_HANDOFF.md`, charter §8).
 
-`AUTONOMOUS_LOOP.md` §4 dice che il livello 6 non si tocca finché il 5 è pieno — e il 5 **non è
-vuoto**: c'è **TD-37**, le transizioni di `status`. Nondimeno TD-37 **non** è la prossima task,
-per due ragioni che tirano nella stessa direzione:
+La prima decisione di **PHASE 3** è quale dei due candidati aprire, ed è una decisione che questa
+sessione **non prende**, perché a fine fase ci si ferma:
 
-1. **PHASE 2 si chiama *Assignment*, non *Lifecycle*.** Il piano di fase elenca esplicitamente
-   ciò che resta fuori e perché; aggiungere le transizioni adesso allargherebbe lo scope della
-   fase mentre la fase è in corso, che è ciò che il charter §4 vieta («non si allarga lo scope per
-   sistemare tutto»);
-2. **la fase ha un adempimento residuo, e non è una task di livello 5**: la condizione 3 del suo
-   criterio di chiusura chiede un `FINAL_HANDOFF` aggiornato, e quello che esiste è di PHASE 1.
-   Il charter §8 dice che a fine fase si prepara quel documento e **ci si ferma**.
+- **TD-04 — autenticazione.** Già indicato come primo candidato di PHASE 3 da `PHASE_2_PLAN.md`
+  §2. Oggi non c'è niente, e ogni endpoint aggiunto è superficie. Costo noto: cambierebbe ogni
+  test di API;
+- **TD-37 — le transizioni di `status`.** È ciò che sblocca **TD-08** e il Planner: un task sa
+  dove sta, di chi è e in che stato è, ma **non può cambiare stato**, e un orchestratore che non
+  muove il lavoro non ha niente da orchestrare.
 
-**TD-37 è quindi il primo candidato di PHASE 3**, insieme a TD-04 (autenticazione), e la scelta
-fra i due è la prima decisione di quella fase — non di questa. Argomenti in
-`tasks/TASK-010/HANDOFF.md`.
+Argomenti raccolti in `tasks/TASK-011/HANDOFF.md`.
 
 ## Last completed task
+
+**TASK-011 — Registro del debito e documentazione operativa** (2026-09-19).
+
+Livello 6, ultima task di PHASE 2. Suite **216 → 219**. **Nessuna modifica al codice
+applicativo, nessuna migrazione**, e nessun debito nuovo: prossimo id libero **`TD-38`**.
+
+**La collisione di identificatori era reale e ha una forma precisa.** Cinque `TD-NN` significano
+cose diverse nei due registri — **`TD-14`, `TD-19`, `TD-20`, `TD-21`, `TD-22`** — mentre
+`TD-01`…`TD-13` e `TD-15`…`TD-18` coincidono. È questo a renderla insidiosa: chi ne verifica due o
+tre conclude che il problema non esista. «`TD-20` è chiuso» era vero in uno spazio e falso
+nell'altro, e niente diceva quale si stesse usando.
+
+**Risolta in modo additivo, non rinumerando.** Rinumerare i vivi romperebbe ogni riferimento in
+ADR, artefatti e commit; rinumerare l'audit riscriverebbe ciò che TASK-000 **osservò**, e uno
+snapshot che si aggiorna non è più uno snapshot. `docs/DEBT_REGISTRY.md` mappa i due spazi per
+intero e dichiara autoritativo il vivo; `docs/audit/TECHNICAL_DEBT.md` lo dice sulla prima
+schermata.
+
+**La decisione più difficile è stata non dichiarare chiusi otto debiti.** `TD-01`, `TD-02`,
+`TD-03`, `TD-05`, `TD-06`, `TD-09`, `TD-10`, `TD-16` esistono solo nell'audit e diversi sono con
+ogni evidenza risolti — H2 rimosso, Flyway padrone dello schema, DTO, 219 test dove l'audit
+contava zero. **Non marcati chiusi**: «con ogni evidenza risolto» *è* «il codice sembra diverso»,
+che il charter vieta come criterio. Il registro dice «non rivalutato qui», che è vero, e la
+rivalutazione è registrata come task successiva.
+
+**`docs/RUNNING.md` conteneva due istruzioni false, non due lacune**, ed è la differenza che
+conta — una documentazione incompleta fa perdere tempo, una falsa fa sbagliare:
+
+1. «*La prossima migrazione di schema si chiama `V2__...sql`*», con lo stream a **`V7`**: chi la
+   seguiva creava una migrazione che **Flyway rifiuta**. Sostituita dalla regola, dal valore di
+   oggi e dal **comando per leggerlo**, perché è proprio un valore scritto a mano che è andato
+   stantio;
+2. «*deve contenere **solo** `1 | V1__create_agents_and_tasks.sql`*», vero appena dopo TASK-001A e
+   falso da `V2`. Ciò che si verifica è l'**assenza** della riga legacy `1000`.
+
+Entrambe portano una nota che dice cosa affermavano prima: qualcuno può averci agito.
+
+Documentati **18 endpoint invece di 3**, e messo **per primo** ciò che mancava del tutto: **ogni
+mutazione richiede `If-Match`**, quindi un `428` è un header mancante e non un server rotto.
+
+**Un test per un problema di documentazione**, perché il charter chiede una verifica che fallisca
+se il difetto torna: `DebtRegistryConsistencyTest` rende rossa la suite se un identificatore
+dell'audit smette di comparire nel registro. È l'unico test che legge file fuori dal proprio
+modulo, e **fallisce invece di saltare** quando non li trova — una guardia sulla documentazione
+che passa perché non ha trovato la documentazione è peggio di nessuna guardia.
+
+Artefatti: `tasks/TASK-011/*`, `docs/DEBT_REGISTRY.md`.
+
+## Task precedenti di PHASE 2
 
 **TASK-010 — Vocabolario chiuso di `Task.status`** (2026-09-19).
 
@@ -114,8 +161,6 @@ che contenesse valori fuori vocabolario — comportamento voluto, precedente esa
 invariato.**
 
 Artefatti: `tasks/TASK-010/*`, `docs/adr/ADR-011-task-status-closed-vocabulary.md`.
-
-## Task precedenti di PHASE 2
 
 **TASK-009 — Assegnazione `Task` → `Agent`** (2026-09-17).
 
@@ -347,8 +392,8 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   obbligatorio su ogni mutazione di risorsa esistente, confrontato **dentro la transazione, dopo
   il lock esclusivo, prima delle regole**. `@Version` è il contatore, non il rilevatore: nessun
   handler per `OptimisticLockException`, e non va aggiunto.
-- Test: **216** (erano 109 in `master`, 158 a fine PHASE 1, 201 dopo TASK-009).
-  `./mvnw -B clean test` → BUILD SUCCESS.
+- Test: **219** (erano 109 in `master`, 158 a fine PHASE 1, 201 dopo TASK-009, 216 dopo
+  TASK-010). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
 ## Stato Git (verificato il 2026-09-19)
@@ -420,14 +465,17 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 
 ## Prossimo passo autonomo
 
-**TASK-011 — da scegliere quando si comincia**, con i criteri di `AUTONOMOUS_LOOP.md` §4 riletti
-sul posto. Due candidati e una domanda di confine (A: TD-37, le transizioni; B: la TASK-011 già
-pianificata al livello 6), argomentati in `tasks/TASK-010/HANDOFF.md`. **Chi sceglie, lo scriva.**
+**Nessuno. PHASE 2 è chiusa e il charter §8 dice di fermarsi qui**, con `FINAL_HANDOFF.md`
+pronto per la review umana.
+
+Quando PHASE 3 comincerà, la sua prima decisione è quale dei due candidati aprire — **TD-04**
+(autenticazione) o **TD-37** (le transizioni di `status`) — e non è una decisione da prendere
+dentro la fase precedente.
 
 **TD-08**, la sostituzione di `MasterOrchestrator`, resta sbloccato ma non ancora eseguibile: un
-task adesso sa dove sta, di chi è e in che stato è — ma non può **cambiare** stato (TD-37), e
-un orchestratore che non può muovere il lavoro attraverso gli stati non ha ancora niente da
-orchestrare. TD-37 è il prerequisito rimasto.
+task adesso sa dove sta, di chi è e in che stato è — ma non può **cambiare** stato (TD-37), e un
+orchestratore che non muove il lavoro attraverso gli stati non ha niente da orchestrare. TD-37 è
+il prerequisito rimasto.
 
 Il piano completo della fase sta in **`.company-os/PHASE_2_PLAN.md`**. In sintesi:
 
@@ -436,7 +484,7 @@ Il piano completo della fase sta in **`.company-os/PHASE_2_PLAN.md`**. In sintes
 | **TASK-008** | Optimistic concurrency (`ETag`/`If-Match`). Chiude TD-28, TD-30 | 3 | **completata** 2026-09-16 |
 | **TASK-009** | Relazione `Task` → `Agent`. Risolve TD-13 | 4 | **completata** 2026-09-17 |
 | **TASK-010** | Vocabolario chiuso di `Task.status`. Chiude la metà `status` di TD-12 | 5 | **completata** 2026-09-19 |
-| **TASK-011** | Da scegliere: TD-37 (transizioni) **oppure** debito/`docs/RUNNING.md` | 5 o 6 | **prossima** |
+| **TASK-011** | Registro del debito disambiguato; `docs/RUNNING.md` reso di nuovo vero | 6 | **completata** 2026-09-19 |
 
 Fuori da PHASE 2 e dichiarato tale: **TD-14** (CI: richiede un remote, hard stop #4), **TD-31**
 (elimina una colonna, hard stop #3), **TD-04** (autenticazione: primo candidato di PHASE 3).
@@ -446,6 +494,12 @@ Il merge di PHASE 1 in `master` resta il gesto con cui un umano accetta il lavor
 
 ## Debito aperto rilevante
 
+> ⚠️ **Due spazi di identificatori.** `docs/audit/TECHNICAL_DEBT.md` (TASK-000) e la numerazione
+> qui sotto usano lo stesso formato `TD-NN` per debiti diversi: **`TD-14`, `TD-19`, `TD-20`,
+> `TD-21`, `TD-22` collidono**. Questa numerazione è **autoritativa**, il prossimo id libero è
+> **`TD-38`**, e la mappa completa è in **`docs/DEBT_REGISTRY.md`** — da leggere prima di chiudere
+> o citare un `TD-NN`.
+
 **Chiusi da TASK-004**: TD-19 (componente ciclo di vita), **TD-24**, **TD-25**.
 **Chiusi da TASK-005**: **TD-07**, **TD-20**, **TD-21**, **TD-27**, **TD-29**.
 **Chiusi da TASK-006**: **TD-22**, **TD-23**.
@@ -454,13 +508,16 @@ Il merge di PHASE 1 in `master` resta il gesto con cui un umano accetta il lavor
 **Risolto da TASK-009**: **TD-13** dell'audit (`Agent` e `Task` non si conoscevano).
 **TASK-009 apre TD-34 e TD-35.**
 **Chiuso a metà da TASK-010**: **TD-12** — la metà `status`. **TASK-010 apre TD-36 e TD-37.**
+**TASK-011 non chiude e non apre nulla**: disambigua i due spazi (`docs/DEBT_REGISTRY.md`) e
+corregge `docs/RUNNING.md`. Registrata e **non fatta**: la rivalutazione degli otto debiti che
+esistono solo nell'audit.
 
 ### Alto valore
 
 | ID | Contenuto |
 |---|---|
 | **TD-31** | *(nuovo)* `Agent` esprime il ciclo di vita con un booleano, `Project` con un enum chiuso. Unificarli richiede di **eliminare una colonna**: migrazione irreversibile, dietro una decisione umana. Nel frattempo il contratto pubblico è già uniforme, perché `status` è derivato |
-| **TD-14** | Nessuna CI. Con 216 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
+| **TD-14** | Nessuna CI. Con 219 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task |
 
 ### Nuovi (TASK-010)
 
@@ -502,7 +559,7 @@ da applicare. `docs/RUNNING.md` non documenta `/api/projects` né gli endpoint d
 
 ## Failure aperti
 
-**Nessuno.** 216/216 verdi (`./mvnw -B clean test`, 2026-09-19).
+**Nessuno.** 219/219 verdi (`./mvnw -B clean test`, 2026-09-19).
 
 ## Domande di contratto aperte
 
@@ -541,6 +598,9 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 - Voice Interaction Layer, Payments / quota monitoring, 3D Omniverse integration
 
 ## Immediate goal
-Completare **PHASE 2** in modo autonomo su `autonomous/phase-2-assignment`, poi aggiornare
-l'handoff per la review umana. **Nessun merge in `master`**, che resta fermo a `d5ff121` con
-PHASE 1 ancora in attesa di accettazione.
+**Raggiunto.** PHASE 2 è completa su `autonomous/phase-2-assignment`, con `FINAL_HANDOFF.md`
+aggiornato per la review umana.
+
+`master` resta fermo a `d5ff121`, e adesso **due fasi** attendono la stessa accettazione: PHASE 1
+su `autonomous/phase-1-foundations` e PHASE 2 su `autonomous/phase-2-assignment`, che la contiene.
+Il merge è il gesto umano, e nessun agente lo esegue (charter §8).

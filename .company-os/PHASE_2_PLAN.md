@@ -50,7 +50,7 @@ quale meccanismo si chiude: concorrenza ottimistica **nel contratto HTTP**, non 
 | Candidato | Perché non in PHASE 2 |
 |---|---|
 | **TD-14 — CI** | Una CI reale richiede un remote, e un push è **hard stop #4** del charter |
-| **TD-31 — unificare il ciclo di vita di `Agent`** | Richiede di eliminare una colonna: **hard stop #3**. La decisione è umana e sta in `FINAL_HANDOFF.md` §5 |
+| **TD-31 — unificare il ciclo di vita di `Agent`** | Richiede di eliminare una colonna: **hard stop #3**. La decisione è umana: `docs/handoff/FINAL_HANDOFF_PHASE_1.md` §5, ripresa in `FINAL_HANDOFF.md` §4 |
 | **TD-04 — autenticazione** | Reale e in crescita, ma non è ciò che il passo successivo tocca, e introdurla cambierebbe ogni test di API della fase mentre la fase è in corso. Primo candidato di PHASE 3 |
 | **TD-08 — `MasterOrchestrator`** | Da sostituire, non da evolvere, e la sostituzione ha senso solo **dopo** che un task sa a quale agente appartiene. Diventa lavoro reale quando TASK-009 è chiusa |
 
@@ -183,10 +183,11 @@ PHASE 2 è completa quando tutte e tre sono vere:
 2. ✅ ogni percorso di scrittura che l'ADR di TASK-008 dichiara coperto **rileva** l'intento
    stantio, e la rilevazione è verificata per mutazione — togliere il confronto rende rosso un
    test — **TASK-008**;
-3. ⬜ `PROJECT_STATE.md` e un `FINAL_HANDOFF` aggiornato bastano a una sessione fredda, e `master`
-   è ancora a `d5ff121`. **`master` è intatto e `PROJECT_STATE.md` è aggiornato, ma
-   `FINAL_HANDOFF.md` è ancora quello di PHASE 1** (`158 test`, schema `V4`): la condizione è
-   **aperta**, ed è l'ultimo adempimento della fase.
+3. ✅ `PROJECT_STATE.md` e un `FINAL_HANDOFF` aggiornato bastano a una sessione fredda, e
+   `master` è ancora a `d5ff121` — **TASK-011**. `FINAL_HANDOFF.md` è adesso quello di PHASE 2;
+   quello di PHASE 1 è conservato in `docs/handoff/FINAL_HANDOFF_PHASE_1.md`, non sostituito.
+
+**PHASE 2 è completa dal 2026-09-19.** Charter §8: da qui non si prosegue senza una persona.
 
 ## 5. Correzioni immediate, non task
 

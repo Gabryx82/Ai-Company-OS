@@ -1,0 +1,99 @@
+task: TASK-011
+title: Registro del debito e documentazione operativa
+mode: implementation
+status: SELF_APPROVED
+approval: autonomous_project_mode
+decided_on: 2026-09-19
+
+selection_rationale: >
+  AUTONOMOUS_LOOP.md sezione 4, livello 6 -- e la scelta va argomentata perche'
+  il criterio a prima vista dice il contrario. Il livello 5 NON e' vuoto:
+  TASK-010 ha aperto TD-37 (le transizioni di status). TD-37 resta comunque
+  fuori da PHASE 2 per due ragioni: la fase si chiama Assignment e non
+  Lifecycle, quindi introdurre le transizioni allargherebbe lo scope di una fase
+  in corso (charter sezione 4); e PHASE_2_PLAN sezione 4 condizione 3 non e'
+  soddisfatta, perche' chiede un FINAL_HANDOFF aggiornato e quello che esiste e'
+  di PHASE 1. Charter sezione 8: a fine fase si prepara quel documento e ci si
+  ferma. TD-37 e' il primo candidato di PHASE 3, accanto a TD-04.
+
+baseline:
+  branch: task-011-debt-registry-and-docs
+  base: autonomous/phase-2-assignment
+  head_at_start: 060c5f8
+  suite_at_start: 216
+  schema_at_start: V7
+  working_tree_at_start: clean
+
+collision_census:
+  audit_range: TD-01..TD-22
+  live_range: TD-01..TD-37
+  colliding: [TD-14, TD-19, TD-20, TD-21, TD-22]
+  coinciding: [TD-04, TD-07, TD-08, TD-11, TD-12, TD-13, TD-15, TD-17, TD-18]
+  audit_only: [TD-01, TD-02, TD-03, TD-05, TD-06, TD-09, TD-10, TD-16]
+  live_only: [TD-23, TD-24, TD-25, TD-26, TD-27, TD-28, TD-29, TD-30, TD-31, TD-32, TD-33, TD-34, TD-35, TD-36, TD-37]
+  next_free: TD-38
+  why_insidious: >
+    la maggior parte degli identificatori coincide, quindi chi ne verifica due o
+    tre conclude che il problema non esista.
+
+running_md_false_statements:
+  - claim: "La prossima migrazione di schema si chiama V2__...sql"
+    reality: "lo stream e' a V7; una V2 nuova viene rifiutata da Flyway"
+    severity: "istruisce a sbagliare, non solo incompleta"
+  - claim: "Dopo la transizione deve contenere solo 1 | V1__create_agents_and_tasks.sql"
+    reality: "vero appena dopo TASK-001A, falso da V2 in poi"
+    fix: "cio' che si verifica e' l'ASSENZA della riga legacy 1000"
+  missing_entirely: >
+    che ogni mutazione richiede If-Match. Senza, il primo PUT di chiunque
+    fallisce con 428 in modo incomprensibile.
+  endpoints_documented_before: 3
+  endpoints_documented_after: 18
+
+decisions:
+  no_renumbering:
+    live: "romperebbe ogni riferimento in ADR, artefatti e commit"
+    audit: "riscriverebbe cio' che TASK-000 osservo'; uno snapshot che si aggiorna non e' uno snapshot"
+    chosen: "additivo: la collisione si rende interpretabile, non si cancella"
+  audit_debts_not_closed: >
+    otto debiti esistono solo nell'audit e diversi sono con ogni evidenza
+    risolti. NON dichiarati chiusi: "con ogni evidenza risolto" E' "il codice
+    sembra diverso", che il charter vieta. Il registro dice "non rivalutato
+    qui", che e' vero, e registra la rivalutazione come task successiva.
+  test_for_a_docs_problem: >
+    il charter chiede una verifica che fallisca se il difetto torna. Il difetto
+    torna quando esiste un id dell'audit di cui il registro non rende conto.
+
+invariants:
+  - "I-1: ogni TD-NN dell'audit compare nel registro"
+  - "I-2: il registro dichiara quale spazio e' autoritativo e i due significati delle cinque collisioni"
+  - "I-3: il test fallisce, non salta, se non trova i file"
+  - "I-4: RUNNING.md non contiene istruzioni false"
+  - "I-5: ogni endpoint dei controller compare in RUNNING.md"
+  - "I-6: nessuna modifica al codice applicativo"
+
+forbidden:
+  - renumbering_either_space
+  - merging_the_two_registers
+  - closing_audit_debts_without_re_evaluation
+  - openapi_springdoc
+  - application_code_changes
+  - new_migration
+  - merge_to_master
+  - push
+
+debt_accounting_at_close:
+  new: none
+  next_free_id: TD-38
+  recorded_not_done: "rivalutazione degli otto debiti solo-audit"
+
+git_constraints:
+  work_branch: task-011-debt-registry-and-docs
+  integration_branch: autonomous/phase-2-assignment
+  forbidden_operations:
+    - merge_to_master
+    - push
+    - remote_configuration
+    - force_push
+    - destructive_reset
+    - destructive_rebase
+    - history_rewrite
