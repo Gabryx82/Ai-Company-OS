@@ -145,21 +145,24 @@ un task esistente (**TD-37**), e `Task.priority` resta una stringa libera (**TD-
 il `PUT` *è* il momento in cui le transizioni diventano una domanda obbligatoria, ed è per questo
 che non è stato introdotto di sfuggita.
 
-### TASK-011 — da scegliere fra due candidati
+### TASK-011 — Registro del debito e documentazione
 
-**Il criterio di chiusura della fase (§4) è già soddisfatto in tutte e tre le condizioni**, quindi
-la domanda non è più «cosa manca a PHASE 2» ma «dove finisce PHASE 2».
+**Livello 6. Prossima, scelta il 2026-09-19 — e la scelta va argomentata, perché il criterio di
+`AUTONOMOUS_LOOP.md` §4 a prima vista dice un'altra cosa.**
 
-- **A — TD-37, le transizioni di `status`** (livello 5). Il livello 5 non è vuoto: TD-37 ci sta, e
-  il livello 6 non si tocca finché il 5 è pieno. Ma PHASE 2 si chiama *Assignment*, non
-  *Lifecycle*, e TD-37 è plausibilmente il primo pezzo della fase successiva.
-- **B — il contenuto già pianificato qui sotto** (livello 6).
+Il livello 5 **non è vuoto**: TASK-010 ha aperto **TD-37**, le transizioni di `status`, e il
+livello 6 non si tocca finché il 5 è pieno. TD-37 resta comunque fuori da PHASE 2:
 
-Argomenti per esteso in `tasks/TASK-010/HANDOFF.md`. Chi sceglie, lo scriva.
+1. **la fase si chiama *Assignment*, non *Lifecycle*.** §2 di questo piano elenca ciò che resta
+   fuori e perché; introdurre le transizioni adesso allargherebbe lo scope della fase mentre la
+   fase è in corso, che il charter §4 vieta;
+2. **§4 condizione 3 non è soddisfatta**, e non per un dettaglio: chiede un `FINAL_HANDOFF`
+   aggiornato, e quello che esiste è di PHASE 1 (`158 test`, schema `V4`). Il charter §8 dice che
+   a fine fase si prepara quel documento e **ci si ferma**.
 
-#### B — Registro del debito e documentazione
+TD-37 è quindi il **primo candidato di PHASE 3**, accanto a TD-04.
 
-**Livello 6.**
+Il contenuto:
 
 `docs/audit/TECHNICAL_DEBT.md` (TASK-000) e la numerazione viva in `PROJECT_STATE.md` usano lo
 **stesso spazio di identificatori per debiti diversi**: `TD-14` è «build non riproducibile
@@ -175,13 +178,15 @@ TASK-003.
 
 PHASE 2 è completa quando tutte e tre sono vere:
 
-1. un task può essere assegnato a un agente, con le regole di dominio dichiarate in un'ADR e rese
-   vere da test, non da convenzione;
-2. ogni percorso di scrittura che l'ADR di TASK-008 dichiara coperto **rileva** l'intento
+1. ✅ un task può essere assegnato a un agente, con le regole di dominio dichiarate in un'ADR e
+   rese vere da test, non da convenzione — **TASK-009**;
+2. ✅ ogni percorso di scrittura che l'ADR di TASK-008 dichiara coperto **rileva** l'intento
    stantio, e la rilevazione è verificata per mutazione — togliere il confronto rende rosso un
-   test;
-3. `PROJECT_STATE.md` e un `FINAL_HANDOFF` aggiornato bastano a una sessione fredda, e `master` è
-   ancora a `d5ff121`.
+   test — **TASK-008**;
+3. ⬜ `PROJECT_STATE.md` e un `FINAL_HANDOFF` aggiornato bastano a una sessione fredda, e `master`
+   è ancora a `d5ff121`. **`master` è intatto e `PROJECT_STATE.md` è aggiornato, ma
+   `FINAL_HANDOFF.md` è ancora quello di PHASE 1** (`158 test`, schema `V4`): la condizione è
+   **aperta**, ed è l'ultimo adempimento della fase.
 
 ## 5. Correzioni immediate, non task
 

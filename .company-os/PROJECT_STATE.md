@@ -21,9 +21,11 @@ L'agente definisce, implementa, revisiona e chiude le task senza approvazione in
 verdi**, schema **`V7`**, nessun failure aperto, nessun remote.
 
 L'obiettivo della fase — *il Company OS sa dire chi lavora su che cosa, e due client non possono
-sovrascriversi in silenzio mentre lo dicono* — è **raggiunto in entrambe le metà**, e il criterio
-di chiusura di `PHASE_2_PLAN.md` §4 è soddisfatto in tutte e tre le condizioni. Resta TASK-011,
-per cui esistono **due candidati e una domanda di confine**: `tasks/TASK-010/HANDOFF.md`.
+sovrascriversi in silenzio mentre lo dicono* — è **raggiunto in entrambe le metà**. Il criterio di
+chiusura di `PHASE_2_PLAN.md` §4 è soddisfatto nelle condizioni **1 e 2**; la **3 no**, e non per
+un dettaglio: chiede «`PROJECT_STATE.md` e un **`FINAL_HANDOFF` aggiornato**», e `FINAL_HANDOFF.md`
+è tuttora quello di **PHASE 1** (`158 test`, schema `V4`). Resta quindi TASK-011, e resta il
+`FINAL_HANDOFF` di fase.
 
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
@@ -34,19 +36,25 @@ PHASE 1 resta com'è: `master` è ancora il gate di quella fase, e PHASE 2 ci si
 senza mergiarla.
 
 ## Current task
-**TASK-011 — da scegliere.** Livelli 1, 2 e 3 vuoti alla chiusura di TASK-010. Due candidati, e
-la scelta richiede di decidere un confine di fase, non solo una priorità:
+**TASK-011 — Registro del debito e documentazione**, cioè il contenuto che
+`PHASE_2_PLAN.md` §3 le aveva già assegnato al livello 6. **Scelta il 2026-09-19, e l'argomento
+va scritto perché la scelta non è quella che il criterio dice a prima vista.**
 
-- **A — TD-37** (livello 5): le transizioni di `status`. Il vocabolario è chiuso ma il ciclo di
-  vita **non è percorribile**, perché nessun percorso muta lo `status` di un task esistente. È
-  esattamente ciò che ADR-011 §3 ha evitato di rispondere per inerzia, e arriva con le domande
-  già formulate;
-- **B — TASK-011 come pianificata** (livello 6): collisione di identificatori nel registro del
-  debito, e `docs/RUNNING.md`.
+`AUTONOMOUS_LOOP.md` §4 dice che il livello 6 non si tocca finché il 5 è pieno — e il 5 **non è
+vuoto**: c'è **TD-37**, le transizioni di `status`. Nondimeno TD-37 **non** è la prossima task,
+per due ragioni che tirano nella stessa direzione:
 
-Il livello 6 non si tocca finché il 5 è pieno, e TD-37 lo riempie — ma PHASE 2 si chiama
-*Assignment*, non *Lifecycle*, e TD-37 è plausibilmente il primo pezzo della fase successiva.
-Argomenti per esteso in `tasks/TASK-010/HANDOFF.md`. **Chi sceglie, lo scriva.**
+1. **PHASE 2 si chiama *Assignment*, non *Lifecycle*.** Il piano di fase elenca esplicitamente
+   ciò che resta fuori e perché; aggiungere le transizioni adesso allargherebbe lo scope della
+   fase mentre la fase è in corso, che è ciò che il charter §4 vieta («non si allarga lo scope per
+   sistemare tutto»);
+2. **la fase ha un adempimento residuo, e non è una task di livello 5**: la condizione 3 del suo
+   criterio di chiusura chiede un `FINAL_HANDOFF` aggiornato, e quello che esiste è di PHASE 1.
+   Il charter §8 dice che a fine fase si prepara quel documento e **ci si ferma**.
+
+**TD-37 è quindi il primo candidato di PHASE 3**, insieme a TD-04 (autenticazione), e la scelta
+fra i due è la prima decisione di quella fase — non di questa. Argomenti in
+`tasks/TASK-010/HANDOFF.md`.
 
 ## Last completed task
 
