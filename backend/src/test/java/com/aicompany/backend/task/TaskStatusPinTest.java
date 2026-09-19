@@ -53,12 +53,25 @@ class TaskStatusPinTest extends AbstractPostgresTest {
     }
 
     /**
-     * I-8. The database declares the same set, read out of the constraint itself
-     * rather than inferred by probing values -- probing can show that the members
-     * are accepted, it cannot show that nothing else is.
+     * I-8. The database declares the decided vocabulary, read out of the
+     * constraint itself rather than inferred by probing values -- probing can
+     * show that the members are accepted, it cannot show that nothing else is.
+     *
+     * <p><strong>It compares the constraint to {@link #VOCABULARY}, not to the
+     * enum, and the name says so since a mutation caught the older one lying.</strong>
+     * Widening the enum alone left a test called
+     * {@code theCheckConstraintDeclaresTheSameSetAsTheEnum} green, because that is
+     * not what it was comparing.
+     *
+     * <p>The triangulation is deliberate and it is the stronger arrangement, not a
+     * workaround: each guard is checked against a set written out independently,
+     * so agreement between the enum and the database follows transitively from
+     * this test and {@link #theEnumIsExactlyTheDecidedVocabulary} together.
+     * Comparing the two guards directly to each other would pass the day somebody
+     * changed both and decided neither.
      */
     @Test
-    void theCheckConstraintDeclaresTheSameSetAsTheEnum() {
+    void theCheckConstraintDeclaresTheDecidedVocabulary() {
 
         String definition = jdbc.queryForObject(
                 "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = ?",

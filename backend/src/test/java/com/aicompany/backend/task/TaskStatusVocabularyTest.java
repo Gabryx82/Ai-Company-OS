@@ -101,6 +101,35 @@ class TaskStatusVocabularyTest extends AbstractPostgresTest {
     }
 
     /**
+     * The boundary between the two constraints on this field, which
+     * {@link com.aicompany.backend.task.dto.InTaskStatusVocabulary} claims in its
+     * javadoc and nothing was asserting.
+     *
+     * <p>A blank status is not in the vocabulary either, so the vocabulary check
+     * deliberately lets it pass and leaves it to {@code @NotBlank}. Otherwise two
+     * constraints report the same absence, the advice keeps whichever arrives
+     * first, and a caller who sent nothing is handed a list of three values
+     * instead of being told the field is required.
+     *
+     * <p>Asserting the message here, rather than only the status code, is the
+     * point: both paths answer 400 {@code validation-failed}, so the code alone
+     * cannot tell whether the right constraint fired.
+     */
+    @Test
+    void aBlankStatusIsReportedAsMissingAndNotAsOutOfVocabulary() throws Exception {
+
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"t","status":"   ","priority":"HIGH"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:validation-failed"))
+                .andExpect(jsonPath("$.errors.status").value("status is required"));
+
+        assertThat(repository.count()).isZero();
+    }
+
+    /**
      * I-2. {@code "open"} is outside the vocabulary exactly as much as
      * {@code "banana"} is, and the audit listed both as accepted today.
      *
