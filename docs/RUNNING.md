@@ -180,6 +180,26 @@ cd backend
 
 I test girano contro un **PostgreSQL reale** avviato da Testcontainers, non su database embedded. **Docker deve essere in esecuzione**, altrimenti i test falliscono all'avvio del container.
 
+### La stessa suite in CI
+
+`.github/workflows/ci.yml` esegue **esattamente questo comando** — `./mvnw -B clean test` in
+`backend/` — su `ubuntu-latest` con JDK 21 (Temurin), a ogni push e a ogni pull request, e a
+richiesta con *Run workflow*.
+
+**Non c'è un blocco `services: postgres`, ed è deliberato.** È la cosa ovvia da aggiungere a un
+workflow per un progetto i cui test usano PostgreSQL, e qui sarebbe sbagliata: nessuno si
+collegherebbe a quel servizio. La suite non prende il database dall'ambiente, se lo **avvia da
+sé** con Testcontainers. Quello che serve davvero è un **daemon Docker**, che i runner
+`ubuntu-latest` hanno, e un passo del workflow lo verifica esplicitamente perché la sua assenza
+altrimenti fallirebbe dentro Testcontainers con un messaggio che non nomina la causa.
+
+I report di Surefire sono caricati come artefatto **anche quando il job fallisce** — soprattutto
+allora, perché sono l'unico modo di vedere quale test è rosso senza rieseguire il job.
+
+> ⚠️ **Al 2026-09-20 nessun job è ancora stato eseguito.** Il workflow è committato ma il push su
+> `origin` è bloccato dall'autenticazione, quindi GitHub non lo ha mai visto. **TD-14 resta
+> aperto**: `tasks/TASK-012/EVIDENCE_TD14.md` §7-10.
+
 ## 4. Profili
 
 | Profilo | Uso | Sorgente della configurazione |

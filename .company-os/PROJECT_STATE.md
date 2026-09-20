@@ -29,9 +29,9 @@ Handoff di review: `docs/handoff/FINAL_HANDOFF_PHASE_1.md` (PHASE 1, conservato 
 e `FINAL_HANDOFF.md` (PHASE 2).
 
 Stato corrente **dopo TASK-012**: suite **223 test verdi**, **stream di migrazione a `V8`** (per
-la versione del database locale vedi «Stato del sistema»), nessun failure aperto, **nessun remote
-configurato**. I numeri nella tabella qui sopra sono quelli **al momento dei merge** e restano
-com'erano.
+la versione del database locale vedi «Stato del sistema»), nessun failure aperto. **`origin` è
+configurato dal 2026-09-20, ma nulla è ancora stato pushato** (TD-14). I numeri nella tabella qui
+sopra sono quelli **al momento dei merge** e restano com'erano.
 
 **I due integration branch restano dove sono**, fermi ai rispettivi tip: sono i marcatori
 storici di che cosa conteneva ciascuna fase, e farli avanzare li renderebbe falsi.
@@ -59,10 +59,15 @@ senza mergiarla.
 
 - **TD-31 — CHIUSO.** Il cambiamento distruttivo è stato autorizzato esplicitamente da un umano,
   delimitato allo scope documentato. `V8` elimina `agents.active`;
-- **TD-14 — APERTO e bloccato**, non per una decisione ma per **un dato che non esiste nel
-  repository**: l'URL del remote. Verificato, non supposto: nessun remote configurato né mai
-  esistito, nessun URL/owner/repo citato in alcun file, `gh` non installato, nessuna CI presente.
-  Evidenza con i comandi in `tasks/TASK-012/EVIDENCE_TD14.md`.
+- **TD-14 — APERTO.** Il dato che mancava è arrivato il **2026-09-20** e il blocco si è spostato
+  di un passo: `origin` è configurato su `https://github.com/Gabryx82/Ai-Company-OS.git`, il
+  `fetch` riesce, **il repository remoto esiste ed è vuoto** (nessun branch, nessuna history
+  indipendente), e `.github/workflows/ci.yml` è scritto, validato in locale e committato
+  (`dbed389`). **Resta bloccato dalla sola autenticazione**: le credenziali memorizzate in Git
+  Credential Manager presentano l'account **`BytecoreLab`**, che non ha permesso di scrittura su
+  quel repository — `403`, e il push non ha scritto nulla. **Nessun job CI è mai stato eseguito**,
+  quindi TD-14 **non si chiude**: un workflow che non ha girato è un file YAML, non una CI.
+  Evidenza e le tre azioni umane possibili in `tasks/TASK-012/EVIDENCE_TD14.md` §7-10.
 
 **TD-04** e **TD-37** restano aperte e **non decise**: sono i due candidati di PHASE 3, e la
 scelta fra loro è la prima decisione di quella fase.
@@ -499,7 +504,12 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   TASK-010, 219 dopo TASK-011). `./mvnw -B clean test` → BUILD SUCCESS.
 - H2 rimosso.
 
-## Stato Git (verificato il 2026-09-19, dopo i merge)
+## Stato Git (verificato il 2026-09-20)
+
+- **Remote**: `origin` → `https://github.com/Gabryx82/Ai-Company-OS.git`, configurato il
+  2026-09-20 su autorizzazione umana esplicita. **Fetch riesce; il repository remoto è vuoto.**
+  **Nessun push è mai andato a buon fine** — bloccato dall'autenticazione (TD-14), e il remoto non
+  contiene nulla.
 
 - **`master`**: **`6dc5989`**. Era `d5ff121`; ci sono arrivati **41 commit** con due fast-forward
   consecutivi, autorizzati dalla review umana del 2026-09-19.
@@ -519,7 +529,7 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   `task-007-agent-registry`, `task-008-optimistic-concurrency`,
   `task-009-task-agent-assignment`, `task-010-task-status-vocabulary`,
   `task-011-debt-registry-and-docs`.
-- **Nessun remote configurato, nessun push eseguito.**
+- **Nessun push eseguito.** Il solo tentativo è stato rifiutato dall'autenticazione (TD-14) e **non ha scritto nulla**: il repository remoto è ancora vuoto.
 - Storia lineare, mai riscritta.
 
 Commit di TASK-010, ora nell'integration branch:
@@ -629,7 +639,7 @@ bloccato** su un dato mancante (`tasks/TASK-012/EVIDENCE_TD14.md`).
 | ID | Contenuto |
 |---|---|
 | **TD-31** | **CHIUSO** il 2026-09-19 da TASK-012. `V8` elimina `agents.active`; decisione umana esplicita, backfill biiettivo, contratto pubblico invariato. ADR-012 |
-| **TD-14** | Nessuna CI. Con 223 test, invarianti di concorrenza e guardie verificate per mutazione, il costo di non averla cresce a ogni task. **Bloccato su un dato, non su una decisione**: serve l'URL del repository remoto, che TASK-012 ha verificato non esistere in alcun file, configurazione o ref. `tasks/TASK-012/EVIDENCE_TD14.md` |
+| **TD-14** | Nessuna CI **eseguita**. Il remote è configurato e il workflow è committato (`dbed389`): manca solo un push che riesca. **Bloccato dall'autenticazione GitHub** — le credenziali memorizzate sono dell'account `BytecoreLab`, senza scrittura su `Gabryx82/Ai-Company-OS`. È un'azione umana: `tasks/TASK-012/EVIDENCE_TD14.md` §9 |
 
 ### Nuovi (TASK-010)
 

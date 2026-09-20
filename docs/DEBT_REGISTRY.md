@@ -33,7 +33,7 @@ Sono queste, e sono tutte. Ogni altro identificatore o coincide (§3) o esiste i
 
 | ID | **Audit** (TASK-000) | **Vivo** (`PROJECT_STATE.md`) |
 |---|---|---|
-| **TD-14** | Build non riproducibile offline: `./mvnw -o test` fallisce per plugin assenti dalla cache. **Non rivalutato** | **Nessuna CI. APERTO, e bloccato su un dato mancante**: TASK-012 ha verificato che il repository non contiene alcun URL, owner o nome di repository remoto, che nessun remote è mai stato configurato e che `gh` non è installato. Serve l'URL del remote. Evidenza e comandi: `tasks/TASK-012/EVIDENCE_TD14.md` |
+| **TD-14** | Build non riproducibile offline: `./mvnw -o test` fallisce per plugin assenti dalla cache. **Non rivalutato** | **Nessuna CI. APERTO, e il blocco si è spostato.** Il remote è stato fornito e configurato il 2026-09-20 (`origin` → `Gabryx82/Ai-Company-OS`), `fetch` riesce, il remoto è **vuoto**, e il workflow GitHub Actions è **scritto e committato** (`dbed389`). Resta bloccato **solo dall'autenticazione**: le credenziali memorizzate presentano l'account `BytecoreLab`, che non ha scrittura sul repository (`403`). **Nessun job è mai stato eseguito**, quindi non c'è evidenza di una CI funzionante. `tasks/TASK-012/EVIDENCE_TD14.md` §7-10 |
 | **TD-19** | Metadati `pom.xml` vuoti | Componente del ciclo di vita del progetto. **Chiuso da TASK-004** |
 | **TD-20** | Igiene Git | Le eccezioni che Spring solleva **prima** del nostro codice non entravano nel contratto d'errore. **Chiuso da TASK-005** |
 | **TD-21** | `System.out.println` invece di logging | **Chiuso da TASK-005**, dentro la normalizzazione del contratto d'errore |

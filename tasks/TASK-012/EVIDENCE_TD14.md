@@ -119,3 +119,77 @@ Scrivere `.github/workflows/ci.yml` presuppone **GitHub**. Il repository non dic
 destinazione sia GitHub, e la piattaforma è parte della destinazione. Preparare un file per una
 piattaforma non scelta sarebbe la stessa invenzione, solo in un'altra forma — e lascerebbe in
 repository un artefatto che sembra configurato e non lo è.
+
+
+---
+
+# Continuazione — 2026-09-20: il remote è arrivato, il blocco si è spostato
+
+Il dato che mancava è stato fornito e autorizzato:
+**`https://github.com/Gabryx82/Ai-Company-OS.git`**.
+
+Quanto sopra resta vero **com'era scritto il 2026-09-19**: descriveva un repository senza remote,
+ed è la fotografia da cui questa continuazione parte.
+
+## 7. Che cosa è stato fatto, e ha funzionato
+
+| Passo | Esito |
+|---|---|
+| `git remote add origin <URL>` | ✅ configurato |
+| `git fetch origin` | ✅ **riuscito**, exit 0 |
+| `git ls-remote origin` | ✅ riuscito, e **restituisce zero righe** |
+| `git ls-remote --heads origin` | ✅ **nessun head** |
+
+**Il repository remoto esiste, è leggibile, ed è completamente vuoto.** Nessun branch, nessun
+tag, nessuna history indipendente, nessun file inatteso. Non c'è niente da riconciliare e non
+c'era alcuna ragione per forzare alcunché.
+
+## 8. Il blocco residuo: **autenticazione**, e solo quella
+
+```
+$ git push -u origin master
+remote: Permission to Gabryx82/Ai-Company-OS.git denied to BytecoreLab.
+fatal: unable to access 'https://github.com/Gabryx82/Ai-Company-OS.git/':
+       The requested URL returned error: 403
+```
+
+| Fatto | Valore | Come è stato stabilito |
+|---|---|---|
+| Credential helper in uso | **Git Credential Manager** (`manager`) | `git config --show-origin --get-all credential.helper` → `C:/Program Files/Git/etc/gitconfig` |
+| Account GitHub che le credenziali memorizzate presentano | **`BytecoreLab`** | **lo dice il server nel rifiuto**, non è stato dedotto né letto da alcun archivio di credenziali |
+| Permessi di quell'account sul repository | **nessuna scrittura** (`403`) | il rifiuto stesso |
+| Lettura | **funziona** | `ls-remote` riesce: il repository è pubblico e leggibile |
+| Identità dei commit | `gabry <g.scialla2@studenti.unisa.it>` | `git config user.name` / `user.email`. **Non c'entra con l'autenticazione**: è metadato del commit, non credenziale |
+
+**Nessuna credenziale è stata letta, modificata, aggirata o esposta** — è hard stop #5 del
+charter. L'unico dato sull'account viene dal messaggio di rifiuto del server.
+
+**Il push non ha scritto nulla.** Verificato dopo il fallimento: `ls-remote --heads` è ancora
+vuoto, e `master` non ha un upstream, perché `-u` si applica solo a un push riuscito.
+
+## 9. Che cosa serve, esattamente
+
+Una di queste tre, ed è una **decisione umana** perché riguarda account e permessi:
+
+1. **Dare all'account `BytecoreLab` accesso in scrittura** a `Gabryx82/Ai-Company-OS`
+   (*Settings → Collaborators and teams → Add people*). È la via più breve se le credenziali
+   memorizzate su questa macchina devono restare quelle.
+
+2. **Far autenticare Git come `Gabryx82`.** Le credenziali memorizzate vanno sostituite in
+   *Credential Manager di Windows → Credenziali Windows → `git:https://github.com`*, e il push
+   successivo chiederà di autenticarsi. **Non è un'operazione che un agente deve fare**: tocca
+   credenziali, hard stop #5.
+
+3. **Se il repository giusto è un altro** — per esempio sotto l'organizzazione `BytecoreLab` —
+   allora l'URL autorizzato è sbagliato e serve quello corretto.
+
+## 10. Che cosa è già pronto e attende solo il push
+
+- `.github/workflows/ci.yml`, committato in `dbed389`;
+- `backend/mvnw` marcato eseguibile (`100644` → `100755`), senza il quale il primo job
+  fallirebbe con *Permission denied* su Linux;
+- suite locale **223/223 verde** subito prima del commit.
+
+**TD-14 resta APERTO.** La CI è scritta e validata per quanto è validabile in locale, ma
+**nessun job è mai stato eseguito**, e un workflow che non ha girato non è una CI: è un file
+YAML. Chiuderlo adesso significherebbe chiudere un debito perché il codice sembra diverso.
