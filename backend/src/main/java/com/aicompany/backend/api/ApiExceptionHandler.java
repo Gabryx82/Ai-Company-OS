@@ -21,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -61,6 +62,26 @@ import java.util.Map;
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
+    // --- who is asking (ADR-013) -------------------------------------------
+
+    /**
+     * Raised in the security filter chain, not by a controller, and handed here by
+     * {@code ProblemAuthenticationEntryPoint} so that the 401 is defined in the same
+     * place as every other response. The challenge header is what RFC 9110 §15.5.2
+     * requires of a 401, and it names the only scheme this API accepts.
+     *
+     * <p>The detail is fixed: the exception's own message would say whether a token
+     * was absent or wrong, which is exactly the difference ADR-013 §4 declines to
+     * reveal.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    ResponseEntity<ProblemDetail> handleUnauthenticated(AuthenticationException e) {
+        return ResponseEntity.status(ApiProblem.UNAUTHENTICATED.status())
+                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .body(ApiProblem.UNAUTHENTICATED.toDetail());
+    }
 
     // --- the precondition protocol (ADR-009) ------------------------------
 

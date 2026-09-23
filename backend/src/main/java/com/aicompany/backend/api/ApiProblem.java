@@ -50,6 +50,16 @@ public enum ApiProblem {
     RESOURCE_NOT_FOUND("resource-not-found", HttpStatus.NOT_FOUND,
             "Resource not found", "There is nothing at this path"),
 
+    // --- who is asking (ADR-013) -------------------------------------------
+
+    /**
+     * No credential, or one that is not ours -- the same answer for both, on
+     * purpose (ADR-013 §4). Rendered by this contract like everything else, even
+     * though it is raised in the filter chain and not by a controller.
+     */
+    UNAUTHENTICATED("unauthenticated", HttpStatus.UNAUTHORIZED,
+            "Authentication required", "This request must carry a valid bearer token"),
+
     // --- the precondition protocol (ADR-009) ------------------------------
 
     /**
