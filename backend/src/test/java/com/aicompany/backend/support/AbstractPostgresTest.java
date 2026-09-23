@@ -9,10 +9,13 @@ import org.springframework.test.context.ActiveProfiles;
  * Base class for tests that need the application running against a real
  * PostgreSQL database. Sharing one annotation set lets Spring reuse a single
  * application context, and therefore a single container, across subclasses.
+ *
+ * <p>The shared {@code MockMvc} is authenticated as the operator (TASK-013):
+ * see {@link AuthenticatedMockMvcConfiguration}.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(PostgresTestcontainerConfig.class)
+@Import({PostgresTestcontainerConfig.class, AuthenticatedMockMvcConfiguration.class})
 public abstract class AbstractPostgresTest {
 }

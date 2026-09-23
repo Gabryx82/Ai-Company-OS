@@ -1,6 +1,7 @@
 package com.aicompany.backend.api;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AssignableTypeFilter;
@@ -42,7 +43,9 @@ class ApiProblemCoverageTest {
     private static final List<Class<?>> PROTOCOL_EXCEPTIONS = List.of(
             PreconditionRequiredException.class,
             PreconditionFailedException.class,
-            InvalidPreconditionException.class);
+            InvalidPreconditionException.class,
+            // ADR-013: raised in the filter chain and handed to the advice.
+            AuthenticationException.class);
 
     /**
      * AC-10, invariant I-6. Every domain exception that exists has a mapping.
@@ -108,6 +111,7 @@ class ApiProblemCoverageTest {
                         "unsupported-media-type",
                         "method-not-allowed",
                         "resource-not-found",
+                        "unauthenticated",
                         "precondition-required",
                         "precondition-failed",
                         "invalid-precondition",
