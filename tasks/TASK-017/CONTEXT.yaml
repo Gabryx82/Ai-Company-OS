@@ -1,0 +1,9 @@
+task: TASK-017
+title: AI Engine skeleton, contract v1, echo provider
+phase: PHASE 5 — AI Engine
+branch: task-017-ai-engine-gateway
+integration_branch: autonomous/phase-5-ai-engine
+adr: docs/adr/ADR-015-ai-engine-model-gateway.md
+required_files:
+  - docs/adr/ADR-001-spring-boot-control-plane.md
+  - docs/audit/MIGRATION_MAP.md
