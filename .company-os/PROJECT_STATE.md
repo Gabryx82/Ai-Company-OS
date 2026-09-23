@@ -44,7 +44,7 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶ Blocco autonomo PHASE 3 → PHASE 7 (in corso dal 2026-09-23)
+## ▶ Blocco autonomo PHASE 3 → PHASE 7 — COMPLETATO il 2026-09-23, in attesa di Human Final Review
 
 > **Leggere prima questa sezione.** Il resto del file descrive lo stato fino a TASK-012 ed è
 > conservato; dove questa sezione e il resto divergono, **vale questa**.
@@ -60,11 +60,18 @@ motivazione: **`.company-os/ROADMAP_PHASES_3_7.md`**.
 | **PHASE 4 — Task lifecycle** | `autonomous/phase-4-task-lifecycle` (da phase-3) | TASK-015, TASK-016 | ✅ **completata** |
 | **PHASE 5 — AI Engine** | `autonomous/phase-5-ai-engine` (da phase-4) | TASK-017, TASK-018 | ✅ **completata** |
 | **PHASE 6 — Execution** | `autonomous/phase-6-execution` (da phase-5) | TASK-019, TASK-020 | ✅ **completata** |
-| PHASE 7 — Operator console | `autonomous/phase-7-operator-console` (da phase-6) | TASK-021, TASK-022 | prossima |
+| **PHASE 7 — Operator console** | `autonomous/phase-7-operator-console` (da phase-6) | TASK-021, TASK-022 | ✅ **completata** |
 
-**Suite: 321 test verdi** (`./mvnw -B clean test`). **Stream: `V11`** (`V10` `task_runs`, `V11`
-`agents.model`). **Prossimo debito libero: `TD-41`** (`docs/DEBT_REGISTRY.md`).
-**Suite AI Engine: 51 test verdi** (`cd ai-engine && .venv/Scripts/python -m pytest`), job CI proprio.
+**Il blocco è chiuso. L'agente è fermo per la Human Final Review: `FINAL_HANDOFF.md`.** L'ultimo
+integration branch, `autonomous/phase-7-operator-console`, contiene tutte e cinque le fasi in linea
+retta sopra `master` (`d166870`); un solo fast-forward le integrerebbe tutte. **`master` non è stato
+toccato.**
+
+**Suite a fine blocco: 394 test verdi** — **329** Java (`cd backend && ./mvnw -B clean test`), **51**
+AI Engine (`cd ai-engine && .venv/Scripts/python -m pytest`), **14** console (`cd frontend && npm test`),
+tre job CI. **Stream: `V11`** (`V9` priority, `V10` `task_runs`, `V11` `agents.model`).
+**Prossimo debito libero: `TD-41`** (`docs/DEBT_REGISTRY.md`). Avvio dell'intero stack:
+`.\scripts\start-dev.ps1`.
 **Live dev DB: `V3`**, verificato il 2026-09-23 e **non toccato**: gli smoke test girano su un
 clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
 
@@ -105,6 +112,17 @@ clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
   `ollama:llama3.2:3b` (13 s). Nessuna chiamata cloud eseguita.
 - Il runtime a grafo (LangGraph o alternative) **resta non deciso**, come ADR-001 lo ha rinviato.
 
+### PHASE 7 in sintesi
+- **TASK-021** (ADR-017 §2). springdoc 3.1.1; `docs/api/openapi.json` tenuto **byte per byte** al
+  codice da `OpenApiContractTest`; `/v3/api-docs` autenticato; `GET /api/engine/models`.
+- **TASK-022** (ADR-017). `frontend/`: React 19 + TS + Vite, tipi **generati** dal contratto (la CI
+  rifiuta una deriva), board a tre colonne, drawer del task (archi, routing, assegnazione, run con
+  scelta del modello, output e prompt), agenti con modello, progetti, modelli dell'engine. `412`
+  mai ritentato. `scripts/start-dev.ps1`. README riscritto: **TD-17, TD-18 chiusi**.
+- **Verifica dal vivo** nel browser integrato: ha trovato che `/actuator/health` non aveva CORS
+  (la console avrebbe segnato «down»); corretto e pinnato. Il login autenticato nel browser **non**
+  è stato eseguito dall'agente (nessun token digitato in un campo): è il primo passo della review.
+
 ### PHASE 6 in sintesi
 - **TASK-019** (ADR-016, `V10`). `POST /api/tasks/{id}/runs` (If-Match del task, `202`),
   `GET /api/runs/{id}`, `GET /api/tasks/{id}/runs`. Lancio col protocollo del task; `OPEN` →
@@ -119,17 +137,15 @@ clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
   routing (`post` ↔ `postgresql`), corretto e pinnato.
 
 ## Current phase
-**PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
-chiusura: **`.company-os/PHASE_2_PLAN.md`**. In una riga: *il Company OS sa dire chi lavora su
-che cosa, e due client non possono sovrascriversi in silenzio mentre lo dicono.*
+**Nessuna in corso.** Il blocco PHASE 3–7 è completo (sezione ▶ qui sopra); piani in
+`.company-os/PHASE_{3..7}_PLAN.md`, sequenza in `ROADMAP_PHASES_3_7.md`.
 
-PHASE 1 resta com'è: `master` è ancora il gate di quella fase, e PHASE 2 ci si costruisce sopra
-senza mergiarla.
+*Storico:* PHASE 2 — Assignment (`PHASE_2_PLAN.md`), accettata e in `master` dal 2026-09-19.
 
 ## Current task
-**Nessuna. PHASE 3 non è iniziata.**
+**Nessuna.** L'ultima è TASK-022. Fermo per la Human Final Review del blocco (`FINAL_HANDOFF.md`).
 
-**TASK-012** (2026-09-19) ha affrontato i due debiti che precedevano PHASE 3, su richiesta umana:
+*Storico, precedente al blocco:* **TASK-012** (2026-09-19) ha affrontato i due debiti che precedevano PHASE 3, su richiesta umana:
 
 - **TD-31 — CHIUSO.** Il cambiamento distruttivo è stato autorizzato esplicitamente da un umano,
   delimitato allo scope documentato. `V8` elimina `agents.active`;
@@ -142,8 +158,8 @@ senza mergiarla.
   debito poteva chiudersi. Percorso completo, compresi i quattro fallimenti di autenticazione che
   lo hanno preceduto, in `tasks/TASK-012/EVIDENCE_TD14.md` §7-11.
 
-**TD-04** e **TD-37** restano aperte e **non decise**: sono i due candidati di PHASE 3, e la
-scelta fra loro è la prima decisione di quella fase.
+*(Stato al 2026-09-19. Da allora TD-04 è chiuso da TASK-013 e TD-37 da TASK-015.)* **TD-04** e
+**TD-37** restavano aperte: erano i due candidati di PHASE 3.
 
 - **TD-04 — autenticazione.** Già indicato come primo candidato di PHASE 3 da `PHASE_2_PLAN.md`
   §2. Oggi non c'è niente, e ogni endpoint aggiunto è superficie. Costo noto: cambierebbe ogni
@@ -573,7 +589,10 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   obbligatorio su ogni mutazione di risorsa esistente, confrontato **dentro la transazione, dopo
   il lock esclusivo, prima delle regole**. `@Version` è il contatore, non il rilevatore: nessun
   handler per `OptimisticLockException`, e non va aggiunto.
-- Test: **223** (erano 109 in `master`, 158 a fine PHASE 1, 201 dopo TASK-009, 216 dopo
+- **A fine blocco PHASE 3–7: 329 test Java, 51 engine, 14 console.** Le righe di questa sezione
+  descrivono il sistema fino a TASK-012; per ciò che il blocco ha aggiunto — sicurezza, ciclo di
+  vita, engine, run, console — vale la sezione ▶ in cima e gli ADR-013…017.
+- Test (fino a TASK-012): **223** (erano 109 in `master`, 158 a fine PHASE 1, 201 dopo TASK-009, 216 dopo
   TASK-010, 219 dopo TASK-011). `./mvnw -B clean test` → BUILD SUCCESS, **in locale e in CI**.
 - H2 rimosso.
 
@@ -658,12 +677,22 @@ Branch conservati: `task-000-audit`, `task-001-persistence-foundation`,
 - **ADR-009** — Concorrenza ottimistica nel contratto HTTP: due meccanismi distinti e complementari (lock = consistenza interna, `ETag`/`If-Match` = intento stantio); `@Version` è un contatore persistente e **non** il rilevatore, perché dopo l'attesa su `PESSIMISTIC_WRITE` l'entità è già alla versione nuova; protocollo **P0–P4**; `If-Match` obbligatorio su tutte e tre le risorse; `428`/`412`/`400`; `GET /api/tasks/{id}` introdotto come percorso canonico dell'ETag; `V5` additiva. **Completa ADR-006 §8.** *Accettata e implementata*.
 - **ADR-011** — Vocabolario chiuso di `Task.status`: il censimento **prima** della decisione (cinque fonti, un solo valore, zero righe da trasformare); `OPEN`/`IN_PROGRESS`/`DONE`, con gli esclusi dichiarati per l'argomento di ADR-004 §2; **un vocabolario non è una macchina a stati** e nessuna transizione viene introdotta; il campo della request resta `String` perché tipizzarlo come enum produrrebbe un `malformed-request` che afferma il falso e perde il nome del campo; confronto **case-sensitive**, scelta opposta a ADR-008 sui nomi e per un criterio dichiarato; **tre guardie** invece delle due di ADR-004 §2; `V7` additiva sui dati ma non per costruzione, con il fallimento su valori fuori vocabolario come rischio **dichiarato ed eseguito**. **Non tocca ADR-007.** *Accettata e implementata*.
 - **ADR-012** — Unificazione del ciclo di vita di `Agent`: **supera ADR-008 §2**, che aveva *sospeso* il cambiamento in attesa di una decisione umana, arrivata il 2026-09-19; backfill **biiettivo** (`TRUE`↔`ACTIVE`, `FALSE`↔`INACTIVE`, nessun terzo caso perché `active` è `NOT NULL` da `V1`), quindi irreversibile è la forma e non il contenuto; **il contratto pubblico non cambia di un byte** — `AgentResponse` portava già entrambi i campi e `V8` inverte quale è derivato; `INACTIVE` e non `ARCHIVED`, perché TD-31 unifica la *forma* e non il vocabolario; `repair()` sul solo stream del seed, con le tre condizioni che lo rendono accettabile lì e in nessun altro posto; fuori scope dichiarati: togliere `active` dalla risposta, rinominare `?active=`, indice, terzo stato. *Accettata e implementata*.
+- **ADR-013** — Autenticazione: bearer token per nome, stateless, deny by default, `401` dentro ADR-007, fail closed. *Accettata e implementata* (TASK-013; CORS in TASK-014).
+- **ADR-014** — Ciclo di vita del task: quattro archi (`start`, `complete`, `stop`, `reopen`) in `TaskTransition`, regole sull'entità, solo `start` guarda l'agente. *Accettata e implementata* (TASK-015).
+- **ADR-015** — AI Engine: model gateway Python senza stato, contratto v1, token fra servizi, provider echo/Ollama/Anthropic (spento senza chiave). Il runtime a grafo resta rinviato. *Accettata e implementata* (TASK-017/018).
+- **ADR-016** — Run: lancio col protocollo del task, esecuzione dopo il commit e fuori transazione, ogni run finisce con un tipo, recupero all'avvio, una run non completa il task. *Accettata e implementata* (TASK-019/020).
+- **ADR-017** — Console dell'operatore: client del contratto, tipi generati e tenuti al codice due volte, `412` mai ritentato. *Accettata e implementata* (TASK-021/022).
 - **ADR-006** — Coerenza archiviazione → task **derivata** (nessuna scrittura sui figli, `restore` inverso per costruzione), congelamento in scrittura con letture aperte, `PUT` idempotente `200` no-op, protocollo di lock **L0–L7** con ordine globale `tasks` → `projects`, nessuna migrazione, contratto invariato, nessun `503`. *Accettata e **implementata**.*
 
 ## Prossimo passo autonomo
 
-**Nessuno. PHASE 2 è chiusa e il charter §8 dice di fermarsi qui**, con `FINAL_HANDOFF.md`
-pronto per la review umana.
+**Nessuno fino alla Human Final Review del blocco PHASE 3–7** (`FINAL_HANDOFF.md`). Dopo, se
+accettato: il prossimo blocco parte dal livello 3 di `AUTONOMOUS_LOOP.md` §4 — **TD-40** (contabilità
+e limiti di costo delle run a consumo) va chiuso prima di abilitare `ANTHROPIC_API_KEY` in modo non
+presidiato; poi le candidate in `FINAL_HANDOFF.md` §8.
+
+*Storico (2026-09-19):* PHASE 2 chiusa, charter §8 rispettato, `FINAL_HANDOFF.md` di allora
+conservato in `docs/handoff/FINAL_HANDOFF_PHASE_2.md`.
 
 Quando PHASE 3 comincerà, la sua prima decisione è quale dei due candidati aprire — **TD-04**
 (autenticazione) o **TD-37** (le transizioni di `status`) — e non è una decisione da prendere
@@ -758,7 +787,7 @@ da applicare. `docs/RUNNING.md` non documenta `/api/projects` né gli endpoint d
 
 ## Failure aperti
 
-**Nessuno.** 223/223 verdi (`./mvnw -B clean test`, 2026-09-19).
+**Nessuno.** 329/329 Java, 51/51 engine, 14/14 console (2026-09-23), e CI verde sui branch pushati.
 
 ## Domande di contratto aperte
 
@@ -786,9 +815,12 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 ## Target architecture
 - Project Registry ✅ *fondazione (TASK-002), relazione con i task (TASK-003), coerenza di archiviazione e concorrenza (TASK-004)*
 - Agent Registry ✅ *fondazione (TASK-007), relazione con i task (TASK-009)*
-- Task lifecycle 🟡 *vocabolario chiuso (TASK-010); transizioni assenti → TD-37*
+- Task lifecycle ✅ *vocabolario chiuso (TASK-010), transizioni (TASK-015), dettagli e priorità (TASK-016)*
+- Security baseline ✅ *bearer token (TASK-013), CORS (TASK-014); utenti/RBAC non ancora*
+- Execution ✅ *run di un agente su un task attraverso l'AI Engine (TASK-019), routing sul registro (TASK-020)*
+- Operator console ✅ *React/TS, tipi generati dal contratto (TASK-021, TASK-022)*
 - Skills / Rules / Subagents / Tools / MCP Registry
-- Model Gateway and local/cloud routing
+- Model Gateway and local/cloud routing 🟡 *AI Engine con echo, Ollama, Anthropic (TASK-017/018); routing di modello per agente (TASK-020); quote e costi → TD-40*
 - Context / Prompt / Harness / Loop / Graph Engineering
 - Visual Code Architecture Graph, Knowledge Vault, Memory Graph
 - Planner
@@ -797,8 +829,11 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 - Voice Interaction Layer, Payments / quota monitoring, 3D Omniverse integration
 
 ## Immediate goal
-**Raggiunto e accettato.** PHASE 1 e PHASE 2 sono in `master`, e **TASK-012** vi ha aggiunto la
-chiusura di TD-31: 223 test verdi, schema `V8`, nessun failure aperto.
+**Blocco PHASE 3–7 completato, da accettare.** Il Company OS è utilizzabile dal vivo: un operatore
+autenticato crea un task, lo assegna all'agente suggerito, lo fa eseguire da un modello locale
+attraverso l'AI Engine, ne legge l'esito e lo chiude — da API o dalla console.
+
+*Storico:* PHASE 1 e PHASE 2 in `master`, TASK-012: 223 test verdi, schema `V8`.
 
 PHASE 3 **non è iniziata** e la sua prima decisione non è stata presa. `master` è adesso la linea
 principale del progetto: da qui in avanti il gate del charter §8 si applica alla fase successiva,

@@ -1,234 +1,124 @@
-# FINAL HANDOFF — PHASE 2, Assignment
+# FINAL HANDOFF — Blocco PHASE 3 → PHASE 7
 
-> ## ✅ ACCETTATA. Integrata in `master` il 2026-09-19.
+> **Da accettare.** Scritto per la Human Final Review del blocco autorizzato il 2026-09-23. Il
+> lavoro non è accettato finché un umano non lo accetta; il merge in `master` è quel gesto, e
+> nessun agente lo esegue (charter §8).
 >
-> Questo documento è stato scritto **per** la review umana; la review è avvenuta e il lavoro è
-> stato accettato. Il testo che segue è conservato **com'era**, perché è ciò che è stato
-> valutato — tranne questo riquadro e §5, che dicono che cosa è poi realmente successo.
->
-> `master`: **`d5ff121` → `6dc5989`**, due fast-forward consecutivi (PHASE 1, poi PHASE 2),
-> 41 commit, **nessun merge commit**, nessuna storia riscritta. Suite **158/158** dopo il primo
-> merge e **219/219** dopo il secondo.
+> L'handoff di PHASE 2 è conservato in `docs/handoff/FINAL_HANDOFF_PHASE_2.md`, quello di PHASE 1
+> in `docs/handoff/FINAL_HANDOFF_PHASE_1.md`.
 
-- Integration branch: **`autonomous/phase-2-assignment`** (`6dc5989`, fermo: marcatore storico)
-- `master`: **`6dc5989`** — era `d5ff121`
-- Suite: **219 test verdi** contro PostgreSQL reale, **migration stream a `V7`**
-  (il database di sviluppo locale è a `V3`: sono due numeri diversi, vedi §5)
-- Nessun failure aperto, nessun push, nessun remote configurato
-
-> **Le due fasi sono state accettate insieme**, come questo documento prevedeva: PHASE 2 è
-> costruita **sopra** PHASE 1 e la contiene, perché `autonomous/phase-2-assignment` discende da
-> `autonomous/phase-1-foundations` (`0a35ac0`) in linea retta.
-> L'handoff di PHASE 1 è conservato, non sostituito, in
-> **`docs/handoff/FINAL_HANDOFF_PHASE_1.md`**.
-
----
+- **`master`**: `d166870`, **intoccato**.
+- **Da integrare**: `autonomous/phase-7-operator-console`, che contiene le cinque fasi in linea retta
+  sopra `master` (catena `phase-3 → phase-4 → phase-5 → phase-6 → phase-7`). Un solo fast-forward.
+- **Suite**: **329** Java + **51** AI Engine + **14** console = **394 verdi**; CI con tre job.
+- **Stream**: `V8` → **`V11`**. **Live dev DB: ancora `V3`**, mai toccato: ogni smoke test ha girato
+  su un clone.
 
 ## 1. Che cosa è stato costruito
 
-Quattro task autonome, senza approvazione intermedia, dopo le sette di PHASE 1.
+| Fase | Obiettivo raggiunto | Task | ADR |
+|---|---|---|---|
+| **3 — Security baseline** | Nessuna richiesta senza un chiamante che il control plane sappia nominare; browser solo da origini dichiarate | TASK-013, 014 | 013 |
+| **4 — Task lifecycle** | Un task si muove lungo quattro archi dichiarati; dettagli modificabili; priorità chiusa | TASK-015, 016 | 014 |
+| **5 — AI Engine** | Il servizio Python di ADR-001: un modello reale dietro un contratto v1 autenticato | TASK-017, 018 | 015 |
+| **6 — Execution** | Un agente esegue un task, e il control plane registra tutto; `MasterOrchestrator` sostituito | TASK-019, 020 | 016 |
+| **7 — Operator console** | Tutto ciò che l'API permette, da un browser, con tipi generati dal contratto | TASK-021, 022 | 017 |
 
-L'obiettivo dichiarato della fase era:
-
-> **Il Company OS sa dire chi lavora su che cosa, e due client non possono sovrascriversi in
-> silenzio mentre lo dicono.**
-
-È raggiunto in entrambe le metà, e la fase ne ha aggiunta una terza che il piano prevedeva come
-possibile: un task adesso sa anche **in che stato è**.
-
-| Task | Che cosa ha aggiunto |
-|---|---|
-| **TASK-008** | **Concorrenza ottimistica nel contratto HTTP.** `ETag`/`If-Match` obbligatorio su ogni mutazione di risorsa esistente, protocollo P0–P4. I lock serializzavano ma non **rilevavano**: adesso il sistema fa entrambe le cose |
-| **TASK-009** | **La relazione `Task` → `Agent`.** Il sistema sa dire chi lavora su che cosa. Lock graph ridimostrato su tre classi di righe |
-| **TASK-010** | **Il vocabolario chiuso di `Task.status`.** `OPEN`, `IN_PROGRESS`, `DONE`, imposti in tre punti. `"banana"` non entra più |
-| **TASK-011** | **Il registro del debito disambiguato**, e `docs/RUNNING.md` reso di nuovo vero |
-
-Suite: **158 → 219**. Schema: **`V4` → `V7`**, tre migrazioni, tutte additive sui dati.
+**Debiti chiusi**: TD-04, TD-08, TD-11, TD-12 (metà `priority`), TD-17, TD-18, TD-36, TD-37; rilievi
+R5 e R7 di TASK-001. **Aperti dal blocco**: TD-38, TD-39, TD-40.
 
 ## 2. Le decisioni che meritano una lettura umana
 
-Non sono tutte. Sono quelle in cui il sistema ha preso una direzione che sarebbe stato ragionevole
-prendere diversa.
+### 2.1. Sicurezza prima delle transizioni (ROADMAP §3)
+`PROJECT_STATE.md` lasciava la scelta TD-04/TD-37 come prima decisione di PHASE 3. Scelto TD-04:
+è il debito che ogni fase successiva tocca, `MIGRATION_MAP.md` M-7 dice di anticiparlo prima delle
+credenziali di provider (PHASE 5), e il suo costo cresce con ogni test scritto prima.
 
-### 2.1. `@Version` è un contatore, non il rilevatore (ADR-009)
+### 2.2. Token per nome, non utenti (ADR-013 §2)
+Nessun utente, password, RBAC o OAuth: il prodotto è *local-first* con un operatore al centro, e
+ogni alternativa richiedeva un bootstrap del primo utente o un sistema esterno. Il nome del token è
+già il *principal*, e le run lo registrano (`requestedBy`). **Utenti veri sono una decisione futura.**
 
-La cosa ovvia sarebbe stata affidarsi a `OptimisticLockException`. **Non scatta mai**: dopo
-l'attesa su `PESSIMISTIC_WRITE` l'entità è caricata **già alla versione nuova**, quindi le due
-versioni coincidono e JPA non solleva niente. Affidarcisi sarebbe stato un `412` che non arriva.
+### 2.3. Quattro archi, e due esclusi (ADR-014 §2)
+`OPEN → DONE` e `DONE → IN_PROGRESS` non esistono. Solo `start` guarda l'agente: uscire da
+`IN_PROGRESS` non dipende mai da lui (ADR-010 D3 sopravvive).
 
-Il rilevamento è un confronto esplicito, **dentro la transazione, dopo il lock, prima delle
-regole**. Non c'è handler per `OptimisticLockException`, e **non va aggiunto**.
+### 2.4. Una run non completa il task (ADR-016 §3)
+`SUCCEEDED` dice che il modello ha risposto, non che la risposta sia buona. L'operatore legge e
+decide. È la scelta *human in the loop* di `PRODUCT_VISION.md`, presa esplicitamente.
 
-### 2.2. Disattivare un agente **non** congela i suoi task (ADR-010, D3)
+### 2.5. Il costo cloud è spento per costruzione (ADR-015 §5)
+Il provider Anthropic (SDK ufficiale, `claude-opus-5`, refusal fallback `"default"`) esiste ma **è
+disattivo senza `ANTHROPIC_API_KEY`**. Nessun test lo raggiunge, nessuna chiamata cloud è stata
+fatta. TD-40 (nessun limite di costo) va chiuso prima di abilitarlo senza presidio.
 
-È la decisione dove il dominio ha divergito da sé. Archiviare un progetto **congela** i task che
-contiene; disattivare un agente **no**, ed è l'opposto della regola gemella.
+### 2.6. Il runtime a grafo resta non deciso
+ADR-001 lo rinviava a un esperimento con criteri misurabili; ADR-015 non lo sceglie per omissione.
 
-La ragione: il momento in cui si disattiva un agente è esattamente il momento in cui bisogna poter
-**riassegnare** il suo lavoro. Congelarlo lo intrappolerebbe con chi non può eseguirlo, e l'unica
-via d'uscita sarebbe riattivare l'agente — cioè annullare la ragione per cui lo si è spento.
+## 3. Che cosa hanno trovato le verifiche, e che i test non vedevano
 
-L'alternativa (far fallire `deactivate` finché ha lavoro) avrebbe **chiuso un ciclo nel lock
-graph**. Dominio e concorrenza rispondono la stessa cosa.
+Il charter chiede di vedere rosso un test prima di crederci. Nel blocco questo ha trovato difetti
+**nel lavoro dell'agente stesso**, e sono registrati:
 
-### 2.3. `Task.status` ha tre valori e nessuna transizione (ADR-011)
-
-Il censimento ha trovato **un solo valore esistente** (`OPEN`) in cinque fonti, quindi la
-migrazione non ha toccato una riga. La scelta di aggiungerne **due** e non zero è argomentata: un
-vocabolario di un solo valore renderebbe le transizioni impossibili *per costruzione*, e le
-transizioni sono la ragione per cui TD-12 chiedeva il vocabolario.
-
-**Non è stata introdotta nessuna macchina a stati**, e non esiste un percorso per **cambiare** lo
-stato di un task. È il limite più rilevante che la fase lascia: **TD-37**.
-
-### 2.4. Un valore fuori vocabolario è un errore di validazione (ADR-011 §4)
-
-Tipizzare il campo della request come enum sembrava più pulito e avrebbe prodotto
-`malformed-request` — «*the request body could not be read*» — che è **falso**, su un `type` su
-cui i client si ramificano. Il campo resta `String` con un vincolo. **Nessun `type` nuovo, il
-contratto d'errore di PHASE 1 è intatto.**
-
-### 2.5. Il registro del debito non è stato rinumerato (TASK-011)
-
-Cinque identificatori significano cose diverse nei due registri. Entrambe le rinumerazioni
-avrebbero rotto qualcosa — i riferimenti scritti finora, oppure ciò che l'audit *osservò*. La
-collisione è stata resa **interpretabile** invece che cancellata.
-
-## 3. Che cosa il sistema **non** fa, dichiarato
-
-Questa è la sezione da leggere se si sta per costruirci sopra.
-
-| Limite | Debito |
-|---|---|
-| **Nessuna autenticazione.** Backend e database non vanno esposti fuori da `localhost` | **TD-04** — primo candidato di PHASE 3 |
-| **Non si può cambiare lo `status` di un task.** Si sceglie alla creazione e resta | **TD-37** |
-| **`Task.priority` è ancora una stringa libera** | **TD-36** |
-| **`MasterOrchestrator` è un placeholder**: quattro `if` su `contains()` che restituiscono nomi di agent che non esistono nel database | **TD-08** |
-| **Nessuna CI.** Con 219 test e invarianti di concorrenza, il costo cresce a ogni task. Richiede un remote → **hard stop #4** | **TD-14** (vivo) |
-| **`Agent` usa un booleano dove `Project` usa un enum.** Unificarli elimina una colonna → **hard stop #3**: decisione umana | **TD-31** |
-| Nessun `DELETE` delle associazioni; nessun filtro per stato o per agente inattivo sui listati; nessuna paginazione | TD-34, TD-35, e le domande di contratto aperte |
-| **Otto debiti dell'audit non sono stati rivalutati**, e diversi sono con ogni evidenza risolti | `docs/DEBT_REGISTRY.md` §4 |
-
-## 4. Le due decisioni che aspettano una persona
-
-> **Aggiornamento 2026-09-19, dopo l'accettazione.** Entrambe sono state affrontate da
-> **TASK-012**, su richiesta umana e prima di PHASE 3:
->
-> - **TD-31 è CHIUSO.** La decisione è stata presa esplicitamente da una persona, delimitata allo
->   scope documentato, e `V8` l'ha eseguita: `agents.active` eliminata, backfill biiettivo,
->   contratto pubblico invariato. ADR-012.
-> - **TD-14 è CHIUSO** dal 2026-09-23. Il blocco non era una decisione ma un dato mancante —
->   l'URL del remote — poi arrivato e autorizzato. `origin` configurato, `master` pushato senza
->   force, e la CI su GitHub Actions **verde alla prima run** (`35863517006`).
->   `tasks/TASK-012/EVIDENCE_TD14.md` §7-12.
->
-> Il testo qui sotto è quello che è stato sottoposto alla review, conservato com'era.
-
-Sono hard stop del charter, e nessun agente le ha prese.
-
-**1. `TD-31` — unificare il ciclo di vita di `Agent`.** `Project` usa un enum chiuso, `Agent` un
-booleano. Unificarli richiede di **eliminare una colonna**: migrazione irreversibile, hard stop
-#3. Nel frattempo il contratto pubblico è già uniforme, perché `AgentResponse.status` è
-**derivato**. Il costo di non decidere è basso, ed è la ragione per cui è ancora qui.
-
-**2. `TD-14` — la CI.** Una CI reale richiede un remote, e un push è hard stop #4. È l'unico
-debito di questa lista il cui costo cresce **a ogni task**, e va deciso prima di PHASE 3, non
-dopo.
-
-## 5. Che cosa è successo quando è stata accettata
-
-**Eseguito il 2026-09-19**, dopo l'accettazione esplicita della review umana. Due fast-forward, in
-quest'ordine, con la suite completa eseguita dopo ciascuno:
-
-```bash
-git checkout master                                      # d5ff121
-git merge --ff-only autonomous/phase-1-foundations       # -> 0a35ac0 ... 158/158 verdi
-git merge --ff-only autonomous/phase-2-assignment        # -> 6dc5989 ... 219/219 verdi
-```
-
-Due merge invece del solo `--ff-only` verso PHASE 2 che questo documento suggeriva: l'esito su
-`master` è identico — PHASE 2 contiene PHASE 1 — ma così **l'accettazione di ciascuna fase è un
-passo distinto e verificato**, con la suite della fase eseguita al suo checkpoint.
-
-Verificato dopo i merge:
-
-- **nessun merge commit prodotto**: `git log --merges d5ff121..master` è vuoto. L'unico merge
-  commit della storia è `e8d0286` (TASK-001, 2026-09-11) ed era già in `master`;
-- **nessuna storia riscritta**: `d5ff121` è ancora un antenato di `master`;
-- working tree pulito dopo entrambi i merge;
-- **219/219 verdi**, nessuna regressione.
-
-**Docker deve essere in esecuzione** per riprodurlo: i test girano contro un PostgreSQL reale via
-Testcontainers.
-
-### `V3` e `V7` sono due numeri diversi
-
-È l'ambiguità che il censimento di TASK-010 ha trovato nello stato del progetto, e vale la pena
-non ricrearla:
-
-| | Valore | Che cos'è |
+| Dove | Che cosa | Esito |
 |---|---|---|
-| **Migration stream** | **`V7`** | La migrazione più alta che esiste nel repository. La prossima da scrivere è `V8` |
-| **Live dev DB** | **`V3`** | Ciò che è stato realmente applicato al volume locale `aicompany_postgres_data` |
+| Harness di mutazione (TASK-013) | Cinque «rossi» erano falsi: il wrapper Maven non partiva | L'harness rifiuta un verdetto senza output del runner. Ha poi rifiutato correttamente altri tre giri difettosi |
+| Sicurezza (TASK-013) | Un token sbagliato trattato come anonimo non cambiava nulla sulle rotte protette | Test aggiunto; il comportamento dichiarato è ora verificato |
+| CORS (TASK-014) | Un mutante equivalente, e un test che guardava il valore invece della ragione | Mutante sostituito; test stretto |
+| Concorrenza (TASK-015) | Il test a barriera restava verde **senza lock di riga** | Sostituito da interleaving forzato |
+| Routing (smoke di TASK-020) | `post` ↔ `postgresql`: database specialist suggerito per un endpoint HTTP | Soglia del prefisso a 5, pinnata |
+| Console (dal vivo, TASK-022) | `/actuator/health` senza CORS: la console avrebbe detto «down» a un backend acceso | Corretto, pinnato, riverificato nel browser |
 
-Sono indipendenti: il primo è una proprietà del **codice**, il secondo di **un'installazione**.
-«Schema a `V7`» senza qualificatore significa **lo stream**, mai un database.
+**Mutazioni eseguite: 58** (5+5+7+6 nel control plane di PHASE 3–4, 6+6 nell'engine, 9+5 sulle run
+e sul routing, 3+5 su contratto e console, 1 sul README). **57 rosse** dopo le correzioni; **una**
+(TASK-014 M1) è un mutante equivalente — Spring Security applica CORS da sé quando il bean esiste — ed
+è stata sostituita da M1b, rossa. Albero verificato pulito prima e dopo ciascuna.
 
-```bash
-ls backend/src/main/resources/db/migration                      # stream -> V7
-docker exec aicompany-postgres psql -U aicompany -d aicompany \
-  -c "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank;"   # dev DB -> 1,2,3
+## 4. Database
+
+| | Prima | Dopo |
+|---|---|---|
+| Stream | `V8` | **`V11`** |
+| `V9` | — | `tasks_priority_check` (`LOW`, `MEDIUM`, `HIGH`). Non additiva per costruzione, additiva sui dati: censimento in `tasks/TASK-016/CENSUS.md` (solo `HIGH`/`LOW`, live DB `LOW`). Si ferma lasciando intatta una riga fuori vocabolario |
+| `V10` | — | `task_runs`, con vincoli che legano esito e stato e al più una run non finita per task. Additiva |
+| `V11` | — | `agents.model`, nullable. Additiva |
+| Live dev DB | `V3` | **`V3`**, intoccato |
+
+**Upgrade verificati**: `MigrationStreamTest` su ogni coppia consecutiva fino a `V11`, più `V8→V9`
+reale e il rifiuto di `V9`; e **tre volte su un clone del database reale** (`V3 → V8`, `V3 → V11`
+due volte), con la riga reale e i tre agenti del seed preservati. **Al primo avvio in `dev` sul
+database reale si applicheranno `V4…V11`**, compresa `V8` (distruttiva, autorizzata il 2026-09-19).
+
+## 5. Git e CI
+
+- 28 commit sopra `master`, storia lineare, nessun merge commit, nessuna riscrittura, nessun force.
+- Branch creati e pushati: 5 integration branch (`autonomous/phase-{3-security,4-task-lifecycle,5-ai-engine,6-execution,7-operator-console}`)
+  e 9 branch di task (`task-013…task-021`; TASK-022 condivide il branch di TASK-021, dichiarato in
+  `PHASE_7_PLAN.md`).
+- CI: job `build-and-test` (Java), `ai-engine` (Python 3.12), `frontend` (Node 22: tipi in sincronia,
+  typecheck, test, build).
+
+## 6. Come si prova
+
+```powershell
+.\scripts\start-dev.ps1 -Database aicompany_try   # dopo aver clonato, vedi RUNNING.md §0
 ```
 
-Riverificato dopo i merge: stream `V7`, dev DB `V1,V2,V3`. Al primo avvio in profilo `dev` le
-quattro migrazioni mancanti si applicheranno in ordine; `V7` passerà, perché l'unica riga di
-`tasks` ha `status = 'OPEN'`. **Non serve `docker compose down -v`.**
+Console `http://localhost:5173`, token `dev-operator-token-change-me`. Con Ollama in esecuzione e
+`llama3.2:3b` installato (su questa macchina lo è), un agente con `model: ollama:llama3.2:3b` produce
+output reale in ~15–25 s. Senza Ollama, `echo:default` risponde in modo deterministico.
 
-## 6. Come riprendere senza questa conversazione
+## 7. Verificato e non verificato
 
-Il repository basta, ed è una proprietà verificata e non sperata: TASK-010 e TASK-011 sono state
-eseguite in una sessione fredda, leggendo solo `.company-os/` e i documenti che esso indica.
+- ✅ Flusso API end-to-end con modello locale reale, su clone del DB reale (TASK-020).
+- ✅ Console avviata, login reso, CORS dal browser verificato.
+- ❌ **Login e flusso autenticato nel browser**: l'agente non digita token nei campi di un browser.
+  È il primo controllo da fare nella review.
+- ❌ Nessuna chiamata a un modello cloud.
 
-| File | Ruolo |
-|---|---|
-| `.company-os/PROJECT_STATE.md` | **Fonte primaria dello stato.** Nessun altro lo sostituisce |
-| `.company-os/AUTONOMOUS_CHARTER.md` | Autorità, guardrail, hard stop |
-| `.company-os/AUTONOMOUS_LOOP.md` | La procedura, e come si sceglie la prossima task |
-| `.company-os/PHASE_2_PLAN.md` | Dove andava la fase, e perché questo scope |
-| `docs/DEBT_REGISTRY.md` | **I due spazi di identificatori del debito.** Da leggere prima di chiudere o citare un `TD-NN` |
-| `docs/RUNNING.md` | Come si avvia, i 18 endpoint, il protocollo `If-Match` |
-| `tasks/TASK-011/HANDOFF.md` | Il briefing per chi riprende |
-| `docs/adr/ADR-0*.md` | Undici decisioni, con le alternative scartate e il perché |
+## 8. Candidati per il blocco successivo
 
-## 7. Che cosa è andato storto, e perché è qui
-
-Un handoff che elenca solo successi non è verificabile.
-
-**TASK-009 — una mutazione che non sapeva revertirsi.** L'harness di verifica per mutazione ha
-sostituito un blocco di codice con la stringa vuota e ha lasciato l'albero mutato. Ne sono seguite
-**due diagnosi sicure e sbagliate** di un'implementazione che era corretta, la seconda costruita
-su un log SQL vero ma raccolto da un albero corrotto.
-
-La regola che ne è uscita è applicata da allora: **quando un test fallisce su codice che si crede
-pulito, la prima ipotesi da verificare è che l'albero sia pulito davvero.** In TASK-010 l'albero è
-stato verificato prima di ogni mutazione e dopo ogni revert, e le quattro mutazioni sono state
-pulite.
-
-**TASK-010 — un test il cui nome prometteva più di quanto verificasse.**
-`theCheckConstraintDeclaresTheSameSetAsTheEnum` confrontava il vincolo con una costante, non con
-l'enum, ed è rimasto **verde** mentre l'enum veniva allargato di un membro. L'ha trovato la
-verifica per mutazione, non la rilettura — che è il motivo per cui la verifica per mutazione
-esiste.
-
-**TASK-011 — due istruzioni false in `docs/RUNNING.md`**, non due omissioni. Diceva che la
-prossima migrazione si chiama `V2` mentre lo stream era a `V7`: chi la seguiva creava una
-migrazione che Flyway rifiuta. Era lì da sei task.
-
-**E tre affermazioni stantie in `PROJECT_STATE.md`**, corrette lungo la strada: lo schema
-dichiarato `V6` per un database che è a `V3`, un conteggio di test fermo a 158, e un HEAD
-dell'integration branch che il commit stesso che lo scriveva rendeva falso.
-
-Il tema è uno, e vale la pena portarlo in PHASE 3: **i numeri e i percorsi scritti a mano vanno
-stantii, e la documentazione che istruisce è più pericolosa di quella che manca.** È la ragione
-per cui `docs/RUNNING.md` adesso dice *come leggere* la testa dello stream invece di limitarsi a
-dichiararla, e per cui l'HEAD dell'integration branch non è più scritto come hash.
+In ordine di `AUTONOMOUS_LOOP.md` §4: **TD-40** (costi), **TD-38** (storia delle transizioni), la
+rivalutazione degli otto debiti solo-audit (`DEBT_REGISTRY.md` §4), **TD-39** (cancellazione delle
+run), poi la target architecture: Skills/Rules/Tools/MCP registry, Planner, runtime a grafo (con
+l'esperimento che ADR-001 chiede).
