@@ -68,6 +68,7 @@ Il charter chiede di vedere rosso un test prima di crederci. Nel blocco questo h
 | Concorrenza (TASK-015) | Il test a barriera restava verde **senza lock di riga** | Sostituito da interleaving forzato |
 | Routing (smoke di TASK-020) | `post` ↔ `postgresql`: database specialist suggerito per un endpoint HTTP | Soglia del prefisso a 5, pinnata |
 | Console (dal vivo, TASK-022) | `/actuator/health` senza CORS: la console avrebbe detto «down» a un backend acceso | Corretto, pinnato, riverificato nel browser |
+| **Review umana** (`start-dev.ps1`) | Backend mai partito: `mvnw.cmd` chiama `powershell` per nome e non è nel `PATH`; lo script stampava gli URL comunque, la console diceva «unreachable» | Script corretto (PATH solo di processo, servizi già attivi saltati, errore esplicito se il backend non sale). Il difetto era già emerso in TASK-013 ed era stato aggirato invece che registrato |
 
 **Mutazioni eseguite: 58** (5+5+7+6 nel control plane di PHASE 3–4, 6+6 nell'engine, 9+5 sulle run
 e sul routing, 3+5 su contratto e console, 1 sul README). **57 rosse** dopo le correzioni; **una**
