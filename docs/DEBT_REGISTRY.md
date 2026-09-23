@@ -54,7 +54,7 @@ problema non esista.
 |---|---|---|
 | **TD-04** | Nessuna sicurezza / autenticazione | **Chiuso da TASK-013** (ADR-013): bearer token per nome su ogni `/api/**`, verificato per riflessione su tutte le rotte e per mutazione |
 | **TD-07** | Nessuna gestione degli errori | **Chiuso da TASK-005** (ADR-007) |
-| **TD-08** | `MasterOrchestrator` è un placeholder spacciato per AI | **Aperto.** Sbloccato da TASK-009, ma ancora non eseguibile: manca TD-37 |
+| **TD-08** | `MasterOrchestrator` è un placeholder spacciato per AI | **Chiuso da TASK-020**: rimosso, sostituito da routing sul registro reale e dalle run di ADR-016 |
 | **TD-11** | CORS incoerente | **Chiuso da TASK-014**: una policy globale, origini dichiarate, niente wildcard, `ETag` esposto |
 | **TD-12** | Nessun dominio per `status` e `priority` | **Chiuso**: la metà `status` da TASK-010, la metà `priority` (TD-36) da TASK-016 |
 | **TD-13** | Nessuna relazione tra entità | **Risolto da TASK-009** |
@@ -109,8 +109,10 @@ ferma a `TD-22`.
 | **TD-36** | `Task.priority` resta una stringa libera senza vincolo DB | **chiuso** da TASK-016: `TaskPriority`, `V9`, censimento | TASK-010 |
 | **TD-37** | Nessun percorso muta lo `status` di un task esistente: vocabolario chiuso, ciclo di vita non percorribile | **chiuso** da TASK-015: quattro archi, ADR-014 | TASK-010 |
 | **TD-38** | Nessuna storia delle transizioni: non si sa chi ha mosso un task né quando | **aperto**, MINOR | TASK-015 |
+| **TD-39** | Una run in corso non si può cancellare: si attende la fine o il timeout di lettura (10 min) | **aperto**, MINOR | TASK-019 |
+| **TD-40** | Nessuna contabilità né limite di costo per le run su modelli a consumo (`anthropic`): i token sono registrati per run, mai sommati o limitati | **aperto**. Innocuo finché `ANTHROPIC_API_KEY` non è impostata; **da chiudere prima** di abilitarla in modo non presidiato | TASK-019 |
 
-**Prossimo identificatore libero: `TD-39`.**
+**Prossimo identificatore libero: `TD-41`.**
 
 ## 6. Come si apre un debito nuovo
 

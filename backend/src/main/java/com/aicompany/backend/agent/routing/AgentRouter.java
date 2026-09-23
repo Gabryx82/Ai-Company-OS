@@ -38,7 +38,12 @@ public class AgentRouter {
             "two", "new", "add", "make", "use", "using", "via", "per", "task", "work", "need", "needs",
             "del", "della", "dei", "delle", "con", "una", "uno", "che", "nel", "nella", "sul", "sulla");
 
-    private static final int MINIMUM_PREFIX = 4;
+    /**
+     * Five, not four: the end-to-end smoke test of TASK-020 matched "post" (from
+     * "POST /api/...") to "PostgreSQL" and suggested the database specialist for an
+     * HTTP endpoint. Four letters are a prefix of too many unrelated words.
+     */
+    private static final int MINIMUM_PREFIX = 5;
 
     private final AgentRepository agents;
 
@@ -86,7 +91,7 @@ public class AgentRouter {
     /**
      * Equal, or one a prefix of the other when both are long enough to mean
      * something: "database" and "databases", "react" and "reactive" are related;
-     * "api" and "apiary" are not.
+     * "post" and "postgresql" are not.
      */
     static boolean related(String a, String b) {
         if (a.equals(b)) {

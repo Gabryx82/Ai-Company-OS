@@ -1,0 +1,8 @@
+task: TASK-020
+title: Agent model and registry routing (replaces MasterOrchestrator)
+phase: PHASE 6 — Execution
+branch: task-020-agent-model-and-routing
+integration_branch: autonomous/phase-6-execution
+debts: [TD-08]
+adr: docs/adr/ADR-016-task-runs-execution.md
+migration: V11__add_agent_model.sql

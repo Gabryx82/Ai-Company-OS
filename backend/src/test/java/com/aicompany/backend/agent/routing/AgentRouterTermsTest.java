@@ -25,5 +25,7 @@ class AgentRouterTermsTest {
         assertThat(AgentRouter.related("model", "modeling")).isTrue();
         assertThat(AgentRouter.related("api", "apiary")).as("too short to be a prefix that means anything").isFalse();
         assertThat(AgentRouter.related("react", "redux")).isFalse();
+        assertThat(AgentRouter.related("post", "postgresql"))
+                .as("found by the end-to-end smoke test: an HTTP verb is not a database").isFalse();
     }
 }

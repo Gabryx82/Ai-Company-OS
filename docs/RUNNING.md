@@ -184,6 +184,9 @@ riceve task nuove e le task che contiene **non si spostano** — `409` in entram
 | `PUT /api/agents/{id}` | aggiorna. **`If-Match`** |
 | `POST /api/agents/{id}/deactivate` | disattiva. **`If-Match`** |
 | `POST /api/agents/{id}/activate` | riattiva. **`If-Match`** |
+
+Da TASK-020 un agente ha un campo facoltativo **`model`** (id dell'engine, per esempio
+`ollama:llama3.2:3b`): è il modello delle sue run. Il `PUT` lo sostituisce come ogni dettaglio.
 | `GET /api/agents/{agentId}/tasks` | le task dell'agent |
 
 Il nome è **unico senza distinzione di maiuscole**, imposto dal database. Un agent disattivato
@@ -195,11 +198,44 @@ La risposta porta **due** campi di ciclo di vita, `active` (booleano) e `status`
 `active` è derivato — prima era l'inverso — ma **il JSON è identico** e il filtro resta
 `?active=true|false`. ADR-012 §4.
 
-### Orchestrator
+### Run: un agente esegue un task (PHASE 6, ADR-016)
+
+Richiede l'**AI Engine** in esecuzione (§2b). Il backend in `dev` lo cerca su
+`http://127.0.0.1:8090` con il token `dev-engine-token-change-me` (`AICOS_ENGINE_URL`,
+`AICOS_ENGINE_TOKEN`; in `prod` obbligatori).
 
 | Endpoint | Descrizione |
 |---|---|
-| `POST /api/orchestrator` | ⚠️ **placeholder.** Quattro `if` su `contains()` che restituiscono nomi di agent **che non esistono nel database**. Non tocca né task né agent. Da sostituire, non da usare (TD-08) |
+| `POST /api/tasks/{id}/runs` | lancia una run. **`If-Match` del task.** Corpo facoltativo `{"model":"ollama:llama3.2:3b"}`. `202` + `Location` |
+| `GET /api/runs/{id}` | la run: `status` `QUEUED` → `RUNNING` → `SUCCEEDED`/`FAILED`, prompt inviati, output, token, latenza |
+| `GET /api/tasks/{id}/runs` | le run del task, la più recente per prima |
+
+- Il task deve avere un agente **attivo**, non essere `DONE` né in un progetto archiviato; una sola
+  run non finita per volta (`409 task-run-in-progress`).
+- Un task `OPEN` lanciato diventa `IN_PROGRESS`. **Una run riuscita non completa il task**:
+  l'operatore legge l'output e usa `POST /api/tasks/{id}/complete`.
+- Modello: quello chiesto al lancio, altrimenti quello dell'agente (`model` nell'agente), altrimenti
+  il default dell'engine (`echo:default`, deterministico).
+- Una run fallita dice perché in `failureType`: il problema dell'engine inoltrato
+  (`urn:ai-company-os:engine:problem:*`) o uno del control plane
+  (`urn:ai-company-os:run-failure:engine-unreachable|engine-timeout|engine-protocol|interrupted|rejected|internal`).
+- All'avvio, le run rimaste `QUEUED`/`RUNNING` da un processo precedente sono fallite `interrupted`.
+
+```bash
+ETAG=$(curl -si http://localhost:8080/api/tasks/7 -H "Authorization: Bearer $TOKEN" | grep -i etag | awk '{print $2}' | tr -d '\r')
+curl -s -X POST http://localhost:8080/api/tasks/7/runs -H "Authorization: Bearer $TOKEN" -H "If-Match: $ETAG"
+curl -s http://localhost:8080/api/runs/1 -H "Authorization: Bearer $TOKEN"
+```
+
+### Routing: quale agente per quale lavoro (TD-08)
+
+| Endpoint | Descrizione |
+|---|---|
+| `GET /api/tasks/{id}/agent-suggestions` | gli agenti **attivi** ordinati per affinità col task, con `score` e `matchedTerms` |
+| `POST /api/routing/suggestions` | lo stesso per testo libero: `{"text":"..."}` |
+
+Lessicale e deterministico: suggerisce, non assegna. `POST /api/orchestrator` (il placeholder) è
+stato **rimosso** da TASK-020.
 
 ### Errori
 
@@ -336,7 +372,7 @@ Quando un documento dice «schema a `V8`» **senza qualificatore, intende lo str
 database.
 
 **La prossima migrazione di schema prende il numero successivo alla testa dello stream, e va in
-`db/migration`.** Al 2026-09-23 la testa è **`V9`**, quindi la prossima è `V10__....sql` — ma va
+`db/migration`.** Al 2026-09-23 la testa è **`V11`**, quindi la prossima è `V12__....sql` — ma va
 letta col comando qui sotto, non da questa riga. I numeri del seed
 sono indipendenti e non vanno considerati.
 
@@ -363,6 +399,8 @@ Le migrazioni applicate finora:
 | `V7` | `tasks_status_check`: vocabolario chiuso di `Task.status` (ADR-011) |
 | `V8` | `agents.status` + `agents_status_check`, e **`agents.active` eliminata** (ADR-012). **La prima migrazione distruttiva dello stream**: un database che la esegue non torna a `V7` eseguendo SQL al contrario |
 | `V9` | `tasks_priority_check`: vocabolario chiuso di `Task.priority` (TASK-016). Si ferma, senza toccare la riga, su un valore fuori vocabolario |
+| `V10` | `task_runs` (ADR-016): stato, prompt, esito, con vincoli che legano l'esito allo stato e al più una run non finita per task |
+| `V11` | `agents.model`, nullable (TASK-020) |
 
 Hibernate gira in `validate`: se le entità e le migrazioni divergono, **l'avvio fallisce** con `Schema validation: missing column ...`. È il comportamento voluto — la correzione è una nuova migrazione, mai una modifica automatica dello schema.
 

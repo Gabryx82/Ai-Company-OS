@@ -59,11 +59,11 @@ motivazione: **`.company-os/ROADMAP_PHASES_3_7.md`**.
 | **PHASE 3 — Security baseline** | `autonomous/phase-3-security` (da `master` `d166870`) | TASK-013, TASK-014 | ✅ **completata** |
 | **PHASE 4 — Task lifecycle** | `autonomous/phase-4-task-lifecycle` (da phase-3) | TASK-015, TASK-016 | ✅ **completata** |
 | **PHASE 5 — AI Engine** | `autonomous/phase-5-ai-engine` (da phase-4) | TASK-017, TASK-018 | ✅ **completata** |
-| PHASE 6 — Execution | `autonomous/phase-6-execution` (da phase-5) | TASK-019, TASK-020 | prossima |
-| PHASE 7 — Operator console | `autonomous/phase-7-operator-console` | — | pianificata |
+| **PHASE 6 — Execution** | `autonomous/phase-6-execution` (da phase-5) | TASK-019, TASK-020 | ✅ **completata** |
+| PHASE 7 — Operator console | `autonomous/phase-7-operator-console` (da phase-6) | TASK-021, TASK-022 | prossima |
 
-**Suite: 277 test verdi** (`./mvnw -B clean test`). **Stream: `V9`** (PHASE 4, `tasks_priority_check`).
-**Prossimo debito libero: `TD-39`** (`docs/DEBT_REGISTRY.md`).
+**Suite: 321 test verdi** (`./mvnw -B clean test`). **Stream: `V11`** (`V10` `task_runs`, `V11`
+`agents.model`). **Prossimo debito libero: `TD-41`** (`docs/DEBT_REGISTRY.md`).
 **Suite AI Engine: 51 test verdi** (`cd ai-engine && .venv/Scripts/python -m pytest`), job CI proprio.
 **Live dev DB: `V3`**, verificato il 2026-09-23 e **non toccato**: gli smoke test girano su un
 clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
@@ -104,6 +104,19 @@ clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
 - **Smoke reale**: quattro modelli Ollama installati su questa macchina; completion reale con
   `ollama:llama3.2:3b` (13 s). Nessuna chiamata cloud eseguita.
 - Il runtime a grafo (LangGraph o alternative) **resta non deciso**, come ADR-001 lo ha rinviato.
+
+### PHASE 6 in sintesi
+- **TASK-019** (ADR-016, `V10`). `POST /api/tasks/{id}/runs` (If-Match del task, `202`),
+  `GET /api/runs/{id}`, `GET /api/tasks/{id}/runs`. Lancio col protocollo del task; `OPEN` →
+  `IN_PROGRESS` via `START`; una run non finita per task; esecuzione **dopo il commit**, fuori
+  transazione, executor limitato; ogni run finisce con un tipo; recupero `interrupted` all'avvio.
+  **Una run riuscita non completa il task** (human in the loop). Apre **TD-39**, **TD-40**.
+- **TASK-020** (`V11`). **TD-08 chiuso**: `MasterOrchestrator` e `POST /api/orchestrator` rimossi;
+  routing lessicale sul registro (`GET /api/tasks/{id}/agent-suggestions`,
+  `POST /api/routing/suggestions`); `agents.model`.
+- **Primo smoke end-to-end reale**, su clone del DB live: task → agente con
+  `ollama:llama3.2:3b` → run `SUCCEEDED` in 24 s con output reale. Ha trovato un falso positivo del
+  routing (`post` ↔ `postgresql`), corretto e pinnato.
 
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
