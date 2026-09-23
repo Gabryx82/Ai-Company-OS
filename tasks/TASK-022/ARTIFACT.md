@@ -48,7 +48,9 @@ Correzioni allo script (nessuna modifica al PATH di sistema):
 - se il control plane non arriva a `UP`, lo script lo dice in rosso ed esce con `1`, invece di
   stampare gli URL;
 - lo stderr di `docker` non è più un errore bloccante sotto Windows PowerShell 5.1;
-- l'attesa interroga `127.0.0.1` (il backend ascolta solo IPv4; `localhost` costava ~2 s a tentativo).
+- l'attesa interroga `127.0.0.1`. Con `localhost` il tentativo IPv6 rifiutato costa ~2 s, pari al
+  timeout di 2 s di ogni sondaggio: **ogni** sondaggio scadeva, e la versione intermedia dello script
+  ha dichiarato «did not come up» con il backend `UP`. Rilanciato dopo la correzione: `exit 0`.
 
 Riverificato: backend avviato dallo script su `aicompany_try` (migrato `V1→V11`), token dev `200`,
 dal browser su `http://localhost:5173` health `200` e API anonima `401` leggibile.
