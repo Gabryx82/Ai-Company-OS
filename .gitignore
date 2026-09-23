@@ -1,7 +1,9 @@
 # Local environment — never commit real credentials
 .env
-.env.local
-.env.*.local
+.env.*
+# ...except the template, which exists to be committed (review R7 of TASK-001:
+# .env.* was not covered, so .env.production would have been tracked).
+!.env.example
 
 # Build output
 target/

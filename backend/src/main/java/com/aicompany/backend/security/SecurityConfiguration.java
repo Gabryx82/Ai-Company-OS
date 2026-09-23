@@ -1,16 +1,21 @@
 package com.aicompany.backend.security;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+
+import java.util.List;
 
 /**
  * The security of the control plane, in one chain (ADR-013).
@@ -26,6 +31,10 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
  *       with 401.</li>
  *   <li><strong>No login form, no Basic, no logout.</strong> Boot's defaults would
  *       add all three, and each is a second way in that nobody decided on.</li>
+ *   <li><strong>CORS before authentication</strong> (TASK-014): a preflight never
+ *       carries a credential, so it is answered by the CORS filter from the declared
+ *       origins alone, and the request that follows is authenticated like any
+ *       other. See {@link CorsPolicy}.</li>
  * </ul>
  */
 @Configuration(proxyBeanMethods = false)
@@ -38,6 +47,17 @@ public class SecurityConfiguration {
     }
 
     @Bean
+    CorsPolicy corsPolicy(@Value("${aicos.cors.allowed-origins:}") List<String> allowedOrigins) {
+        return CorsPolicy.from(allowedOrigins);
+    }
+
+    /** Picked up by {@code http.cors(...)} below: Spring Security looks for this bean. */
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(CorsPolicy policy) {
+        return policy.toSource();
+    }
+
+    @Bean
     SecurityFilterChain apiSecurity(HttpSecurity http,
                                     ApiTokenRegistry registry,
                                     @Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver)
@@ -46,6 +66,7 @@ public class SecurityConfiguration {
         AuthenticationEntryPoint entryPoint = new ProblemAuthenticationEntryPoint(resolver);
 
         http
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
