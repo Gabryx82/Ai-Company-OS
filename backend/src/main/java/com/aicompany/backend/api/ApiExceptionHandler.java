@@ -10,7 +10,9 @@ import com.aicompany.backend.project.exception.ProjectNameConflictException;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
+import com.aicompany.backend.task.exception.IllegalTaskStateTransitionException;
 import com.aicompany.backend.task.exception.InactiveAgentCannotReceiveTasksException;
+import com.aicompany.backend.task.exception.UnassignedTaskCannotStartException;
 import com.aicompany.backend.task.exception.TaskNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -182,6 +184,18 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(InactiveAgentCannotReceiveTasksException.class)
     ResponseEntity<ProblemDetail> handleInactiveDestination(InactiveAgentCannotReceiveTasksException e) {
         return respond(ApiProblem.INACTIVE_AGENT_CANNOT_RECEIVE_TASKS, e.getMessage());
+    }
+
+    // --- the task lifecycle (ADR-014) ----------------------------------------
+
+    @ExceptionHandler(IllegalTaskStateTransitionException.class)
+    ResponseEntity<ProblemDetail> handleIllegalTaskTransition(IllegalTaskStateTransitionException e) {
+        return respond(ApiProblem.ILLEGAL_TASK_STATE_TRANSITION, e.getMessage());
+    }
+
+    @ExceptionHandler(UnassignedTaskCannotStartException.class)
+    ResponseEntity<ProblemDetail> handleUnassignedStart(UnassignedTaskCannotStartException e) {
+        return respond(ApiProblem.UNASSIGNED_TASK_CANNOT_START, e.getMessage());
     }
 
     // --- what the caller sent, as Spring sees it --------------------------

@@ -6,6 +6,7 @@ import com.aicompany.backend.task.dto.TaskAgentAssignmentRequest;
 import com.aicompany.backend.task.dto.TaskCreateRequest;
 import com.aicompany.backend.task.dto.TaskProjectAssignmentRequest;
 import com.aicompany.backend.task.dto.TaskResponse;
+import com.aicompany.backend.task.model.TaskTransition;
 import com.aicompany.backend.task.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -114,6 +115,42 @@ public class TaskController {
             @Valid @RequestBody TaskAgentAssignmentRequest request) {
 
         return ok(service.assignToAgent(id, request.agentId(), Precondition.fromHeader(ifMatch)));
+    }
+
+    // --- the lifecycle (ADR-014) ---------------------------------------------
+    //
+    // One route per edge, the shape the project and agent lifecycles already use
+    // (POST /archive, POST /deactivate): a transition is a verb on the resource,
+    // not a field a client sets. There is no PUT on status, and there must not be
+    // one -- it would let a caller name the destination instead of the edge, and
+    // then OPEN -> DONE is a request away.
+
+    @PostMapping("/{id}/start")
+    public ResponseEntity<TaskResponse> start(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+        return ok(service.transition(id, TaskTransition.START, Precondition.fromHeader(ifMatch)));
+    }
+
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<TaskResponse> complete(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+        return ok(service.transition(id, TaskTransition.COMPLETE, Precondition.fromHeader(ifMatch)));
+    }
+
+    @PostMapping("/{id}/stop")
+    public ResponseEntity<TaskResponse> stop(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+        return ok(service.transition(id, TaskTransition.STOP, Precondition.fromHeader(ifMatch)));
+    }
+
+    @PostMapping("/{id}/reopen")
+    public ResponseEntity<TaskResponse> reopen(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+        return ok(service.transition(id, TaskTransition.REOPEN, Precondition.fromHeader(ifMatch)));
     }
 
     /**

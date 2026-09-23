@@ -127,6 +127,8 @@ class ApiProblemCoverageTest {
                         "archived-project-cannot-receive-tasks",
                         "inactive-agent-cannot-receive-tasks",
                         "archived-project-task-is-immutable",
+                        "illegal-task-state-transition",
+                        "unassigned-task-cannot-start",
                         "internal-error");
     }
 

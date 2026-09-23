@@ -4,7 +4,9 @@ import com.aicompany.backend.agent.model.Agent;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
+import com.aicompany.backend.task.exception.IllegalTaskStateTransitionException;
 import com.aicompany.backend.task.exception.InactiveAgentCannotReceiveTasksException;
+import com.aicompany.backend.task.exception.UnassignedTaskCannotStartException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -48,12 +50,10 @@ public class Task {
      * hold them; and an ordinal would make reordering the members below rewrite
      * the meaning of every existing row without touching one.
      *
-     * <p>There is no setter and no transition method, and that absence is the
-     * decision of ADR-011 §3: this task closed the vocabulary, not the lifecycle.
-     * A value is chosen when the task is created and there is no path that
-     * changes it afterwards (TD-37). When that path is added, the transition
-     * rules are the question it has to answer, and they belong here next to the
-     * state -- the way the project and agent lifecycles already do.
+     * <p>No setter. Since TASK-015 the value moves only through {@link #apply},
+     * along the edges {@link TaskTransition} declares (ADR-014) -- the vocabulary
+     * of ADR-011 stays where it was, and the machine is a separate table. Until
+     * then there was no path that changed it at all (TD-37).
      */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -252,6 +252,50 @@ public class Task {
         }
 
         this.agent = target;
+    }
+
+    /**
+     * Moves this task along one edge of its lifecycle (ADR-014).
+     *
+     * <p>Three rules, in this order, and the order is the decision:
+     *
+     * <ol>
+     *   <li><strong>A frozen task does not move</strong> -- ADR-006 §2, "any future
+     *       write to that task", applied for the third time. First, because it is
+     *       the refusal the caller can act on whatever else is wrong: restore the
+     *       project and ask again.</li>
+     *   <li><strong>The transition must be an edge from the current state.</strong>
+     *       Not idempotent: a repeated {@code start} is a 409, like a repeated
+     *       {@code archive} (ADR-004 §4). The caller asked to move and the task was
+     *       not where it thought.</li>
+     *   <li><strong>Starting needs somebody who can work</strong>: an agent, and an
+     *       active one. On {@link TaskTransition#START} only -- leaving
+     *       {@code IN_PROGRESS} never depends on the agent (ADR-010 D3).</li>
+     * </ol>
+     *
+     * <p>{@code lockedAgent} is the task's own agent, handed in as the instance the
+     * caller locked (rule L2), or {@code null} when the task has none or the edge
+     * does not need it. Like {@link #assignTo(Agent, Project)}, this cannot know on
+     * its own that {@code this.agent} is still true: that is rule L0.
+     */
+    public void apply(TaskTransition transition, Project projectItLivesIn, Agent lockedAgent) {
+
+        requireNotFrozen(projectItLivesIn);
+
+        if (status != transition.from()) {
+            throw new IllegalTaskStateTransitionException(status, transition);
+        }
+
+        if (transition.requiresActiveAgent()) {
+            if (lockedAgent == null) {
+                throw new UnassignedTaskCannotStartException(id);
+            }
+            if (!lockedAgent.isActive()) {
+                throw new InactiveAgentCannotReceiveTasksException(lockedAgent.getId());
+            }
+        }
+
+        this.status = transition.to();
     }
 
     /**

@@ -138,6 +138,19 @@ public enum ApiProblem {
     INACTIVE_AGENT_CANNOT_RECEIVE_TASKS("inactive-agent-cannot-receive-tasks", HttpStatus.CONFLICT,
             "Inactive agent cannot be given work", "Activate the agent first"),
 
+    // --- the task lifecycle (ADR-014) ----------------------------------------
+
+    ILLEGAL_TASK_STATE_TRANSITION("illegal-task-state-transition", HttpStatus.CONFLICT,
+            "Illegal task state transition", "The task is not in a state that allows this"),
+
+    /**
+     * Distinct from {@link #INACTIVE_AGENT_CANNOT_RECEIVE_TASKS}, which a start on a
+     * task whose agent is inactive also returns: the remedy here is to assign
+     * somebody, there to activate or reassign.
+     */
+    UNASSIGNED_TASK_CANNOT_START("unassigned-task-cannot-start", HttpStatus.CONFLICT,
+            "Task has no agent", "Assign the task to an agent before starting it"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

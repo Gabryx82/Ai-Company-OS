@@ -93,7 +93,8 @@ class PreconditionCoverageTest {
                 .containsExactlyInAnyOrder(
                         "create",                      // exempt: no earlier state to be stale about
                         "assignToProject:Precondition",
-                        "assignToAgent:Precondition");
+                        "assignToAgent:Precondition",
+                        "transition:Precondition");      // ADR-014: every edge, one path
 
         assertThat(writePaths(ProjectService.class))
                 .containsExactlyInAnyOrder(

@@ -12,6 +12,7 @@ import com.aicompany.backend.task.dto.TaskResponse;
 import com.aicompany.backend.task.exception.TaskNotFoundException;
 import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.model.TaskStatus;
+import com.aicompany.backend.task.model.TaskTransition;
 import com.aicompany.backend.task.repository.TaskRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -301,6 +302,55 @@ public class TaskService {
 
         // Rules on the entity, not here.
         task.assignTo(target, lockedProject);
+
+        return versioned(repository.saveAndFlush(task));
+    }
+
+    /**
+     * Moves an existing task along one edge of its lifecycle (ADR-014).
+     *
+     * <p>The protocol of {@link #assignToAgent}, with one difference -- which agent
+     * row is read:
+     *
+     * <ol>
+     *   <li><strong>L0</strong>, the task row, exclusively;</li>
+     *   <li><strong>P1</strong>, the precondition, before any rule reads the row;</li>
+     *   <li><strong>L2 on the project</strong> the task lives in, shared, because
+     *       every transition is refused when it is archived (ADR-006 §2);</li>
+     *   <li><strong>L2 on the task's own agent</strong>, shared, and only for an
+     *       edge whose rule depends on it ({@link TaskTransition#START}). At the
+     *       commit of a start, the agent <em>was</em> active: a concurrent
+     *       deactivation either commits first and the start is refused, or waits
+     *       and applies to a task already in progress -- which ADR-010 D3 makes a
+     *       legal state.</li>
+     * </ol>
+     *
+     * <p>L5' holds: {@code tasks} → {@code projects} → {@code agents}, and no path
+     * that locks an agent ever locks a task afterwards (ADR-010 §3), so the graph
+     * gains no arc and stays acyclic.
+     */
+    public Versioned<TaskResponse> transition(Long taskId, TaskTransition transition,
+                                              Precondition precondition) {
+
+        // L0.
+        Task task = repository.findByIdForUpdate(taskId)
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+        // P1.
+        precondition.requireSatisfiedBy(task.getVersion());
+
+        // L2 on the project, for the freezing rule.
+        Long projectId = task.getProjectId();
+        Project lockedProject = projectId == null ? null : requireProjectForDecision(projectId);
+
+        // L2 on the agent, after the project (L5'), only when the edge reads it.
+        Agent lockedAgent = null;
+        if (transition.requiresActiveAgent() && task.getAgentId() != null) {
+            lockedAgent = requireAgentForDecision(task.getAgentId());
+        }
+
+        // Rules on the entity, not here.
+        task.apply(transition, lockedProject, lockedAgent);
 
         return versioned(repository.saveAndFlush(task));
     }
