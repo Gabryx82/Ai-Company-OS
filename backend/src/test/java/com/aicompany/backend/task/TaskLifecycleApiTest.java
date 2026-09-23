@@ -17,14 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -323,38 +316,9 @@ class TaskLifecycleApiTest extends AbstractPostgresTest {
         assertThat(etagOf("/api/projects/" + project)).isEqualTo(projectTag);
     }
 
-    /**
-     * Two callers, one tag, the same transition, at once. The row lock orders
-     * them and the precondition tells the second one it was overtaken -- whatever
-     * the interleaving, the outcome set is exactly one 200 and one 412.
-     */
-    @Test
-    void twoConcurrentCompletionsWithOneTagProduceOneSuccessAndOneStaleRefusal() throws Exception {
-
-        Long taskId = task(TaskStatus.IN_PROGRESS, activeAgent("Backend"), null);
-        String tag = etagOfTask(taskId);
-
-        ExecutorService threads = Executors.newFixedThreadPool(2);
-        try {
-            CyclicBarrier together = new CyclicBarrier(2);
-            List<Future<Integer>> calls = new ArrayList<>();
-            for (int i = 0; i < 2; i++) {
-                calls.add(threads.submit(() -> {
-                    together.await(10, TimeUnit.SECONDS);
-                    return mockMvc.perform(transition(taskId, "complete", tag)).andReturn().getResponse().getStatus();
-                }));
-            }
-            List<Integer> codes = new ArrayList<>();
-            for (Future<Integer> call : calls) {
-                codes.add(call.get(30, TimeUnit.SECONDS));
-            }
-            Collections.sort(codes);
-            assertThat(codes).containsExactly(200, 412);
-        } finally {
-            threads.shutdownNow();
-        }
-        assertThat(statusOf(taskId)).isEqualTo("DONE");
-    }
+    // The concurrent case lives in TaskLifecycleConcurrencyTest, with a forced
+    // interleaving. A version of it here, at a barrier, survived the removal of
+    // the row lock: two HTTP calls at a barrier do not overlap on demand.
 
     // --- helpers -----------------------------------------------------------
 
