@@ -1,0 +1,13 @@
+task: TASK-013
+title: API authentication (bearer tokens)
+phase: PHASE 3 — Security baseline
+branch: task-013-api-authentication
+integration_branch: autonomous/phase-3-security
+debts: [TD-04]
+adr: docs/adr/ADR-013-api-authentication.md
+required_files:
+  - .company-os/PROJECT_STATE.md
+  - .company-os/PHASE_3_PLAN.md
+  - backend/src/main/java/com/aicompany/backend/api/ApiExceptionHandler.java
+  - backend/src/main/java/com/aicompany/backend/api/ApiProblem.java
+  - backend/src/test/java/com/aicompany/backend/support/AbstractPostgresTest.java

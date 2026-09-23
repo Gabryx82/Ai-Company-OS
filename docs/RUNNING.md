@@ -1,6 +1,7 @@
 # Running AI Company OS locally
 
-Stato attuale: control plane Spring Boot + PostgreSQL. Frontend e servizio AI non esistono ancora.
+Stato attuale: control plane Spring Boot + PostgreSQL, autenticato con bearer token (ADR-013).
+Frontend e servizio AI non esistono ancora.
 
 ## Prerequisiti
 - JDK 21
@@ -51,7 +52,34 @@ Il profilo di default è `dev`. All'avvio Flyway applica le migrazioni e, solo i
 
 L'applicazione risponde su `http://localhost:8080`.
 
-### Prima di tutto: ogni mutazione richiede `If-Match`
+### Prima di tutto: ogni richiesta richiede un token
+
+**Da TASK-013 (ADR-013) ogni rotta `/api/**` risponde `401` senza un bearer token valido.** Non
+è un server rotto: manca l'header.
+
+| Profilo | Token dell'operatore |
+|---|---|
+| `dev` | `AICOS_OPERATOR_TOKEN` se impostata, altrimenti il default locale `dev-operator-token-change-me` |
+| `prod` | **solo** `AICOS_OPERATOR_TOKEN`, senza default: senza la variabile l'applicazione non parte |
+
+```bash
+TOKEN=dev-operator-token-change-me
+curl -i http://localhost:8080/api/projects -H "Authorization: Bearer $TOKEN"
+```
+
+L'unica rotta pubblica è `GET /actuator/health`, che risponde soltanto `{"status":"UP"}`.
+
+L'applicazione **rifiuta di partire** se nessun token è configurato, se un token è più corto di 16
+caratteri, o se lo stesso token è configurato sotto due nomi. Altri token si aggiungono per nome —
+`aicos.security.api-tokens.<nome>=<token>`, o `AICOS_SECURITY_APITOKENS_<NOME>` (senza trattino: è la regola di binding di Spring per le variabili d'ambiente) dall'ambiente — e
+il nome è l'identità con cui il sistema registra chi ha fatto che cosa.
+
+Un token sbagliato riceve **esattamente** la stessa risposta di un token assente, ed è rifiutato
+anche sull'health: se il client ne manda uno, deve essere giusto.
+
+Negli esempi qui sotto l'header `Authorization` è **sottinteso**.
+
+### Poi: ogni mutazione richiede `If-Match`
 
 **Se una richiesta di scrittura su una risorsa esistente risponde `428`, non è un errore del
 server: manca l'header.** È il protocollo P0–P4 di ADR-009, e vale per **tutte e tre** le
@@ -318,5 +346,7 @@ docker compose down -v && docker compose up -d
 
 - **Non promuovere un database di sviluppo a produzione.** È una **policy operativa, non un controllo tecnico**: il profilo `prod` legge solo `flyway_schema_history` e ignora del tutto lo stream del seed, quindi si avvia senza errori sia su un database mai seminato sia su uno seminato in dev. Nulla impedisce a `prod` di puntare a un database di sviluppo — la separazione evita che i due stream interferiscano, non protegge da una configurazione sbagliata.
 - **Un solo profilo operativo per avvio.** Combinazioni come `dev,prod` non sono un confine di sicurezza: attivano il bean del seed.
-- Non esiste ancora autenticazione: non esporre backend o database fuori da `localhost`.
+- **L'autenticazione esiste da TASK-013, ma è un token per operatore, non un sistema di utenti**:
+  non esporre backend o database fuori da `localhost` senza TLS davanti. Un bearer token in chiaro
+  su una rete è una password in chiaro.
 - Il seed di sviluppo è **dato dimostrativo**, non dato di riferimento di produzione.
