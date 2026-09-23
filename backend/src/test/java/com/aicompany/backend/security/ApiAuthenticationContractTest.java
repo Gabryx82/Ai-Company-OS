@@ -230,6 +230,22 @@ class ApiAuthenticationContractTest extends AbstractPostgresTest {
         assertThat(body).doesNotContain("components").doesNotContain("details");
     }
 
+    /**
+     * A credential that is presented and wrong is refused even where none is
+     * needed. Found by mutation: letting a bad token fall through as anonymous
+     * changed nothing on protected routes -- the anonymous caller is refused there
+     * anyway -- so no other test could tell the two designs apart. This one can, and
+     * it pins the one that tells a client with a stale token the truth.
+     */
+    @Test
+    void aWrongTokenIsRefusedEvenWhereNoTokenIsNeeded() throws Exception {
+
+        anonymous.perform(get("/actuator/health")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer a-stale-or-mistyped-token-value"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.type").value(UNAUTHENTICATED));
+    }
+
     @Test
     void noOtherActuatorEndpointIsReachableAnonymously() throws Exception {
 
