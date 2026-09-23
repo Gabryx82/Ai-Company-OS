@@ -131,6 +131,10 @@ di scritture non ha bisogno di rileggere ogni volta.
 | `POST /api/tasks` | creazione (`201` + `Location` + `ETag`) |
 | `PUT /api/tasks/{id}/project` | assegna o sposta di progetto. **`If-Match`** |
 | `PUT /api/tasks/{id}/agent` | assegna o cambia agente. **`If-Match`** |
+| `POST /api/tasks/{id}/start` | `OPEN → IN_PROGRESS`. Richiede un agente **attivo**. **`If-Match`** |
+| `POST /api/tasks/{id}/complete` | `IN_PROGRESS → DONE`. **`If-Match`** |
+| `POST /api/tasks/{id}/stop` | `IN_PROGRESS → OPEN`. **`If-Match`** |
+| `POST /api/tasks/{id}/reopen` | `DONE → OPEN`. **`If-Match`** |
 
 Non esiste `DELETE /api/tasks/{id}` (risponde `405`, «non per questa via»), né un `PUT` generale
 sulla task: le due associazioni sono sotto-risorse.
@@ -144,8 +148,10 @@ curl -i -X POST http://localhost:8080/api/tasks -H 'Content-Type: application/js
 **esattamente** — `"open"` è rifiutato quanto `"banana"`, con `400` e il campo nominato in
 `errors.status` (ADR-011). `priority` è ancora una stringa libera.
 
-**Non esiste un modo di cambiare lo `status` di una task esistente**: si sceglie alla creazione.
-È un limite dichiarato, TD-37.
+**Lo `status` si cambia solo lungo i quattro archi qui sopra** (ADR-014, da TASK-015): ogni altra
+coppia è `409 illegal-task-state-transition`, e non esiste un `PUT` su `status`. `start` senza
+agente è `409 unassigned-task-cannot-start`; con un agente inattivo `409
+inactive-agent-cannot-receive-tasks`. Un task in un progetto archiviato non si muove.
 
 `projectId` e `agentId` sono facoltativi nel corpo della `POST`: se presenti e rifiutati, **la
 task non viene creata affatto**.

@@ -1,0 +1,8 @@
+task: TASK-015
+title: Task status transitions
+phase: PHASE 4 — Task lifecycle
+branch: task-015-task-status-transitions
+integration_branch: autonomous/phase-4-task-lifecycle
+debts: [TD-37]
+opens: [TD-38]
+adr: docs/adr/ADR-014-task-lifecycle-transitions.md
