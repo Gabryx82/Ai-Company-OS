@@ -59,15 +59,14 @@ senza mergiarla.
 
 - **TD-31 — CHIUSO.** Il cambiamento distruttivo è stato autorizzato esplicitamente da un umano,
   delimitato allo scope documentato. `V8` elimina `agents.active`;
-- **TD-14 — APERTO.** Il dato che mancava è arrivato il **2026-09-20** e il blocco si è spostato
-  di un passo: `origin` è configurato su `https://github.com/Gabryx82/Ai-Company-OS.git`, il
-  `fetch` riesce, **il repository remoto esiste ed è vuoto** (nessun branch, nessuna history
-  indipendente), e `.github/workflows/ci.yml` è scritto, validato in locale e committato
-  (`dbed389`). **Resta bloccato dalla sola autenticazione**: le credenziali memorizzate in Git
-  Credential Manager presentano l'account **`BytecoreLab`**, che non ha permesso di scrittura su
-  quel repository — `403`, e il push non ha scritto nulla. **Nessun job CI è mai stato eseguito**,
-  quindi TD-14 **non si chiude**: un workflow che non ha girato è un file YAML, non una CI.
-  Evidenza e le tre azioni umane possibili in `tasks/TASK-012/EVIDENCE_TD14.md` §7-10.
+- **TD-14 — CHIUSO il 2026-09-23.** Il remote è configurato
+  (`https://github.com/Gabryx82/Ai-Company-OS.git`), `master` è stato pushato senza force e senza
+  riscrivere storia (`14f70b3`, `origin/master` allineato, divergenza `0 0`), il workflow `CI` è
+  **registrato e attivo** su GitHub, e la run **`35863517006` si è conclusa `success`**: 9 step su
+  9 verdi su `ubuntu-latest`, `./mvnw -B clean test` incluso, in 1m26s, con l'artefatto
+  `surefire-reports` caricato. **La CI ha girato davvero** — che è la sola evidenza con cui questo
+  debito poteva chiudersi. Percorso completo, compresi i quattro fallimenti di autenticazione che
+  lo hanno preceduto, in `tasks/TASK-012/EVIDENCE_TD14.md` §7-11.
 
 **TD-04** e **TD-37** restano aperte e **non decise**: sono i due candidati di PHASE 3, e la
 scelta fra loro è la prima decisione di quella fase.
@@ -501,15 +500,16 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   il lock esclusivo, prima delle regole**. `@Version` è il contatore, non il rilevatore: nessun
   handler per `OptimisticLockException`, e non va aggiunto.
 - Test: **223** (erano 109 in `master`, 158 a fine PHASE 1, 201 dopo TASK-009, 216 dopo
-  TASK-010, 219 dopo TASK-011). `./mvnw -B clean test` → BUILD SUCCESS.
+  TASK-010, 219 dopo TASK-011). `./mvnw -B clean test` → BUILD SUCCESS, **in locale e in CI**.
 - H2 rimosso.
 
 ## Stato Git (verificato il 2026-09-20)
 
 - **Remote**: `origin` → `https://github.com/Gabryx82/Ai-Company-OS.git`, configurato il
-  2026-09-20 su autorizzazione umana esplicita. **Fetch riesce; il repository remoto è vuoto.**
-  **Nessun push è mai andato a buon fine** — bloccato dall'autenticazione (TD-14), e il remoto non
-  contiene nulla.
+  2026-09-20 su autorizzazione umana esplicita, **pushato il 2026-09-23**. Repository pubblico,
+  di proprietà di `Gabryx82`, default branch `master`.
+- **CI attiva**: GitHub Actions, `.github/workflows/ci.yml`, esegue `./mvnw -B clean test` a ogni
+  push e pull request. Prima run verde: `35863517006`.
 
 - **`master`**: **`6dc5989`**. Era `d5ff121`; ci sono arrivati **41 commit** con due fast-forward
   consecutivi, autorizzati dalla review umana del 2026-09-19.
@@ -529,7 +529,10 @@ Artefatti: `tasks/TASK-004/*`, `docs/adr/ADR-006-archival-consistency-and-projec
   `task-007-agent-registry`, `task-008-optimistic-concurrency`,
   `task-009-task-agent-assignment`, `task-010-task-status-vocabulary`,
   `task-011-debt-registry-and-docs`.
-- **Nessun push eseguito.** Il solo tentativo è stato rifiutato dall'autenticazione (TD-14) e **non ha scritto nulla**: il repository remoto è ancora vuoto.
+- **`master` è pushato su `origin`** dal 2026-09-23 (`14f70b3`), senza force e senza riscrivere
+  storia. `origin/master` allineato a HEAD, upstream impostato, ed è il **default branch** del
+  repository remoto. Gli integration branch e i branch di task **non** sono stati pushati: restano
+  marcatori locali.
 - Storia lineare, mai riscritta.
 
 Commit di TASK-010, ora nell'integration branch:
@@ -639,7 +642,7 @@ bloccato** su un dato mancante (`tasks/TASK-012/EVIDENCE_TD14.md`).
 | ID | Contenuto |
 |---|---|
 | **TD-31** | **CHIUSO** il 2026-09-19 da TASK-012. `V8` elimina `agents.active`; decisione umana esplicita, backfill biiettivo, contratto pubblico invariato. ADR-012 |
-| **TD-14** | Nessuna CI **eseguita**. Il remote è configurato e il workflow è committato (`dbed389`): manca solo un push che riesca. **Bloccato dall'autenticazione GitHub** — le credenziali memorizzate sono dell'account `BytecoreLab`, senza scrittura su `Gabryx82/Ai-Company-OS`. È un'azione umana: `tasks/TASK-012/EVIDENCE_TD14.md` §9 |
+| **TD-14** | **CHIUSO 2026-09-23.** CI su GitHub Actions, verde alla prima run (`35863517006`). Con 223 test e invarianti di concorrenza, era l'unico debito il cui costo cresceva a ogni task |
 
 ### Nuovi (TASK-010)
 

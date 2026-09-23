@@ -33,7 +33,7 @@ Sono queste, e sono tutte. Ogni altro identificatore o coincide (§3) o esiste i
 
 | ID | **Audit** (TASK-000) | **Vivo** (`PROJECT_STATE.md`) |
 |---|---|---|
-| **TD-14** | Build non riproducibile offline: `./mvnw -o test` fallisce per plugin assenti dalla cache. **Non rivalutato** | **Nessuna CI. APERTO, e il blocco si è spostato.** Il remote è stato fornito e configurato il 2026-09-20 (`origin` → `Gabryx82/Ai-Company-OS`), `fetch` riesce, il remoto è **vuoto**, e il workflow GitHub Actions è **scritto e committato** (`dbed389`). Resta bloccato **solo dall'autenticazione**: le credenziali memorizzate presentano l'account `BytecoreLab`, che non ha scrittura sul repository (`403`). **Nessun job è mai stato eseguito**, quindi non c'è evidenza di una CI funzionante. `tasks/TASK-012/EVIDENCE_TD14.md` §7-10 |
+| **TD-14** | Build non riproducibile offline: `./mvnw -o test` fallisce per plugin assenti dalla cache. **Non rivalutato**, e resta aperto nello spazio dell'audit | **CHIUSO** il 2026-09-23. `origin` → `Gabryx82/Ai-Company-OS`, `master` pushato (`14f70b3`), workflow `CI` **registrato e attivo**, e la **run `35863517006` è passata in verde** su `ubuntu-latest` in 1m26s, eseguendo `./mvnw -B clean test` con tutti e 9 gli step `success`. Non è un file YAML: è una CI che ha girato. `tasks/TASK-012/EVIDENCE_TD14.md` §11 |
 | **TD-19** | Metadati `pom.xml` vuoti | Componente del ciclo di vita del progetto. **Chiuso da TASK-004** |
 | **TD-20** | Igiene Git | Le eccezioni che Spring solleva **prima** del nostro codice non entravano nel contratto d'errore. **Chiuso da TASK-005** |
 | **TD-21** | `System.out.println` invece di logging | **Chiuso da TASK-005**, dentro la normalizzazione del contratto d'errore |

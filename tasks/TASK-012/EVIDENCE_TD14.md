@@ -193,3 +193,75 @@ Una di queste tre, ed è una **decisione umana** perché riguarda account e perm
 **TD-14 resta APERTO.** La CI è scritta e validata per quanto è validabile in locale, ma
 **nessun job è mai stato eseguito**, e un workflow che non ha girato non è una CI: è un file
 YAML. Chiuderlo adesso significherebbe chiudere un debito perché il codice sembra diverso.
+
+
+---
+
+# Chiusura — 2026-09-23: la CI ha girato
+
+## 11. L'evidenza con cui TD-14 si chiude
+
+Il push è passato il 2026-09-23, dopo **quattro** fallimenti di autenticazione che vale la pena
+lasciare a verbale perché ciascuno ha escluso una causa diversa:
+
+| # | Sintomo | Che cosa ha escluso |
+|---|---|---|
+| 1 | `403 denied to BytecoreLab` | Le credenziali memorizzate erano di un altro account |
+| 2 | `401 Invalid username or token` | La voce legacy `GScialla2` conteneva una password, e GitHub non le accetta più |
+| 3 | **Hang**, exit 124, nessun output | Tre processi GCM sovrapposti: il primo occupava il listener del callback OAuth, quindi il browser completava e la risposta finiva al processo sbagliato |
+| 4 | `403 denied to Gabryx82` | **Il proprietario negato sul proprio repository**: non l'account, non il repo — il token senza permesso di scrittura |
+
+L'interrogazione dell'API pubblica ha escluso il repository come causa al passo 4:
+`archived=false`, `disabled=false`, `private=false`, `owner=Gabryx82`. Restava solo il token.
+
+### Esito
+
+```
+To https://github.com/Gabryx82/Ai-Company-OS.git
+ * [new branch]      master -> master
+branch 'master' set up to track 'origin/master'.
+```
+
+| Verifica | Esito |
+|---|---|
+| `origin/master` | `14f70b3` — **identico** a HEAD locale |
+| `git rev-list --left-right --count master...origin/master` | `0 0` — allineati |
+| Upstream | `master` → `origin/master` |
+| Branch remoti | uno solo: `master` |
+| Default branch remoto | `master`, promosso da GitHub al primo push |
+| Force push / riscrittura storia | **nessuno**, in nessun tentativo |
+
+### La CI, che è il punto
+
+| Verifica | Esito |
+|---|---|
+| Workflow registrato | `CI` → `.github/workflows/ci.yml`, **state `active`**, id `365136968` |
+| Run | `35863517006`, evento `push`, branch `master`, sha `14f70b3` |
+| Runner | `ubuntu-latest` |
+| Durata | `12:54:51Z` → `12:56:17Z` — **1m26s** |
+| **Conclusione** | **`success`** |
+| Step | **9 su 9 `success`**, compresi *Confirm Docker is available* e *Build and run the full test suite* |
+| Artefatto | `surefire-reports`, 150 764 byte, caricato |
+
+Lo step **Confirm Docker is available** che passa è la conferma della decisione di non mettere
+un blocco `services: postgres`: il runner ha il daemon, e Testcontainers avvia il proprio
+PostgreSQL. Un service container sarebbe rimasto inutilizzato.
+
+### Due cose che la validazione locale aveva già salvato
+
+Entrambe avrebbero fatto fallire questa prima run, ed entrambe erano state corrette prima del
+push perché cercate invece che assunte:
+
+1. **`backend/mvnw` era `100644`.** Su Linux `./mvnw` sarebbe stato *Permission denied* prima che
+   Maven partisse. Corretto con `update-index --chmod=+x` — blob hash invariato.
+2. **Line endings.** Il repository è editato su Windows e non ha `.gitattributes`; il blob di
+   `mvnw` è stato **contato** e ha zero byte CR, quindi lo shebang era già sicuro.
+
+## 12. Stato di TD-14
+
+**CHIUSO** nello spazio vivo, il 2026-09-23, con evidenza eseguibile: il workflow non è un file
+YAML che *dovrebbe* funzionare, è una run verde con un identificativo verificabile.
+
+**Attenzione al doppio spazio di identificatori** (`docs/DEBT_REGISTRY.md` §2): `TD-14` nello
+spazio dell'**audit** è un debito diverso — «build non riproducibile offline» — e **resta aperto**,
+perché questa task non lo ha rivalutato.

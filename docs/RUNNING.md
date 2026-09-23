@@ -196,9 +196,9 @@ altrimenti fallirebbe dentro Testcontainers con un messaggio che non nomina la c
 I report di Surefire sono caricati come artefatto **anche quando il job fallisce** — soprattutto
 allora, perché sono l'unico modo di vedere quale test è rosso senza rieseguire il job.
 
-> ⚠️ **Al 2026-09-20 nessun job è ancora stato eseguito.** Il workflow è committato ma il push su
-> `origin` è bloccato dall'autenticazione, quindi GitHub non lo ha mai visto. **TD-14 resta
-> aperto**: `tasks/TASK-012/EVIDENCE_TD14.md` §7-10.
+> ✅ **Attiva dal 2026-09-23.** Prima run verde: `35863517006` — 9 step su 9 `success` su
+> `ubuntu-latest` in 1m26s, `./mvnw -B clean test` compreso. **TD-14 chiuso**:
+> `tasks/TASK-012/EVIDENCE_TD14.md` §11.
 
 ## 4. Profili
 

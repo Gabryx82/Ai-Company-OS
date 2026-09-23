@@ -117,10 +117,10 @@ Questa è la sezione da leggere se si sta per costruirci sopra.
 > - **TD-31 è CHIUSO.** La decisione è stata presa esplicitamente da una persona, delimitata allo
 >   scope documentato, e `V8` l'ha eseguita: `agents.active` eliminata, backfill biiettivo,
 >   contratto pubblico invariato. ADR-012.
-> - **TD-14 resta APERTO**, e il blocco si è rivelato essere **un dato mancante, non una
->   decisione**: il repository non contiene alcun URL, owner o nome di repository remoto, nessun
->   remote è mai stato configurato e `gh` non è installato. Serve l'URL del remote.
->   `tasks/TASK-012/EVIDENCE_TD14.md`.
+> - **TD-14 è CHIUSO** dal 2026-09-23. Il blocco non era una decisione ma un dato mancante —
+>   l'URL del remote — poi arrivato e autorizzato. `origin` configurato, `master` pushato senza
+>   force, e la CI su GitHub Actions **verde alla prima run** (`35863517006`).
+>   `tasks/TASK-012/EVIDENCE_TD14.md` §7-12.
 >
 > Il testo qui sotto è quello che è stato sottoposto alla review, conservato com'era.
 
