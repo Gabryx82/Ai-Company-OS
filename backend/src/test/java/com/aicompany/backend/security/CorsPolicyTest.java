@@ -114,7 +114,13 @@ class CorsPolicyTest extends AbstractPostgresTest {
 
         assertThatThrownBy(() -> CorsPolicy.from(List.of("http://console.test", "*")))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("*");
+                // The reason, not just the value: "*" also fails the origin check
+                // below, and an operator told only "not an origin" would try "https://*".
+                .hasMessageContaining("wildcards are refused");
+
+        assertThatThrownBy(() -> CorsPolicy.from(List.of("https://*.example.com")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("wildcards are refused");
 
         assertThatThrownBy(() -> CorsPolicy.from(List.of("console.test")))
                 .isInstanceOf(IllegalStateException.class)
