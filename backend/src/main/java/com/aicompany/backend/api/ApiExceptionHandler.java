@@ -9,7 +9,10 @@ import com.aicompany.backend.project.exception.IllegalProjectStateTransitionExce
 import com.aicompany.backend.project.exception.ProjectNameConflictException;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
+import com.aicompany.backend.run.exception.RunNotFoundException;
+import com.aicompany.backend.run.exception.TaskRunInProgressException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
+import com.aicompany.backend.task.exception.FinishedTaskCannotRunException;
 import com.aicompany.backend.task.exception.IllegalTaskStateTransitionException;
 import com.aicompany.backend.task.exception.InactiveAgentCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.UnassignedTaskCannotStartException;
@@ -196,6 +199,23 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(UnassignedTaskCannotStartException.class)
     ResponseEntity<ProblemDetail> handleUnassignedStart(UnassignedTaskCannotStartException e) {
         return respond(ApiProblem.UNASSIGNED_TASK_CANNOT_START, e.getMessage());
+    }
+
+    // --- runs (ADR-016) -----------------------------------------------------
+
+    @ExceptionHandler(RunNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleRunNotFound(RunNotFoundException e) {
+        return respond(ApiProblem.RUN_NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(TaskRunInProgressException.class)
+    ResponseEntity<ProblemDetail> handleRunInProgress(TaskRunInProgressException e) {
+        return respond(ApiProblem.TASK_RUN_IN_PROGRESS, e.getMessage());
+    }
+
+    @ExceptionHandler(FinishedTaskCannotRunException.class)
+    ResponseEntity<ProblemDetail> handleFinishedTaskRun(FinishedTaskCannotRunException e) {
+        return respond(ApiProblem.FINISHED_TASK_CANNOT_RUN, e.getMessage());
     }
 
     // --- what the caller sent, as Spring sees it --------------------------

@@ -31,7 +31,8 @@ class ApiProblemCoverageTest {
     private static final List<String> DOMAIN_EXCEPTION_PACKAGES = List.of(
             "com.aicompany.backend.agent.exception",
             "com.aicompany.backend.project.exception",
-            "com.aicompany.backend.task.exception");
+            "com.aicompany.backend.task.exception",
+            "com.aicompany.backend.run.exception");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in
@@ -129,6 +130,9 @@ class ApiProblemCoverageTest {
                         "archived-project-task-is-immutable",
                         "illegal-task-state-transition",
                         "unassigned-task-cannot-start",
+                        "run-not-found",
+                        "task-run-in-progress",
+                        "finished-task-cannot-run",
                         "internal-error");
     }
 

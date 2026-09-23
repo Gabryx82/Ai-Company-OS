@@ -2,6 +2,7 @@ package com.aicompany.backend.api;
 
 import com.aicompany.backend.agent.service.AgentService;
 import com.aicompany.backend.project.service.ProjectService;
+import com.aicompany.backend.run.service.RunService;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PreconditionCoverageTest {
 
     private static final List<Class<?>> SERVICES =
-            List.of(TaskService.class, ProjectService.class, AgentService.class);
+            List.of(TaskService.class, ProjectService.class, AgentService.class, RunService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -103,6 +104,12 @@ class PreconditionCoverageTest {
                         "update:Precondition",
                         "archive:Precondition",
                         "restore:Precondition");
+
+        // ADR-016: launching a run may start the task, so it is a write to an
+        // existing row and carries the task's precondition. The executor's own
+        // writes to the run (RunRecorder) are not a client path and not listed.
+        assertThat(writePaths(RunService.class))
+                .containsExactlyInAnyOrder("launch:Precondition");
 
         assertThat(writePaths(AgentService.class))
                 .containsExactlyInAnyOrder(

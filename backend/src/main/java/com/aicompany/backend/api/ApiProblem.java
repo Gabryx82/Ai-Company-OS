@@ -151,6 +151,17 @@ public enum ApiProblem {
     UNASSIGNED_TASK_CANNOT_START("unassigned-task-cannot-start", HttpStatus.CONFLICT,
             "Task has no agent", "Assign the task to an agent before starting it"),
 
+    // --- runs (ADR-016) -----------------------------------------------------
+
+    RUN_NOT_FOUND("run-not-found", HttpStatus.NOT_FOUND,
+            "Run not found", "No run with that identifier"),
+
+    TASK_RUN_IN_PROGRESS("task-run-in-progress", HttpStatus.CONFLICT,
+            "Task already has a run in progress", "Wait for the current run to finish"),
+
+    FINISHED_TASK_CANNOT_RUN("finished-task-cannot-run", HttpStatus.CONFLICT,
+            "Finished task cannot run", "Reopen the task before running it again"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

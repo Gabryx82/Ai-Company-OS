@@ -4,6 +4,7 @@ import com.aicompany.backend.agent.model.Agent;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
+import com.aicompany.backend.task.exception.FinishedTaskCannotRunException;
 import com.aicompany.backend.task.exception.IllegalTaskStateTransitionException;
 import com.aicompany.backend.task.exception.InactiveAgentCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.UnassignedTaskCannotStartException;
@@ -321,6 +322,31 @@ public class Task {
         }
 
         this.status = transition.to();
+    }
+
+    /**
+     * Whether an agent may be asked to work on this task now (ADR-016 §2).
+     *
+     * <p>The rules of {@link TaskTransition#START} plus one: a {@code DONE} task is
+     * not runnable, because finished work is re-opened on purpose, by its own edge,
+     * not re-run by accident. An {@code IN_PROGRESS} task <em>is</em> runnable --
+     * a second attempt at work already under way is the ordinary case, and its
+     * agent must still be present and active, because a run is work taken on.
+     * Order as in {@link #apply}: frozen first, the refusal the caller can act on.
+     */
+    public void requireRunnable(Project projectItLivesIn, Agent lockedAgent) {
+
+        requireNotFrozen(projectItLivesIn);
+
+        if (status == TaskStatus.DONE) {
+            throw new FinishedTaskCannotRunException(id);
+        }
+        if (lockedAgent == null) {
+            throw new UnassignedTaskCannotStartException(id);
+        }
+        if (!lockedAgent.isActive()) {
+            throw new InactiveAgentCannotReceiveTasksException(lockedAgent.getId());
+        }
     }
 
     /**
