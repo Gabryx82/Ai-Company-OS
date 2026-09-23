@@ -59,8 +59,8 @@ problema non esista.
 | **TD-12** | Nessun dominio per `status` e `priority` | **Chiuso**: la metà `status` da TASK-010, la metà `priority` (TD-36) da TASK-016 |
 | **TD-13** | Nessuna relazione tra entità | **Risolto da TASK-009** |
 | **TD-15** | Lombok dichiarato e mai usato | **Aperto** |
-| **TD-17** | `README.md` con escape markdown errati | **Aperto** |
-| **TD-18** | `README.md` descrive uno stack inesistente | **Aperto** |
+| **TD-17** | `README.md` con escape markdown errati | **Chiuso** (blocco PHASE 3–7): README riscritto; `ReadmeTruthTest` fallisce se tornano |
+| **TD-18** | `README.md` descrive uno stack inesistente | **Chiuso** (blocco PHASE 3–7): README descrive lo stack reale; `ReadmeTruthTest` rifiuta Supabase/Vercel/LangGraph e verifica le cartelle citate |
 
 ## 4. Solo nell'audit
 

@@ -1,0 +1,11 @@
+task: TASK-022
+title: Operator console (React + TypeScript + Vite)
+phase: PHASE 7 — Operator console
+branch: task-021-openapi-and-engine-models (shared with TASK-021)
+integration_branch: autonomous/phase-7-operator-console
+adr: docs/adr/ADR-017-operator-console.md
+required_files:
+  - docs/api/openapi.json
+  - docs/adr/ADR-009-optimistic-concurrency-http-contract.md
+  - docs/adr/ADR-014-task-lifecycle-transitions.md
+  - docs/adr/ADR-016-task-runs-execution.md

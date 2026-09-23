@@ -1,0 +1,6 @@
+task: TASK-021
+title: OpenAPI description and engine models relay
+phase: PHASE 7 — Operator console
+branch: task-021-openapi-and-engine-models
+integration_branch: autonomous/phase-7-operator-console
+adr: docs/adr/ADR-017-operator-console.md

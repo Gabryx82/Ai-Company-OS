@@ -1,7 +1,20 @@
 # Running AI Company OS locally
 
-Stato attuale: control plane Spring Boot + PostgreSQL, autenticato con bearer token (ADR-013).
-Frontend e servizio AI non esistono ancora.
+Stato attuale (2026-09-23): **control plane** Spring Boot + PostgreSQL, autenticato con bearer
+token (ADR-013); **AI Engine** Python (ADR-015, §2b); **console dell'operatore** React (ADR-017, §2c).
+
+## 0. Tutto insieme, in un comando
+
+```powershell
+.\scripts\start-dev.ps1                         # database 'aicompany'
+.\scripts\start-dev.ps1 -Database aicompany_try # un clone, per non toccare i dati
+```
+
+Avvia PostgreSQL, l'AI Engine, il backend (`dev`) e la console, ciascuno nella propria finestra, poi
+apre gli URL: console `http://localhost:5173`, backend `http://localhost:8080`, engine
+`http://127.0.0.1:8090`. ⚠️ Su un database dietro la testa dello stream il backend applica le
+migrazioni mancanti all'avvio (compresa `V8`, l'unica distruttiva, autorizzata il 2026-09-19):
+per provare senza toccare i dati, clonare prima (vedi l'intestazione dello script).
 
 ## Prerequisiti
 - JDK 21
@@ -292,6 +305,30 @@ Altre variabili: `AICOS_ENGINE_DEFAULT_MODEL`, `AICOS_ENGINE_ANTHROPIC_MODELS` (
 virgole), `AICOS_ENGINE_HOST`, `AICOS_ENGINE_PORT`, `AICOS_ENGINE_PROFILE`.
 
 Test dell'engine: `cd ai-engine && .venv/Scripts/python -m pytest` (nessuna rete, nessun costo).
+
+## 2c. Avviare la console (PHASE 7, ADR-017)
+
+Prerequisito: Node ≥ 22.
+
+```bash
+cd frontend
+npm ci
+npm run dev        # http://localhost:5173
+```
+
+Deve girare su `http://localhost:5173`: è l'origine che il profilo `dev` del backend ammette
+(`aicos.cors.allowed-origins`). Login con l'URL del backend e il token dell'operatore.
+
+| Comando | |
+|---|---|
+| `npm test` | 14 test (Vitest, `fetch` finto: nessun backend necessario) |
+| `npm run typecheck` / `npm run build` | controllo dei tipi / build di produzione in `dist/` |
+| `npm run api:types` | rigenera `src/api/schema.d.ts` da `docs/api/openapi.json` |
+
+Il contratto: `docs/api/openapi.json`, prodotto dal codice e tenuto identico da
+`OpenApiContractTest`. Dopo una modifica voluta dell'API:
+`cd backend && ./mvnw test -Dtest=OpenApiContractTest -Dopenapi.write=true`, poi
+`cd frontend && npm run api:types`. La CI fallisce se uno dei due è indietro.
 
 ## 3. Eseguire i test
 
