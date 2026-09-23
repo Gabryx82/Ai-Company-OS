@@ -56,7 +56,7 @@ problema non esista.
 | **TD-07** | Nessuna gestione degli errori | **Chiuso da TASK-005** (ADR-007) |
 | **TD-08** | `MasterOrchestrator` è un placeholder spacciato per AI | **Aperto.** Sbloccato da TASK-009, ma ancora non eseguibile: manca TD-37 |
 | **TD-11** | CORS incoerente | **Chiuso da TASK-014**: una policy globale, origini dichiarate, niente wildcard, `ETag` esposto |
-| **TD-12** | Nessun dominio per `status` e `priority` | **Parzialmente chiuso da TASK-010**: la metà `status`. La metà `priority` è **TD-36** |
+| **TD-12** | Nessun dominio per `status` e `priority` | **Chiuso**: la metà `status` da TASK-010, la metà `priority` (TD-36) da TASK-016 |
 | **TD-13** | Nessuna relazione tra entità | **Risolto da TASK-009** |
 | **TD-15** | Lombok dichiarato e mai usato | **Aperto** |
 | **TD-17** | `README.md` con escape markdown errati | **Aperto** |
@@ -106,10 +106,11 @@ ferma a `TD-22`.
 | **TD-33** | I listati non portano ETag: mutare N risorse costa N letture | **aperto**, MINOR | TASK-008 |
 | **TD-34** | Nessun modo di chiedere «i task fermi su agenti inattivi» | **aperto**, MINOR | TASK-009 |
 | **TD-35** | Nessun `DELETE` dell'associazione con l'agente | **aperto**, MINOR | TASK-009 |
-| **TD-36** | `Task.priority` resta una stringa libera senza vincolo DB | **aperto**, MINOR | TASK-010 |
-| **TD-37** | Nessun percorso muta lo `status` di un task esistente: vocabolario chiuso, ciclo di vita non percorribile | **aperto** | TASK-010 |
+| **TD-36** | `Task.priority` resta una stringa libera senza vincolo DB | **chiuso** da TASK-016: `TaskPriority`, `V9`, censimento | TASK-010 |
+| **TD-37** | Nessun percorso muta lo `status` di un task esistente: vocabolario chiuso, ciclo di vita non percorribile | **chiuso** da TASK-015: quattro archi, ADR-014 | TASK-010 |
+| **TD-38** | Nessuna storia delle transizioni: non si sa chi ha mosso un task né quando | **aperto**, MINOR | TASK-015 |
 
-**Prossimo identificatore libero: `TD-38`.**
+**Prossimo identificatore libero: `TD-39`.**
 
 ## 6. Come si apre un debito nuovo
 

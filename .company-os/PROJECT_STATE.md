@@ -57,12 +57,13 @@ motivazione: **`.company-os/ROADMAP_PHASES_3_7.md`**.
 | Fase | Integration branch | Task | Stato |
 |---|---|---|---|
 | **PHASE 3 — Security baseline** | `autonomous/phase-3-security` (da `master` `d166870`) | TASK-013, TASK-014 | ✅ **completata** |
-| PHASE 4 — Task lifecycle | `autonomous/phase-4-task-lifecycle` (da phase-3) | TASK-015, TASK-016 | prossima |
-| PHASE 5 — AI Engine | `autonomous/phase-5-ai-engine` | — | pianificata |
+| **PHASE 4 — Task lifecycle** | `autonomous/phase-4-task-lifecycle` (da phase-3) | TASK-015, TASK-016 | ✅ **completata** |
+| PHASE 5 — AI Engine | `autonomous/phase-5-ai-engine` (da phase-4) | TASK-017, TASK-018 | prossima |
 | PHASE 6 — Execution | `autonomous/phase-6-execution` | — | pianificata |
 | PHASE 7 — Operator console | `autonomous/phase-7-operator-console` | — | pianificata |
 
-**Suite: 244 test verdi** (`./mvnw -B clean test`). **Stream: `V8`** (PHASE 3 non migra).
+**Suite: 277 test verdi** (`./mvnw -B clean test`). **Stream: `V9`** (PHASE 4, `tasks_priority_check`).
+**Prossimo debito libero: `TD-39`** (`docs/DEBT_REGISTRY.md`).
 **Live dev DB: `V3`**, verificato il 2026-09-23 e **non toccato**: gli smoke test girano su un
 clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
 
@@ -78,6 +79,18 @@ clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
   ignorato.
 - **Lezione sull'harness di mutazione**: il primo giro ha dato cinque «rossi» falsi perché il
   wrapper Maven non partiva. L'harness ora rifiuta un verdetto senza output di Surefire.
+
+### PHASE 4 in sintesi
+- **TASK-015 — TD-37 chiuso** (ADR-014). `POST /api/tasks/{id}/start|complete|stop|reopen`,
+  `If-Match`. `TaskStatus` è il vocabolario, `TaskTransition` la macchina (quattro archi). Regole
+  sull'entità: congelato → arco → (solo `start`) agente presente e attivo. Uscire da `IN_PROGRESS`
+  non dipende mai dall'agente (D3 regge). Invariante nuovo **`IN_PROGRESS` ⇒ agente**, protetto
+  finché TD-35 resta aperto: chi lo chiude deve rifiutare i task `IN_PROGRESS`. Apre **TD-38**.
+- **TASK-016 — TD-36 chiuso** (e con esso TD-12). `PUT /api/tasks/{id}` (dettagli soltanto),
+  `priority ∈ {LOW, MEDIUM, HIGH}` con censimento (`tasks/TASK-016/CENSUS.md`: solo `HIGH`/`LOW`,
+  live DB `LOW`) e **`V9`**, `GET /api/tasks?status=`.
+- Lezione: un test di concorrenza a barriera **non** forza l'interleaving (M7 sopravvissuta);
+  sostituito da transazione esterna + latch.
 
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di

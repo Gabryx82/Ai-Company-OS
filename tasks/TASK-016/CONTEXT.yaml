@@ -1,0 +1,11 @@
+task: TASK-016
+title: Task details, priority vocabulary, status filter
+phase: PHASE 4 — Task lifecycle
+branch: task-016-task-details-and-priority
+integration_branch: autonomous/phase-4-task-lifecycle
+debts: [TD-36]
+migration: V9__add_task_priority_check.sql
+required_files:
+  - tasks/TASK-010/CENSUS.md
+  - docs/adr/ADR-011-task-status-closed-vocabulary.md
+  - backend/src/main/java/com/aicompany/backend/task/model/Task.java

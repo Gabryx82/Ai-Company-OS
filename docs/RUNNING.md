@@ -126,9 +126,10 @@ di scritture non ha bisogno di rileggere ogni volta.
 
 | Endpoint | Descrizione |
 |---|---|
-| `GET /api/tasks` | elenco. **Senza `ETag`** |
+| `GET /api/tasks` | elenco. Filtro facoltativo `?status=OPEN\|IN_PROGRESS\|DONE`. **Senza `ETag`** |
 | `GET /api/tasks/{id}` | una task, **con `ETag`** — il percorso canonico per ottenerlo |
 | `POST /api/tasks` | creazione (`201` + `Location` + `ETag`) |
+| `PUT /api/tasks/{id}` | sostituisce **titolo, descrizione, priorità**. Non lo stato né le associazioni. **`If-Match`** |
 | `PUT /api/tasks/{id}/project` | assegna o sposta di progetto. **`If-Match`** |
 | `PUT /api/tasks/{id}/agent` | assegna o cambia agente. **`If-Match`** |
 | `POST /api/tasks/{id}/start` | `OPEN → IN_PROGRESS`. Richiede un agente **attivo**. **`If-Match`** |
@@ -136,8 +137,8 @@ di scritture non ha bisogno di rileggere ogni volta.
 | `POST /api/tasks/{id}/stop` | `IN_PROGRESS → OPEN`. **`If-Match`** |
 | `POST /api/tasks/{id}/reopen` | `DONE → OPEN`. **`If-Match`** |
 
-Non esiste `DELETE /api/tasks/{id}` (risponde `405`, «non per questa via»), né un `PUT` generale
-sulla task: le due associazioni sono sotto-risorse.
+Non esiste `DELETE /api/tasks/{id}` (risponde `405`, «non per questa via»). Il `PUT` sulla task
+riguarda i soli dettagli: le due associazioni sono sotto-risorse, e lo stato si muove lungo archi.
 
 ```bash
 curl -i -X POST http://localhost:8080/api/tasks -H 'Content-Type: application/json' \
@@ -146,7 +147,8 @@ curl -i -X POST http://localhost:8080/api/tasks -H 'Content-Type: application/js
 
 `status` ha un **vocabolario chiuso**: `OPEN`, `IN_PROGRESS`, `DONE`, confrontati
 **esattamente** — `"open"` è rifiutato quanto `"banana"`, con `400` e il campo nominato in
-`errors.status` (ADR-011). `priority` è ancora una stringa libera.
+`errors.status` (ADR-011). Anche `priority` ha un **vocabolario chiuso** da TASK-016: `LOW`,
+`MEDIUM`, `HIGH`, con le stesse regole.
 
 **Lo `status` si cambia solo lungo i quattro archi qui sopra** (ADR-014, da TASK-015): ogni altra
 coppia è `409 illegal-task-state-transition`, e non esiste un `PUT` su `status`. `start` senza
@@ -296,7 +298,8 @@ Quando un documento dice «schema a `V8`» **senza qualificatore, intende lo str
 database.
 
 **La prossima migrazione di schema prende il numero successivo alla testa dello stream, e va in
-`db/migration`.** Oggi la testa è **`V8`**, quindi la prossima è `V9__....sql`. I numeri del seed
+`db/migration`.** Al 2026-09-23 la testa è **`V9`**, quindi la prossima è `V10__....sql` — ma va
+letta col comando qui sotto, non da questa riga. I numeri del seed
 sono indipendenti e non vanno considerati.
 
 Per leggere la testa invece di fidarsi di questo paragrafo:
@@ -321,6 +324,7 @@ Le migrazioni applicate finora:
 | `V6` | `tasks.agent_id` + FK + indice |
 | `V7` | `tasks_status_check`: vocabolario chiuso di `Task.status` (ADR-011) |
 | `V8` | `agents.status` + `agents_status_check`, e **`agents.active` eliminata** (ADR-012). **La prima migrazione distruttiva dello stream**: un database che la esegue non torna a `V7` eseguendo SQL al contrario |
+| `V9` | `tasks_priority_check`: vocabolario chiuso di `Task.priority` (TASK-016). Si ferma, senza toccare la riga, su un valore fuori vocabolario |
 
 Hibernate gira in `validate`: se le entità e le migrazioni divergono, **l'avvio fallisce** con `Schema validation: missing column ...`. È il comportamento voluto — la correzione è una nuova migrazione, mai una modifica automatica dello schema.
 
