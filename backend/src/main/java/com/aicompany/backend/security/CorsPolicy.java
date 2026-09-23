@@ -84,6 +84,16 @@ public final class CorsPolicy {
         configuration.setMaxAge(Duration.ofHours(1));
 
         source.registerCorsConfiguration("/api/**", configuration);
+
+        // The liveness probe too, read-only. Found by the first live run of the
+        // console (TASK-022): the page asks /actuator/health to show whether the
+        // control plane is up, and without CORS the browser hid the answer -- the
+        // console said "down" for a backend that was up.
+        CorsConfiguration health = new CorsConfiguration();
+        health.setAllowedOrigins(allowedOrigins);
+        health.setAllowedMethods(List.of("GET"));
+        health.setAllowCredentials(false);
+        source.registerCorsConfiguration("/actuator/health", health);
         return source;
     }
 

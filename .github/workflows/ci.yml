@@ -114,3 +114,43 @@ jobs:
 
       - name: Run the test suite
         run: python -m pytest
+
+  # PHASE 7 (ADR-017). The operator console: its types must be the ones the
+  # committed OpenAPI description produces, and then it must typecheck, pass its
+  # tests and build. No backend runs here -- the tests use a fake fetch.
+  frontend:
+    name: Operator console
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generated API types match the committed contract
+        # docs/api/openapi.json is held to the server by OpenApiContractTest;
+        # this holds the console's types to that file. Together: no silent drift.
+        run: |
+          npm run api:types
+          git diff --exit-code -- src/api/schema.d.ts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

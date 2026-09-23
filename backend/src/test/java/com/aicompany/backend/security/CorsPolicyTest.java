@@ -109,6 +109,18 @@ class CorsPolicyTest extends AbstractPostgresTest {
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS));
     }
 
+    /** Found by running the console against a live backend: its status light read this route. */
+    @Test
+    void theLivenessProbeIsReadableByTheConsole() throws Exception {
+
+        browser.perform(get("/actuator/health").header(HttpHeaders.ORIGIN, CONSOLE))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, CONSOLE));
+
+        browser.perform(get("/actuator/health").header(HttpHeaders.ORIGIN, STRANGER))
+                .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
+
     @Test
     void theWildcardIsNotAnOriginAndStopsTheApplication() {
 
