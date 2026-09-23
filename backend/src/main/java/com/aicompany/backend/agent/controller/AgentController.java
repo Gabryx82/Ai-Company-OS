@@ -73,7 +73,7 @@ public class AgentController {
     @PostMapping
     public ResponseEntity<AgentResponse> createAgent(@Valid @RequestBody AgentCreateRequest request) {
 
-        Agent created = service.create(request.name(), request.role(), request.specialization());
+        Agent created = service.create(request.name(), request.role(), request.specialization(), request.model());
 
         return ResponseEntity.created(URI.create("/api/agents/" + created.getId()))
                 .eTag(ETags.of(created.getVersion()))
@@ -86,7 +86,7 @@ public class AgentController {
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
             @Valid @RequestBody AgentUpdateRequest request) {
 
-        return ok(service.update(id, request.name(), request.role(), request.specialization(),
+        return ok(service.update(id, request.name(), request.role(), request.specialization(), request.model(),
                 Precondition.fromHeader(ifMatch)));
     }
 

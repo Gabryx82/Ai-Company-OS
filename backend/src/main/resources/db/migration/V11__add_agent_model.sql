@@ -1,0 +1,13 @@
+-- TASK-020 (ADR-016 §6). The model an agent runs on, as an AI Engine model id
+-- ('ollama:llama3.2:3b', 'anthropic:claude-opus-5'), or NULL for the engine's
+-- default.
+--
+-- Additive by construction: a nullable column with no default, so every existing
+-- row -- including the three the dev seed inserts, which name their columns --
+-- keeps working and means exactly what it meant before: "the engine decides".
+--
+-- No check constraint on the value. Which models exist is the engine's to say and
+-- changes when somebody pulls a model; the control plane checks only the shape,
+-- at the API, and an unknown model comes back as a failed run with the engine's
+-- unknown-model type.
+ALTER TABLE agents ADD COLUMN model VARCHAR(200);

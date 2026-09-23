@@ -75,7 +75,7 @@ class AgentLifecycleTest {
         Agent agent = new Agent("Code Architect", "Engineer", "architecture");
         agent.deactivate();
 
-        assertThatThrownBy(() -> agent.updateDetails("Renamed", "Other", "other"))
+        assertThatThrownBy(() -> agent.updateDetails("Renamed", "Other", "other", null))
                 .isInstanceOf(InactiveAgentIsImmutableException.class)
                 .hasMessageContaining("activate it first");
 
@@ -90,7 +90,7 @@ class AgentLifecycleTest {
         Agent agent = new Agent("Code Architect", "Engineer", "architecture");
         agent.deactivate();
         agent.activate();
-        agent.updateDetails("Renamed", "Other", "other");
+        agent.updateDetails("Renamed", "Other", "other", null);
 
         assertThat(agent.getName()).isEqualTo("Renamed");
         assertThat(agent.isActive()).isTrue();
@@ -100,7 +100,7 @@ class AgentLifecycleTest {
     void updatingDetailsDoesNotTouchTheLifecycle() {
 
         Agent agent = new Agent("Code Architect", "Engineer", "architecture");
-        agent.updateDetails("Renamed", "Other", "other");
+        agent.updateDetails("Renamed", "Other", "other", null);
 
         assertThat(agent.isActive()).isTrue();
     }

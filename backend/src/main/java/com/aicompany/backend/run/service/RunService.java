@@ -74,8 +74,8 @@ public class RunService {
      *       to be delivered after the commit.</li>
      * </ol>
      *
-     * <p>{@code requestedModel} null means: the engine's default (the agent-level
-     * model arrives with TASK-020).
+     * <p>{@code requestedModel} null means: the agent's model if it has one,
+     * otherwise the engine's default.
      */
     public RunResponse launch(Long taskId, String requestedModel, String requestedBy, Precondition precondition) {
 
@@ -100,8 +100,12 @@ public class RunService {
             task.apply(TaskTransition.START, project, agent);
         }
 
+        // The model: the one asked for, else the agent's, else the engine's default
+        // (null). What is recorded is what is sent.
+        String model = requestedModel != null ? requestedModel : agent.getModel();
+
         RunPrompt prompt = RunPrompt.of(task, agent, project);
-        TaskRun run = runs.saveAndFlush(new TaskRun(taskId, agent.getId(), requestedModel,
+        TaskRun run = runs.saveAndFlush(new TaskRun(taskId, agent.getId(), model,
                 prompt.system(), prompt.user(), "run-" + UUID.randomUUID(), requestedBy));
         tasks.saveAndFlush(task);
 

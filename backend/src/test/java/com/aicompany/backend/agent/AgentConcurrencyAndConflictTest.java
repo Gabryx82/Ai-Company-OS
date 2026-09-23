@@ -186,7 +186,7 @@ class AgentConcurrencyAndConflictTest extends AbstractPostgresTest {
         when(doubled.existsByNormalisedName(anyString())).thenReturn(false);
         when(doubled.saveAndFlush(any(Agent.class))).thenThrow(unrelated);
 
-        assertThatThrownBy(() -> isolated.create("Code Architect", "Engineer", "x"))
+        assertThatThrownBy(() -> isolated.create("Code Architect", "Engineer", "x", null))
                 .isSameAs(unrelated)
                 .isNotInstanceOf(AgentNameConflictException.class);
     }

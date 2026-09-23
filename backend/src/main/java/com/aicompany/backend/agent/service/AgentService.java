@@ -31,13 +31,13 @@ public class AgentService {
         this.repository = repository;
     }
 
-    public Agent create(String name, String role, String specialization) {
+    public Agent create(String name, String role, String specialization, String model) {
 
         if (repository.existsByNormalisedName(name)) {
             throw new AgentNameConflictException(name);
         }
 
-        return saveGuardingUniqueName(new Agent(name, role, specialization), name);
+        return saveGuardingUniqueName(new Agent(name, role, specialization, model), name);
     }
 
     /**
@@ -57,7 +57,7 @@ public class AgentService {
         return repository.findById(id).orElseThrow(() -> new AgentNotFoundException(id));
     }
 
-    public Agent update(Long id, String name, String role, String specialization,
+    public Agent update(Long id, String name, String role, String specialization, String model,
                         Precondition precondition) {
 
         Agent agent = lockForWrite(id, precondition);
@@ -67,7 +67,7 @@ public class AgentService {
         }
 
         // Rejects an inactive agent; the rule is on the entity, not here.
-        agent.updateDetails(name, role, specialization);
+        agent.updateDetails(name, role, specialization, model);
         return saveGuardingUniqueName(agent, name);
     }
 

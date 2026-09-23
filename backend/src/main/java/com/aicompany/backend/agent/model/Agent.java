@@ -71,6 +71,15 @@ public class Agent {
     @Column(nullable = false)
     private AgentStatus status;
 
+    /**
+     * The AI Engine model this agent runs on ({@code "ollama:llama3.2:3b"}), or
+     * {@code null} for the engine's default. From {@code V11} (TASK-020). A
+     * descriptive field like the others: part of {@link #updateDetails}, and like
+     * them frozen while the agent is inactive.
+     */
+    @Column(length = 200)
+    private String model;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -102,9 +111,14 @@ public class Agent {
     }
 
     public Agent(String name, String role, String specialization) {
+        this(name, role, specialization, null);
+    }
+
+    public Agent(String name, String role, String specialization, String model) {
         this.name = name;
         this.role = role;
         this.specialization = specialization;
+        this.model = model;
         this.status = AgentStatus.ACTIVE;
     }
 
@@ -117,7 +131,7 @@ public class Agent {
      * accepts edits is not out of anything, and it goes on holding its name in
      * the unique index while doing so. Restore it first.
      */
-    public void updateDetails(String name, String role, String specialization) {
+    public void updateDetails(String name, String role, String specialization, String model) {
 
         if (status != AgentStatus.ACTIVE) {
             throw new InactiveAgentIsImmutableException();
@@ -126,6 +140,12 @@ public class Agent {
         this.name = name;
         this.role = role;
         this.specialization = specialization;
+        this.model = model;
+    }
+
+    /** The engine model id, or {@code null} for the engine's default. */
+    public String getModel() {
+        return model;
     }
 
     /** Takes the agent out of the working registry. This is what replaces a delete. */
