@@ -79,6 +79,18 @@ anche sull'health: se il client ne manda uno, deve essere giusto.
 
 Negli esempi qui sotto l'header `Authorization` è **sottinteso**.
 
+### Rete e browser (TASK-014)
+
+- In `dev` il backend ascolta **solo su `127.0.0.1`**, come il database. `SERVER_ADDRESS=0.0.0.0`
+  lo apre deliberatamente.
+- **CORS**: un browser può chiamare l'API solo dalle origini in `aicos.cors.allowed-origins`
+  (`AICOS_CORS_ALLOWED_ORIGINS`). In `dev` il default è il dev server di Vite
+  (`http://localhost:5173`, `http://127.0.0.1:5173`); in `prod` **nessuna**. `*` e valori che non
+  sono origini (`scheme://host[:port]`) **impediscono l'avvio**.
+- La policy espone `ETag` e `Location` e accetta `If-Match`: senza, una pagina potrebbe leggere ma
+  mai scrivere. Nessuna richiesta *credentialed*: il token lo manda la pagina, il browser non
+  allega niente da sé.
+
 ### Poi: ogni mutazione richiede `If-Match`
 
 **Se una richiesta di scrittura su una risorsa esistente risponde `428`, non è un errore del

@@ -1,0 +1,10 @@
+task: TASK-014
+title: CORS policy and network hardening
+phase: PHASE 3 — Security baseline
+branch: task-014-cors-and-network-hardening
+integration_branch: autonomous/phase-3-security
+debts: [TD-11, R5, R7]
+adr: docs/adr/ADR-013-api-authentication.md (§3, CORS clause added by this task)
+required_files:
+  - backend/src/main/java/com/aicompany/backend/security/SecurityConfiguration.java
+  - backend/src/main/resources/application-dev.properties

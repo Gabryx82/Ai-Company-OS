@@ -52,10 +52,10 @@ problema non esista.
 
 | ID | Contenuto | Stato nel registro vivo |
 |---|---|---|
-| **TD-04** | Nessuna sicurezza / autenticazione | **Aperto.** Primo candidato di PHASE 3 |
+| **TD-04** | Nessuna sicurezza / autenticazione | **Chiuso da TASK-013** (ADR-013): bearer token per nome su ogni `/api/**`, verificato per riflessione su tutte le rotte e per mutazione |
 | **TD-07** | Nessuna gestione degli errori | **Chiuso da TASK-005** (ADR-007) |
 | **TD-08** | `MasterOrchestrator` è un placeholder spacciato per AI | **Aperto.** Sbloccato da TASK-009, ma ancora non eseguibile: manca TD-37 |
-| **TD-11** | CORS incoerente | **Aperto**, con superficie più stretta: TASK-007 ha rimosso il `@CrossOrigin` senza origine |
+| **TD-11** | CORS incoerente | **Chiuso da TASK-014**: una policy globale, origini dichiarate, niente wildcard, `ETag` esposto |
 | **TD-12** | Nessun dominio per `status` e `priority` | **Parzialmente chiuso da TASK-010**: la metà `status`. La metà `priority` è **TD-36** |
 | **TD-13** | Nessuna relazione tra entità | **Risolto da TASK-009** |
 | **TD-15** | Lombok dichiarato e mai usato | **Aperto** |
