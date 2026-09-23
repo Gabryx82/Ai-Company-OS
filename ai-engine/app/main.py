@@ -31,6 +31,12 @@ _CORRELATION_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 def default_providers(settings: Settings) -> list[Provider]:
     providers: list[Provider] = [EchoProvider()]
+    # Imported here so that a provider's library only matters to that provider.
+    if settings.ollama_url:
+        from app.providers.ollama import OllamaProvider
+        providers.append(OllamaProvider(settings.ollama_url, settings.ollama_timeout_seconds))
+    from app.providers.anthropic_provider import AnthropicProvider
+    providers.append(AnthropicProvider(settings))
     return providers
 
 
