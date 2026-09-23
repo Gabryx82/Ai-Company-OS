@@ -58,12 +58,13 @@ motivazione: **`.company-os/ROADMAP_PHASES_3_7.md`**.
 |---|---|---|---|
 | **PHASE 3 — Security baseline** | `autonomous/phase-3-security` (da `master` `d166870`) | TASK-013, TASK-014 | ✅ **completata** |
 | **PHASE 4 — Task lifecycle** | `autonomous/phase-4-task-lifecycle` (da phase-3) | TASK-015, TASK-016 | ✅ **completata** |
-| PHASE 5 — AI Engine | `autonomous/phase-5-ai-engine` (da phase-4) | TASK-017, TASK-018 | prossima |
-| PHASE 6 — Execution | `autonomous/phase-6-execution` | — | pianificata |
+| **PHASE 5 — AI Engine** | `autonomous/phase-5-ai-engine` (da phase-4) | TASK-017, TASK-018 | ✅ **completata** |
+| PHASE 6 — Execution | `autonomous/phase-6-execution` (da phase-5) | TASK-019, TASK-020 | prossima |
 | PHASE 7 — Operator console | `autonomous/phase-7-operator-console` | — | pianificata |
 
 **Suite: 277 test verdi** (`./mvnw -B clean test`). **Stream: `V9`** (PHASE 4, `tasks_priority_check`).
 **Prossimo debito libero: `TD-39`** (`docs/DEBT_REGISTRY.md`).
+**Suite AI Engine: 51 test verdi** (`cd ai-engine && .venv/Scripts/python -m pytest`), job CI proprio.
 **Live dev DB: `V3`**, verificato il 2026-09-23 e **non toccato**: gli smoke test girano su un
 clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
 
@@ -91,6 +92,18 @@ clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
   live DB `LOW`) e **`V9`**, `GET /api/tasks?status=`.
 - Lezione: un test di concorrenza a barriera **non** forza l'interleaving (M7 sopravvissuta);
   sostituito da transazione esterna + latch.
+
+### PHASE 5 in sintesi
+- **TASK-017** (ADR-015). `ai-engine/`: FastAPI, contratto **v1** (`POST /v1/completions`,
+  `GET /v1/models`, `GET /health`), token fra servizi a tempo costante, problem details
+  `urn:ai-company-os:engine:problem:*`, correlation id, campi sconosciuti rifiutati, provider
+  `echo` deterministico. Bind `127.0.0.1:8090`. Job CI `ai-engine` (Python 3.12).
+- **TASK-018**. Provider `ollama` (locale, attivo per default, «non disponibile» se spento) e
+  `anthropic` (SDK ufficiale, `claude-opus-5`, `fallbacks: "default"`, **spento senza
+  `ANTHROPIC_API_KEY`**). Nessun test raggiunge rete o servizi a pagamento.
+- **Smoke reale**: quattro modelli Ollama installati su questa macchina; completion reale con
+  `ollama:llama3.2:3b` (13 s). Nessuna chiamata cloud eseguita.
+- Il runtime a grafo (LangGraph o alternative) **resta non deciso**, come ADR-001 lo ha rinviato.
 
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di

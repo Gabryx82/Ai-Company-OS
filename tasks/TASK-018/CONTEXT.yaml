@@ -1,0 +1,9 @@
+task: TASK-018
+title: Engine providers — Ollama and Anthropic
+phase: PHASE 5 — AI Engine
+branch: task-018-engine-providers
+integration_branch: autonomous/phase-5-ai-engine
+adr: docs/adr/ADR-015-ai-engine-model-gateway.md
+required_files:
+  - ai-engine/app/providers/__init__.py
+  - ai-engine/app/main.py

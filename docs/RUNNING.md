@@ -219,6 +219,44 @@ può essere riscritto: un client deve ramificare sul primo.
 
 Un body invalido (per esempio `{}`) è rifiutato con `400` e **nulla viene scritto** sul database.
 
+## 2b. Avviare l'AI Engine (PHASE 5, ADR-015)
+
+Il servizio Python di ADR-001: riceve un prompt, restituisce un completamento. Senza stato, senza
+database. Prerequisito: Python ≥ 3.11.
+
+```bash
+cd ai-engine
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements-dev.txt   # su Linux/macOS: .venv/bin/python
+.venv/Scripts/python -m app
+```
+
+Ascolta su **`127.0.0.1:8090`**. Profilo `dev` per default, con token fra servizi
+`dev-engine-token-change-me`; fuori da `dev` `AICOS_ENGINE_TOKEN` è obbligatoria.
+
+| Rotta | Auth | |
+|---|---|---|
+| `GET /health` | no | `{"status":"UP"}` |
+| `GET /v1/models` | `Bearer` | modelli e disponibilità |
+| `POST /v1/completions` | `Bearer` | `{model?, system?, messages[], max_tokens?}` |
+
+```bash
+curl -s -X POST http://127.0.0.1:8090/v1/completions \
+  -H "Authorization: Bearer dev-engine-token-change-me" -H "Content-Type: application/json" \
+  -d '{"model":"ollama:llama3.2:3b","messages":[{"role":"user","content":"Ciao"}]}'
+```
+
+| Provider | Id | Costo | Come si abilita |
+|---|---|---|---|
+| `echo` | `echo:default` (default) | zero | sempre attivo; **deterministico, non è un modello** |
+| `ollama` | `ollama:<nome>` | zero, locale | Ollama in esecuzione su `AICOS_ENGINE_OLLAMA_URL` (default `http://127.0.0.1:11434`) e un modello scaricato (`ollama pull llama3.2:3b`) |
+| `anthropic` | `anthropic:claude-opus-5` | **a consumo** | **solo** impostando `ANTHROPIC_API_KEY`. Spento per default |
+
+Altre variabili: `AICOS_ENGINE_DEFAULT_MODEL`, `AICOS_ENGINE_ANTHROPIC_MODELS` (lista separata da
+virgole), `AICOS_ENGINE_HOST`, `AICOS_ENGINE_PORT`, `AICOS_ENGINE_PROFILE`.
+
+Test dell'engine: `cd ai-engine && .venv/Scripts/python -m pytest` (nessuna rete, nessun costo).
+
 ## 3. Eseguire i test
 
 ```bash
