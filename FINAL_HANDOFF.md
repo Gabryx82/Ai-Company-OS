@@ -91,7 +91,10 @@ database reale si applicheranno `V4…V11`**, compresa `V8` (distruttiva, autori
 
 ## 5. Git e CI
 
-- 28 commit sopra `master`, storia lineare, nessun merge commit, nessuna riscrittura, nessun force.
+- Una trentina di commit sopra `master` — il numero esatto è
+  `git log --oneline master..autonomous/phase-7-operator-console | wc -l`, non scritto qui perché il
+  commit che lo scrive lo cambierebbe (la lezione di `1c339ee`). Storia lineare, nessun merge commit,
+  nessuna riscrittura, nessun force.
 - Branch creati e pushati: 5 integration branch (`autonomous/phase-{3-security,4-task-lifecycle,5-ai-engine,6-execution,7-operator-console}`)
   e 9 branch di task (`task-013…task-021`; TASK-022 condivide il branch di TASK-021, dichiarato in
   `PHASE_7_PLAN.md`).
