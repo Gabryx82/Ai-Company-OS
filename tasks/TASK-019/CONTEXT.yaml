@@ -1,0 +1,12 @@
+task: TASK-019
+title: Task runs — execution through the AI Engine
+phase: PHASE 6 — Execution
+branch: task-019-task-runs
+integration_branch: autonomous/phase-6-execution
+adr: docs/adr/ADR-016-task-runs-execution.md
+migration: V10__create_task_runs.sql
+required_files:
+  - docs/adr/ADR-001-spring-boot-control-plane.md
+  - docs/adr/ADR-014-task-lifecycle-transitions.md
+  - docs/adr/ADR-015-ai-engine-model-gateway.md
+  - backend/src/main/java/com/aicompany/backend/task/service/TaskService.java
