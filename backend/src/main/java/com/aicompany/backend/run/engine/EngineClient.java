@@ -17,9 +17,18 @@ public interface EngineClient {
      */
     Completion complete(Request request);
 
+    /** {@code GET /v1/models}: what the engine can serve right now (TASK-021). */
+    ModelList models();
+
     /** What is sent. {@code model} null means the engine's own default. */
     record Request(String model, String system, String user, int maxTokens,
                    String correlationId, Map<String, String> metadata) {
+    }
+
+    record ModelInfo(String id, String provider, boolean available, String detail, boolean billed) {
+    }
+
+    record ModelList(String defaultModel, java.util.List<ModelInfo> models) {
     }
 
     /** What comes back, already mapped from the wire. */

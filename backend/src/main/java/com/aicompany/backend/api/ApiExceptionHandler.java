@@ -9,6 +9,7 @@ import com.aicompany.backend.project.exception.IllegalProjectStateTransitionExce
 import com.aicompany.backend.project.exception.ProjectNameConflictException;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
+import com.aicompany.backend.run.exception.EngineUnavailableException;
 import com.aicompany.backend.run.exception.RunNotFoundException;
 import com.aicompany.backend.run.exception.TaskRunInProgressException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
@@ -211,6 +212,11 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(TaskRunInProgressException.class)
     ResponseEntity<ProblemDetail> handleRunInProgress(TaskRunInProgressException e) {
         return respond(ApiProblem.TASK_RUN_IN_PROGRESS, e.getMessage());
+    }
+
+    @ExceptionHandler(EngineUnavailableException.class)
+    ResponseEntity<ProblemDetail> handleEngineUnavailable(EngineUnavailableException e) {
+        return respond(ApiProblem.ENGINE_UNAVAILABLE, e.getMessage());
     }
 
     @ExceptionHandler(FinishedTaskCannotRunException.class)

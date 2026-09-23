@@ -35,6 +35,7 @@ public class ScriptedEngineClient implements EngineClient {
         script.clear();
         requests.clear();
         release();
+        modelsUnavailable = false;
         hold = null;
         entered = null;
     }
@@ -77,6 +78,23 @@ public class ScriptedEngineClient implements EngineClient {
         if (!entered.await(10, TimeUnit.SECONDS)) {
             throw new IllegalStateException("the engine was never called");
         }
+    }
+
+    private volatile boolean modelsUnavailable;
+
+    public void modelsUnavailable() {
+        modelsUnavailable = true;
+    }
+
+    @Override
+    public ModelList models() {
+        if (modelsUnavailable) {
+            modelsUnavailable = false;
+            throw new EngineFailure("urn:ai-company-os:run-failure:engine-unreachable", "Nothing answered");
+        }
+        return new ModelList("echo:default", List.of(
+                new ModelInfo("echo:default", "echo", true, "Deterministic echo; not a language model", false),
+                new ModelInfo("anthropic:claude-opus-5", "anthropic", false, "Set ANTHROPIC_API_KEY to enable", true)));
     }
 
     public List<Request> requests() {

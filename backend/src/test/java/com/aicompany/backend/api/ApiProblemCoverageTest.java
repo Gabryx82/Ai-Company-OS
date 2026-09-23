@@ -133,6 +133,7 @@ class ApiProblemCoverageTest {
                         "run-not-found",
                         "task-run-in-progress",
                         "finished-task-cannot-run",
+                        "engine-unavailable",
                         "internal-error");
     }
 

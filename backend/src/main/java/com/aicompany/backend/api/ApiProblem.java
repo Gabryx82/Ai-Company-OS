@@ -162,6 +162,10 @@ public enum ApiProblem {
     FINISHED_TASK_CANNOT_RUN("finished-task-cannot-run", HttpStatus.CONFLICT,
             "Finished task cannot run", "Reopen the task before running it again"),
 
+    /** TASK-021. The control plane is fine; the AI Engine behind it did not answer. */
+    ENGINE_UNAVAILABLE("engine-unavailable", HttpStatus.SERVICE_UNAVAILABLE,
+            "AI Engine unavailable", "The AI Engine did not answer; is it running?"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

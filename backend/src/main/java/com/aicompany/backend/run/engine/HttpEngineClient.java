@@ -113,6 +113,43 @@ public class HttpEngineClient implements EngineClient {
                 answer.path("latency_ms").asLong(0));
     }
 
+    @Override
+    public ModelList models() {
+
+        HttpRequest http = HttpRequest.newBuilder(URI.create(properties.getUrl().replaceAll("/+$", "") + "/v1/models"))
+                .timeout(java.time.Duration.ofSeconds(10))
+                .header("Authorization", "Bearer " + properties.getToken())
+                .header("Accept", "application/json")
+                .GET()
+                .build();
+        HttpResponse<String> response;
+        try {
+            response = this.http.send(http, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new EngineFailure(RunFailures.ENGINE_UNREACHABLE,
+                    "Nothing answered at " + properties.getUrl() + "; is the AI Engine running?");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new EngineFailure(RunFailures.INTERRUPTED, "Interrupted while asking the engine for its models");
+        }
+        if (response.statusCode() != 200) {
+            throw new EngineFailure(RunFailures.ENGINE_PROTOCOL,
+                    "The AI Engine answered " + response.statusCode() + " to /v1/models");
+        }
+        try {
+            JsonNode answer = json.readTree(response.body());
+            java.util.List<ModelInfo> models = new java.util.ArrayList<>();
+            for (JsonNode model : answer.path("models")) {
+                models.add(new ModelInfo(text(model, "id"), text(model, "provider"),
+                        model.path("available").asBoolean(false), text(model, "detail"),
+                        model.path("billed").asBoolean(false)));
+            }
+            return new ModelList(text(answer, "default"), models);
+        } catch (RuntimeException e) {
+            throw new EngineFailure(RunFailures.ENGINE_PROTOCOL, "The AI Engine's model list is not readable");
+        }
+    }
+
     private static String text(JsonNode node, String field) {
         JsonNode value = node == null ? null : node.get(field);
         return value == null || value.isNull() ? null : value.asString();

@@ -51,6 +51,15 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 		<dependency>
+			<!-- TASK-021: the OpenAPI description of the API, API only (no UI).
+			     Served authenticated at /v3/api-docs, and exported to
+			     docs/api/openapi.json by OpenApiContractTest, from which the
+			     console generates its types. -->
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+			<version>3.1.1</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
 			<scope>runtime</scope>
