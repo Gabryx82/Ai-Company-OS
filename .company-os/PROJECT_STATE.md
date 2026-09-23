@@ -44,6 +44,41 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
+## ▶ Blocco autonomo PHASE 3 → PHASE 7 (in corso dal 2026-09-23)
+
+> **Leggere prima questa sezione.** Il resto del file descrive lo stato fino a TASK-012 ed è
+> conservato; dove questa sezione e il resto divergono, **vale questa**.
+
+Autorizzazione umana esplicita del 2026-09-23: completare almeno cinque fasi consecutive senza
+fermarsi a fine task o fase, **push su `origin` e uso della CI autorizzati**, una sola Human Final
+Review alla fine. `master` resta il checkpoint umano e **non viene toccato**. Sequenza e
+motivazione: **`.company-os/ROADMAP_PHASES_3_7.md`**.
+
+| Fase | Integration branch | Task | Stato |
+|---|---|---|---|
+| **PHASE 3 — Security baseline** | `autonomous/phase-3-security` (da `master` `d166870`) | TASK-013, TASK-014 | ✅ **completata** |
+| PHASE 4 — Task lifecycle | `autonomous/phase-4-task-lifecycle` (da phase-3) | TASK-015, TASK-016 | prossima |
+| PHASE 5 — AI Engine | `autonomous/phase-5-ai-engine` | — | pianificata |
+| PHASE 6 — Execution | `autonomous/phase-6-execution` | — | pianificata |
+| PHASE 7 — Operator console | `autonomous/phase-7-operator-console` | — | pianificata |
+
+**Suite: 244 test verdi** (`./mvnw -B clean test`). **Stream: `V8`** (PHASE 3 non migra).
+**Live dev DB: `V3`**, verificato il 2026-09-23 e **non toccato**: gli smoke test girano su un
+clone (`aicompany_smoke`, `CREATE DATABASE … TEMPLATE aicompany`).
+
+### PHASE 3 in sintesi
+- **TASK-013 — TD-04 chiuso** (ADR-013). Ogni `/api/**` richiede `Authorization: Bearer <token>`;
+  token configurati per nome (`aicos.security.api-tokens.<nome>`), il nome è il principal. `401`
+  dentro ADR-007 (`urn:ai-company-os:problem:unauthenticated`), identico per token assente e
+  sbagliato, **prima** di `404` e `428`. Fail closed all'avvio. Solo `/actuator/health` pubblico.
+  Verifica **per riflessione su ogni rotta**. Nessun test esistente modificato: il `MockMvc`
+  condiviso porta il token dell'operatore.
+- **TASK-014 — TD-11, R5, R7 chiusi.** CORS da origini dichiarate (no `*`), `ETag`/`Location`
+  esposti, `If-Match` ammesso, niente *credentialed*; backend `dev` su `127.0.0.1`; `.env.*`
+  ignorato.
+- **Lezione sull'harness di mutazione**: il primo giro ha dato cinque «rossi» falsi perché il
+  wrapper Maven non partiva. L'harness ora rifiuta un verdetto senza output di Surefire.
+
 ## Current phase
 **PHASE 2 — Assignment.** Obiettivo, scope, motivazione livello per livello e criterio di
 chiusura: **`.company-os/PHASE_2_PLAN.md`**. In una riga: *il Company OS sa dire chi lavora su
