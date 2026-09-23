@@ -1,6 +1,7 @@
 package com.aicompany.backend.task.dto;
 
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 
 /**
@@ -32,7 +33,7 @@ public record TaskResponse(
         String title,
         String description,
         TaskStatus status,
-        String priority,
+        TaskPriority priority,
         Long projectId,
         Long agentId
 ) {

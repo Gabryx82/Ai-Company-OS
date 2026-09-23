@@ -5,6 +5,7 @@ import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import jakarta.persistence.EntityManager;
@@ -49,7 +50,7 @@ class TaskProjectRelationPersistenceTest extends AbstractPostgresTest {
 
         Project project = projectRepository.saveAndFlush(new Project("Company OS", null));
 
-        Task task = new Task("Persisted task", null, TaskStatus.OPEN, "HIGH");
+        Task task = new Task("Persisted task", null, TaskStatus.OPEN, TaskPriority.HIGH);
         task.assignTo(project);
         Long taskId = taskRepository.saveAndFlush(task).getId();
 
@@ -79,7 +80,7 @@ class TaskProjectRelationPersistenceTest extends AbstractPostgresTest {
 
         // This is the state every task created before V3 is in, and it has to be
         // expressible rather than tolerated: ADR-005 §1.
-        Task saved = taskRepository.saveAndFlush(new Task("Unassigned", null, TaskStatus.OPEN, "LOW"));
+        Task saved = taskRepository.saveAndFlush(new Task("Unassigned", null, TaskStatus.OPEN, TaskPriority.LOW));
 
         assertThat(saved.getProjectId()).isNull();
         assertThat(jdbc.queryForObject(
@@ -103,7 +104,7 @@ class TaskProjectRelationPersistenceTest extends AbstractPostgresTest {
 
         Project project = projectRepository.saveAndFlush(new Project("Company OS", null));
 
-        Task task = new Task("t", null, TaskStatus.OPEN, "HIGH");
+        Task task = new Task("t", null, TaskStatus.OPEN, TaskPriority.HIGH);
         task.assignTo(project);
         taskRepository.saveAndFlush(task);
 
@@ -123,7 +124,7 @@ class TaskProjectRelationPersistenceTest extends AbstractPostgresTest {
         project.archive();
         projectRepository.saveAndFlush(project);
 
-        Task task = new Task("t", null, TaskStatus.OPEN, "HIGH");
+        Task task = new Task("t", null, TaskStatus.OPEN, TaskPriority.HIGH);
 
         // The rule is on the entity, so it holds for every entry point and not
         // only for the HTTP one.
@@ -138,7 +139,7 @@ class TaskProjectRelationPersistenceTest extends AbstractPostgresTest {
 
         Project project = projectRepository.saveAndFlush(new Project("Company OS", null));
 
-        Task task = new Task("t", null, TaskStatus.OPEN, "HIGH");
+        Task task = new Task("t", null, TaskStatus.OPEN, TaskPriority.HIGH);
         task.assignTo(project);
         Long taskId = taskRepository.saveAndFlush(task).getId();
 
@@ -167,7 +168,7 @@ class TaskProjectRelationPersistenceTest extends AbstractPostgresTest {
         save("first", project);
         save("second", project);
         save("elsewhere", other);
-        taskRepository.saveAndFlush(new Task("unassigned", null, TaskStatus.OPEN, "LOW"));
+        taskRepository.saveAndFlush(new Task("unassigned", null, TaskStatus.OPEN, TaskPriority.LOW));
 
         assertThat(taskRepository.findAllByProjectId(project.getId()))
                 .extracting(Task::getTitle)
@@ -175,7 +176,7 @@ class TaskProjectRelationPersistenceTest extends AbstractPostgresTest {
     }
 
     private void save(String title, Project project) {
-        Task task = new Task(title, null, TaskStatus.OPEN, "HIGH");
+        Task task = new Task(title, null, TaskStatus.OPEN, TaskPriority.HIGH);
         task.assignTo(project);
         taskRepository.saveAndFlush(task);
     }

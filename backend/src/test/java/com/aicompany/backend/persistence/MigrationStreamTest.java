@@ -428,6 +428,69 @@ class MigrationStreamTest {
     }
 
     /**
+     * TASK-016 (TD-36) -- the real V8 to V9 upgrade on a populated database. Both
+     * values the census found in real data are seeded, not one: with a single
+     * value a constraint that accepted only that value would pass this test.
+     */
+    @Test
+    void taskPriorityVocabularyIsAppliedToAPopulatedV8Database() {
+
+        String schema = "task016_v8_to_v9";
+
+        schemaFlywayUpTo(schema, "8").migrate();
+        seedAgentsAt(schema);
+        jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, status, priority) "
+                + "VALUES (?, ?, ?)", "high before V9", "OPEN", "HIGH");
+        jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, status, priority) "
+                + "VALUES (?, ?, ?)", "low before V9", "DONE", "LOW");
+
+        Map<String, Integer> before = rowCountsIn(schema);
+
+        MigrateResult toV9 = schemaFlywayUpTo(schema, "9").migrate();
+
+        assertThat(toV9.success).isTrue();
+        assertThat(toV9.migrationsExecuted).isEqualTo(1);
+        assertThat(rowCountsIn(schema)).isEqualTo(before);
+        assertThat(jdbc().queryForList(
+                "SELECT priority FROM \"" + schema + "\".tasks ORDER BY title", String.class))
+                .containsExactly("HIGH", "LOW");
+
+        // The third member of the vocabulary is accepted from here on ...
+        jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, status, priority) "
+                + "VALUES (?, ?, ?)", "medium after V9", "OPEN", "MEDIUM");
+
+        // ... and nothing outside it is, on either path.
+        assertThatThrownBy(() -> jdbc().update(
+                "INSERT INTO \"" + schema + "\".tasks (title, status, priority) VALUES (?, ?, ?)",
+                "urgent after V9", "OPEN", "URGENT"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc().update(
+                "UPDATE \"" + schema + "\".tasks SET priority = ? WHERE title = ?",
+                "high", "high before V9"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    /** TASK-016 -- the declared risk of V9: it stops, and leaves the row as it was. */
+    @Test
+    void taskPriorityVocabularyStopsOnADatabaseThatHoldsAValueOutsideIt() {
+
+        String schema = "task016_v9_refuses";
+
+        schemaFlywayUpTo(schema, "8").migrate();
+        jdbc().update("INSERT INTO \"" + schema + "\".tasks (title, status, priority) "
+                + "VALUES (?, ?, ?)", "priority nobody declared", "OPEN", "whenever");
+
+        assertThatThrownBy(() -> schemaFlywayUpTo(schema, "9").migrate())
+                .isInstanceOf(FlywayException.class);
+
+        assertThat(appliedSchemaVersions(schema)).doesNotContain("9");
+        assertThat(jdbc().queryForObject(
+                "SELECT priority FROM \"" + schema + "\".tasks WHERE title = ?",
+                String.class, "priority nobody declared"))
+                .isEqualTo("whenever");
+    }
+
+    /**
      * TASK-010, invariant I-6 -- the declared risk of V7, made executable.
      *
      * <p>On a database holding a status outside the vocabulary, this migration

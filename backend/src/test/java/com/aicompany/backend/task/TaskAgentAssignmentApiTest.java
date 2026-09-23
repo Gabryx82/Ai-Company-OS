@@ -6,6 +6,7 @@ import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import jakarta.persistence.EntityManagerFactory;
@@ -598,7 +599,7 @@ class TaskAgentAssignmentApiTest extends AbstractPostgresTest {
     }
 
     private Long task(String title) {
-        return taskRepository.saveAndFlush(new Task(title, null, TaskStatus.OPEN, "HIGH")).getId();
+        return taskRepository.saveAndFlush(new Task(title, null, TaskStatus.OPEN, TaskPriority.HIGH)).getId();
     }
 
     private Long project(String name) {

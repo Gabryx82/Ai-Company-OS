@@ -1,6 +1,7 @@
 package com.aicompany.backend.task.repository;
 
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -69,6 +70,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      */
     @Query("SELECT t FROM Task t LEFT JOIN FETCH t.project LEFT JOIN FETCH t.agent ORDER BY t.id ASC")
     List<Task> findAllWithAssociations();
+
+    /** The tasks in one state, oldest first, associations resolved (TASK-016). */
+    @Query("SELECT t FROM Task t LEFT JOIN FETCH t.project LEFT JOIN FETCH t.agent "
+            + "WHERE t.status = :status ORDER BY t.id ASC")
+    List<Task> findAllByStatusWithAssociations(@Param("status") TaskStatus status);
 
     /**
      * One task with both associations resolved, for the single read.

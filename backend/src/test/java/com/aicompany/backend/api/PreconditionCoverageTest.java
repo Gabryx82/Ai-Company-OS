@@ -94,7 +94,8 @@ class PreconditionCoverageTest {
                         "create",                      // exempt: no earlier state to be stale about
                         "assignToProject:Precondition",
                         "assignToAgent:Precondition",
-                        "transition:Precondition");      // ADR-014: every edge, one path
+                        "transition:Precondition",       // ADR-014: every edge, one path
+                        "update:Precondition");          // TASK-016: the details
 
         assertThat(writePaths(ProjectService.class))
                 .containsExactlyInAnyOrder(

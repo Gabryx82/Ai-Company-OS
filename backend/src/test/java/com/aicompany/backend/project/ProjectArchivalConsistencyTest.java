@@ -9,6 +9,7 @@ import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.task.service.TaskService;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -278,7 +279,7 @@ class ProjectArchivalConsistencyTest extends AbstractPostgresTest {
     }
 
     private Long taskIn(Long projectId, String title) {
-        Long taskId = taskRepository.saveAndFlush(new Task(title, null, TaskStatus.OPEN, "HIGH")).getId();
+        Long taskId = taskRepository.saveAndFlush(new Task(title, null, TaskStatus.OPEN, TaskPriority.HIGH)).getId();
         taskService.assignToProject(taskId, projectId, taskPrecondition(taskId));
         return taskId;
     }

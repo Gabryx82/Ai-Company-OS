@@ -6,6 +6,8 @@ import com.aicompany.backend.task.dto.TaskAgentAssignmentRequest;
 import com.aicompany.backend.task.dto.TaskCreateRequest;
 import com.aicompany.backend.task.dto.TaskProjectAssignmentRequest;
 import com.aicompany.backend.task.dto.TaskResponse;
+import com.aicompany.backend.task.dto.TaskUpdateRequest;
+import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.model.TaskTransition;
 import com.aicompany.backend.task.service.TaskService;
 import jakarta.validation.Valid;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
@@ -40,8 +43,10 @@ public class TaskController {
      * and the cost of that round trip is TD-33.
      */
     @GetMapping
-    public List<TaskResponse> getTasks() {
-        return service.findAll();
+    public List<TaskResponse> getTasks(@RequestParam(required = false) TaskStatus status) {
+        // An unknown value does not convert, and the advice answers invalid-parameter:
+        // "no such state" and "no task in that state" are different answers.
+        return service.findAll(status);
     }
 
     /**
@@ -67,7 +72,7 @@ public class TaskController {
                 request.title(),
                 request.description(),
                 request.statusValue(),
-                request.priority(),
+                request.priorityValue(),
                 request.projectId(),
                 request.agentId());
 
@@ -75,6 +80,21 @@ public class TaskController {
                 .created(URI.create("/api/tasks/" + created.body().id()))
                 .eTag(created.etag())
                 .body(created.body());
+    }
+
+    /**
+     * Replaces the details of a task (TASK-016). Title, description, priority --
+     * not the status, which moves along edges, and not the associations, which are
+     * sub-resources. {@code If-Match} from the first day, by P4.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<TaskResponse> updateTask(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+            @Valid @RequestBody TaskUpdateRequest request) {
+
+        return ok(service.update(id, request.title(), request.description(), request.priorityValue(),
+                Precondition.fromHeader(ifMatch)));
     }
 
     /**

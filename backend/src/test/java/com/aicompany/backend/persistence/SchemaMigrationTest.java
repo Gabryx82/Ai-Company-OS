@@ -32,7 +32,7 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // Schema versions only, in order. The development seed is a separate
         // Flyway stream and must never appear here, otherwise the next schema
         // migration becomes out of order (R1).
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9");
     }
 
     /**

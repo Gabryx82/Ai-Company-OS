@@ -11,6 +11,7 @@ import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.task.dto.TaskResponse;
 import com.aicompany.backend.task.exception.TaskNotFoundException;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.model.TaskTransition;
 import com.aicompany.backend.task.repository.TaskRepository;
@@ -52,9 +53,12 @@ public class TaskService {
         this.agentRepository = agentRepository;
     }
 
+    /** Every task, or those in one state when {@code status} is given (TASK-016). */
     @Transactional(readOnly = true)
-    public List<TaskResponse> findAll() {
-        return toResponses(repository.findAllWithAssociations());
+    public List<TaskResponse> findAll(TaskStatus status) {
+        return toResponses(status == null
+                ? repository.findAllWithAssociations()
+                : repository.findAllByStatusWithAssociations(status));
     }
 
     /**
@@ -113,7 +117,7 @@ public class TaskService {
     public Versioned<TaskResponse> create(String title,
                                           String description,
                                           TaskStatus status,
-                                          String priority,
+                                          TaskPriority priority,
                                           Long projectId,
                                           Long agentId) {
 
@@ -302,6 +306,29 @@ public class TaskService {
 
         // Rules on the entity, not here.
         task.assignTo(target, lockedProject);
+
+        return versioned(repository.saveAndFlush(task));
+    }
+
+    /**
+     * Replaces the details of an existing task (TASK-016).
+     *
+     * <p>L0, P1, then L2 on the project the task lives in -- the freezing rule reads
+     * its state, so it is read under a shared lock held to commit, exactly as on
+     * every other write to a task. No agent row is read: no detail depends on it.
+     */
+    public Versioned<TaskResponse> update(Long taskId, String title, String description,
+                                          TaskPriority priority, Precondition precondition) {
+
+        Task task = repository.findByIdForUpdate(taskId)
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+        precondition.requireSatisfiedBy(task.getVersion());
+
+        Long projectId = task.getProjectId();
+        Project lockedProject = projectId == null ? null : requireProjectForDecision(projectId);
+
+        task.updateDetails(title, description, priority, lockedProject);
 
         return versioned(repository.saveAndFlush(task));
     }

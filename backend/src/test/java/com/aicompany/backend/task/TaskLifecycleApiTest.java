@@ -6,6 +6,7 @@ import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -339,7 +340,7 @@ class TaskLifecycleApiTest extends AbstractPostgresTest {
 
     /** Seeded through SQL, so a test can start from any state without walking the graph to it. */
     private Long task(TaskStatus status, Long agentId, Long projectId) {
-        Long id = taskRepository.saveAndFlush(new Task("Lifecycle", null, status, "HIGH")).getId();
+        Long id = taskRepository.saveAndFlush(new Task("Lifecycle", null, status, TaskPriority.HIGH)).getId();
         jdbc.update("UPDATE tasks SET agent_id = ?, project_id = ? WHERE id = ?", agentId, projectId, id);
         return id;
     }

@@ -59,8 +59,14 @@ public class Task {
     @Column(nullable = false)
     private TaskStatus status;
 
+    /**
+     * From the closed vocabulary of {@link TaskPriority} since TASK-016 (TD-36),
+     * guarded three times like {@link #status}: the request constraint, this
+     * mapping, and {@code tasks_priority_check} from {@code V9}.
+     */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String priority;
+    private TaskPriority priority;
 
     /**
      * The project this task belongs to, or {@code null} for a task that has not
@@ -138,7 +144,7 @@ public class Task {
     public Task(String title,
                 String description,
                 TaskStatus status,
-                String priority) {
+                TaskPriority priority) {
 
         this.title = title;
         this.description = description;
@@ -255,6 +261,25 @@ public class Task {
     }
 
     /**
+     * Replaces the details of this task: title, description, priority (TASK-016).
+     *
+     * <p>Not the status, and not the associations -- each has its own path with
+     * its own rules. The one rule here is the freezing rule, and it is here because
+     * ADR-006 §2 said "any future write to that task" and this is one: a task in an
+     * archived project is read-only in every field, not only in the ones that
+     * existed when the rule was written.
+     */
+    public void updateDetails(String title, String description, TaskPriority priority,
+                              Project projectItLivesIn) {
+
+        requireNotFrozen(projectItLivesIn);
+
+        this.title = title;
+        this.description = description;
+        this.priority = priority;
+    }
+
+    /**
      * Moves this task along one edge of its lifecycle (ADR-014).
      *
      * <p>Three rules, in this order, and the order is the decision:
@@ -348,7 +373,7 @@ public class Task {
         return status;
     }
 
-    public String getPriority() {
+    public TaskPriority getPriority() {
         return priority;
     }
 

@@ -6,6 +6,7 @@ import com.aicompany.backend.api.PreconditionFailedException;
 import com.aicompany.backend.support.AbstractPostgresTest;
 import com.aicompany.backend.support.Preconditions;
 import com.aicompany.backend.task.model.Task;
+import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.model.TaskTransition;
 import com.aicompany.backend.task.repository.TaskRepository;
@@ -84,7 +85,7 @@ class TaskLifecycleConcurrencyTest extends AbstractPostgresTest {
     void twoCompletionsWithOneTagAreOneCompletionAndOneStaleRefusal() throws Exception {
 
         Long agent = agentRepository.saveAndFlush(new Agent("Backend", "Engineer", "jvm")).getId();
-        Long taskId = taskRepository.saveAndFlush(new Task("Race", null, TaskStatus.IN_PROGRESS, "HIGH")).getId();
+        Long taskId = taskRepository.saveAndFlush(new Task("Race", null, TaskStatus.IN_PROGRESS, TaskPriority.HIGH)).getId();
         jdbc.update("UPDATE tasks SET agent_id = ? WHERE id = ?", agent, taskId);
 
         long before = versionOf(taskId);

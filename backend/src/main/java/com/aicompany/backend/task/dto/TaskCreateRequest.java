@@ -1,5 +1,6 @@
 package com.aicompany.backend.task.dto;
 
+import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
@@ -18,10 +19,8 @@ import jakarta.validation.constraints.Size;
  * a validation failure with {@code errors.status}. The reasoning is in
  * {@link InTaskStatusVocabulary} and ADR-011 §4.
  *
- * <p>{@code priority} is still a required free-form string. TD-12 covered both,
- * and TASK-010 deliberately closed only {@code status}: the other half is
- * TD-36, left open rather than folded in because it is an adjacent
- * normalisation and not the same one.
+ * <p>{@code priority} has had its own closed vocabulary since TASK-016
+ * ({@link TaskPriority}, TD-36), guarded the same way and for the same reason.
  *
  * <p>{@code agentId} is optional in the same way, and for the same reason
  * ADR-005 gave for the project: a rejected agent means no task at all, so a
@@ -48,7 +47,7 @@ public record TaskCreateRequest(
         String status,
 
         @NotBlank(message = "priority is required")
-        @Size(max = 255, message = "priority must be at most 255 characters")
+        @InTaskPriorityVocabulary
         String priority,
 
         @Positive(message = "projectId must be a positive identifier")
@@ -76,5 +75,10 @@ public record TaskCreateRequest(
      */
     public TaskStatus statusValue() {
         return TaskStatus.valueOf(status);
+    }
+
+    /** The priority as a domain value; safe for the same reason as {@link #statusValue()}. */
+    public TaskPriority priorityValue() {
+        return TaskPriority.valueOf(priority);
     }
 }
