@@ -41,6 +41,11 @@ public abstract class AbstractPostgresTest {
     @BeforeEach
     void clearRunsAndTheScriptedEngine() {
         baseJdbc.update("DELETE FROM task_runs");
+        // PHASE 10: plans reference projects, and tests of other domains delete
+        // projects in their own setup. Detach and remove every plan first.
+        baseJdbc.update("UPDATE tasks SET phase_id = NULL WHERE phase_id IS NOT NULL");
+        baseJdbc.update("DELETE FROM project_phases");
+        baseJdbc.update("DELETE FROM plan_runs");
         baseEngine.reset();
         baseHost.reset();
     }

@@ -1,6 +1,8 @@
 package com.aicompany.backend.task.model;
 
 import com.aicompany.backend.agent.model.Agent;
+import com.aicompany.backend.plan.exception.PhaseNotApprovedException;
+import com.aicompany.backend.plan.model.ProjectPhase;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.task.exception.ArchivedProjectCannotReceiveTasksException;
 import com.aicompany.backend.task.exception.ArchivedProjectTaskIsImmutableException;
@@ -138,6 +140,21 @@ public class Task {
     @Version
     @Column(nullable = false)
     private long version;
+
+    // --- the plan (V15, ADR-021) -----------------------------------------------
+
+    /** The phase this task belongs to, or {@code null} for a task created outside a plan. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "phase_id")
+    private ProjectPhase phase;
+
+    /** {@code TASK-NNN}, unique in its project, or {@code null} outside a plan. */
+    @Column(length = 16)
+    private String code;
+
+    /** Where the task's document lives, relative to the project workspace (ADR-020). */
+    @Column(name = "document_path", length = 500)
+    private String documentPath;
 
     public Task() {
     }
@@ -313,6 +330,7 @@ public class Task {
         }
 
         if (transition.requiresActiveAgent()) {
+            requirePhaseApproved();
             if (lockedAgent == null) {
                 throw new UnassignedTaskCannotStartException(id);
             }
@@ -341,6 +359,7 @@ public class Task {
         if (status == TaskStatus.DONE) {
             throw new FinishedTaskCannotRunException(id);
         }
+        requirePhaseApproved();
         if (lockedAgent == null) {
             throw new UnassignedTaskCannotStartException(id);
         }
@@ -372,6 +391,29 @@ public class Task {
      * answered the question "where does that state come from". The alternative left
      * a lookup whose value went nowhere, which is a line the next person deletes.
      */
+    /**
+     * Places this task in a plan: its phase, its code and its document (ADR-021).
+     * Only the planner calls it, on a task it is creating.
+     */
+    public void attachToPlan(ProjectPhase phase, String code, String documentPath) {
+        this.phase = phase;
+        this.code = code;
+        this.documentPath = documentPath;
+    }
+
+    /**
+     * The Human-in-the-Loop gate of ADR-022: work of a phase the operator has
+     * not approved does not start, by the START edge or by a run. A task outside
+     * any plan has no phase, and the gate does not concern it -- which is what
+     * keeps every task created before V15 working exactly as before.
+     */
+    private void requirePhaseApproved() {
+        if (phase != null && !phase.isApproved()) {
+            throw new PhaseNotApprovedException(
+                    "Task " + id + " belongs to phase " + phase.getNumber() + ", which is not approved");
+        }
+    }
+
     private void requireNotFrozen(Project projectItLivesIn) {
         if (projectItLivesIn != null && projectItLivesIn.isArchived()) {
             throw new ArchivedProjectTaskIsImmutableException(projectItLivesIn.getId());
@@ -430,5 +472,21 @@ public class Task {
     /** Identifier of the responsible agent, or {@code null}. Same rule as above. */
     public Long getAgentId() {
         return agent == null ? null : agent.getId();
+    }
+
+    public ProjectPhase getPhase() {
+        return phase;
+    }
+
+    public Long getPhaseId() {
+        return phase == null ? null : phase.getId();
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getDocumentPath() {
+        return documentPath;
     }
 }

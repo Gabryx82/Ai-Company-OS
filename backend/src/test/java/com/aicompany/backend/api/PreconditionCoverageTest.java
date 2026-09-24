@@ -7,6 +7,7 @@ import com.aicompany.backend.llm.service.LlmCatalogService;
 import com.aicompany.backend.software.service.SoftwareService;
 import com.aicompany.backend.usage.service.UsageService;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
+import com.aicompany.backend.plan.service.PlanningService;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,14 +44,20 @@ class PreconditionCoverageTest {
     private static final List<Class<?>> SERVICES =
             List.of(TaskService.class, ProjectService.class, AgentService.class, RunService.class,
                     SoftwareService.class, LlmCatalogService.class, UsageService.class,
-                    ProjectWorkspaceService.class);
+                    ProjectWorkspaceService.class, PlanningService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
      * could be stale about, which is the same argument ADR-006 §4 used to keep
      * {@code POST /api/tasks} out of rule L0.
      */
-    private static final List<String> CREATION_METHODS = List.of("create");
+    private static final List<String> CREATION_METHODS = List.of("create",
+            // PHASE 10 (ADR-021): producing a plan is creation too -- of phases and
+            // tasks nobody has seen -- and replacing a draft is refused outright
+            // once it is approved or worked on (PlanLockedException), which is the
+            // staleness a tag would otherwise have guarded. recoverInterrupted runs
+            // at startup, not on a client's request.
+            "generate", "importFromWorkspace", "recoverInterrupted");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {
@@ -139,6 +146,15 @@ class PreconditionCoverageTest {
         // documents write files in the workspace, never the database.
         assertThat(writePaths(ProjectWorkspaceService.class))
                 .containsExactlyInAnyOrder("configure:Precondition");
+
+        // PHASE 10 (ADR-021). Approvals mutate existing rows and take the tag.
+        // generate and importFromWorkspace are exempt the way create is: they
+        // produce a plan nobody has seen, and they refuse to replace one that is
+        // approved or worked on (PlanLockedException) -- the refusal the
+        // precondition would otherwise have had to express.
+        assertThat(writePaths(PlanningService.class))
+                .containsExactlyInAnyOrder("generate", "importFromWorkspace", "recoverInterrupted",
+                        "approvePlan:Precondition", "reviewPhase:Precondition");
     }
 
     /**

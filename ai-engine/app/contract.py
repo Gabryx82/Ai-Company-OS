@@ -34,6 +34,10 @@ class CompletionRequest(BaseModel):
     max_tokens: int = Field(default=4096, ge=1, le=128_000)
     # Opaque to the engine; logged with the correlation id, never interpreted.
     metadata: dict[str, str] = Field(default_factory=dict, max_length=20)
+    # PHASE 10: ask for a JSON object (the planner's plan.json). Optional, so the
+    # addition is compatible; a provider without a JSON mode ignores it and the
+    # caller validates what comes back anyway.
+    response_format: Literal["json"] | None = None
 
 
 class Usage(BaseModel):

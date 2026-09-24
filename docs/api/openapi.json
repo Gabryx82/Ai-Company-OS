@@ -167,6 +167,16 @@
         },
         "type" : "object"
       },
+      "GenerateRequest" : {
+        "properties" : {
+          "model" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "LaunchRequest" : {
         "properties" : {
           "projectId" : {
@@ -338,6 +348,137 @@
           },
           "tokens" : {
             "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PhaseResponse" : {
+        "properties" : {
+          "approval" : {
+            "enum" : [ "PENDING", "APPROVED", "CHANGES_REQUESTED" ],
+            "type" : "string"
+          },
+          "approvalNote" : {
+            "type" : "string"
+          },
+          "approvedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "documentPath" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "number" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "objective" : {
+            "type" : "string"
+          },
+          "projectId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "PLANNED", "IN_PROGRESS", "DONE" ],
+            "type" : "string"
+          },
+          "tasks" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TaskResponse"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PlanResponse" : {
+        "properties" : {
+          "phases" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PhaseResponse"
+            },
+            "type" : "array"
+          },
+          "project" : {
+            "$ref" : "#/components/schemas/ProjectResponse"
+          },
+          "runs" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PlanRunResponse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PlanRunResponse" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "failureDetail" : {
+            "type" : "string"
+          },
+          "finishedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "inputTokens" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "output" : {
+            "type" : "string"
+          },
+          "outputTokens" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "phases" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "projectId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "requestedBy" : {
+            "type" : "string"
+          },
+          "requestedModel" : {
+            "type" : "string"
+          },
+          "servedModel" : {
+            "type" : "string"
+          },
+          "source" : {
+            "enum" : [ "ENGINE", "IMPORT" ],
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "RUNNING", "SUCCEEDED", "FAILED" ],
+            "type" : "string"
+          },
+          "tasks" : {
+            "format" : "int32",
             "type" : "integer"
           }
         },
@@ -531,6 +672,16 @@
           },
           "resetZone" : {
             "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ReviewRequest" : {
+        "properties" : {
+          "note" : {
+            "maxLength" : 2000,
             "minLength" : 0,
             "type" : "string"
           }
@@ -980,10 +1131,20 @@
             "format" : "int64",
             "type" : "integer"
           },
+          "code" : {
+            "type" : "string"
+          },
           "description" : {
             "type" : "string"
           },
+          "documentPath" : {
+            "type" : "string"
+          },
           "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "phaseId" : {
             "format" : "int64",
             "type" : "integer"
           },
@@ -1477,6 +1638,119 @@
         "tags" : [ "engine-controller" ]
       }
     },
+    "/api/phases/{phaseId}/approve" : {
+      "post" : {
+        "operationId" : "approvePhase",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "phaseId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReviewRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PhaseResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "plan-controller" ]
+      }
+    },
+    "/api/phases/{phaseId}/request-changes" : {
+      "post" : {
+        "operationId" : "requestChanges",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "phaseId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReviewRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PhaseResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "plan-controller" ]
+      }
+    },
+    "/api/plan-runs/{runId}" : {
+      "get" : {
+        "operationId" : "run_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "runId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanRunResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "plan-controller" ]
+      }
+    },
     "/api/projects" : {
       "get" : {
         "operationId" : "list_1",
@@ -1738,6 +2012,165 @@
           }
         },
         "tags" : [ "project-workspace-controller" ]
+      }
+    },
+    "/api/projects/{id}/plan" : {
+      "get" : {
+        "operationId" : "plan",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "plan-controller" ]
+      }
+    },
+    "/api/projects/{id}/plan/approve" : {
+      "post" : {
+        "operationId" : "approve",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "approveAllPhases",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "plan-controller" ]
+      }
+    },
+    "/api/projects/{id}/plan/generate" : {
+      "post" : {
+        "operationId" : "generate",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GenerateRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanRunResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "plan-controller" ]
+      }
+    },
+    "/api/projects/{id}/plan/handoff" : {
+      "get" : {
+        "operationId" : "handoff",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "plan-controller" ]
+      }
+    },
+    "/api/projects/{id}/plan/import" : {
+      "post" : {
+        "operationId" : "importPlan",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanRunResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "plan-controller" ]
       }
     },
     "/api/projects/{id}/profile" : {

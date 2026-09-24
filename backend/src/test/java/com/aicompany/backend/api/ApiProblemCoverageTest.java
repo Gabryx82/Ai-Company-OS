@@ -39,7 +39,8 @@ class ApiProblemCoverageTest {
             "com.aicompany.backend.software",
             "com.aicompany.backend.llm",
             "com.aicompany.backend.usage",
-            "com.aicompany.backend.workspace");
+            "com.aicompany.backend.workspace",
+            "com.aicompany.backend.plan");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in
@@ -153,6 +154,12 @@ class ApiProblemCoverageTest {
                         "workspace-path-refused",
                         "workspace-file-not-found",
                         "workspace-unavailable",
+                        "phase-not-found",
+                        "phase-not-approved",
+                        "master-prompt-missing",
+                        "plan-invalid",
+                        "plan-locked",
+                        "planning-in-progress",
                         "internal-error");
     }
 

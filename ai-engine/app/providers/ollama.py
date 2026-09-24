@@ -47,12 +47,15 @@ class OllamaProvider:
         messages.extend({"role": m.role, "content": m.content} for m in request.messages)
 
         try:
-            response = await self._client.post("/api/chat", json={
+            body = {
                 "model": model,
                 "messages": messages,
                 "stream": False,
                 "options": {"num_predict": request.max_tokens},
-            })
+            }
+            if request.response_format == "json":
+                body["format"] = "json"
+            response = await self._client.post("/api/chat", json=body)
         except httpx.TimeoutException as error:
             raise EngineError(EngineProblem.PROVIDER_TIMEOUT, f"Ollama did not answer in time ({type(error).__name__})")
         except httpx.HTTPError as error:

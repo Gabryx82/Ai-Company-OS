@@ -32,7 +32,7 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // Schema versions only, in order. The development seed is a separate
         // Flyway stream and must never appear here, otherwise the next schema
         // migration becomes out of order (R1).
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15");
     }
 
     /**
@@ -91,8 +91,8 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // Nothing beyond the migrated tables and Flyway's own history: proof that
         // Hibernate did not add anything of its own.
         assertThat(tables)
-                .containsExactly("agents", "flyway_schema_history", "llm_models", "model_providers", "projects",
-                        "quota_plans", "software", "task_runs", "tasks")
+                .containsExactly("agents", "flyway_schema_history", "llm_models", "model_providers", "plan_runs",
+                        "project_phases", "projects", "quota_plans", "software", "task_runs", "tasks")
                 .doesNotContain("flyway_dev_seed_history");
     }
 
@@ -143,7 +143,9 @@ class SchemaMigrationTest extends AbstractPostgresTest {
                         + "ORDER BY constraint_name",
                 String.class);
 
-        assertThat(foreignKeys).containsExactly("tasks_agent_id_fkey", "tasks_project_id_fkey");
+        // Third entry by decision in PHASE 10 (V15, ADR-021): a task may belong to a
+        // phase of its project's plan.
+        assertThat(foreignKeys).containsExactly("tasks_agent_id_fkey", "tasks_phase_id_fkey", "tasks_project_id_fkey");
 
         // Deleting a project or an agent out from under its tasks must be refused
         // rather than cascade: the Company OS archives projects and deactivates
@@ -151,6 +153,7 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // NO ACTION is the deliberate choice on both.
         assertThat(deleteRuleOf("tasks_project_id_fkey")).isEqualTo("NO ACTION");
         assertThat(deleteRuleOf("tasks_agent_id_fkey")).isEqualTo("NO ACTION");
+        assertThat(deleteRuleOf("tasks_phase_id_fkey")).isEqualTo("NO ACTION");
     }
 
     private String deleteRuleOf(String constraintName) {

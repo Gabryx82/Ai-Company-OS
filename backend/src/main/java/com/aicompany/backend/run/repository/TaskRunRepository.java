@@ -16,6 +16,9 @@ public interface TaskRunRepository extends JpaRepository<TaskRun, Long> {
 
     List<TaskRun> findAllByTaskIdOrderByIdDesc(Long taskId);
 
+    /** PHASE 10: a draft plan's task that was ever run is work, and the draft is no longer replaceable. */
+    boolean existsByTaskId(Long taskId);
+
     boolean existsByTaskIdAndStatusIn(Long taskId, Collection<RunStatus> statuses);
 
     List<TaskRun> findAllByStatusIn(Collection<RunStatus> statuses);

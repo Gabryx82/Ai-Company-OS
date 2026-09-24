@@ -35,7 +35,11 @@ public record TaskResponse(
         TaskStatus status,
         TaskPriority priority,
         Long projectId,
-        Long agentId
+        Long agentId,
+        // PHASE 10 (ADR-021): the plan. Additive; null for tasks outside a plan.
+        Long phaseId,
+        String code,
+        String documentPath
 ) {
 
     public static TaskResponse from(Task task) {
@@ -46,7 +50,10 @@ public record TaskResponse(
                 task.getStatus(),
                 task.getPriority(),
                 task.getProjectId(),
-                task.getAgentId()
+                task.getAgentId(),
+                task.getPhaseId(),
+                task.getCode(),
+                task.getDocumentPath()
         );
     }
 }

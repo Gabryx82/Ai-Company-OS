@@ -249,3 +249,19 @@ def test_nothing_the_provider_says_leaks_into_an_error_detail():
     with app_with(anthropic_provider(leaky)) as client:
         response = client.post("/v1/completions", json=completion(model="anthropic:claude-opus-5"), headers=AUTH)
     assert "SECRET-DETAIL" not in response.text
+
+
+def test_a_json_request_asks_ollama_for_its_json_format_and_a_plain_one_does_not():
+    seen = []
+
+    def handler(request: httpx.Request):
+        seen.append(json.loads(request.content))
+        return httpx.Response(200, json={"model": "m", "message": {"role": "assistant", "content": "{}"},
+                                         "done_reason": "stop", "prompt_eval_count": 1, "eval_count": 1})
+
+    with app_with(ollama(handler)) as client:
+        client.post("/v1/completions", headers=AUTH, json=completion(model="ollama:m", response_format="json"))
+        client.post("/v1/completions", headers=AUTH, json=completion(model="ollama:m"))
+
+    assert seen[0]["format"] == "json"
+    assert "format" not in seen[1]

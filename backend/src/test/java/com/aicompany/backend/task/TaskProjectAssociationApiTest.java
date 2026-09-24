@@ -466,7 +466,12 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
 
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].*", org.hamcrest.Matchers.hasSize(7)))
+                // 7 -> 10 by decision in PHASE 10 (ADR-021): phaseId, code and
+                // documentPath place a task in its project's plan. Additive, and
+                // null for a task created outside a plan, like this one.
+                .andExpect(jsonPath("$[0].*", org.hamcrest.Matchers.hasSize(10)))
+                .andExpect(jsonPath("$[0].phaseId").doesNotExist())
+                .andExpect(jsonPath("$[0].code").doesNotExist())
                 .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].title").exists())
                 .andExpect(jsonPath("$[0].status").exists())

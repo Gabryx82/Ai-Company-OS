@@ -54,6 +54,10 @@ public class HttpEngineClient implements EngineClient {
         body.put("system", request.system());
         body.putArray("messages").addObject().put("role", "user").put("content", request.user());
         body.put("max_tokens", request.maxTokens());
+        if (request.responseFormat() != null) {
+            // PHASE 10: an optional field of contract v1 -- compatible by its own rule.
+            body.put("response_format", request.responseFormat());
+        }
         ObjectNode metadata = body.putObject("metadata");
         request.metadata().forEach(metadata::put);
 

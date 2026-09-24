@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/project-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["projectTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/providers": {
         parameters: {
             query?: never;
@@ -124,6 +140,54 @@ export interface paths {
             cookie?: never;
         };
         get: operations["models_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/phases/{phaseId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approvePhase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/phases/{phaseId}/request-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestChanges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plan-runs/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["run_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -180,6 +244,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["documents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["read"];
+        put: operations["write"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["plan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/plan/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/plan/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["generate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/plan/handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["handoff"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/plan/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["configure"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/restore": {
         parameters: {
             query?: never;
@@ -190,6 +382,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["scaffold"];
         delete?: never;
         options?: never;
         head?: never;
@@ -516,6 +724,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspace/default-folder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["defaultFolder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -545,6 +769,32 @@ export interface components {
             name: string;
             role: string;
             specialization: string;
+        };
+        Document: {
+            /** Format: date-time */
+            modified?: string;
+            path?: string;
+            /** Format: int64 */
+            size?: number;
+        };
+        DocumentWrite: {
+            content: string;
+        };
+        Documents: {
+            agents?: components["schemas"]["Document"];
+            exists?: boolean;
+            handoffs?: components["schemas"]["Document"][];
+            implementationPlan?: components["schemas"]["Document"];
+            masterPrompt?: components["schemas"]["Document"];
+            masterPromptIsTemplate?: boolean;
+            phases?: components["schemas"]["Document"][];
+            planJson?: components["schemas"]["Document"];
+            references?: components["schemas"]["Document"][];
+            tasks?: components["schemas"]["Document"][];
+            workspacePath?: string;
+        };
+        GenerateRequest: {
+            model?: string;
         };
         LaunchRequest: {
             /** Format: int64 */
@@ -606,11 +856,74 @@ export interface components {
             /** Format: int64 */
             tokens?: number;
         };
+        PhaseResponse: {
+            /** @enum {string} */
+            approval?: "PENDING" | "APPROVED" | "CHANGES_REQUESTED";
+            approvalNote?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            documentPath?: string;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int32 */
+            number?: number;
+            objective?: string;
+            /** Format: int64 */
+            projectId?: number;
+            /** @enum {string} */
+            status?: "PLANNED" | "IN_PROGRESS" | "DONE";
+            tasks?: components["schemas"]["TaskResponse"][];
+            title?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        PlanResponse: {
+            phases?: components["schemas"]["PhaseResponse"][];
+            project?: components["schemas"]["ProjectResponse"];
+            runs?: components["schemas"]["PlanRunResponse"][];
+        };
+        PlanRunResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            failureDetail?: string;
+            /** Format: date-time */
+            finishedAt?: string;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int32 */
+            inputTokens?: number;
+            output?: string;
+            /** Format: int32 */
+            outputTokens?: number;
+            /** Format: int32 */
+            phases?: number;
+            /** Format: int64 */
+            projectId?: number;
+            requestedBy?: string;
+            requestedModel?: string;
+            servedModel?: string;
+            /** @enum {string} */
+            source?: "ENGINE" | "IMPORT";
+            /** @enum {string} */
+            status?: "RUNNING" | "SUCCEEDED" | "FAILED";
+            /** Format: int32 */
+            tasks?: number;
+        };
+        ProfileRequest: {
+            /** @enum {string} */
+            autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
+            /** @enum {string} */
+            projectType?: "WEB_APP" | "BACKEND" | "MOBILE" | "DESKTOP" | "AI_ML" | "GAME" | "THREE_D" | "DATA" | "AUTOMATION" | "API" | "FULL_STACK" | "OTHER";
+            stack?: string;
+            workspacePath?: string;
+        };
         ProjectCreateRequest: {
             description?: string;
             name: string;
         };
         ProjectResponse: {
+            /** @enum {string} */
+            autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
             /** Format: date-time */
             createdAt?: string;
             description?: string;
@@ -618,9 +931,24 @@ export interface components {
             id?: number;
             name?: string;
             /** @enum {string} */
+            planStatus?: "NONE" | "DRAFT" | "APPROVED";
+            /** @enum {string} */
+            projectType?: "WEB_APP" | "BACKEND" | "MOBILE" | "DESKTOP" | "AI_ML" | "GAME" | "THREE_D" | "DATA" | "AUTOMATION" | "API" | "FULL_STACK" | "OTHER";
+            stack?: string;
+            /** @enum {string} */
             status?: "ACTIVE" | "ARCHIVED";
             /** Format: date-time */
             updatedAt?: string;
+            workspacePath?: string;
+        };
+        ProjectTypeInfo: {
+            agentRoles?: string[];
+            description?: string;
+            label?: string;
+            software?: string[];
+            stack?: string[];
+            /** @enum {string} */
+            type?: "WEB_APP" | "BACKEND" | "MOBILE" | "DESKTOP" | "AI_ML" | "GAME" | "THREE_D" | "DATA" | "AUTOMATION" | "API" | "FULL_STACK" | "OTHER";
         };
         ProjectUpdateRequest: {
             description?: string;
@@ -646,6 +974,9 @@ export interface components {
             /** Format: int32 */
             resetWeekday?: number;
             resetZone?: string;
+        };
+        ReviewRequest: {
+            note?: string;
         };
         RoutingRequest: {
             text: string;
@@ -684,6 +1015,11 @@ export interface components {
             /** Format: int64 */
             taskId?: number;
             userPrompt?: string;
+        };
+        ScaffoldEntry: {
+            /** @enum {string} */
+            outcome?: "CREATED" | "EXISTING";
+            path?: string;
         };
         SoftwareRequest: {
             appId?: string;
@@ -784,9 +1120,13 @@ export interface components {
         TaskResponse: {
             /** Format: int64 */
             agentId?: number;
+            code?: string;
             description?: string;
+            documentPath?: string;
             /** Format: int64 */
             id?: number;
+            /** Format: int64 */
+            phaseId?: number;
             /** @enum {string} */
             priority?: "LOW" | "MEDIUM" | "HIGH";
             /** Format: int64 */
@@ -1062,6 +1402,26 @@ export interface operations {
             };
         };
     };
+    projectTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectTypeInfo"][];
+                };
+            };
+        };
+    };
     providers: {
         parameters: {
             query?: never;
@@ -1098,6 +1458,84 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ModelList"];
+                };
+            };
+        };
+    };
+    approvePhase: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                phaseId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PhaseResponse"];
+                };
+            };
+        };
+    };
+    requestChanges: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                phaseId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PhaseResponse"];
+                };
+            };
+        };
+    };
+    run_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlanRunResponse"];
                 };
             };
         };
@@ -1222,6 +1660,226 @@ export interface operations {
             };
         };
     };
+    documents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Documents"];
+                };
+            };
+        };
+    };
+    read: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    write: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentWrite"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Document"];
+                };
+            };
+        };
+    };
+    plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlanResponse"];
+                };
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: {
+                approveAllPhases?: boolean;
+            };
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectResponse"];
+                };
+            };
+        };
+    };
+    generate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["GenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlanRunResponse"];
+                };
+            };
+        };
+    };
+    handoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+        };
+    };
+    importPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlanRunResponse"];
+                };
+            };
+        };
+    };
+    configure: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectResponse"];
+                };
+            };
+        };
+    };
     restore: {
         parameters: {
             query?: never;
@@ -1242,6 +1900,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProjectResponse"];
+                };
+            };
+        };
+    };
+    scaffold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScaffoldEntry"][];
                 };
             };
         };
@@ -1837,6 +2517,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    defaultFolder: {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: string;
+                    };
+                };
             };
         };
     };

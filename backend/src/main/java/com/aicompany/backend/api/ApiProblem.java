@@ -209,6 +209,27 @@ public enum ApiProblem {
     WORKSPACE_UNAVAILABLE("workspace-unavailable", HttpStatus.SERVICE_UNAVAILABLE,
             "Workspace unavailable", "The project folder could not be read or written"),
 
+    // --- planning (PHASE 10, ADR-021) --------------------------------------------
+
+    PHASE_NOT_FOUND("phase-not-found", HttpStatus.NOT_FOUND,
+            "Phase not found", "No phase with that identifier"),
+
+    /** ADR-022: the Human-in-the-Loop gate. A task of a phase nobody approved does not start. */
+    PHASE_NOT_APPROVED("phase-not-approved", HttpStatus.CONFLICT,
+            "Phase not approved", "Approve the task's phase before starting or running it"),
+
+    MASTER_PROMPT_MISSING("master-prompt-missing", HttpStatus.CONFLICT,
+            "Master prompt missing", "Write MASTER_PROMPT.md before generating the plan"),
+
+    PLAN_INVALID("plan-invalid", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Plan invalid", "The plan does not follow the plan.json format"),
+
+    PLAN_LOCKED("plan-locked", HttpStatus.CONFLICT,
+            "Plan locked", "The current plan cannot be replaced"),
+
+    PLANNING_IN_PROGRESS("planning-in-progress", HttpStatus.CONFLICT,
+            "Planning in progress", "A plan is already being generated for this project"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

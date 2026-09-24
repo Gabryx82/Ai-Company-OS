@@ -38,4 +38,21 @@ public class RunConfiguration {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * PHASE 10 (ADR-021). Plan generations: one at a time, because a local
+     * planner model is the heaviest thing this machine runs, and a queue small
+     * enough that a stuck engine is noticed rather than buried.
+     */
+    @Bean(name = "planExecutor", destroyMethod = "shutdown")
+    ThreadPoolTaskExecutor planExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setQueueCapacity(10);
+        executor.setThreadNamePrefix("plan-");
+        executor.setWaitForTasksToCompleteOnShutdown(false);
+        executor.initialize();
+        return executor;
+    }
 }

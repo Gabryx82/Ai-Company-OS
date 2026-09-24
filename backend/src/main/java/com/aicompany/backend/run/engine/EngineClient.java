@@ -22,7 +22,13 @@ public interface EngineClient {
 
     /** What is sent. {@code model} null means the engine's own default. */
     record Request(String model, String system, String user, int maxTokens,
-                   String correlationId, Map<String, String> metadata) {
+                   String correlationId, Map<String, String> metadata, String responseFormat) {
+
+        /** A plain-text completion, as every request was before PHASE 10. */
+        public Request(String model, String system, String user, int maxTokens,
+                       String correlationId, Map<String, String> metadata) {
+            this(model, system, user, maxTokens, correlationId, metadata, null);
+        }
     }
 
     record ModelInfo(String id, String provider, boolean available, String detail, boolean billed) {
