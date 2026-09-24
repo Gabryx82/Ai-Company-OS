@@ -1,0 +1,41 @@
+[
+  {
+    "key": "ollama", "name": "Ollama (locale)", "kind": "LOCAL", "engineProvider": "ollama",
+    "billing": "FREE", "status": "ENABLED", "baseUrl": "http://127.0.0.1:11434",
+    "docsUrl": "https://ollama.com/library",
+    "notes": "Modelli locali sulla macchina dell'operatore. Nessun costo, nessun dato esce dalla macchina."
+  },
+  {
+    "key": "anthropic", "name": "Anthropic API", "kind": "CLOUD_API", "engineProvider": "anthropic",
+    "billing": "PAY_PER_TOKEN", "status": "DISABLED", "baseUrl": "https://api.anthropic.com",
+    "docsUrl": "https://docs.anthropic.com",
+    "notes": "Spento senza ANTHROPIC_API_KEY (ADR-015 §5). Distinto dall'abbonamento di Claude Code, che si usa tramite l'applicazione."
+  },
+  {
+    "key": "openrouter", "name": "OpenRouter", "kind": "ROUTER", "engineProvider": "openrouter",
+    "billing": "PAY_PER_TOKEN", "status": "DISABLED", "baseUrl": "https://openrouter.ai/api/v1",
+    "docsUrl": "https://openrouter.ai/docs",
+    "notes": "Router opzionale verso molti modelli cloud con un'interfaccia OpenAI-compatibile. Spento senza AICOS_ENGINE_OPENROUTER_API_KEY; da abilitare dopo TD-40 (limiti di costo)."
+  },
+  {
+    "key": "claude-subscription", "name": "Abbonamento Claude (Claude Code / Claude app)", "kind": "SUBSCRIPTION",
+    "billing": "SUBSCRIPTION", "status": "ENABLED", "docsUrl": "https://claude.ai/settings/usage",
+    "notes": "Usato tramite Claude Code CLI e l'app Claude: execution target del Master Orchestrator senza API a consumo."
+  },
+  {
+    "key": "chatgpt-subscription", "name": "Abbonamento ChatGPT (ChatGPT / Codex)", "kind": "SUBSCRIPTION",
+    "billing": "SUBSCRIPTION", "status": "ENABLED", "docsUrl": "https://chatgpt.com/codex/settings/usage",
+    "notes": "Usato tramite ChatGPT Classic (brainstorming, Master Prompt) e Codex (execution target)."
+  },
+  {
+    "key": "dwarfstar", "name": "DwarfStar 4 (ds4)", "kind": "LOCAL",
+    "billing": "FREE", "status": "INCOMPATIBLE_HARDWARE", "baseUrl": "http://127.0.0.1:8000",
+    "docsUrl": "https://github.com/antirez/ds4",
+    "notes": "Richiede Metal/CUDA/ROCm e ≥96 GB di RAM; questa macchina non li ha. Utilizzabile in futuro via provider OpenAI-compatibile se servito da un'altra macchina."
+  },
+  {
+    "key": "echo", "name": "Echo (deterministico)", "kind": "TEST", "engineProvider": "echo",
+    "billing": "FREE", "status": "ENABLED",
+    "notes": "Risponde con il proprio input: per test e per provare il flusso senza modelli."
+  }
+]

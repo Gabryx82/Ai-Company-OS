@@ -1,0 +1,59 @@
+package com.aicompany.backend.support;
+
+import com.aicompany.backend.software.detect.SoftwareDetector;
+import com.aicompany.backend.software.detect.SoftwareIcons;
+import com.aicompany.backend.software.launch.SoftwareLauncher;
+import com.aicompany.backend.software.service.HostEnvironment;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+
+@TestConfiguration(proxyBeanMethods = false)
+public class FakeHostConfiguration {
+
+    private static final FakeHost HOST = new FakeHost();
+
+    /**
+     * A Windows-like machine in a temporary folder: a home, and a Windows
+     * Terminal that exists as a file -- so launch planning runs the same on the
+     * Linux CI runner as on the operator's machine.
+     */
+    @Bean
+    @Primary
+    HostEnvironment fakeHostEnvironment() throws IOException {
+        Path root = Files.createTempDirectory("aicos-fake-host");
+        Path terminal = Files.createDirectories(root.resolve("WindowsApps")).resolve("wt.exe");
+        Files.writeString(terminal, "");
+        Path home = Files.createDirectories(root.resolve("home"));
+        return new HostEnvironment(Map.of("SystemRoot", "C:\\Windows", "USERPROFILE", home.toString()),
+                true, terminal, home);
+    }
+
+    @Bean
+    FakeHost fakeHost() {
+        return HOST;
+    }
+
+    @Bean
+    @Primary
+    SoftwareDetector fakeDetector() {
+        return HOST.detector();
+    }
+
+    @Bean
+    @Primary
+    SoftwareLauncher fakeLauncher() {
+        return HOST.launcher();
+    }
+
+    @Bean
+    @Primary
+    SoftwareIcons fakeIcons() {
+        return HOST.icons();
+    }
+}

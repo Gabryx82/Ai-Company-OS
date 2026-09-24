@@ -1,0 +1,44 @@
+[
+  {
+    "key": "ollama:qwen3.5:9b", "providerKey": "ollama", "displayName": "Qwen 3.5 9B", "role": "PLANNER",
+    "capabilities": ["tools", "thinking", "vision", "long-context", "planning", "coding", "italian"],
+    "contextWindow": 262144, "sizeGb": 6.6, "parameters": "9.7B", "lifecycle": "ACTIVE",
+    "notes": "Modello locale più capace installato: pianificazione (IMPLEMENTATION_PLAN), ragionamento, codice in attesa di un coder dedicato."
+  },
+  {
+    "key": "ollama:qwen3.5:4b", "providerKey": "ollama", "displayName": "Qwen 3.5 4B", "role": "FAST",
+    "capabilities": ["tools", "thinking", "vision", "long-context"],
+    "contextWindow": 262144, "sizeGb": 3.4, "parameters": "4B", "lifecycle": "CANDIDATE",
+    "notes": "Sostituto candidato di llama3.2:3b per il ruolo veloce/economico (2026, tools, 256K). Diventa ACTIVE solo dopo la verifica sul flusso reale."
+  },
+  {
+    "key": "ollama:llama3.2:3b", "providerKey": "ollama", "displayName": "Llama 3.2 3B", "role": "FAST",
+    "capabilities": ["chat", "summarization", "classification"],
+    "contextWindow": 131072, "sizeGb": 2.0, "parameters": "3.2B", "lifecycle": "ACTIVE",
+    "replacedBy": "ollama:qwen3.5:4b",
+    "notes": "Modello del 2024 usato negli smoke test di PHASE 5–6. Resta finché il sostituto non è verificato (regola della direttiva §26)."
+  },
+  {
+    "key": "ollama:deepseek-coder-v2:16b", "providerKey": "ollama", "displayName": "DeepSeek Coder V2 16B", "role": "CODER",
+    "capabilities": ["coding", "code-completion"],
+    "contextWindow": 163840, "sizeGb": 8.9, "parameters": "15.7B", "lifecycle": "ACTIVE",
+    "notes": "Coder del 2024, senza tool calling. Sostituto moderno: qwen3-coder:30b (19 GB, MoE 3B attivi) — richiede decisione umana su disco/RAM."
+  },
+  {
+    "key": "ollama:gemma4:e4b", "providerKey": "ollama", "displayName": "Gemma 4 E4B", "role": "VISION",
+    "capabilities": ["vision", "multimodal", "reference-analysis"],
+    "contextWindow": 131072, "sizeGb": 9.6, "parameters": "8B", "lifecycle": "ACTIVE",
+    "notes": "Multimodale: analisi di reference, screenshot e mockup del progetto."
+  },
+  {
+    "key": "anthropic:claude-opus-5", "providerKey": "anthropic", "displayName": "Claude Opus 5 (API)", "role": "PREMIUM",
+    "capabilities": ["tools", "coding", "planning", "long-context", "vision"],
+    "lifecycle": "ACTIVE",
+    "notes": "Via API a consumo: spento finché ANTHROPIC_API_KEY non è configurata e TD-40 non è chiuso."
+  },
+  {
+    "key": "echo:default", "providerKey": "echo", "displayName": "Echo", "role": "TEST",
+    "capabilities": ["deterministic"], "lifecycle": "ACTIVE",
+    "notes": "Default dell'AI Engine: risponde con il proprio input."
+  }
+]

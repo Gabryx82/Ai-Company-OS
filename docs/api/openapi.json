@@ -90,6 +90,82 @@
         "required" : [ "name", "role", "specialization" ],
         "type" : "object"
       },
+      "LaunchRequest" : {
+        "properties" : {
+          "projectId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "LaunchResponse" : {
+        "properties" : {
+          "command" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "folderOpened" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "workingDirectory" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ModelCatalogResponse" : {
+        "properties" : {
+          "engineDefault" : {
+            "type" : "string"
+          },
+          "engineReachable" : {
+            "type" : "boolean"
+          },
+          "models" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ModelResponse"
+            },
+            "type" : "array"
+          },
+          "uncatalogued" : {
+            "items" : {
+              "$ref" : "#/components/schemas/UncataloguedModel"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ModelClassificationRequest" : {
+        "properties" : {
+          "lifecycle" : {
+            "enum" : [ "ACTIVE", "CANDIDATE", "DEPRECATED", "RETIRED" ],
+            "type" : "string"
+          },
+          "notes" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "replacedBy" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "role" : {
+            "enum" : [ "FAST", "GENERAL", "CODER", "PLANNER", "VISION", "REASONING", "PREMIUM", "EMBEDDING", "TEST" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "lifecycle", "role" ],
+        "type" : "object"
+      },
       "ModelInfo" : {
         "properties" : {
           "available" : {
@@ -120,6 +196,72 @@
               "$ref" : "#/components/schemas/ModelInfo"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ModelResponse" : {
+        "properties" : {
+          "capabilities" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "contextWindow" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "engineAvailable" : {
+            "type" : "boolean"
+          },
+          "engineDetail" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "lifecycle" : {
+            "enum" : [ "ACTIVE", "CANDIDATE", "DEPRECATED", "RETIRED" ],
+            "type" : "string"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "parameters" : {
+            "type" : "string"
+          },
+          "providerKey" : {
+            "type" : "string"
+          },
+          "replacedBy" : {
+            "type" : "string"
+          },
+          "role" : {
+            "enum" : [ "FAST", "GENERAL", "CODER", "PLANNER", "VISION", "REASONING", "PREMIUM", "EMBEDDING", "TEST" ],
+            "type" : "string"
+          },
+          "sizeGb" : {
+            "type" : "number"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ModelTokens" : {
+        "properties" : {
+          "model" : {
+            "type" : "string"
+          },
+          "tokens" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -181,6 +323,67 @@
           }
         },
         "required" : [ "name" ],
+        "type" : "object"
+      },
+      "ProviderResponse" : {
+        "properties" : {
+          "baseUrl" : {
+            "type" : "string"
+          },
+          "billing" : {
+            "enum" : [ "FREE", "PAY_PER_TOKEN", "SUBSCRIPTION" ],
+            "type" : "string"
+          },
+          "docsUrl" : {
+            "type" : "string"
+          },
+          "engineProvider" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "LOCAL", "CLOUD_API", "ROUTER", "SUBSCRIPTION", "TEST" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "ENABLED", "DISABLED", "INCOMPATIBLE_HARDWARE" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "QuotaAnchorRequest" : {
+        "properties" : {
+          "limitNote" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "resetTime" : {
+            "maxLength" : 8,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "resetWeekday" : {
+            "format" : "int32",
+            "maximum" : 7,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "resetZone" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "RoutingRequest" : {
@@ -276,6 +479,247 @@
           },
           "userPrompt" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SoftwareRequest" : {
+        "properties" : {
+          "appId" : {
+            "maxLength" : 300,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "capabilities" : {
+            "items" : {
+              "maxLength" : 60,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 60,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "category" : {
+            "enum" : [ "AGENTIC_IDE", "IDE", "EDITOR", "TERMINAL", "AI_CLOUD", "AI_LOCAL", "DATABASE", "API", "INFRASTRUCTURE", "DIAGRAM", "DESIGN", "THREE_D", "VCS", "HOSTING", "PRODUCTIVITY" ],
+            "type" : "string"
+          },
+          "cliCommand" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "configuration" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "embedNote" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "embeddable" : {
+            "type" : "boolean"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "executable" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "executableArgs" : {
+            "items" : {
+              "maxLength" : 300,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 10,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "executionTarget" : {
+            "type" : "boolean"
+          },
+          "healthUrl" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "pattern" : "^(https?://.*)?$",
+            "type" : "string"
+          },
+          "iconUrl" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "incompatibleReason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "key" : {
+            "pattern" : "^[a-z0-9][a-z0-9-]{1,63}$",
+            "type" : "string"
+          },
+          "launchKind" : {
+            "enum" : [ "DESKTOP", "CLI", "WEB", "LOCAL_SERVICE" ],
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "openFolder" : {
+            "type" : "boolean"
+          },
+          "projectTypes" : {
+            "items" : {
+              "maxLength" : 30,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 20,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "purpose" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "requirements" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "role" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "url" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "pattern" : "^(https?://.*)?$",
+            "type" : "string"
+          }
+        },
+        "required" : [ "category", "launchKind", "name", "role" ],
+        "type" : "object"
+      },
+      "SoftwareResponse" : {
+        "properties" : {
+          "appId" : {
+            "type" : "string"
+          },
+          "availability" : {
+            "enum" : [ "INSTALLED", "NOT_INSTALLED", "WEB", "RUNNING", "STOPPED", "INCOMPATIBLE_HARDWARE", "UNKNOWN" ],
+            "type" : "string"
+          },
+          "availabilityDetail" : {
+            "type" : "string"
+          },
+          "capabilities" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "category" : {
+            "enum" : [ "AGENTIC_IDE", "IDE", "EDITOR", "TERMINAL", "AI_CLOUD", "AI_LOCAL", "DATABASE", "API", "INFRASTRUCTURE", "DIAGRAM", "DESIGN", "THREE_D", "VCS", "HOSTING", "PRODUCTIVITY" ],
+            "type" : "string"
+          },
+          "cliCommand" : {
+            "type" : "string"
+          },
+          "configuration" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "embedNote" : {
+            "type" : "string"
+          },
+          "embeddable" : {
+            "type" : "boolean"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "executable" : {
+            "type" : "string"
+          },
+          "executableArgs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "executionTarget" : {
+            "type" : "boolean"
+          },
+          "healthUrl" : {
+            "type" : "string"
+          },
+          "iconUrl" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "incompatibleReason" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "launchKind" : {
+            "enum" : [ "DESKTOP", "CLI", "WEB", "LOCAL_SERVICE" ],
+            "type" : "string"
+          },
+          "launchable" : {
+            "type" : "boolean"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "openFolder" : {
+            "type" : "boolean"
+          },
+          "projectTypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "purpose" : {
+            "type" : "string"
+          },
+          "requirements" : {
+            "type" : "string"
+          },
+          "resolvedExecutable" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -416,6 +860,102 @@
           }
         },
         "required" : [ "priority", "title" ],
+        "type" : "object"
+      },
+      "UncataloguedModel" : {
+        "properties" : {
+          "available" : {
+            "type" : "boolean"
+          },
+          "billed" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UsageWindowResponse" : {
+        "properties" : {
+          "byModel" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ModelTokens"
+            },
+            "type" : "array"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "limitNote" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "nextResetAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "observedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "outputTokens" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "resetTime" : {
+            "type" : "string"
+          },
+          "resetWeekday" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "resetZone" : {
+            "type" : "string"
+          },
+          "source" : {
+            "enum" : [ "CODEX_LOCAL", "CLAUDE_CODE_LOCAL", "ENGINE_RUNS", "MANUAL" ],
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "MEASURED", "COUNTED", "RESET_SINCE_OBSERVATION", "NO_DATA", "CONFIGURATION_NEEDED" ],
+            "type" : "string"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "tokens" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "usageUrl" : {
+            "type" : "string"
+          },
+          "usedPercent" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "windowKind" : {
+            "enum" : [ "ROLLING_5H", "DAILY", "WEEKLY", "MONTHLY" ],
+            "type" : "string"
+          },
+          "windowStart" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
         "type" : "object"
       }
     },
@@ -655,9 +1195,89 @@
         "tags" : [ "agent-controller" ]
       }
     },
-    "/api/engine/models" : {
+    "/api/catalog/models" : {
       "get" : {
         "operationId" : "models",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ModelCatalogResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "llm-catalog-controller" ]
+      },
+      "put" : {
+        "operationId" : "classify",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ModelClassificationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "llm-catalog-controller" ]
+      }
+    },
+    "/api/catalog/providers" : {
+      "get" : {
+        "operationId" : "providers",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ProviderResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "llm-catalog-controller" ]
+      }
+    },
+    "/api/engine/models" : {
+      "get" : {
+        "operationId" : "models_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -675,7 +1295,7 @@
     },
     "/api/projects" : {
       "get" : {
-        "operationId" : "list",
+        "operationId" : "list_1",
         "parameters" : [ {
           "in" : "query",
           "name" : "status",
@@ -703,7 +1323,7 @@
         "tags" : [ "project-controller" ]
       },
       "post" : {
-        "operationId" : "create",
+        "operationId" : "create_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -756,7 +1376,7 @@
         "tags" : [ "project-controller" ]
       },
       "put" : {
-        "operationId" : "update",
+        "operationId" : "update_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -952,6 +1572,193 @@
           }
         },
         "tags" : [ "run-controller" ]
+      }
+    },
+    "/api/software" : {
+      "get" : {
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SoftwareResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "software-controller" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SoftwareRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SoftwareResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "software-controller" ]
+      }
+    },
+    "/api/software/refresh" : {
+      "post" : {
+        "operationId" : "refresh",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "software-controller" ]
+      }
+    },
+    "/api/software/{key}" : {
+      "get" : {
+        "operationId" : "get",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SoftwareResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "software-controller" ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SoftwareRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SoftwareResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "software-controller" ]
+      }
+    },
+    "/api/software/{key}/icon" : {
+      "get" : {
+        "operationId" : "icon",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "image/png" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "software-controller" ]
+      }
+    },
+    "/api/software/{key}/launch" : {
+      "post" : {
+        "operationId" : "launch_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LaunchRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LaunchResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "software-controller" ]
       }
     },
     "/api/tasks" : {
@@ -1402,6 +2209,63 @@
           }
         },
         "tags" : [ "run-controller" ]
+      }
+    },
+    "/api/usage" : {
+      "get" : {
+        "operationId" : "report",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/UsageWindowResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "usage-controller" ]
+      }
+    },
+    "/api/usage/plans/{key}" : {
+      "put" : {
+        "operationId" : "anchor",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/QuotaAnchorRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "usage-controller" ]
       }
     }
   },

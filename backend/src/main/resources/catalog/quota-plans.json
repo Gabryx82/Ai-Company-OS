@@ -1,0 +1,40 @@
+[
+  {
+    "key": "claude-code-5h", "name": "Claude Code — sessione di 5 ore", "subject": "claude-code",
+    "source": "CLAUDE_CODE_LOCAL", "windowKind": "ROLLING_5H",
+    "limitNote": "Il limite dipende dal piano; Claude Code non lo registra in locale.",
+    "usageUrl": "https://claude.ai/settings/usage"
+  },
+  {
+    "key": "claude-code-weekly", "name": "Claude Code — limite settimanale", "subject": "claude-code",
+    "source": "CLAUDE_CODE_LOCAL", "windowKind": "WEEKLY",
+    "limitNote": "Imposta giorno e ora del reset come indicati in claude.ai → Settings → Usage.",
+    "usageUrl": "https://claude.ai/settings/usage"
+  },
+  {
+    "key": "codex-5h", "name": "Codex — finestra di 5 ore", "subject": "codex",
+    "source": "CODEX_LOCAL", "windowKind": "ROLLING_5H",
+    "usageUrl": "https://chatgpt.com/codex/settings/usage"
+  },
+  {
+    "key": "codex-weekly", "name": "Codex — limite settimanale", "subject": "codex",
+    "source": "CODEX_LOCAL", "windowKind": "WEEKLY",
+    "usageUrl": "https://chatgpt.com/codex/settings/usage"
+  },
+  {
+    "key": "anthropic-api-daily", "name": "Anthropic API — consumo giornaliero delle run", "subject": "anthropic",
+    "source": "ENGINE_RUNS", "windowKind": "DAILY", "resetTime": "00:00", "resetZone": "Europe/Rome",
+    "usageUrl": "https://console.anthropic.com/settings/usage"
+  },
+  {
+    "key": "openrouter-daily", "name": "OpenRouter — consumo giornaliero delle run", "subject": "openrouter",
+    "source": "ENGINE_RUNS", "windowKind": "DAILY", "resetTime": "00:00", "resetZone": "Europe/Rome",
+    "usageUrl": "https://openrouter.ai/activity"
+  },
+  {
+    "key": "gemini-daily", "name": "Gemini — limiti dell'app", "subject": "gemini",
+    "source": "MANUAL", "windowKind": "DAILY",
+    "limitNote": "Nessun dato locale: imposta l'ora del reset se vuoi il conto alla rovescia.",
+    "usageUrl": "https://gemini.google.com/app"
+  }
+]

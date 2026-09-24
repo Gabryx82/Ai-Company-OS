@@ -3,6 +3,9 @@ package com.aicompany.backend.api;
 import com.aicompany.backend.agent.service.AgentService;
 import com.aicompany.backend.project.service.ProjectService;
 import com.aicompany.backend.run.service.RunService;
+import com.aicompany.backend.llm.service.LlmCatalogService;
+import com.aicompany.backend.software.service.SoftwareService;
+import com.aicompany.backend.usage.service.UsageService;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +40,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PreconditionCoverageTest {
 
     private static final List<Class<?>> SERVICES =
-            List.of(TaskService.class, ProjectService.class, AgentService.class, RunService.class);
+            List.of(TaskService.class, ProjectService.class, AgentService.class, RunService.class,
+                    SoftwareService.class, LlmCatalogService.class, UsageService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -117,6 +121,17 @@ class PreconditionCoverageTest {
                         "update:Precondition",
                         "activate:Precondition",
                         "deactivate:Precondition");
+
+        // PHASE 8 (ADR-019). A launch reads the catalog and starts a process; it
+        // writes no row, so it is not a write path and takes no precondition.
+        assertThat(writePaths(SoftwareService.class))
+                .containsExactlyInAnyOrder("create", "update:Precondition");
+
+        assertThat(writePaths(LlmCatalogService.class))
+                .containsExactlyInAnyOrder("classify:Precondition");
+
+        assertThat(writePaths(UsageService.class))
+                .containsExactlyInAnyOrder("anchor:Precondition");
     }
 
     /**

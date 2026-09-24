@@ -32,7 +32,13 @@ class ApiProblemCoverageTest {
             "com.aicompany.backend.agent.exception",
             "com.aicompany.backend.project.exception",
             "com.aicompany.backend.task.exception",
-            "com.aicompany.backend.run.exception");
+            "com.aicompany.backend.run.exception",
+            // PHASE 8 onwards: the ecosystem domains, whose exceptions extend
+            // ProblemException (one handler for the supertype, the problem named
+            // by each exception itself).
+            "com.aicompany.backend.software",
+            "com.aicompany.backend.llm",
+            "com.aicompany.backend.usage");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in
@@ -66,13 +72,13 @@ class ApiProblemCoverageTest {
                 .as("the scan must actually find the domain exceptions, or this test proves nothing")
                 .isNotEmpty();
 
-        assertThat(mapped)
+        assertThat(declared)
                 .as("""
-                    every domain exception needs a mapping in ApiExceptionHandler. One that is \
+                    every domain exception needs a mapping in ApiExceptionHandler -- its own, or                     one for a supertype such as ProblemException. One that is \
                     missing does not fail loudly: it falls through to the catch-all and is \
                     reported as an internal error, which tells a caller nothing and hides a \
                     decision nobody took.""")
-                .containsAll(declared);
+                .allMatch(exception -> mapped.stream().anyMatch(type -> type.isAssignableFrom(exception)));
 
         assertThat(mapped)
                 .as("""
@@ -134,6 +140,14 @@ class ApiProblemCoverageTest {
                         "task-run-in-progress",
                         "finished-task-cannot-run",
                         "engine-unavailable",
+                        "software-not-found",
+                        "software-key-conflict",
+                        "software-not-launchable",
+                        "launcher-unavailable",
+                        "launch-failed",
+                        "provider-not-found",
+                        "model-not-found",
+                        "quota-plan-not-found",
                         "internal-error");
     }
 

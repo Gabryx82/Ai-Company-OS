@@ -1,0 +1,319 @@
+[
+  {
+    "key": "antigravity-ide", "name": "Antigravity IDE", "category": "AGENTIC_IDE",
+    "role": "Agentic IDE (Google) — execution target",
+    "purpose": "Editor agentico: apre la cartella del progetto e lavora con i suoi agenti sul codice. Riceve le task dal Master Orchestrator tramite handoff su file.",
+    "capabilities": ["agentic-ide", "code-editing", "agent-execution", "typescript", "javascript", "python", "java", "web", "refactoring"],
+    "projectTypes": ["WEB_APP", "FULL_STACK", "BACKEND", "API", "AI_ML", "AUTOMATION", "DESKTOP"],
+    "launchKind": "DESKTOP", "appId": "Google.AntigravityIDE",
+    "executable": "%LOCALAPPDATA%\\Programs\\Antigravity IDE\\Antigravity IDE.exe", "openFolder": true,
+    "executionTarget": true,
+    "configuration": "Nessuna API pubblica: il prompt dell'handoff si trova in .aicos/handoffs/ e va incollato nel pannello agente."
+  },
+  {
+    "key": "antigravity", "name": "Antigravity", "category": "AGENTIC_IDE",
+    "role": "Agent manager di Antigravity",
+    "purpose": "Gestione e supervisione degli agenti Antigravity.",
+    "capabilities": ["agent-manager", "agent-execution"],
+    "launchKind": "DESKTOP", "appId": "Google.Antigravity",
+    "executable": "%LOCALAPPDATA%\\Programs\\antigravity\\Antigravity.exe"
+  },
+  {
+    "key": "devin", "name": "Devin", "category": "AGENTIC_IDE",
+    "role": "AI developer autonomo",
+    "purpose": "Sviluppo autonomo di attività complete.",
+    "capabilities": ["agentic-ide", "agent-execution", "autonomous-development"],
+    "launchKind": "DESKTOP", "executable": "%LOCALAPPDATA%\\Programs\\Devin\\Devin.exe"
+  },
+  {
+    "key": "intellij-junie", "name": "IntelliJ IDEA + Junie", "category": "AGENTIC_IDE",
+    "role": "IDE Java/Kotlin con agente Junie",
+    "purpose": "Sviluppo enterprise Java, Spring, Kotlin; Junie come agente integrato.",
+    "capabilities": ["java", "kotlin", "spring", "maven", "gradle", "jpa", "debugging", "refactoring", "agent-execution", "sql"],
+    "projectTypes": ["BACKEND", "API", "FULL_STACK", "DESKTOP"],
+    "launchKind": "DESKTOP",
+    "executable": "%ProgramFiles%\\JetBrains\\IntelliJ IDEA *\\bin\\idea64.exe", "openFolder": true
+  },
+  {
+    "key": "kimi", "name": "Kimi", "category": "AGENTIC_IDE",
+    "role": "Agentic IDE (Moonshot)",
+    "purpose": "Assistente agentico per codice e analisi.",
+    "capabilities": ["agentic-ide", "code-editing", "long-context"],
+    "launchKind": "DESKTOP", "appId": "com.moonshot.kimichat",
+    "executable": "%LOCALAPPDATA%\\Programs\\Kimi\\Kimi.exe"
+  },
+  {
+    "key": "verdent", "name": "Verdent", "category": "AGENTIC_IDE",
+    "role": "Agentic coding workspace",
+    "purpose": "Pianificazione ed esecuzione agentica di task di sviluppo.",
+    "capabilities": ["agentic-ide", "agent-execution", "planning"],
+    "launchKind": "DESKTOP", "appId": "ai.verdent.deck",
+    "executable": "%LOCALAPPDATA%\\Programs\\Verdent\\Verdent.exe"
+  },
+  {
+    "key": "vscode-continue", "name": "Visual Studio Code + Continue.dev", "category": "AGENTIC_IDE",
+    "role": "Editor universale con assistente Continue (modelli locali)",
+    "purpose": "Editing leggero di qualsiasi stack; Continue.dev collegato ai modelli Ollama locali.",
+    "capabilities": ["code-editing", "typescript", "javascript", "python", "react", "markdown", "local-llm", "web", "frontend"],
+    "projectTypes": ["WEB_APP", "FULL_STACK", "AUTOMATION", "DATA", "AI_ML", "API", "OTHER"],
+    "launchKind": "DESKTOP", "appId": "Microsoft.VisualStudioCode",
+    "executable": "%LOCALAPPDATA%\\Programs\\Microsoft VS Code\\Code.exe", "openFolder": true,
+    "requirements": "Estensione continue.continue installata (rilevata 2.0.0)"
+  },
+  {
+    "key": "netbeans", "name": "Apache NetBeans", "category": "IDE",
+    "role": "IDE Java",
+    "purpose": "Sviluppo Java SE/EE, servlet, progetti Maven e Ant.",
+    "capabilities": ["java", "servlet", "jsp", "maven", "ant", "swing"],
+    "projectTypes": ["BACKEND", "DESKTOP", "API"],
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\NetBeans-*\\netbeans\\bin\\netbeans64.exe"
+  },
+  {
+    "key": "pycharm", "name": "PyCharm", "category": "IDE",
+    "role": "IDE Python",
+    "purpose": "Sviluppo Python, data science, FastAPI, script e automazioni.",
+    "capabilities": ["python", "fastapi", "django", "data", "notebooks", "debugging", "pytest"],
+    "projectTypes": ["AI_ML", "DATA", "AUTOMATION", "BACKEND", "API"],
+    "launchKind": "DESKTOP", "executable": "%LOCALAPPDATA%\\JetBrains\\PyCharm *\\bin\\pycharm64.exe", "openFolder": true
+  },
+  {
+    "key": "visual-studio-2022", "name": "Visual Studio 2022", "category": "IDE",
+    "role": "IDE .NET / C++",
+    "purpose": "Sviluppo C#, .NET, C++, applicazioni desktop Windows e game dev.",
+    "capabilities": ["csharp", "dotnet", "cpp", "wpf", "winforms", "unity", "debugging"],
+    "projectTypes": ["DESKTOP", "GAME", "BACKEND"],
+    "launchKind": "DESKTOP",
+    "executable": "%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\devenv.exe", "openFolder": true
+  },
+  {
+    "key": "webstorm", "name": "WebStorm", "category": "IDE",
+    "role": "IDE web (JavaScript/TypeScript)",
+    "purpose": "Frontend e Node.js: React, Vite, TypeScript, test e debugging web.",
+    "capabilities": ["typescript", "javascript", "react", "vite", "node", "css", "frontend", "web"],
+    "projectTypes": ["WEB_APP", "FULL_STACK", "MOBILE"],
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\JetBrains\\WebStorm *\\bin\\webstorm64.exe", "openFolder": true
+  },
+  {
+    "key": "notepad-plus-plus", "name": "Notepad++", "category": "EDITOR",
+    "role": "Editor di testo rapido",
+    "purpose": "Modifiche veloci a file di testo, log, configurazioni.",
+    "capabilities": ["text-editing", "logs", "configuration"],
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\Notepad++\\notepad++.exe"
+  },
+  {
+    "key": "warp", "name": "Warp", "category": "TERMINAL",
+    "role": "Terminale con AI",
+    "purpose": "Terminale moderno con assistenza AI ai comandi.",
+    "capabilities": ["terminal", "shell"],
+    "launchKind": "DESKTOP", "appId": "dev.warp.Warp", "executable": "%LOCALAPPDATA%\\Programs\\Warp\\warp.exe"
+  },
+  {
+    "key": "powershell", "name": "PowerShell", "category": "TERMINAL",
+    "role": "Terminale di sistema",
+    "purpose": "Shell nella cartella del progetto, dentro Windows Terminal.",
+    "capabilities": ["terminal", "shell", "scripting"],
+    "launchKind": "CLI", "cliCommand": "powershell -NoLogo"
+  },
+  {
+    "key": "claude-code", "name": "Claude Code CLI", "category": "AI_CLOUD",
+    "role": "Agente di sviluppo Anthropic nel terminale — execution target",
+    "purpose": "Esegue task di sviluppo nella cartella del progetto con l'abbonamento dell'operatore, senza API a consumo.",
+    "capabilities": ["agent-execution", "code-editing", "refactoring", "testing", "code-review", "documentation", "java", "python", "typescript", "architecture"],
+    "projectTypes": ["WEB_APP", "BACKEND", "FULL_STACK", "API", "AI_ML", "AUTOMATION", "DATA", "DESKTOP", "MOBILE", "GAME", "OTHER"],
+    "launchKind": "CLI", "cliCommand": "claude", "executionTarget": true,
+    "configuration": "Handoff: claude \"<prompt compatto>\" lanciato in Windows Terminal nella cartella del progetto."
+  },
+  {
+    "key": "opencode", "name": "OpenCode CLI", "category": "AI_CLOUD",
+    "role": "Agente di sviluppo open source nel terminale — execution target",
+    "purpose": "Agente di coding multi-provider (anche modelli locali Ollama).",
+    "capabilities": ["agent-execution", "code-editing", "local-llm", "multi-provider"],
+    "projectTypes": ["WEB_APP", "BACKEND", "FULL_STACK", "API", "AUTOMATION", "OTHER"],
+    "launchKind": "CLI", "cliCommand": "opencode", "executionTarget": true,
+    "configuration": "Handoff: opencode --prompt \"<prompt compatto>\" nella cartella del progetto. 'opencode serve' espone un'API locale (fase successiva)."
+  },
+  {
+    "key": "chatgpt-classic", "name": "ChatGPT Classic", "category": "AI_CLOUD",
+    "role": "Brainstorming e generazione del MASTER PROMPT",
+    "purpose": "Punto di partenza di ogni progetto: brainstorming dell'idea, poi MASTER_PROMPT.md da salvare nel progetto.",
+    "capabilities": ["brainstorming", "master-prompt", "writing", "research"],
+    "launchKind": "DESKTOP", "appId": "OpenAI.ChatGPT-Desktop_2p2nqsd0c76g0!ChatGPT"
+  },
+  {
+    "key": "codex", "name": "ChatGPT / Codex", "category": "AI_CLOUD",
+    "role": "Agente di sviluppo OpenAI — execution target",
+    "purpose": "Esegue task di sviluppo sul repository con l'abbonamento dell'operatore.",
+    "capabilities": ["agent-execution", "code-editing", "code-review", "testing", "refactoring"],
+    "projectTypes": ["WEB_APP", "BACKEND", "FULL_STACK", "API", "AI_ML", "AUTOMATION", "DATA", "OTHER"],
+    "launchKind": "DESKTOP", "appId": "OpenAI.Codex_2p2nqsd0c76g0!App", "executionTarget": true,
+    "configuration": "Nessuna API locale: l'handoff si apre con il prompt compatto copiato e il file in .aicos/handoffs/."
+  },
+  {
+    "key": "claude-desktop", "name": "Claude", "category": "AI_CLOUD",
+    "role": "Assistente Anthropic (desktop)",
+    "purpose": "Conversazione, analisi di documenti, revisione di piani.",
+    "capabilities": ["chat", "analysis", "writing", "review"],
+    "launchKind": "DESKTOP", "appId": "Claude_pzs8sxrjxfjjc!Claude"
+  },
+  {
+    "key": "gemini", "name": "Gemini", "category": "AI_CLOUD",
+    "role": "Reference visuali (immagini)",
+    "purpose": "Genera reference di UI, grafica e 3D da salvare in references/ del progetto.",
+    "capabilities": ["image-generation", "reference", "ui-reference", "3d-reference"],
+    "projectTypes": ["WEB_APP", "MOBILE", "GAME", "THREE_D", "DESKTOP", "FULL_STACK"],
+    "launchKind": "WEB", "url": "https://gemini.google.com/app", "iconUrl": "https://gemini.google.com/favicon.ico",
+    "embedNote": "Google non consente l'embedding (policy anti-framing): si apre in una finestra dedicata."
+  },
+  {
+    "key": "openrouter", "name": "OpenRouter", "category": "AI_CLOUD",
+    "role": "Router di modelli cloud (console web)",
+    "purpose": "Dashboard dell'account OpenRouter: crediti, chiavi, attività. Le chiamate passano dall'AI Engine.",
+    "capabilities": ["model-router", "billing"],
+    "launchKind": "WEB", "url": "https://openrouter.ai/activity", "iconUrl": "https://openrouter.ai/favicon.ico",
+    "embedNote": "X-Frame-Options: SAMEORIGIN (misurato il 2026-09-24)."
+  },
+  {
+    "key": "open-webui", "name": "Open WebUI", "category": "AI_LOCAL",
+    "role": "Chat ed esplorazione dei modelli locali Ollama",
+    "purpose": "Ambiente separato di conversazione con i modelli locali; AI Company OS lo incorpora invece di duplicarlo.",
+    "capabilities": ["chat", "local-llm", "model-exploration", "rag"],
+    "launchKind": "LOCAL_SERVICE", "url": "http://localhost:8080", "healthUrl": "http://localhost:8080/health",
+    "appId": "com.openwebui.desktop", "executable": "%LOCALAPPDATA%\\Programs\\open-webui\\open-webui.exe",
+    "embeddable": true,
+    "configuration": "Server locale dell'app desktop su 127.0.0.1:8080 collegato a Ollama (localhost:11434)."
+  },
+  {
+    "key": "ollama", "name": "Ollama", "category": "AI_LOCAL",
+    "role": "Runtime dei modelli locali",
+    "purpose": "Serve i modelli locali all'AI Engine e a Open WebUI.",
+    "capabilities": ["local-llm", "model-runtime"],
+    "launchKind": "LOCAL_SERVICE", "url": "http://127.0.0.1:11434", "healthUrl": "http://127.0.0.1:11434/api/version",
+    "executable": "%LOCALAPPDATA%\\Programs\\Ollama\\ollama app.exe",
+    "embedNote": "Solo API, nessuna interfaccia: i modelli si esplorano in Open WebUI."
+  },
+  {
+    "key": "dwarfstar4", "name": "DwarfStar 4 (ds4)", "category": "AI_LOCAL",
+    "role": "Motore di inferenza locale ad alte prestazioni (DeepSeek V4 Flash)",
+    "purpose": "Server locale OpenAI/Anthropic-compatibile di antirez per DeepSeek V4 Flash/PRO e GLM 5.x.",
+    "capabilities": ["local-llm", "model-runtime", "openai-compatible"],
+    "launchKind": "LOCAL_SERVICE", "url": "http://127.0.0.1:8000",
+    "requirements": "Metal, CUDA o ROCm; almeno 96 GB di RAM (https://github.com/antirez/ds4).",
+    "incompatibleReason": "Questa macchina ha GPU Intel Arc 140V (memoria condivisa) e 31.5 GB di RAM: nessun backend supportato. Non installato."
+  },
+  {
+    "key": "mysql-workbench", "name": "MySQL Workbench", "category": "DATABASE",
+    "role": "Progettazione e amministrazione MySQL",
+    "purpose": "Schema, query, modellazione ER sul MySQL Server 8.0 locale (porta 3306).",
+    "capabilities": ["mysql", "sql", "database", "er-modeling", "schema"],
+    "projectTypes": ["BACKEND", "FULL_STACK", "DATA", "API", "WEB_APP"],
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\MySQL\\MySQL Workbench 8.0 CE\\MySQLWorkbench.exe"
+  },
+  {
+    "key": "postman", "name": "Postman", "category": "API",
+    "role": "Test e documentazione di API",
+    "purpose": "Chiamate REST, collezioni, test di endpoint.",
+    "capabilities": ["rest-client", "api-testing", "http", "api"],
+    "projectTypes": ["BACKEND", "API", "FULL_STACK", "WEB_APP", "MOBILE"],
+    "launchKind": "DESKTOP", "appId": "com.squirrel.Postman.Postman", "executable": "%LOCALAPPDATA%\\Postman\\Postman.exe"
+  },
+  {
+    "key": "virtualbox", "name": "Oracle VirtualBox", "category": "INFRASTRUCTURE",
+    "role": "Virtualizzazione",
+    "purpose": "Macchine virtuali per ambienti di test isolati.",
+    "capabilities": ["virtualization", "vm", "testing-environment"],
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\Oracle\\VirtualBox\\VirtualBox.exe"
+  },
+  {
+    "key": "docker-desktop", "name": "Docker Desktop", "category": "INFRASTRUCTURE",
+    "role": "Container locali",
+    "purpose": "PostgreSQL di AI Company OS e servizi containerizzati dei progetti.",
+    "capabilities": ["docker", "containers", "postgresql"],
+    "projectTypes": ["BACKEND", "FULL_STACK", "API", "DATA"],
+    "launchKind": "DESKTOP", "executable": "%LOCALAPPDATA%\\Programs\\DockerDesktop\\Docker Desktop.exe"
+  },
+  {
+    "key": "drawio", "name": "draw.io", "category": "DIAGRAM",
+    "role": "Diagrammi e progettazione",
+    "purpose": "Architetture, flussi, ER, UML.",
+    "capabilities": ["diagram", "architecture", "uml", "er-modeling"],
+    "launchKind": "DESKTOP", "appId": "draw.io.draw.ioDiagrams_1zh33159kp73c!draw.io.draw.ioDiagrams"
+  },
+  {
+    "key": "omniverse-3d", "name": "3D Omniverse", "category": "THREE_D",
+    "role": "Dipartimento 3D dell'operatore",
+    "purpose": "Orchestratore di workflow 3D (agenti, launcher DCC, progetti 3D). Applicazione separata incorporata nella console.",
+    "capabilities": ["3d", "blender", "unreal", "3d-workflow", "rendering", "reference"],
+    "projectTypes": ["THREE_D", "GAME"],
+    "launchKind": "LOCAL_SERVICE", "url": "http://localhost:8800",
+    "executable": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "executableArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "%USERPROFILE%\\3D Omniverse\\start.ps1", "-NoBrowser"],
+    "embeddable": true,
+    "configuration": "Avviato da C:\\Users\\<utente>\\3D Omniverse\\start.ps1 (porta OMNIVERSE_PORT, default 8800)."
+  },
+  {
+    "key": "blender", "name": "Blender", "category": "THREE_D",
+    "role": "Modellazione e rendering 3D",
+    "purpose": "Asset 3D, scene, rendering.",
+    "capabilities": ["3d", "modeling", "rendering", "animation"],
+    "projectTypes": ["THREE_D", "GAME"],
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\Blender Foundation\\Blender *\\blender-launcher.exe"
+  },
+  {
+    "key": "github", "name": "GitHub", "category": "VCS",
+    "role": "Repository e CI",
+    "purpose": "Repository remoti, pull request, Actions.",
+    "capabilities": ["git", "ci", "code-review"],
+    "launchKind": "WEB", "url": "https://github.com", "iconUrl": "https://github.com/favicon.ico",
+    "embedNote": "X-Frame-Options: deny (misurato il 2026-09-24)."
+  },
+  {
+    "key": "gitlab", "name": "GitLab", "category": "VCS",
+    "role": "Repository e CI",
+    "purpose": "Repository remoti e pipeline.",
+    "capabilities": ["git", "ci"],
+    "launchKind": "WEB", "url": "https://gitlab.com", "iconUrl": "https://gitlab.com/favicon.ico",
+    "embedNote": "X-Frame-Options: SAMEORIGIN (misurato il 2026-09-24)."
+  },
+  {
+    "key": "supabase", "name": "Supabase", "category": "HOSTING",
+    "role": "Database Postgres e backend gestito",
+    "purpose": "Progetti Supabase: database, auth, storage.",
+    "capabilities": ["postgresql", "auth", "storage", "hosting"],
+    "projectTypes": ["WEB_APP", "FULL_STACK", "MOBILE"],
+    "launchKind": "WEB", "url": "https://supabase.com/dashboard", "iconUrl": "https://supabase.com/favicon.ico",
+    "embedNote": "X-Frame-Options: DENY (misurato il 2026-09-24)."
+  },
+  {
+    "key": "vercel", "name": "Vercel", "category": "HOSTING",
+    "role": "Deploy frontend",
+    "purpose": "Deploy e preview di applicazioni web.",
+    "capabilities": ["hosting", "deploy", "frontend"],
+    "projectTypes": ["WEB_APP", "FULL_STACK"],
+    "launchKind": "WEB", "url": "https://vercel.com/dashboard", "iconUrl": "https://vercel.com/favicon.ico",
+    "embedNote": "X-Frame-Options: DENY (misurato il 2026-09-24)."
+  },
+  {
+    "key": "gmail", "name": "Gmail", "category": "PRODUCTIVITY",
+    "role": "Posta",
+    "purpose": "Posta dell'operatore.",
+    "capabilities": ["email"],
+    "launchKind": "WEB", "url": "https://mail.google.com", "iconUrl": "https://mail.google.com/favicon.ico",
+    "embedNote": "Google rifiuta l'embedding: finestra dedicata. L'integrazione dati (API Gmail) richiede OAuth dell'operatore."
+  },
+  {
+    "key": "google-drive", "name": "Google Drive", "category": "PRODUCTIVITY",
+    "role": "Documenti e file",
+    "purpose": "Documenti e reference condivisi.",
+    "capabilities": ["files", "documents"],
+    "launchKind": "WEB", "url": "https://drive.google.com", "iconUrl": "https://drive.google.com/favicon.ico",
+    "embedNote": "Google rifiuta l'embedding: finestra dedicata. L'integrazione dati (API Drive) richiede OAuth dell'operatore."
+  },
+  {
+    "key": "clickup", "name": "ClickUp", "category": "PRODUCTIVITY",
+    "role": "Project management di team",
+    "purpose": "Pianificazione condivisa; il Daily Work di AI Company OS resta il livello personale.",
+    "capabilities": ["project-management", "tasks"],
+    "launchKind": "WEB", "url": "https://app.clickup.com", "iconUrl": "https://clickup.com/favicon.ico",
+    "embedNote": "frame-ancestors 'self' clickup.com (misurato il 2026-09-24). L'API richiede un token personale."
+  }
+]

@@ -166,6 +166,34 @@ public enum ApiProblem {
     ENGINE_UNAVAILABLE("engine-unavailable", HttpStatus.SERVICE_UNAVAILABLE,
             "AI Engine unavailable", "The AI Engine did not answer; is it running?"),
 
+    // --- ecosystem catalogs (PHASE 8, ADR-018/019) ---------------------------
+
+    SOFTWARE_NOT_FOUND("software-not-found", HttpStatus.NOT_FOUND,
+            "Software not found", "No software with that key in the catalog"),
+
+    SOFTWARE_KEY_CONFLICT("software-key-conflict", HttpStatus.CONFLICT,
+            "Software key already exists", "Another catalog entry already uses that key"),
+
+    /** ADR-019 I5: web entries, disabled entries and known incompatibilities are not launched. */
+    SOFTWARE_NOT_LAUNCHABLE("software-not-launchable", HttpStatus.CONFLICT,
+            "Software cannot be launched", "This catalog entry cannot be launched from the control plane"),
+
+    /** ADR-019 I6: not Windows, or the test profile. */
+    LAUNCHER_UNAVAILABLE("launcher-unavailable", HttpStatus.SERVICE_UNAVAILABLE,
+            "Launcher unavailable", "Launching local software is not supported where the control plane runs"),
+
+    LAUNCH_FAILED("launch-failed", HttpStatus.BAD_GATEWAY,
+            "Launch failed", "The operating system did not start the program"),
+
+    PROVIDER_NOT_FOUND("provider-not-found", HttpStatus.NOT_FOUND,
+            "Provider not found", "No model provider with that key"),
+
+    MODEL_NOT_FOUND("model-not-found", HttpStatus.NOT_FOUND,
+            "Model not found", "No catalogued model with that key"),
+
+    QUOTA_PLAN_NOT_FOUND("quota-plan-not-found", HttpStatus.NOT_FOUND,
+            "Quota plan not found", "No quota window with that key"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

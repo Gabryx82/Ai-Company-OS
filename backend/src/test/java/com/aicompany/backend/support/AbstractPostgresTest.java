@@ -20,7 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import({PostgresTestcontainerConfig.class, AuthenticatedMockMvcConfiguration.class,
-        ScriptedEngineConfiguration.class})
+        ScriptedEngineConfiguration.class, FakeHostConfiguration.class})
 public abstract class AbstractPostgresTest {
 
     @Autowired
@@ -35,9 +35,13 @@ public abstract class AbstractPostgresTest {
      * left behind. Base-class {@code @BeforeEach} runs before the subclass's, so
      * the runs are gone before anybody deletes what they point at (TASK-019).
      */
+    @Autowired
+    private FakeHost baseHost;
+
     @BeforeEach
     void clearRunsAndTheScriptedEngine() {
         baseJdbc.update("DELETE FROM task_runs");
         baseEngine.reset();
+        baseHost.reset();
     }
 }

@@ -313,6 +313,20 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return respond(ApiProblem.INTERNAL_ERROR, null);
     }
 
+    // --- the ecosystem domains (PHASE 8 onwards) -----------------------------
+
+    /** Every {@link ProblemException}: the exception names its problem itself. */
+    @ExceptionHandler(ProblemException.class)
+    ResponseEntity<ProblemDetail> handleProblem(ProblemException e) {
+        ProblemDetail detail = e.problem().toDetail(e.getMessage());
+        if (!e.errors().isEmpty()) {
+            detail.setProperty("errors", e.errors());
+        }
+        return ResponseEntity.status(e.problem().status())
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .body(detail);
+    }
+
     // --- rendering ---------------------------------------------------------
 
     private static ResponseEntity<ProblemDetail> respond(ApiProblem problem, String detail) {
