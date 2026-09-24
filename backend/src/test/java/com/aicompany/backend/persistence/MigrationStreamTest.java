@@ -66,7 +66,8 @@ class MigrationStreamTest {
      */
     private static final List<String> TABLES_AT_HEAD =
             List.of("agents", "flyway_schema_history", "llm_models", "model_providers", "plan_runs",
-                    "project_phases", "projects", "quota_plans", "software", "task_runs", "tasks");
+                    "project_phases", "projects", "quota_plans", "software", "task_handoffs", "task_reviews",
+                    "task_runs", "tasks");
 
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =

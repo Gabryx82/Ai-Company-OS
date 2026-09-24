@@ -32,7 +32,7 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // Schema versions only, in order. The development seed is a separate
         // Flyway stream and must never appear here, otherwise the next schema
         // migration becomes out of order (R1).
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16");
     }
 
     /**
@@ -92,7 +92,8 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // Hibernate did not add anything of its own.
         assertThat(tables)
                 .containsExactly("agents", "flyway_schema_history", "llm_models", "model_providers", "plan_runs",
-                        "project_phases", "projects", "quota_plans", "software", "task_runs", "tasks")
+                        "project_phases", "projects", "quota_plans", "software", "task_handoffs", "task_reviews", "task_runs",
+                        "tasks")
                 .doesNotContain("flyway_dev_seed_history");
     }
 

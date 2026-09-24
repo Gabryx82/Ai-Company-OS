@@ -331,7 +331,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["handoff"];
+        get: operations["handoff_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -612,6 +612,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/{id}/handoffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["handoffs"];
+        put?: never;
+        post: operations["handoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{id}/orchestration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["decide"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/{id}/project": {
         parameters: {
             query?: never;
@@ -638,6 +670,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["reopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reviews"];
+        put?: never;
+        post: operations["review"];
         delete?: never;
         options?: never;
         head?: never;
@@ -744,6 +792,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AgentChoice: {
+            /** Format: int64 */
+            agentId?: number;
+            assigned?: boolean;
+            model?: string;
+            name?: string;
+            reason?: string;
+            role?: string;
+        };
         AgentCreateRequest: {
             model?: string;
             name: string;
@@ -769,6 +826,11 @@ export interface components {
             name: string;
             role: string;
             specialization: string;
+        };
+        ContextFile: {
+            exists?: boolean;
+            path?: string;
+            why?: string;
         };
         Document: {
             /** Format: date-time */
@@ -796,6 +858,28 @@ export interface components {
         GenerateRequest: {
             model?: string;
         };
+        HandoffRequest: {
+            target: string;
+        };
+        HandoffResponse: {
+            command?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            documentPath?: string;
+            /** Format: int64 */
+            id?: number;
+            prompt?: string;
+            requestedBy?: string;
+            target?: string;
+            /** Format: int64 */
+            taskId?: number;
+        };
+        HandoffResult: {
+            handoff?: components["schemas"]["HandoffResponse"];
+            prompt?: string;
+            promptToClipboard?: boolean;
+            task?: components["schemas"]["TaskResponse"];
+        };
         LaunchRequest: {
             /** Format: int64 */
             projectId?: number;
@@ -811,6 +895,12 @@ export interface components {
             engineReachable?: boolean;
             models?: components["schemas"]["ModelResponse"][];
             uncatalogued?: components["schemas"]["UncataloguedModel"][];
+        };
+        ModelChoice: {
+            available?: boolean;
+            model?: string;
+            reason?: string;
+            role?: string;
         };
         ModelClassificationRequest: {
             /** @enum {string} */
@@ -855,6 +945,33 @@ export interface components {
             model?: string;
             /** Format: int64 */
             tokens?: number;
+        };
+        Orchestration: {
+            agent?: components["schemas"]["AgentChoice"];
+            /** @enum {string} */
+            autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
+            autonomyRules?: string;
+            blockers?: string[];
+            code?: string;
+            context?: components["schemas"]["ContextFile"][];
+            model?: components["schemas"]["ModelChoice"];
+            phaseApproved?: boolean;
+            /** Format: int64 */
+            phaseId?: number;
+            /** Format: int32 */
+            phaseNumber?: number;
+            phaseTitle?: string;
+            /** Format: int64 */
+            projectId?: number;
+            projectName?: string;
+            prompt?: string;
+            software?: components["schemas"]["SoftwareChoice"][];
+            /** @enum {string} */
+            status?: "OPEN" | "IN_PROGRESS" | "DONE";
+            targets?: components["schemas"]["Target"][];
+            /** Format: int64 */
+            taskId?: number;
+            title?: string;
         };
         PhaseResponse: {
             /** @enum {string} */
@@ -976,7 +1093,33 @@ export interface components {
             resetZone?: string;
         };
         ReviewRequest: {
+            /** Format: int64 */
+            handoffId?: number;
             note?: string;
+            /** Format: int64 */
+            runId?: number;
+            /** @enum {string} */
+            verdict: "ACCEPTED" | "CHANGES_REQUESTED";
+        };
+        ReviewResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            handoffId?: number;
+            /** Format: int64 */
+            id?: number;
+            note?: string;
+            reviewer?: string;
+            /** Format: int64 */
+            runId?: number;
+            /** Format: int64 */
+            taskId?: number;
+            /** @enum {string} */
+            verdict?: "ACCEPTED" | "CHANGES_REQUESTED";
+        };
+        ReviewResult: {
+            review?: components["schemas"]["ReviewResponse"];
+            task?: components["schemas"]["TaskResponse"];
         };
         RoutingRequest: {
             text: string;
@@ -1020,6 +1163,15 @@ export interface components {
             /** @enum {string} */
             outcome?: "CREATED" | "EXISTING";
             path?: string;
+        };
+        SoftwareChoice: {
+            /** @enum {string} */
+            availability?: "INSTALLED" | "NOT_INSTALLED" | "WEB" | "RUNNING" | "STOPPED" | "INCOMPATIBLE_HARDWARE" | "UNKNOWN";
+            executionTarget?: boolean;
+            key?: string;
+            launchable?: boolean;
+            name?: string;
+            reason?: string;
         };
         SoftwareRequest: {
             appId?: string;
@@ -1098,6 +1250,14 @@ export interface components {
             /** Format: int32 */
             score?: number;
             specialization?: string;
+        };
+        Target: {
+            available?: boolean;
+            detail?: string;
+            key?: string;
+            /** @enum {string} */
+            kind?: "ENGINE" | "CLI" | "DESKTOP" | "MANUAL";
+            name?: string;
         };
         TaskAgentAssignmentRequest: {
             /** Format: int64 */
@@ -1808,7 +1968,7 @@ export interface operations {
             };
         };
     };
-    handoff: {
+    handoff_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2324,6 +2484,78 @@ export interface operations {
             };
         };
     };
+    handoffs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["HandoffResponse"][];
+                };
+            };
+        };
+    };
+    handoff: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoffRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["HandoffResult"];
+                };
+            };
+        };
+    };
+    decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Orchestration"];
+                };
+            };
+        };
+    };
     assignToProject: {
         parameters: {
             query?: never;
@@ -2372,6 +2604,56 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TaskResponse"];
+                };
+            };
+        };
+    };
+    reviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReviewResponse"][];
+                };
+            };
+        };
+    };
+    review: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReviewResult"];
                 };
             };
         };

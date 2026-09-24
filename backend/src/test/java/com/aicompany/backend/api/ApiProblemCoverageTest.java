@@ -40,7 +40,8 @@ class ApiProblemCoverageTest {
             "com.aicompany.backend.llm",
             "com.aicompany.backend.usage",
             "com.aicompany.backend.workspace",
-            "com.aicompany.backend.plan");
+            "com.aicompany.backend.plan",
+            "com.aicompany.backend.orchestrator");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in

@@ -1,6 +1,30 @@
 {
   "components" : {
     "schemas" : {
+      "AgentChoice" : {
+        "properties" : {
+          "agentId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "assigned" : {
+            "type" : "boolean"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "AgentCreateRequest" : {
         "properties" : {
           "model" : {
@@ -90,6 +114,20 @@
         "required" : [ "name", "role", "specialization" ],
         "type" : "object"
       },
+      "ContextFile" : {
+        "properties" : {
+          "exists" : {
+            "type" : "boolean"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "why" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "Document" : {
         "properties" : {
           "modified" : {
@@ -177,6 +215,66 @@
         },
         "type" : "object"
       },
+      "HandoffRequest" : {
+        "properties" : {
+          "target" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "target" ],
+        "type" : "object"
+      },
+      "HandoffResponse" : {
+        "properties" : {
+          "command" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "documentPath" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "prompt" : {
+            "type" : "string"
+          },
+          "requestedBy" : {
+            "type" : "string"
+          },
+          "target" : {
+            "type" : "string"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "HandoffResult" : {
+        "properties" : {
+          "handoff" : {
+            "$ref" : "#/components/schemas/HandoffResponse"
+          },
+          "prompt" : {
+            "type" : "string"
+          },
+          "promptToClipboard" : {
+            "type" : "boolean"
+          },
+          "task" : {
+            "$ref" : "#/components/schemas/TaskResponse"
+          }
+        },
+        "type" : "object"
+      },
       "LaunchRequest" : {
         "properties" : {
           "projectId" : {
@@ -225,6 +323,23 @@
               "$ref" : "#/components/schemas/UncataloguedModel"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ModelChoice" : {
+        "properties" : {
+          "available" : {
+            "type" : "boolean"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -349,6 +464,86 @@
           "tokens" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Orchestration" : {
+        "properties" : {
+          "agent" : {
+            "$ref" : "#/components/schemas/AgentChoice"
+          },
+          "autonomyLevel" : {
+            "enum" : [ "GUIDED", "SUPERVISED", "DELEGATED", "FINAL_REVIEW" ],
+            "type" : "string"
+          },
+          "autonomyRules" : {
+            "type" : "string"
+          },
+          "blockers" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "context" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ContextFile"
+            },
+            "type" : "array"
+          },
+          "model" : {
+            "$ref" : "#/components/schemas/ModelChoice"
+          },
+          "phaseApproved" : {
+            "type" : "boolean"
+          },
+          "phaseId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "phaseNumber" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "phaseTitle" : {
+            "type" : "string"
+          },
+          "projectId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "projectName" : {
+            "type" : "string"
+          },
+          "prompt" : {
+            "type" : "string"
+          },
+          "software" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SoftwareChoice"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "enum" : [ "OPEN", "IN_PROGRESS", "DONE" ],
+            "type" : "string"
+          },
+          "targets" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Target"
+            },
+            "type" : "array"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "title" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -680,10 +875,69 @@
       },
       "ReviewRequest" : {
         "properties" : {
+          "handoffId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
           "note" : {
-            "maxLength" : 2000,
+            "maxLength" : 4000,
             "minLength" : 0,
             "type" : "string"
+          },
+          "runId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "verdict" : {
+            "enum" : [ "ACCEPTED", "CHANGES_REQUESTED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "verdict" ],
+        "type" : "object"
+      },
+      "ReviewResponse" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "handoffId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "note" : {
+            "type" : "string"
+          },
+          "reviewer" : {
+            "type" : "string"
+          },
+          "runId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "verdict" : {
+            "enum" : [ "ACCEPTED", "CHANGES_REQUESTED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ReviewResult" : {
+        "properties" : {
+          "review" : {
+            "$ref" : "#/components/schemas/ReviewResponse"
+          },
+          "task" : {
+            "$ref" : "#/components/schemas/TaskResponse"
           }
         },
         "type" : "object"
@@ -792,6 +1046,30 @@
             "type" : "string"
           },
           "path" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SoftwareChoice" : {
+        "properties" : {
+          "availability" : {
+            "enum" : [ "INSTALLED", "NOT_INSTALLED", "WEB", "RUNNING", "STOPPED", "INCOMPATIBLE_HARDWARE", "UNKNOWN" ],
+            "type" : "string"
+          },
+          "executionTarget" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "launchable" : {
+            "type" : "boolean"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "reason" : {
             "type" : "string"
           }
         },
@@ -1064,6 +1342,27 @@
             "type" : "integer"
           },
           "specialization" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Target" : {
+        "properties" : {
+          "available" : {
+            "type" : "boolean"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "ENGINE", "CLI", "DESKTOP", "MANUAL" ],
+            "type" : "string"
+          },
+          "name" : {
             "type" : "string"
           }
         },
@@ -2121,7 +2420,7 @@
     },
     "/api/projects/{id}/plan/handoff" : {
       "get" : {
-        "operationId" : "handoff",
+        "operationId" : "handoff_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2789,6 +3088,105 @@
         "tags" : [ "task-controller" ]
       }
     },
+    "/api/tasks/{id}/handoffs" : {
+      "get" : {
+        "operationId" : "handoffs",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/HandoffResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "orchestrator-controller" ]
+      },
+      "post" : {
+        "operationId" : "handoff",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/HandoffRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HandoffResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "orchestrator-controller" ]
+      }
+    },
+    "/api/tasks/{id}/orchestration" : {
+      "get" : {
+        "operationId" : "decide",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Orchestration"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "orchestrator-controller" ]
+      }
+    },
     "/api/tasks/{id}/project" : {
       "put" : {
         "operationId" : "assignToProject",
@@ -2865,6 +3263,78 @@
           }
         },
         "tags" : [ "task-controller" ]
+      }
+    },
+    "/api/tasks/{id}/reviews" : {
+      "get" : {
+        "operationId" : "reviews",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ReviewResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "orchestrator-controller" ]
+      },
+      "post" : {
+        "operationId" : "review",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReviewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReviewResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "orchestrator-controller" ]
       }
     },
     "/api/tasks/{id}/start" : {

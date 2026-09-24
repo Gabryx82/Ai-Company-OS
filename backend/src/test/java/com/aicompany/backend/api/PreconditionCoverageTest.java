@@ -8,6 +8,7 @@ import com.aicompany.backend.software.service.SoftwareService;
 import com.aicompany.backend.usage.service.UsageService;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import com.aicompany.backend.plan.service.PlanningService;
+import com.aicompany.backend.orchestrator.service.ExecutionService;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +45,7 @@ class PreconditionCoverageTest {
     private static final List<Class<?>> SERVICES =
             List.of(TaskService.class, ProjectService.class, AgentService.class, RunService.class,
                     SoftwareService.class, LlmCatalogService.class, UsageService.class,
-                    ProjectWorkspaceService.class, PlanningService.class);
+                    ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -155,6 +156,10 @@ class PreconditionCoverageTest {
         assertThat(writePaths(PlanningService.class))
                 .containsExactlyInAnyOrder("generate", "importFromWorkspace", "recoverInterrupted",
                         "approvePlan:Precondition", "reviewPhase:Precondition");
+
+        // PHASE 11 (ADR-021 §4-5). Both may move the task, so both take its tag.
+        assertThat(writePaths(ExecutionService.class))
+                .containsExactlyInAnyOrder("handoff:Precondition", "review:Precondition");
     }
 
     /**

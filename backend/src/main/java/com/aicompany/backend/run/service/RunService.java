@@ -10,6 +10,7 @@ import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.run.dto.RunResponse;
 import com.aicompany.backend.run.exception.RunNotFoundException;
 import com.aicompany.backend.run.exception.TaskRunInProgressException;
+import com.aicompany.backend.run.execution.RunContext;
 import com.aicompany.backend.run.execution.RunPrompt;
 import com.aicompany.backend.run.model.RunStatus;
 import com.aicompany.backend.run.model.TaskRun;
@@ -46,14 +47,16 @@ public class RunService {
     private final ProjectRepository projects;
     private final AgentRepository agents;
     private final ApplicationEventPublisher events;
+    private final RunContext context;
 
     public RunService(TaskRunRepository runs, TaskRepository tasks, ProjectRepository projects,
-                      AgentRepository agents, ApplicationEventPublisher events) {
+                      AgentRepository agents, ApplicationEventPublisher events, RunContext context) {
         this.runs = runs;
         this.tasks = tasks;
         this.projects = projects;
         this.agents = agents;
         this.events = events;
+        this.context = context;
     }
 
     /**
@@ -104,7 +107,8 @@ public class RunService {
         // (null). What is recorded is what is sent.
         String model = requestedModel != null ? requestedModel : agent.getModel();
 
-        RunPrompt prompt = RunPrompt.of(task, agent, project);
+        // ADR-021 §6: a planned task carries its files; any other task, PHASE 6's prompt unchanged.
+        RunPrompt prompt = context.enrich(RunPrompt.of(task, agent, project), task, project);
         TaskRun run = runs.saveAndFlush(new TaskRun(taskId, agent.getId(), model,
                 prompt.system(), prompt.user(), "run-" + UUID.randomUUID(), requestedBy));
         tasks.saveAndFlush(task);

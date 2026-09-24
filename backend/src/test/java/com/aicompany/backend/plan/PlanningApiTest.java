@@ -31,9 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * The Master Orchestrator's planning (ADR-021) and the Human-in-the-Loop gate it
  * puts in front of execution (ADR-022), end to end over HTTP.
  */
-class PlanningApiTest extends AbstractPostgresTest {
+public class PlanningApiTest extends AbstractPostgresTest {
 
-    static final String PLAN = """
+    public static final String PLAN = """
             Ecco il piano:
             ```json
             {"summary":"Un gestionale per officine.","stack":["Spring Boot","React"],

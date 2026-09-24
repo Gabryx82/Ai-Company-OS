@@ -40,6 +40,9 @@ public abstract class AbstractPostgresTest {
 
     @BeforeEach
     void clearRunsAndTheScriptedEngine() {
+        // PHASE 11: reviews and handoffs reference runs and tasks; they go first.
+        baseJdbc.update("DELETE FROM task_reviews");
+        baseJdbc.update("DELETE FROM task_handoffs");
         baseJdbc.update("DELETE FROM task_runs");
         // PHASE 10: plans reference projects, and tests of other domains delete
         // projects in their own setup. Detach and remove every plan first.
