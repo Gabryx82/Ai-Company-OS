@@ -175,6 +175,7 @@ class ApiProblemCoverageTest {
                         "current-password-wrong", "username-taken", "user-not-found", "last-admin",
                         "not-a-user-session",
                         "binding-invalid", "agent-works-elsewhere", "target-not-found", "no-baseline",
+                        "resource-not-file-backed", "skill-document-invalid", "skill-import-refused", "library-unavailable",
                         "internal-error");
     }
 

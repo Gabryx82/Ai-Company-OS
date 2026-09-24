@@ -8,6 +8,7 @@ import com.aicompany.backend.api.RequestValidationException;
 import com.aicompany.backend.binding.AgentBindingService;
 import com.aicompany.backend.binding.ExecutionTargetCatalog;
 import com.aicompany.backend.binding.ExecutionTargetCatalog.ExecutionTarget;
+import com.aicompany.backend.harness.library.SkillLibrary;
 import com.aicompany.backend.harness.service.HarnessService;
 import com.aicompany.backend.orchestrator.model.TaskHandoff;
 import com.aicompany.backend.orchestrator.model.TaskReview;
@@ -66,12 +67,14 @@ public class ExecutionService {
     private final ExecutionTargetCatalog targets;
     private final AgentBindingService binding;
     private final HarnessService harness;
+    private final SkillLibrary library;
 
     public ExecutionService(TaskRepository tasks, ProjectRepository projects, AgentRepository agents,
                             SoftwareRepository softwareCatalog, SoftwareService software,
                             ProjectWorkspaceService workspace, TaskHandoffRepository handoffs,
                             TaskReviewRepository reviews, ExecutionTargetCatalog targets,
-                            AgentBindingService binding, HarnessService harness) {
+                            AgentBindingService binding, HarnessService harness, SkillLibrary library) {
+        this.library = library;
         this.targets = targets;
         this.binding = binding;
         this.harness = harness;
@@ -138,9 +141,16 @@ public class ExecutionService {
             writeIfOurs(folder, target.contextFile(), HandoffPackager.targetRules(target, packagePath), written);
         }
 
-        HandoffPackager.Package pkg = HandoffPackager.build(task, project, agent, harness.of(agent.getId()).resources(),
+        List<com.aicompany.backend.harness.model.HarnessResource> equipped = harness.of(agent.getId()).resources();
+        java.util.Map<String, String> skillFiles = new java.util.LinkedHashMap<>();
+        for (var r : equipped) {
+            if (SkillLibrary.fileBacked(r.getKind()) && library.body(r).isPresent()) {
+                skillFiles.put(r.getKey(), library.root().resolve(SkillLibrary.relativePath(r.getKind(), r.getKey())).toString());
+            }
+        }
+        HandoffPackager.Package pkg = HandoffPackager.build(task, project, agent, equipped,
                 binding.describe(agent), target, folder, taskDocument,
-                workspace.readIn(folder, taskDocument).orElse(null), packagePath);
+                workspace.readIn(folder, taskDocument).orElse(null), packagePath, skillFiles);
         workspace.writeIn(folder, packagePath, pkg.document());
         written.add(packagePath);
 

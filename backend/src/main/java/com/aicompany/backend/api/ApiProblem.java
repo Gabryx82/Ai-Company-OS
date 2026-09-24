@@ -283,6 +283,17 @@ public enum ApiProblem {
     NO_BASELINE("no-baseline", HttpStatus.CONFLICT,
             "No initial configuration", "Only seed and template agents have an initial configuration to restore"),
 
+    // --- the file-based library (PHASE 19, ADR-026) -------------------------------------
+
+    RESOURCE_NOT_FILE_BACKED("resource-not-file-backed", HttpStatus.CONFLICT,
+            "No file for this resource", "Only skills and knowledge entries are kept as files"),
+    SKILL_DOCUMENT_INVALID("skill-document-invalid", HttpStatus.BAD_REQUEST,
+            "Invalid skill document", "The document does not have a valid frontmatter"),
+    SKILL_IMPORT_REFUSED("skill-import-refused", HttpStatus.BAD_REQUEST,
+            "Import refused", "The URL cannot be imported"),
+    LIBRARY_UNAVAILABLE("library-unavailable", HttpStatus.SERVICE_UNAVAILABLE,
+            "Library unavailable", "The library folder could not be read or written"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

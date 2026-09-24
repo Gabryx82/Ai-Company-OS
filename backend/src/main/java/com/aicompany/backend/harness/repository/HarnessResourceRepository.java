@@ -10,6 +10,10 @@ public interface HarnessResourceRepository extends JpaRepository<HarnessResource
 
     Optional<HarnessResource> findByKey(String key);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select r from HarnessResource r where r.key = :key")
+    Optional<HarnessResource> findByKeyForUpdate(@org.springframework.data.repository.query.Param("key") String key);
+
     boolean existsByKey(String key);
 
     List<HarnessResource> findAllByOrderByKindAscNameAsc();

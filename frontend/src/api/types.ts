@@ -226,3 +226,12 @@ export interface AgentConfigurationWrite {
   outputFormat?: string | null; directives?: string; contextPolicy?: string | null; parentId?: number | null;
   model?: string | null; executionTarget: string;
 }
+
+// --- PHASE 19: skills and knowledge as files (ADR-026) -----------------------------
+
+export interface LibraryInfo { root: string; exists: boolean; skills: number; knowledge: number; layout: string }
+export interface ResourceFile {
+  key: string; relativePath: string; absolutePath: string; exists: boolean; content: string | null;
+  modified: string | null; version: number;
+}
+export interface LibrarySync { root: string; created: string[]; updated: string[]; invalid: string[] }

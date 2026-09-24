@@ -28,6 +28,9 @@ public class HarnessResource {
 
     public enum Kind { SKILL, KNOWLEDGE, MCP, TOOL, FRAMEWORK, TEMPLATE_PROVIDER }
 
+    /** Where the entry came from (V22, ADR-026). */
+    public enum Origin { CATALOG, FILE, WEB, USER }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -56,6 +59,17 @@ public class HarnessResource {
 
     @Column(length = 4000)
     private String configuration;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private Origin origin = Origin.CATALOG;
+
+    /** Relative to the library root: {@code skills/<key>/SKILL.md} or {@code knowledge/<key>.md}. */
+    @Column(name = "file_path", length = 500)
+    private String filePath;
+
+    @Column(name = "file_synced_at")
+    private Instant fileSyncedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -93,6 +107,32 @@ public class HarnessResource {
     void onUpdate() {
         this.updatedAt = Instant.now();
     }
+
+    /** What the file says the entry is: its frontmatter wins over the index (ADR-026 §2). */
+    public void describe(String name, String description, List<String> tags, String sourceUrl) {
+        this.name = name;
+        this.description = description;
+        this.tags = Tags.join(tags);
+        if (sourceUrl != null && !sourceUrl.isBlank()) {
+            this.sourceUrl = sourceUrl;
+        }
+    }
+
+    public void linkFile(String relativePath, Origin origin) {
+        this.filePath = relativePath;
+        this.fileSyncedAt = Instant.now();
+        if (origin != null) {
+            this.origin = origin;
+        }
+    }
+
+    public void configure(String configuration) {
+        this.configuration = configuration;
+    }
+
+    public Origin getOrigin() { return origin; }
+    public String getFilePath() { return filePath; }
+    public Instant getFileSyncedAt() { return fileSyncedAt; }
 
     public Long getId() { return id; }
     public String getKey() { return key; }

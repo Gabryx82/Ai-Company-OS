@@ -61,10 +61,11 @@ final class HandoffPackager {
 
     static Package build(Task task, Project project, Agent agent, List<HarnessResource> harness,
                          AgentBindingService.Binding binding, ExecutionTarget target, Path folder,
-                         String taskDocument, String taskDocumentText, String packagePath) {
+                         String taskDocument, String taskDocumentText, String packagePath,
+                         java.util.Map<String, String> skillFiles) {
         AutonomyLevel level = project == null ? AutonomyLevel.GUIDED : project.getAutonomyLevel();
         String role = role(agent);
-        String skills = skills(harness);
+        String skills = skills(harness, skillFiles);
         String context = context(task, project, taskDocument);
         String compact = "Leggi " + packagePath + " ed esegui la task che descrive.";
 
@@ -179,7 +180,7 @@ final class HandoffPackager {
         }
     }
 
-    private static String skills(List<HarnessResource> harness) {
+    private static String skills(List<HarnessResource> harness, java.util.Map<String, String> skillFiles) {
         if (harness.isEmpty()) {
             return "Nessuna risorsa associata all'agente.";
         }
@@ -190,6 +191,9 @@ final class HandoffPackager {
                 text.append(" — ").append(r.getDescription());
             }
             text.append("\n");
+            if (skillFiles.containsKey(r.getKey())) {
+                text.append("  - istruzioni nel file `").append(skillFiles.get(r.getKey())).append("`: leggilo e applicalo\n");
+            }
             if (r.getConfiguration() != null && !r.getConfiguration().isBlank()) {
                 text.append("\n```\n").append(r.getConfiguration().strip()).append("\n```\n\n");
             }

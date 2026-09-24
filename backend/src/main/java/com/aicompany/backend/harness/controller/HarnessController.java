@@ -33,10 +33,13 @@ import java.util.List;
 public class HarnessController {
 
     public record ResourceResponse(Long id, String key, HarnessResource.Kind kind, String name, String description,
-                                   List<String> tags, String sourceUrl, String searchUrl, String configuration) {
+                                   List<String> tags, String sourceUrl, String searchUrl, String configuration,
+                                   HarnessResource.Origin origin, boolean fileBacked, String filePath, long version) {
         public static ResourceResponse from(HarnessResource r) {
             return new ResourceResponse(r.getId(), r.getKey(), r.getKind(), r.getName(), r.getDescription(), r.getTags(),
-                    r.getSourceUrl(), r.getSearchUrl(), r.getConfiguration());
+                    r.getSourceUrl(), r.getSearchUrl(), r.getConfiguration(), r.getOrigin(),
+                    com.aicompany.backend.harness.library.SkillLibrary.fileBacked(r.getKind()), r.getFilePath(),
+                    r.getVersion());
         }
     }
 

@@ -56,4 +56,13 @@ public class FakeHostConfiguration {
     SoftwareIcons fakeIcons() {
         return HOST.icons();
     }
+
+    private static final FakeRemoteText WEB = new FakeRemoteText();
+
+    /** PHASE 19: the skill import never reaches the network in tests. */
+    @Bean
+    @Primary
+    FakeRemoteText fakeRemoteText() {
+        return WEB;
+    }
 }

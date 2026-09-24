@@ -13,7 +13,7 @@ import type {
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
-  ExecutionTarget,
+  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -496,6 +496,40 @@ export class ControlPlane {
     } catch {
       return null;
     }
+  }
+
+  // --- the file-based library (ADR-026) -----------------------------------------
+
+  library(): Promise<LibraryInfo> {
+    return this.plain("GET", "/api/library");
+  }
+
+  syncLibrary(): Promise<LibrarySync> {
+    return this.plain("POST", "/api/library/sync");
+  }
+
+  createLibraryEntry(content: string): Promise<Resource> {
+    return this.plain("POST", "/api/library/entries", { body: { content } });
+  }
+
+  importSkill(url: string): Promise<Resource> {
+    return this.plain("POST", "/api/library/import", { body: { url } });
+  }
+
+  resourceFile(key: string): Promise<Versioned<ResourceFile>> {
+    return this.versioned("GET", `/api/resources/${encodeURIComponent(key)}/file`);
+  }
+
+  materializeResourceFile(key: string): Promise<Versioned<ResourceFile>> {
+    return this.versioned("POST", `/api/resources/${encodeURIComponent(key)}/file`);
+  }
+
+  saveResourceFile(key: string, etag: string, content: string): Promise<Versioned<ResourceFile>> {
+    return this.versioned("PUT", `/api/resources/${encodeURIComponent(key)}/file`, { body: { content }, ifMatch: etag });
+  }
+
+  openResource(key: string): Promise<{ folder: string; command: string[] }> {
+    return this.plain("POST", `/api/resources/${encodeURIComponent(key)}/open`);
   }
 
   // --- agent configuration and binding (ADR-025) --------------------------------

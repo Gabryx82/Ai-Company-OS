@@ -405,6 +405,17 @@
         },
         "type" : "object"
       },
+      "Content" : {
+        "properties" : {
+          "content" : {
+            "maxLength" : 200000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "content" ],
+        "type" : "object"
+      },
       "ContextFile" : {
         "properties" : {
           "exists" : {
@@ -649,6 +660,34 @@
         },
         "type" : "object"
       },
+      "FileResponse" : {
+        "properties" : {
+          "absolutePath" : {
+            "type" : "string"
+          },
+          "content" : {
+            "type" : "string"
+          },
+          "exists" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "modified" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "relativePath" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "GenerateRequest" : {
         "properties" : {
           "model" : {
@@ -754,6 +793,17 @@
         },
         "type" : "object"
       },
+      "Import" : {
+        "properties" : {
+          "url" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "url" ],
+        "type" : "object"
+      },
       "Installed" : {
         "properties" : {
           "agentId" : {
@@ -799,6 +849,28 @@
           },
           "workingDirectory" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LibraryInfo" : {
+        "properties" : {
+          "exists" : {
+            "type" : "boolean"
+          },
+          "knowledge" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "layout" : {
+            "type" : "string"
+          },
+          "root" : {
+            "type" : "string"
+          },
+          "skills" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -1084,6 +1156,20 @@
             "type" : "string"
           },
           "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Opened" : {
+        "properties" : {
+          "command" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "folder" : {
             "type" : "string"
           }
         },
@@ -1642,6 +1728,12 @@
           "description" : {
             "type" : "string"
           },
+          "fileBacked" : {
+            "type" : "boolean"
+          },
+          "filePath" : {
+            "type" : "string"
+          },
           "id" : {
             "format" : "int64",
             "type" : "integer"
@@ -1656,6 +1748,10 @@
           "name" : {
             "type" : "string"
           },
+          "origin" : {
+            "enum" : [ "CATALOG", "FILE", "WEB", "USER" ],
+            "type" : "string"
+          },
           "searchUrl" : {
             "type" : "string"
           },
@@ -1667,6 +1763,10 @@
               "type" : "string"
             },
             "type" : "array"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -2152,6 +2252,32 @@
           },
           "specialization" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SyncResponse" : {
+        "properties" : {
+          "created" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "invalid" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "root" : {
+            "type" : "string"
+          },
+          "updated" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -2646,7 +2772,7 @@
         "tags" : [ "admin-controller" ]
       },
       "post" : {
-        "operationId" : "create_4",
+        "operationId" : "create_5",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -3567,7 +3693,7 @@
         "tags" : [ "daily-controller" ]
       },
       "post" : {
-        "operationId" : "create_3",
+        "operationId" : "create_4",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -3809,6 +3935,98 @@
           }
         },
         "tags" : [ "ecosystem-graph-controller" ]
+      }
+    },
+    "/api/library" : {
+      "get" : {
+        "operationId" : "info",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LibraryInfo"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "library-controller" ]
+      }
+    },
+    "/api/library/entries" : {
+      "post" : {
+        "operationId" : "create_3",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Content"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResourceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "library-controller" ]
+      }
+    },
+    "/api/library/import" : {
+      "post" : {
+        "operationId" : "importFrom",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Import"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResourceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "library-controller" ]
+      }
+    },
+    "/api/library/sync" : {
+      "post" : {
+        "operationId" : "sync",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SyncResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "library-controller" ]
       }
     },
     "/api/phases/{phaseId}/approve" : {
@@ -4627,6 +4845,123 @@
           }
         },
         "tags" : [ "harness-controller" ]
+      }
+    },
+    "/api/resources/{key}/file" : {
+      "get" : {
+        "operationId" : "file",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FileResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "library-controller" ]
+      },
+      "post" : {
+        "operationId" : "materialize",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FileResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "library-controller" ]
+      },
+      "put" : {
+        "operationId" : "save",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Content"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FileResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "library-controller" ]
+      }
+    },
+    "/api/resources/{key}/open" : {
+      "post" : {
+        "operationId" : "open",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Opened"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "library-controller" ]
       }
     },
     "/api/routing/suggestions" : {

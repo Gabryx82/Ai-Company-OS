@@ -33,8 +33,14 @@ public class RunContext {
 
     private final ProjectWorkspaceService workspace;
     private final HarnessService harness;
+    private final com.aicompany.backend.harness.library.SkillLibrary library;
 
-    public RunContext(ProjectWorkspaceService workspace, HarnessService harness) {
+    /** Per skill: enough for real instructions, not enough to crowd out the task. */
+    static final int SKILL_LIMIT = 4000;
+
+    public RunContext(ProjectWorkspaceService workspace, HarnessService harness,
+                      com.aicompany.backend.harness.library.SkillLibrary library) {
+        this.library = library;
         this.workspace = workspace;
         this.harness = harness;
     }
@@ -56,7 +62,11 @@ public class RunContext {
 
     /** The operator's prompt engineering for this agent (directive §13–14), or nothing. */
     private String agentProfile(Agent agent) {
-        if (agent == null || !agent.hasProfile()) {
+        if (agent == null) {
+            return "";
+        }
+        List<HarnessResource> equipped = harness.of(agent.getId()).resources();
+        if (!agent.hasProfile() && equipped.isEmpty()) {
             return "";
         }
         StringBuilder text = new StringBuilder("\n");
@@ -65,12 +75,18 @@ public class RunContext {
         section(text, "Limits", agent.getLimits());
         section(text, "Expected output", agent.getOutputFormat());
         section(text, "Directives", agent.getDirectives());
-        List<HarnessResource> equipped = harness.of(agent.getId()).resources();
         if (!equipped.isEmpty()) {
             text.append("\nYour harness: ");
             text.append(String.join("; ", equipped.stream()
                     .map(r -> r.getKind().name().toLowerCase() + " " + r.getName()).toList()));
             text.append('.');
+            // PHASE 19 (ADR-026): a skill is its instructions, read from its file.
+            for (HarnessResource r : equipped) {
+                library.body(r).filter(body -> !body.isBlank()).ifPresent(body -> text.append("\n\n")
+                        .append(r.getKind() == HarnessResource.Kind.SKILL ? "Skill" : "Knowledge")
+                        .append(" \"").append(r.getName()).append("\":\n")
+                        .append(body.length() <= SKILL_LIMIT ? body.strip() : body.substring(0, SKILL_LIMIT) + "\n[…troncato]"));
+            }
         }
         return text.toString();
     }

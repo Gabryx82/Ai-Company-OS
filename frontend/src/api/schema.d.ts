@@ -29,7 +29,7 @@ export interface paths {
         };
         get: operations["users"];
         put?: never;
-        post: operations["create_4"];
+        post: operations["create_5"];
         delete?: never;
         options?: never;
         head?: never;
@@ -413,7 +413,7 @@ export interface paths {
         };
         get: operations["between"];
         put?: never;
-        post: operations["create_3"];
+        post: operations["create_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -526,6 +526,70 @@ export interface paths {
         get: operations["graph"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["info"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["create_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importFrom"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sync"];
         delete?: never;
         options?: never;
         head?: never;
@@ -846,6 +910,38 @@ export interface paths {
         get: operations["search"];
         put?: never;
         post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resources/{key}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["file"];
+        put: operations["save"];
+        post: operations["materialize"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resources/{key}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["open"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1344,6 +1440,9 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        Content: {
+            content: string;
+        };
         ContextFile: {
             exists?: boolean;
             path?: string;
@@ -1433,6 +1532,17 @@ export interface components {
             providers?: string[];
             software?: string;
         };
+        FileResponse: {
+            absolutePath?: string;
+            content?: string;
+            exists?: boolean;
+            key?: string;
+            /** Format: date-time */
+            modified?: string;
+            relativePath?: string;
+            /** Format: int64 */
+            version?: number;
+        };
         GenerateRequest: {
             model?: string;
         };
@@ -1467,6 +1577,9 @@ export interface components {
             task?: components["schemas"]["TaskResponse"];
             written?: string[];
         };
+        Import: {
+            url: string;
+        };
         Installed: {
             /** Format: int64 */
             agentId?: number;
@@ -1485,6 +1598,15 @@ export interface components {
             folderOpened?: boolean;
             key?: string;
             workingDirectory?: string;
+        };
+        LibraryInfo: {
+            exists?: boolean;
+            /** Format: int64 */
+            knowledge?: number;
+            layout?: string;
+            root?: string;
+            /** Format: int64 */
+            skills?: number;
         };
         LoginRequest: {
             password: string;
@@ -1584,6 +1706,10 @@ export interface components {
             };
             status?: string;
             type?: string;
+        };
+        Opened: {
+            command?: string[];
+            folder?: string;
         };
         Orchestration: {
             agent?: components["schemas"]["AgentChoice"];
@@ -1774,15 +1900,21 @@ export interface components {
         ResourceResponse: {
             configuration?: string;
             description?: string;
+            fileBacked?: boolean;
+            filePath?: string;
             /** Format: int64 */
             id?: number;
             key?: string;
             /** @enum {string} */
             kind?: "SKILL" | "KNOWLEDGE" | "MCP" | "TOOL" | "FRAMEWORK" | "TEMPLATE_PROVIDER";
             name?: string;
+            /** @enum {string} */
+            origin?: "CATALOG" | "FILE" | "WEB" | "USER";
             searchUrl?: string;
             sourceUrl?: string;
             tags?: string[];
+            /** Format: int64 */
+            version?: number;
         };
         ReviewRequest: {
             /** Format: int64 */
@@ -1946,6 +2078,12 @@ export interface components {
             /** Format: int32 */
             score?: number;
             specialization?: string;
+        };
+        SyncResponse: {
+            created?: string[];
+            invalid?: string[];
+            root?: string;
+            updated?: string[];
         };
         Target: {
             available?: boolean;
@@ -2149,7 +2287,7 @@ export interface operations {
             };
         };
     };
-    create_4: {
+    create_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -2880,7 +3018,7 @@ export interface operations {
             };
         };
     };
-    create_3: {
+    create_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -3077,6 +3215,94 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Graph"];
+                };
+            };
+        };
+    };
+    info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LibraryInfo"];
+                };
+            };
+        };
+    };
+    create_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Content"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceResponse"];
+                };
+            };
+        };
+    };
+    importFrom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Import"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceResponse"];
+                };
+            };
+        };
+    };
+    sync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SyncResponse"];
                 };
             };
         };
@@ -3674,6 +3900,100 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceResponse"];
+                };
+            };
+        };
+    };
+    file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FileResponse"];
+                };
+            };
+        };
+    };
+    save: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Content"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FileResponse"];
+                };
+            };
+        };
+    };
+    materialize: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FileResponse"];
+                };
+            };
+        };
+    };
+    open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Opened"];
                 };
             };
         };

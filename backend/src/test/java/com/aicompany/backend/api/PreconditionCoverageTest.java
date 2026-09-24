@@ -15,6 +15,7 @@ import com.aicompany.backend.daily.service.DailyService;
 import com.aicompany.backend.task.service.TaskService;
 import com.aicompany.backend.user.service.AuthService;
 import com.aicompany.backend.binding.AgentConfigurationService;
+import com.aicompany.backend.harness.library.SkillLibrary;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,7 +53,7 @@ class PreconditionCoverageTest {
                     SoftwareService.class, LlmCatalogService.class, UsageService.class,
                     ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class,
                     HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class,
-                    AgentConfigurationService.class);
+                    AgentConfigurationService.class, SkillLibrary.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -80,7 +81,11 @@ class PreconditionCoverageTest {
             // one's own session. Changing one's own password is guarded by the current
             // password, a stronger precondition than a tag. Admin edits of people
             // (update, resetPassword) do take the tag.
-            "login", "logout", "changePassword");
+            "login", "logout", "changePassword",
+            // PHASE 19 (ADR-026): creating an entry (by hand, from the folder or from the web) is creation;
+            // materialize writes the file of an entry that has none and never overwrites; sync reads the folder,
+            // which is the source of truth, into the index. Saving the file from the console takes the tag.
+            "materialize", "sync", "importFrom");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {
