@@ -76,6 +76,19 @@ class HarnessApiTest extends AbstractPostgresTest {
                 .getHeader(HttpHeaders.ETAG);
     }
 
+    /** PHASE 15: a null list in this response blanked the whole Knowledge Hub. */
+    @Test
+    void everyTemplateListsItsSubAgentsDirectivesAndResourcesAsArraysNeverNull() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/agent-templates")).andExpect(status().isOk()).andReturn();
+        JsonNode templates = json.readTree(result.getResponse().getContentAsString());
+        assertThat(templates.size()).isGreaterThan(0);
+        for (JsonNode template : templates) {
+            for (String list : new String[] {"children", "directives", "resources", "software"}) {
+                assertThat(template.path(list).isArray()).as(template.path("key").asString() + "." + list).isTrue();
+            }
+        }
+    }
+
     @Test
     void theExplorerFindsResourcesByKindAndWords() throws Exception {
         mockMvc.perform(get("/api/resources").param("kind", "MCP"))

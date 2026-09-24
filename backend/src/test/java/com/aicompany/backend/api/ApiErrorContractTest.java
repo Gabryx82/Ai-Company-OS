@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -118,7 +119,7 @@ class ApiErrorContractTest extends AbstractPostgresTest {
 
         Long projectId = activeProject("Company OS");
 
-        problem(mockMvc.perform(delete("/api/projects/" + projectId)), 405, "method-not-allowed");
+        problem(mockMvc.perform(patch("/api/projects/" + projectId)), 405, "method-not-allowed");
     }
 
     // --- TD-27: one route, one dialect --------------------------------------

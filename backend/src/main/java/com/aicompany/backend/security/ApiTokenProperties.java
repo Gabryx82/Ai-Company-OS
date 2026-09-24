@@ -23,11 +23,26 @@ public class ApiTokenProperties {
 
     private Map<String, String> apiTokens = new LinkedHashMap<>();
 
+    /**
+     * PHASE 15 (ADR-024 §3). The role each service token acts with:
+     * {@code aicos.security.api-token-roles.<name>=ADMIN|OPERATOR}. Unset means
+     * OPERATOR -- a machine is not an admin unless somebody says so.
+     */
+    private Map<String, String> apiTokenRoles = new LinkedHashMap<>();
+
     public Map<String, String> getApiTokens() {
         return apiTokens;
     }
 
     public void setApiTokens(Map<String, String> apiTokens) {
         this.apiTokens = apiTokens;
+    }
+
+    public Map<String, String> getApiTokenRoles() {
+        return apiTokenRoles;
+    }
+
+    public void setApiTokenRoles(Map<String, String> apiTokenRoles) {
+        this.apiTokenRoles = apiTokenRoles;
     }
 }

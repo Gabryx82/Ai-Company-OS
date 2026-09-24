@@ -27,6 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -87,6 +88,12 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .body(ApiProblem.UNAUTHENTICATED.toDetail());
+    }
+
+    /** PHASE 15 (ADR-024 §3): signed in, but the role does not allow it. */
+    @ExceptionHandler(AccessDeniedException.class)
+    ResponseEntity<ProblemDetail> handleAccessDenied(AccessDeniedException e) {
+        return respond(ApiProblem.ACCESS_DENIED, null);
     }
 
     // --- the precondition protocol (ADR-009) ------------------------------

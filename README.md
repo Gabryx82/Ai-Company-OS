@@ -30,8 +30,10 @@ with a model (`ollama pull qwen3.5:4b`) for real local completions.
 .\scripts\start-dev.ps1
 ```
 
-Then open <http://localhost:5173> and sign in with the operator token (`dev-operator-token-change-me`
-in development unless `AICOS_OPERATOR_TOKEN` is set). The control plane listens on port **8081**
+Then open <http://localhost:5173> and sign in as `admin`. On first use the script creates the local
+secrets file `%USERPROFILE%\.aicos\local.env` — outside the repository — with a random admin
+password, and prints it; `.\scripts\init-local-secrets.ps1 -Show` prints it again. Change it from
+the console (*Account e sicurezza*). The control plane listens on port **8081**
 (8080 belongs to Open WebUI). Manual steps, every endpoint, profiles and the database:
 [`docs/RUNNING.md`](docs/RUNNING.md).
 

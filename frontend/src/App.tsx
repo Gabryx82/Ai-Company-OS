@@ -18,6 +18,7 @@ import { DailyWork } from "./views/DailyWork";
 import { SecondBrain } from "./views/SecondBrain";
 import { MockupHub } from "./views/MockupHub";
 import { GlobalSearch } from "./components/GlobalSearch";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Icon, type IconName } from "./components/icons";
 import { displayName } from "./preferences";
 
@@ -79,6 +80,21 @@ export function App() {
 
   const signIn = useCallback((next: Session) => { saveSession(next); setSession(next); }, []);
   const signOut = useCallback(() => { clearSession(); setSession(null); }, []);
+  // Signing out also ends the session on the server (ADR-024): a copied token stops working.
+  const logout = useCallback(() => { api?.logout().catch(() => undefined).finally(signOut); }, [api, signOut]);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Who is signed in, fresh from the server: role and "must change password" can change.
+  useEffect(() => {
+    if (!api || !session) return;
+    api.me().then((me) => {
+      if (me.user && JSON.stringify(me.user) !== JSON.stringify(session.user)) {
+        const next = { ...session, user: me.user };
+        saveSession(next);
+        setSession(next);
+      }
+    }).catch(() => undefined);
+  }, [api]); // eslint-disable-line react-hooks/exhaustive-deps
   const navigate: Navigate = useCallback((page, detail) => {
     window.location.hash = `/${page}${detail ? `/${encodeURIComponent(detail)}` : ""}`;
   }, []);
@@ -96,8 +112,10 @@ export function App() {
     return <Login onSignIn={signIn} />;
   }
 
-  const name = displayName();
+  const user = session.user;
+  const name = user?.displayName || user?.username || displayName();
   const { page, detail } = route;
+  const pageLabel = NAV.flatMap((g) => g.items).find((item) => item.key === page)?.label ?? page;
 
   return (
     <ApiContext.Provider value={api}>
@@ -126,7 +144,7 @@ export function App() {
               </span>
             </span>
             <span className="mono">{session.baseUrl}</span>
-            <button className="btn btn-small" onClick={signOut}><Icon name="logout" size={14} /> Esci</button>
+            <button className="btn btn-small" onClick={logout}><Icon name="logout" size={14} /> Esci</button>
           </div>
         </nav>
         <main className="main">
@@ -134,9 +152,30 @@ export function App() {
             <GlobalSearch navigate={navigate} />
             <span className="spacer" />
             <span className="muted">{new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</span>
-            <span className="avatar" title={name}>{name.slice(0, 1).toUpperCase()}</span>
+            <div className="user-menu">
+              <button className="user-chip" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen}
+                      aria-label="Account">
+                <span className="avatar">{name.slice(0, 1).toUpperCase()}</span>
+                <span className="user-chip-text"><strong>{name}</strong>
+                  <small>{user ? (user.role === "ADMIN" ? "Admin" : "Operatore") : "Token di servizio"}</small></span>
+              </button>
+              {menuOpen && (
+                <div className="menu" role="menu" onMouseLeave={() => setMenuOpen(false)}>
+                  <button role="menuitem" onClick={() => { setMenuOpen(false); navigate("settings", "account"); }}>
+                    <Icon name="settings" size={14} /> Account e sicurezza</button>
+                  <button role="menuitem" onClick={logout}><Icon name="logout" size={14} /> Esci</button>
+                </div>
+              )}
+            </div>
           </header>
+          {user?.mustChangePassword && (
+            <div className="notice notice-warn" style={{ margin: "12px 24px 0" }}>
+              <Icon name="warning" size={14} /> Stai usando una password iniziale generata.{" "}
+              <button className="btn btn-small" onClick={() => navigate("settings", "account")}>Cambiala ora</button>
+            </div>
+          )}
           <div className="content">
+            <ErrorBoundary key={page} label={pageLabel}>
             {page === "dashboard" && <Dashboard navigate={navigate} />}
             {page === "projects" && <Projects selected={detail} navigate={navigate} />}
             {page === "tasks" && <TaskBoard />}
@@ -150,7 +189,8 @@ export function App() {
             {page === "mockups" && <MockupHub />}
             {page === "models" && <Models />}
             {page === "usage" && <Usage />}
-            {page === "settings" && <Settings />}
+            {page === "settings" && <Settings session={session} onPasswordChanged={(next) => { saveSession(next); setSession(next); }} />}
+            </ErrorBoundary>
           </div>
         </main>
       </div>

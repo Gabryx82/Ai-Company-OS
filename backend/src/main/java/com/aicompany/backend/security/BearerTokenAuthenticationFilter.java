@@ -24,7 +24,8 @@ import java.util.Optional;
  * decision:
  *
  * <ol>
- *   <li>a token of ours: the request continues as its principal;</li>
+ *   <li>a token of ours -- a live session or a configured service token
+ *       (ADR-024): the request continues as that {@link Caller}, with its role;</li>
  *   <li><strong>no Authorization header</strong>: the request continues
  *       anonymously, and the authorization rules decide. That keeps the public
  *       routes public without this filter having to know which they are;</li>
@@ -44,14 +45,11 @@ final class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String SCHEME = "bearer ";
 
-    /** Every authenticated caller is the operator today: one role, no RBAC (ADR-013 §3). */
-    static final String OPERATOR_AUTHORITY = "ROLE_OPERATOR";
-
-    private final ApiTokenRegistry registry;
+    private final CallerResolver resolver;
     private final AuthenticationEntryPoint entryPoint;
 
-    BearerTokenAuthenticationFilter(ApiTokenRegistry registry, AuthenticationEntryPoint entryPoint) {
-        this.registry = registry;
+    BearerTokenAuthenticationFilter(CallerResolver resolver, AuthenticationEntryPoint entryPoint) {
+        this.resolver = resolver;
         this.entryPoint = entryPoint;
     }
 
@@ -66,7 +64,7 @@ final class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        Optional<String> principal = token(header).flatMap(registry::principalFor);
+        Optional<Caller> principal = token(header).flatMap(resolver::resolve);
 
         if (principal.isEmpty()) {
             SecurityContextHolder.clearContext();
@@ -77,7 +75,7 @@ final class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
 
         SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
-                principal.get(), null, AuthorityUtils.createAuthorityList(OPERATOR_AUTHORITY)));
+                principal.get(), null, AuthorityUtils.createAuthorityList(principal.get().role().authority())));
         SecurityContextHolder.setContext(securityContext);
 
         try {

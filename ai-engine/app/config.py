@@ -9,10 +9,37 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 
 MINIMUM_TOKEN_LENGTH = 16
 
 DEV_ENGINE_TOKEN = "dev-engine-token-change-me"
+
+
+def local_secrets(path: Path | None = None) -> dict[str, str]:
+    """The operator's local secrets file (ADR-024 §6): ``KEY=VALUE`` lines.
+
+    ``~/.aicos/local.env`` by default (``AICOS_HOME`` moves it), written by
+    ``scripts/init-local-secrets.ps1`` and never inside the repository. The
+    control plane imports the same file, so both processes agree on the engine
+    token however each of them was started. Real environment variables win.
+    """
+    if path is None:
+        home = os.environ.get("AICOS_HOME")
+        path = Path(home) if home else Path.home() / ".aicos"
+        path = path / "local.env"
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    values: dict[str, str] = {}
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip()
+    return values
 
 
 class ConfigurationError(RuntimeError):
@@ -71,7 +98,7 @@ class Settings:
 
     @staticmethod
     def from_environment(env: dict[str, str] | None = None) -> "Settings":
-        env = dict(os.environ if env is None else env)
+        env = {**local_secrets(), **os.environ} if env is None else dict(env)
         profile = env.get("AICOS_ENGINE_PROFILE", "dev")
 
         token = env.get("AICOS_ENGINE_TOKEN")

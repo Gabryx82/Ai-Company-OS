@@ -172,3 +172,22 @@ export type AgentProfile = Omit<Deep<S["AgentProfileResponse"]>, "parentId" | "m
 export type AgentTemplate = Deep<S["Template"]>;
 export type InstalledAgent = Deep<S["Installed"]>;
 export type DailyItem = Omit<Deep<S["DailyResponse"]>, "task"> & { task: Deep<S["TaskRef"]> | null };
+
+// --- PHASE 15: people and sessions (ADR-024) ------------------------------------
+
+export type Role = "ADMIN" | "OPERATOR";
+export interface UserInfo {
+  id: number;
+  username: string;
+  displayName: string | null;
+  role: Role;
+  enabled: boolean;
+  mustChangePassword: boolean;
+  lastLoginAt: string | null;
+  passwordChangedAt: string | null;
+  version: number;
+}
+export interface Me { name: string; role: Role; kind: "USER" | "SERVICE"; user: UserInfo | null }
+export interface SecurityEventInfo {
+  id: number; occurredAt: string; type: string; principal: string | null; source: string | null; detail: string | null;
+}

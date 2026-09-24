@@ -11,9 +11,10 @@
   A service whose port is already listening is not started again, so the script can be re-run after
   one window was closed or failed.
 
-  Sign in to the console with the operator token: AICOS_OPERATOR_TOKEN if set, otherwise the local
-  default "dev-operator-token-change-me". The backend and the engine share the dev default engine
-  token unless AICOS_ENGINE_TOKEN is set -- set it in this shell and both windows inherit it.
+  Sign in to the console as "admin" (PHASE 15, ADR-024). On first use the script creates the local
+  secrets file %USERPROFILE%\.aicos\local.env (scripts\init-local-secrets.ps1) with a random admin
+  password and a random engine token, prints the admin password once, and loads the file into the
+  windows it opens. Show the credentials again with: .\scripts\init-local-secrets.ps1 -Show
 
   -Database chooses the PostgreSQL database the backend uses (default: aicompany). On a database
   behind the head of the migration stream, the backend applies the missing migrations at start --
@@ -49,6 +50,15 @@ function Test-Listening([int]$port) {
 function Start-Window([string]$title, [string]$directory, [string]$command) {
   Start-Process $powershell -ArgumentList "-NoExit", "-Command",
     "$pathFix; Set-Location '$directory'; `$host.UI.RawUI.WindowTitle = '$title'; $command"
+}
+
+Write-Host "== Local secrets" -ForegroundColor Cyan
+& (Join-Path $PSScriptRoot "init-local-secrets.ps1")
+$secretsHome = if ($env:AICOS_HOME) { $env:AICOS_HOME } else { Join-Path $env:USERPROFILE ".aicos" }
+# The windows opened below inherit these; a variable already set in this shell wins.
+Get-Content (Join-Path $secretsHome "local.env") | Where-Object { $_ -match '^[A-Z_]+=' } | ForEach-Object {
+  $name, $value = $_ -split '=', 2
+  if (-not [Environment]::GetEnvironmentVariable($name)) { [Environment]::SetEnvironmentVariable($name, $value) }
 }
 
 Write-Host "== PostgreSQL" -ForegroundColor Cyan
@@ -131,5 +141,5 @@ if (-not $up) {
   exit 1
 }
 Write-Host "Console:        http://localhost:5173" -ForegroundColor Green
-Write-Host "Control plane:  http://localhost:8081   (token: `$env:AICOS_OPERATOR_TOKEN or dev-operator-token-change-me)"
+Write-Host "Control plane:  http://localhost:8081   (sign in as admin: .\scripts\init-local-secrets.ps1 -Show)"
 Write-Host "AI Engine:      http://127.0.0.1:8090   (local models through Ollama if it is running)"

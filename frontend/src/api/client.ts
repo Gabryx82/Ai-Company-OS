@@ -1,7 +1,8 @@
 // The control plane, as a browser sees it.
 //
 // Three rules of the server shape every function here:
-//  - every request carries the operator's bearer token (ADR-013);
+//  - every request carries a bearer token: a signed-in session (ADR-024) or a
+//    configured service token (ADR-013);
 //  - every mutation of an existing resource carries If-Match with the ETag the
 //    caller last read (ADR-009) -- so the functions that mutate take the tag
 //    explicitly, and the ones that read a single resource return it;
@@ -11,7 +12,7 @@ import type {
   Agent, AgentProfile, AgentTemplate, AgentWrite, AutonomyLevel, DailyItem, InstalledAgent, Resource, Handoff, HandoffOutcome, LaunchResult, ModelCatalog, ModelList, Orchestration,
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
-  WorkspaceDocuments,
+  WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -55,6 +56,8 @@ export interface Versioned<T> {
 export interface Session {
   baseUrl: string;
   token: string;
+  /** Who signed in (ADR-024); absent for a service-token session. */
+  user?: UserInfo;
 }
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
@@ -65,9 +68,9 @@ export class ControlPlane {
   private async request<T>(method: Method, path: string, options: { body?: unknown; ifMatch?: string } = {}):
     Promise<{ body: T; etag: string | null; status: number }> {
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${this.session.token}`,
       Accept: "application/json, application/problem+json",
     };
+    if (this.session.token) headers.Authorization = `Bearer ${this.session.token}`;
     if (options.body !== undefined) headers["Content-Type"] = "application/json";
     if (options.ifMatch !== undefined) headers["If-Match"] = options.ifMatch;
 
@@ -108,6 +111,50 @@ export class ControlPlane {
 
   private async plain<T>(method: Method, path: string, options: { body?: unknown; ifMatch?: string } = {}): Promise<T> {
     return (await this.request<T>(method, path, options)).body;
+  }
+
+  // --- people and sessions (ADR-024) -----------------------------------------
+
+  /** Signs in and returns the session the console keeps. The one call without a token. */
+  static async login(baseUrl: string, username: string, password: string,
+                     fetcher: typeof fetch = fetch.bind(globalThis)): Promise<Session> {
+    const base = baseUrl.trim().replace(/\/+$/, "");
+    const anonymous = new ControlPlane({ baseUrl: base, token: "" }, fetcher);
+    const body = await anonymous.plain<{ token: string; expiresAt: string; user: UserInfo }>(
+      "POST", "/api/auth/login", { body: { username, password } });
+    return { baseUrl: base, token: body.token, user: body.user };
+  }
+
+  logout(): Promise<void> {
+    return this.plain("POST", "/api/auth/logout");
+  }
+
+  me(): Promise<Me> {
+    return this.plain("GET", "/api/auth/me");
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return this.plain("PUT", "/api/auth/password", { body: { currentPassword, newPassword } });
+  }
+
+  users(): Promise<UserInfo[]> {
+    return this.plain("GET", "/api/admin/users");
+  }
+
+  createUser(user: { username: string; displayName?: string; role: Role; initialPassword: string }): Promise<UserInfo> {
+    return this.plain("POST", "/api/admin/users", { body: user });
+  }
+
+  updateUser(id: number, version: number, update: { displayName: string | null; role: Role; enabled: boolean }): Promise<UserInfo> {
+    return this.plain("PUT", `/api/admin/users/${id}`, { body: update, ifMatch: `"${version}"` });
+  }
+
+  resetUserPassword(id: number, version: number, temporaryPassword: string): Promise<UserInfo> {
+    return this.plain("PUT", `/api/admin/users/${id}/password`, { body: { temporaryPassword }, ifMatch: `"${version}"` });
+  }
+
+  securityEvents(limit = 100): Promise<SecurityEventInfo[]> {
+    return this.plain("GET", `/api/admin/security-events?limit=${limit}`);
   }
 
   // --- liveness ---------------------------------------------------------------

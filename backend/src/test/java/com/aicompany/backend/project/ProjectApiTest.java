@@ -388,14 +388,15 @@ class ProjectApiTest extends AbstractPostgresTest {
     }
 
     @Test
-    void thereIsNoPhysicalDeleteOverHttp() throws Exception {
+    void anOperatorCannotPhysicallyDeleteAProject() throws Exception {
 
         Long id = createProject("Company OS");
 
-        // The path exists for other methods, so this is 405 and not 404: the
-        // answer is "not this way", and the way is /archive.
+        // PHASE 15 (ADR-024): a physical delete is an admin's decision. The
+        // default client is an OPERATOR service token: refused before anything
+        // is looked at. Archiving stays the operator's way (/archive).
         mockMvc.perform(delete("/api/projects/" + id))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isForbidden());
 
         assertThat(repository.findById(id)).isPresent();
     }

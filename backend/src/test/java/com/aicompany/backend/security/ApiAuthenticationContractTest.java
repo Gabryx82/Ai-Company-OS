@@ -71,6 +71,8 @@ class ApiAuthenticationContractTest extends AbstractPostgresTest {
     // Coverage: every route, not a sample
     // ------------------------------------------------------------------
 
+    private static final List<String> PUBLIC_ROUTES = List.of("POST /api/auth/login");
+
     @Test
     void everyApiRouteRefusesAnAnonymousCaller() throws Exception {
 
@@ -83,6 +85,11 @@ class ApiAuthenticationContractTest extends AbstractPostgresTest {
         List<String> open = new ArrayList<>();
         for (MockHttpServletRequestBuilder route : routes) {
             MvcResult result = anonymous.perform(route).andReturn();
+            // PHASE 15 (ADR-024): signing in is the one public write -- it is how a
+            // credential is obtained. Its own test is AuthApiTest.
+            if (PUBLIC_ROUTES.contains(describe(result))) {
+                continue;
+            }
             if (result.getResponse().getStatus() != 401) {
                 open.add(describe(result) + " -> " + result.getResponse().getStatus());
             }

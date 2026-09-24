@@ -13,6 +13,7 @@ import com.aicompany.backend.harness.service.AgentTemplates;
 import com.aicompany.backend.harness.service.HarnessService;
 import com.aicompany.backend.daily.service.DailyService;
 import com.aicompany.backend.task.service.TaskService;
+import com.aicompany.backend.user.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +50,7 @@ class PreconditionCoverageTest {
             List.of(TaskService.class, ProjectService.class, AgentService.class, RunService.class,
                     SoftwareService.class, LlmCatalogService.class, UsageService.class,
                     ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class,
-                    HarnessService.class, AgentTemplates.class, DailyService.class);
+                    HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -70,7 +71,14 @@ class PreconditionCoverageTest {
             "attach", "detach", "allowSoftware", "disallowSoftware", "adopt", "drop", "install", "installAll",
             // PHASE 13: carrying a day's unfinished items to another day is the
             // operator's bulk gesture on their own list; no single tag describes it.
-            "carryOver");
+            "carryOver",
+            // PHASE 15 (ADR-024): signing in creates a session and counts failures on
+            // the account row -- the server's bookkeeping, not a client's edit, and no
+            // client can hold a tag before it has a credential. Signing out revokes
+            // one's own session. Changing one's own password is guarded by the current
+            // password, a stronger precondition than a tag. Admin edits of people
+            // (update, resetPassword) do take the tag.
+            "login", "logout", "changePassword");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {

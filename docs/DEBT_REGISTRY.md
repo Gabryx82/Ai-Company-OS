@@ -125,8 +125,9 @@ ferma a `TD-22`.
 | **TD-50** | Quote: Codex è misurato solo fino all'ultima sessione locale; il reset settimanale di Claude va impostato a mano; nessuna API espone le quote degli abbonamenti | **aperto**, vincolo esterno | PHASE 8 |
 | **TD-51** | `llama3.2:3b` è `DEPRECATED` (sostituto `qwen3.5:4b` verificato) ma resta il modello degli agenti del seed: migrare quegli agenti è una scelta dell'operatore sui suoi dati, poi il modello si può rimuovere | **aperto** | PHASE 8 |
 | **TD-52** | Il ruolo `CODER` è coperto da `deepseek-coder-v2:16b` (2024, senza tool calling); il candidato `qwen3-coder:30b` (19 GB) attende una decisione umana su disco e RAM | **aperto**, decisione umana | PHASE 8 |
+| **TD-53** | Il token di sessione della console vive nel `sessionStorage`: uno script iniettato nella console potrebbe leggerlo. Mitigato da React (niente HTML non fidato), scadenza e revoca; un cookie `HttpOnly` richiederebbe protezione CSRF e un proxy same-origin (ADR-024 §8) | **aperto**, MINOR | PHASE 15 |
 
-**Prossimo identificatore libero: `TD-53`.**
+**Prossimo identificatore libero: `TD-54`.**
 
 ## 6. Come si apre un debito nuovo
 

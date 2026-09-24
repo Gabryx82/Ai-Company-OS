@@ -88,30 +88,61 @@ Il profilo di default è `dev`. All'avvio Flyway applica le migrazioni e, solo i
 
 L'applicazione risponde su `http://localhost:8081`.
 
-### Prima di tutto: ogni richiesta richiede un token
+### Prima di tutto: accesso e credenziali (PHASE 15, ADR-024)
 
-**Da TASK-013 (ADR-013) ogni rotta `/api/**` risponde `401` senza un bearer token valido.** Non
-è un server rotto: manca l'header.
+**Ogni rotta `/api/**` risponde `401` senza un bearer token valido.** Le persone entrano con
+utente e password; le macchine (script, automazioni) possono usare un token di servizio.
 
-| Profilo | Token dell'operatore |
+**L'account Admin.** Al primo avvio su un database senza admin, il control plane crea l'utente
+`admin`:
+
+| Situazione | Password iniziale |
 |---|---|
-| `dev` | `AICOS_OPERATOR_TOKEN` se impostata, altrimenti il default locale `dev-operator-token-change-me` |
-| `prod` | **solo** `AICOS_OPERATOR_TOKEN`, senza default: senza la variabile l'applicazione non parte |
+| `AICOS_ADMIN_PASSWORD` impostata (ambiente o file locale dei segreti) | quella |
+| nessuna password configurata | generata a caso e scritta **solo** in `%USERPROFILE%\.aicos\admin-initial-password.txt`; al primo accesso la console chiede di cambiarla |
 
-```bash
-TOKEN=dev-operator-token-change-me
-curl -i http://localhost:8081/api/projects -H "Authorization: Bearer $TOKEN"
+Il file locale dei segreti è `%USERPROFILE%\.aicos\local.env` (fuori dal repository). Lo crea
+`scripts\init-local-secrets.ps1` — lo chiama `start-dev.ps1` — con una password admin casuale e un
+token casuale condiviso fra control plane e AI Engine. Il backend lo importa
+(`spring.config.import` in `application-dev.properties`), l'engine lo legge da sé; le variabili
+d'ambiente vincono sempre sul file.
+
+```powershell
+.\scripts\init-local-secrets.ps1 -Show    # mostra utente e password admin iniziali
 ```
 
-L'unica rotta pubblica è `GET /actuator/health`, che risponde soltanto `{"status":"UP"}`.
+- **Cambiare la password**: console → menu utente → *Account e sicurezza*. Le altre sessioni si
+  chiudono. Regole: almeno 12 caratteri, al massimo 72 byte (limite di BCrypt), niente nome utente.
+- **Password dimenticata**: metti la nuova password in `AICOS_ADMIN_PASSWORD` (nel file locale o
+  nell'ambiente), avvia una volta il backend con `AICOS_ADMIN_RESET=true`, poi togli la variabile.
+- **Altri utenti**: un admin li crea da *Impostazioni → Utenti* (ruolo `OPERATOR` o `ADMIN`).
 
-L'applicazione **rifiuta di partire** se nessun token è configurato, se un token è più corto di 16
-caratteri, o se lo stesso token è configurato sotto due nomi. Altri token si aggiungono per nome —
-`aicos.security.api-tokens.<nome>=<token>`, o `AICOS_SECURITY_APITOKENS_<NOME>` (senza trattino: è la regola di binding di Spring per le variabili d'ambiente) dall'ambiente — e
-il nome è l'identità con cui il sistema registra chi ha fatto che cosa.
+**Dall'API**:
 
-Un token sbagliato riceve **esattamente** la stessa risposta di un token assente, ed è rifiutato
-anche sull'health: se il client ne manda uno, deve essere giusto.
+```bash
+TOKEN=$(curl -s http://localhost:8081/api/auth/login -H 'Content-Type: application/json'   -d '{"username":"admin","password":"<la tua password>"}' | jq -r .token)
+curl -i http://localhost:8081/api/projects -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:8081/api/auth/logout -H "Authorization: Bearer $TOKEN"
+```
+
+| Aspetto | Comportamento |
+|---|---|
+| Password | solo hash BCrypt (costo 12) |
+| Sessione | token casuale di 256 bit, conservato solo come SHA-256; scade dopo 8 h di inattività o 72 h in assoluto (`aicos.security.session.idle` / `.lifetime`); logout, cambio password e disattivazione la revocano |
+| Tentativi | 5 password errate bloccano l'account per 15 minuti; al massimo 20 tentativi al minuto per indirizzo |
+| Ruoli | `OPERATOR` lavora; `ADMIN` in più gestisce utenti, legge il registro di sicurezza, elimina progetti e task, usa il terminale |
+| Registro | accessi, errori, blocchi, cambi di password, accessi negati, eliminazioni: tabella `security_events` e logger `aicos.security`; mai password né token |
+| Risposte | stessa risposta per utente inesistente e password errata; `Cache-Control: no-store` sul login; `Content-Security-Policy: default-src 'none'`, `X-Content-Type-Options`, `Referrer-Policy: no-referrer` |
+
+**Token di servizio** (opzionali, per script): `aicos.security.api-tokens.<nome>=<token>`, o
+`AICOS_OPERATOR_TOKEN` per il nome `operator`. Nessun default: se non è impostato, nessuna macchina
+può chiamare. Ruolo `OPERATOR`, salvo `aicos.security.api-token-roles.<nome>=ADMIN`. Un token più
+corto di 16 caratteri, o lo stesso token sotto due nomi, impediscono l'avvio.
+
+L'unica rotta pubblica oltre al login è `GET /actuator/health`, che risponde soltanto
+`{"status":"UP"}`. Un token sbagliato riceve **esattamente** la stessa risposta di un token
+assente. **CSRF**: il token viaggia in un header e mai in un cookie, quindi il browser non lo
+allega da solo; non c'è niente che un sito terzo possa sfruttare.
 
 Negli esempi qui sotto l'header `Authorization` è **sottinteso**.
 

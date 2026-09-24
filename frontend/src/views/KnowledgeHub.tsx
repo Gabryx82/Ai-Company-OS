@@ -86,7 +86,7 @@ export function KnowledgeHub() {
           <div key={r.key} className="tile" style={{ justifyItems: "stretch", textAlign: "left", cursor: "default" }}>
             <div className="row"><span className="chip">{r.kind}</span><strong>{r.name}</strong></div>
             {r.description && <div className="muted" style={{ fontSize: 12.5 }}>{r.description}</div>}
-            <div>{r.tags.map((t) => <span key={t} className="chip">{t}</span>)}</div>
+            <div>{(r.tags ?? []).map((t) => <span key={t} className="chip">{t}</span>)}</div>
             {r.configuration && <code style={{ fontSize: 11 }}>{r.configuration}</code>}
             <div className="row">
               {r.sourceUrl && <a className="btn btn-small" href={r.sourceUrl} target="_blank" rel="noreferrer"><Icon name="external" size={12} /> Fonte</a>}
@@ -102,7 +102,7 @@ export function KnowledgeHub() {
           <div key={t.key} className="tile" style={{ justifyItems: "stretch", textAlign: "left", cursor: "default" }}>
             <div className="row"><Icon name="agents" /><strong>{t.name}</strong></div>
             <div className="muted" style={{ fontSize: 12.5 }}>{t.specialization}</div>
-            {t.children.length > 0 && <div style={{ fontSize: 12 }}>Sottoagenti: {t.children.map((c) => <span key={c.key} className="chip">{c.name}</span>)}</div>}
+            {(t.children ?? []).length > 0 && <div style={{ fontSize: 12 }}>Sottoagenti: {(t.children ?? []).map((c) => <span key={c.key} className="chip">{c.name}</span>)}</div>}
             <div className="row"><span className="mono muted" style={{ fontSize: 11 }}>{t.model}</span><span className="spacer" />
               <button className="btn btn-small" onClick={() => install(t.key)}>Installa</button></div>
           </div>

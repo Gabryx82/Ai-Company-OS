@@ -33,6 +33,17 @@ public class AgentTemplates {
                            String systemPrompt, String responsibilities, String limits, String outputFormat,
                            List<String> directives, List<String> resources, List<String> software,
                            List<Template> children) {
+        /**
+         * A template without sub-agents, directives or resources has empty lists,
+         * never nulls: the catalog omits them, and a null crashed the Knowledge Hub
+         * (PHASE 15).
+         */
+        public Template {
+            directives = directives == null ? List.of() : List.copyOf(directives);
+            resources = resources == null ? List.of() : List.copyOf(resources);
+            software = software == null ? List.of() : List.copyOf(software);
+            children = children == null ? List.of() : List.copyOf(children);
+        }
     }
 
     public enum Outcome { CREATED, EXISTING }

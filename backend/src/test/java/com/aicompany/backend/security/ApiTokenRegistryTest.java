@@ -17,15 +17,18 @@ class ApiTokenRegistryTest {
     private static final String OPERATOR_TOKEN = "operator-token-0123456789";
     private static final String ENGINE_TOKEN = "engine-token-0123456789ab";
 
+    /**
+     * PHASE 15 (ADR-024): people sign in, so a service token is optional. No
+     * token configured means no machine can call -- never an open API.
+     */
     @Test
-    void noConfiguredTokenIsARefusalToStartNotAnOpenApi() {
+    void noConfiguredTokenMeansNoServiceCallerNotAnOpenApi() {
 
-        assertThatThrownBy(() -> new ApiTokenRegistry(Map.of()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("aicos.security.api-tokens");
-
-        assertThatThrownBy(() -> new ApiTokenRegistry(null))
-                .isInstanceOf(IllegalStateException.class);
+        assertThat(new ApiTokenRegistry(Map.of()).principalFor(OPERATOR_TOKEN)).isEmpty();
+        assertThat(new ApiTokenRegistry(null).principals()).isEmpty();
+        // An unset environment variable resolves to a blank value: "not configured".
+        assertThat(new ApiTokenRegistry(Map.of("operator", "   ")).principals()).isEmpty();
+        assertThat(new ApiTokenRegistry(Map.of("operator", "   ")).principalFor("   ")).isEmpty();
     }
 
     @Test
@@ -35,9 +38,6 @@ class ApiTokenRegistryTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("operator")
                 .hasMessageContaining(String.valueOf(ApiTokenRegistry.MINIMUM_TOKEN_LENGTH));
-
-        assertThatThrownBy(() -> new ApiTokenRegistry(Map.of("operator", "   ")))
-                .isInstanceOf(IllegalStateException.class);
     }
 
     /** Otherwise the principal of a request would depend on map iteration order. */

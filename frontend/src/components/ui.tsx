@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { cloneElement, isValidElement, useEffect, useId, type ReactElement, type ReactNode } from "react";
 import { ApiProblem } from "../api/client";
 import type { RunStatus, TaskPriority, TaskStatus } from "../api/types";
 
@@ -69,10 +69,15 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
 }
 
 export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: ReactNode }) {
+  // The label names its control (PHASE 15): screen readers and getByLabelText
+  // find the input by its label, as they should.
+  const generated = useId();
+  const single = isValidElement(children) ? (children as ReactElement<{ id?: string }>) : null;
+  const id = single?.props.id ?? generated;
   return (
     <div className="field">
-      <label>{label}</label>
-      {children}
+      <label htmlFor={single ? id : undefined}>{label}</label>
+      {single ? cloneElement(single, { id }) : children}
       {hint && <span className="hint">{hint}</span>}
       {error && <span className="error">{error}</span>}
     </div>

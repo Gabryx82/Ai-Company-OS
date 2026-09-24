@@ -12,13 +12,15 @@ import java.util.Set;
 /**
  * Resolves a presented bearer token to the name it was configured under.
  *
- * <h2>Fail closed</h2>
+ * <h2>Machines, not people</h2>
  *
- * <p>An empty registry does not mean "no authentication": it refuses to exist.
- * The application would otherwise start, answer 401 to everything, and look like
- * a broken client rather than a missing configuration. The same goes for a token
- * too short to be a credential and for two names sharing one token -- the second
- * would make the principal a coin toss.
+ * <p>Since PHASE 15 (ADR-024) people sign in with a username and a password; a
+ * configured token is a <em>service</em> credential for scripts and automation.
+ * None is required: an empty registry means no machine may call, not that the
+ * API is open -- every route still needs a principal. A blank value is "not
+ * configured" and skipped, so {@code AICOS_OPERATOR_TOKEN} can simply be unset.
+ * What stays refused at startup is a token too short to be a credential and two
+ * names sharing one token -- the second would make the principal a coin toss.
  *
  * <h2>What is kept, and how it is compared</h2>
  *
@@ -38,20 +40,17 @@ public final class ApiTokenRegistry {
 
     public ApiTokenRegistry(Map<String, String> tokensByName) {
 
-        if (tokensByName == null || tokensByName.isEmpty()) {
-            throw new IllegalStateException(
-                    "No API token is configured (aicos.security.api-tokens.<name>). "
-                            + "The control plane refuses to start without one: see docs/RUNNING.md");
-        }
-
         Map<String, byte[]> digests = new LinkedHashMap<>();
         Set<String> seen = new HashSet<>();
 
-        tokensByName.forEach((name, token) -> {
+        (tokensByName == null ? Map.<String, String>of() : tokensByName).forEach((name, token) -> {
+            if (token == null || token.isBlank()) {
+                return;
+            }
             if (name == null || name.isBlank()) {
                 throw new IllegalStateException("An API token is configured without a name");
             }
-            if (token == null || token.strip().length() < MINIMUM_TOKEN_LENGTH) {
+            if (token.strip().length() < MINIMUM_TOKEN_LENGTH) {
                 throw new IllegalStateException("The API token '" + name + "' is shorter than "
                         + MINIMUM_TOKEN_LENGTH + " characters");
             }

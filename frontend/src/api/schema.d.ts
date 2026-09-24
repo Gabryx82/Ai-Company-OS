@@ -4,6 +4,70 @@
  */
 
 export interface paths {
+    "/api/admin/security-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["users"];
+        put?: never;
+        post: operations["create_4"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["update_3"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["resetPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent-profiles": {
         parameters: {
             query?: never;
@@ -191,6 +255,70 @@ export interface paths {
         put: operations["allow"];
         post?: never;
         delete: operations["disallow"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["changePassword"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1141,6 +1269,16 @@ export interface components {
             source?: string;
             target?: string;
         };
+        EventResponse: {
+            detail?: string;
+            /** Format: int64 */
+            id?: number;
+            /** Format: date-time */
+            occurredAt?: string;
+            principal?: string;
+            source?: string;
+            type?: string;
+        };
         GenerateRequest: {
             model?: string;
         };
@@ -1188,6 +1326,24 @@ export interface components {
             folderOpened?: boolean;
             key?: string;
             workingDirectory?: string;
+        };
+        LoginRequest: {
+            password: string;
+            username: string;
+        };
+        LoginResponse: {
+            /** Format: date-time */
+            expiresAt?: string;
+            token?: string;
+            user?: components["schemas"]["UserResponse"];
+        };
+        MeResponse: {
+            /** @enum {string} */
+            kind?: "USER" | "SERVICE";
+            name?: string;
+            /** @enum {string} */
+            role?: "ADMIN" | "OPERATOR";
+            user?: components["schemas"]["UserResponse"];
         };
         ModelCatalogResponse: {
             engineDefault?: string;
@@ -1245,6 +1401,13 @@ export interface components {
             /** Format: int64 */
             tokens?: number;
         };
+        NewUser: {
+            displayName?: string;
+            initialPassword: string;
+            /** @enum {string} */
+            role: "ADMIN" | "OPERATOR";
+            username: string;
+        };
         Node: {
             id?: string;
             label?: string;
@@ -1280,6 +1443,13 @@ export interface components {
             /** Format: int64 */
             taskId?: number;
             title?: string;
+        };
+        PasswordChange: {
+            currentPassword: string;
+            newPassword: string;
+        };
+        PasswordReset: {
+            temporaryPassword: string;
         };
         PhaseResponse: {
             /** @enum {string} */
@@ -1702,6 +1872,28 @@ export interface components {
             /** Format: date-time */
             windowStart?: string;
         };
+        UserResponse: {
+            displayName?: string;
+            enabled?: boolean;
+            /** Format: int64 */
+            id?: number;
+            /** Format: date-time */
+            lastLoginAt?: string;
+            mustChangePassword?: boolean;
+            /** Format: date-time */
+            passwordChangedAt?: string;
+            /** @enum {string} */
+            role?: "ADMIN" | "OPERATOR";
+            username?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        UserUpdate: {
+            displayName?: string;
+            enabled: boolean;
+            /** @enum {string} */
+            role: "ADMIN" | "OPERATOR";
+        };
     };
     responses: never;
     parameters: never;
@@ -1711,6 +1903,128 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    events: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EventResponse"][];
+                };
+            };
+        };
+    };
+    users: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"][];
+                };
+            };
+        };
+    };
+    create_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewUser"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    update_3: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordReset"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
     profiles: {
         parameters: {
             query?: never;
@@ -2083,6 +2397,90 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LoginResponse"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MeResponse"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

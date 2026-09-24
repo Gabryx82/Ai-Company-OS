@@ -247,6 +247,29 @@ public enum ApiProblem {
     DAILY_ITEM_NOT_FOUND("daily-item-not-found", HttpStatus.NOT_FOUND,
             "Daily item not found", "No daily item with that identifier"),
 
+    // --- people, sessions, authorization (PHASE 15, ADR-024) -------------------------
+
+    /** One answer for every failed sign-in, so that it does not reveal which usernames exist. */
+    INVALID_CREDENTIALS("invalid-credentials", HttpStatus.UNAUTHORIZED,
+            "Sign-in refused", "Wrong username or password, or the account is disabled or temporarily locked"),
+    TOO_MANY_LOGIN_ATTEMPTS("too-many-login-attempts", HttpStatus.TOO_MANY_REQUESTS,
+            "Too many sign-in attempts", "Too many sign-in attempts from this client; wait a minute and try again"),
+    /** Authenticated, but the role does not allow it. Never used for a missing credential: that is a 401. */
+    ACCESS_DENIED("access-denied", HttpStatus.FORBIDDEN,
+            "Not allowed", "Your role does not allow this operation"),
+    WEAK_PASSWORD("weak-password", HttpStatus.BAD_REQUEST,
+            "Password refused", "The password does not meet the policy"),
+    CURRENT_PASSWORD_WRONG("current-password-wrong", HttpStatus.BAD_REQUEST,
+            "Current password wrong", "The current password is not correct"),
+    USERNAME_TAKEN("username-taken", HttpStatus.CONFLICT,
+            "Username taken", "That username is already in use"),
+    USER_NOT_FOUND("user-not-found", HttpStatus.NOT_FOUND,
+            "User not found", "No user with that identifier"),
+    LAST_ADMIN("last-admin", HttpStatus.CONFLICT,
+            "Last admin", "The last enabled admin cannot be disabled or demoted"),
+    NOT_A_USER_SESSION("not-a-user-session", HttpStatus.CONFLICT,
+            "Not a user session", "This operation needs a signed-in person, not a service token"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

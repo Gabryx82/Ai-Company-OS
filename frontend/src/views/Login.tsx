@@ -2,14 +2,17 @@ import { useState, type FormEvent } from "react";
 import { ApiProblem, ControlPlane, type Session } from "../api/client";
 import { DEFAULT_BASE_URL } from "../session";
 import { Field, ProblemNote } from "../components/ui";
+import { Icon } from "../components/icons";
 
 /**
- * The operator's bearer token (ADR-013). Checked against a real protected route
- * before it is kept, so a wrong token is refused here and not on the first page.
+ * Sign-in with a username and a password (ADR-024). The session token the
+ * control plane returns is kept for this tab only (sessionStorage).
  */
 export function Login({ onSignIn }: { onSignIn: (session: Session) => void }) {
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
-  const [token, setToken] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [advanced, setAdvanced] = useState(false);
   const [problem, setProblem] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -17,14 +20,13 @@ export function Login({ onSignIn }: { onSignIn: (session: Session) => void }) {
     event.preventDefault();
     setBusy(true);
     setProblem(null);
-    const session = { baseUrl: baseUrl.trim(), token: token.trim() };
     try {
-      await new ControlPlane(session).agents();
-      onSignIn(session);
+      onSignIn(await ControlPlane.login(baseUrl, username.trim(), password));
     } catch (error) {
-      setProblem(error instanceof ApiProblem && error.isUnauthenticated
-        ? new ApiProblem(401, { title: "Token refused", detail: "The control plane did not accept this token.",
-          type: error.type })
+      setPassword("");
+      setProblem(error instanceof ApiProblem && error.slug === "invalid-credentials"
+        ? new ApiProblem(401, { title: "Accesso negato", type: error.type,
+          detail: "Utente o password errati, oppure account disattivato o temporaneamente bloccato (5 tentativi errati: 15 minuti)." })
         : error);
     } finally {
       setBusy(false);
@@ -34,20 +36,32 @@ export function Login({ onSignIn }: { onSignIn: (session: Session) => void }) {
   return (
     <div className="login">
       <form className="card card-body stack" onSubmit={submit}>
-        <div>
-          <h1>AI Company OS</h1>
-          <p className="muted">Sign in to the control plane with the operator token.</p>
+        <div className="row">
+          <span className="brand-mark"><Icon name="sparkle" size={18} /></span>
+          <div>
+            <h1>AI Company OS</h1>
+            <p className="muted">Accedi con il tuo account.</p>
+          </div>
         </div>
-        <Field label="Control plane URL">
-          <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} required />
+        <Field label="Utente">
+          <input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus autoComplete="username" />
         </Field>
-        <Field label="Operator token" hint="In dev: AICOS_OPERATOR_TOKEN, or the local default dev-operator-token-change-me.">
-          <input type="password" value={token} onChange={(e) => setToken(e.target.value)} required autoFocus
+        <Field label="Password" hint="Primo avvio: l'account admin e la sua password sono in %USERPROFILE%\.aicos (vedi docs/RUNNING.md).">
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
                  autoComplete="current-password" />
         </Field>
+        {advanced ? (
+          <Field label="Indirizzo del control plane">
+            <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} required />
+          </Field>
+        ) : (
+          <button type="button" className="btn btn-small" style={{ justifySelf: "start" }} onClick={() => setAdvanced(true)}>
+            Control plane: {baseUrl}
+          </button>
+        )}
         <ProblemNote problem={problem} />
-        <button className="btn btn-primary" type="submit" disabled={busy || !token.trim()}>
-          {busy ? "Checking…" : "Sign in"}
+        <button className="btn btn-primary" type="submit" disabled={busy || !username.trim() || !password}>
+          {busy ? "Verifica…" : "Accedi"}
         </button>
       </form>
     </div>
