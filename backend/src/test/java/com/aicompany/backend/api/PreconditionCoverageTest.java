@@ -6,6 +6,7 @@ import com.aicompany.backend.run.service.RunService;
 import com.aicompany.backend.llm.service.LlmCatalogService;
 import com.aicompany.backend.software.service.SoftwareService;
 import com.aicompany.backend.usage.service.UsageService;
+import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +42,8 @@ class PreconditionCoverageTest {
 
     private static final List<Class<?>> SERVICES =
             List.of(TaskService.class, ProjectService.class, AgentService.class, RunService.class,
-                    SoftwareService.class, LlmCatalogService.class, UsageService.class);
+                    SoftwareService.class, LlmCatalogService.class, UsageService.class,
+                    ProjectWorkspaceService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -132,6 +134,11 @@ class PreconditionCoverageTest {
 
         assertThat(writePaths(UsageService.class))
                 .containsExactlyInAnyOrder("anchor:Precondition");
+
+        // PHASE 9 (ADR-020). Only the profile writes a row; scaffolding and
+        // documents write files in the workspace, never the database.
+        assertThat(writePaths(ProjectWorkspaceService.class))
+                .containsExactlyInAnyOrder("configure:Precondition");
     }
 
     /**

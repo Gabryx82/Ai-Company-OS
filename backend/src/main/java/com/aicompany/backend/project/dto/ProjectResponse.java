@@ -1,7 +1,10 @@
 package com.aicompany.backend.project.dto;
 
 import com.aicompany.backend.project.model.Project;
+import com.aicompany.backend.project.model.AutonomyLevel;
+import com.aicompany.backend.project.model.PlanStatus;
 import com.aicompany.backend.project.model.ProjectStatus;
+import com.aicompany.backend.project.model.ProjectType;
 
 import java.time.Instant;
 
@@ -14,7 +17,13 @@ public record ProjectResponse(
         String description,
         ProjectStatus status,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        // PHASE 9 (ADR-020): the profile. Additive fields; nothing above changed.
+        ProjectType projectType,
+        String stack,
+        String workspacePath,
+        AutonomyLevel autonomyLevel,
+        PlanStatus planStatus
 ) {
 
     public static ProjectResponse from(Project project) {
@@ -24,7 +33,12 @@ public record ProjectResponse(
                 project.getDescription(),
                 project.getStatus(),
                 project.getCreatedAt(),
-                project.getUpdatedAt()
+                project.getUpdatedAt(),
+                project.getProjectType(),
+                project.getStack(),
+                project.getWorkspacePath(),
+                project.getAutonomyLevel(),
+                project.getPlanStatus()
         );
     }
 }

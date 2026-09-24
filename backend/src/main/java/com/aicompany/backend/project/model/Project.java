@@ -74,6 +74,26 @@ public class Project {
     @Column(nullable = false)
     private long version;
 
+    // --- the profile (V14, ADR-020 §2.1) --------------------------------------
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "project_type", length = 24)
+    private ProjectType projectType;
+
+    @Column(length = 2000)
+    private String stack;
+
+    @Column(name = "workspace_path", length = 1000)
+    private String workspacePath;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "autonomy_level", nullable = false, length = 24)
+    private AutonomyLevel autonomyLevel = AutonomyLevel.GUIDED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "plan_status", nullable = false, length = 24)
+    private PlanStatus planStatus = PlanStatus.NONE;
+
     protected Project() {
         // for JPA
     }
@@ -101,6 +121,49 @@ public class Project {
 
         this.name = name;
         this.description = description;
+    }
+
+    /**
+     * Sets the profile (ADR-020). Frozen while archived, like the details
+     * (ADR-004 §8): an archived project is out of the working registry.
+     */
+    public void configureProfile(ProjectType projectType, String stack, String workspacePath,
+                                 AutonomyLevel autonomyLevel) {
+        if (isArchived()) {
+            throw new ArchivedProjectIsImmutableException();
+        }
+        this.projectType = projectType;
+        this.stack = stack;
+        this.workspacePath = workspacePath;
+        this.autonomyLevel = autonomyLevel == null ? AutonomyLevel.GUIDED : autonomyLevel;
+    }
+
+    /** Where the plan stands (PHASE 10). Frozen while archived. */
+    public void markPlan(PlanStatus planStatus) {
+        if (isArchived()) {
+            throw new ArchivedProjectIsImmutableException();
+        }
+        this.planStatus = planStatus;
+    }
+
+    public ProjectType getProjectType() {
+        return projectType;
+    }
+
+    public String getStack() {
+        return stack;
+    }
+
+    public String getWorkspacePath() {
+        return workspacePath;
+    }
+
+    public AutonomyLevel getAutonomyLevel() {
+        return autonomyLevel;
+    }
+
+    public PlanStatus getPlanStatus() {
+        return planStatus;
     }
 
     /**

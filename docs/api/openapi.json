@@ -90,6 +90,83 @@
         "required" : [ "name", "role", "specialization" ],
         "type" : "object"
       },
+      "Document" : {
+        "properties" : {
+          "modified" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "size" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "DocumentWrite" : {
+        "properties" : {
+          "content" : {
+            "maxLength" : 1000000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "content" ],
+        "type" : "object"
+      },
+      "Documents" : {
+        "properties" : {
+          "agents" : {
+            "$ref" : "#/components/schemas/Document"
+          },
+          "exists" : {
+            "type" : "boolean"
+          },
+          "handoffs" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Document"
+            },
+            "type" : "array"
+          },
+          "implementationPlan" : {
+            "$ref" : "#/components/schemas/Document"
+          },
+          "masterPrompt" : {
+            "$ref" : "#/components/schemas/Document"
+          },
+          "masterPromptIsTemplate" : {
+            "type" : "boolean"
+          },
+          "phases" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Document"
+            },
+            "type" : "array"
+          },
+          "planJson" : {
+            "$ref" : "#/components/schemas/Document"
+          },
+          "references" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Document"
+            },
+            "type" : "array"
+          },
+          "tasks" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Document"
+            },
+            "type" : "array"
+          },
+          "workspacePath" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "LaunchRequest" : {
         "properties" : {
           "projectId" : {
@@ -266,6 +343,29 @@
         },
         "type" : "object"
       },
+      "ProfileRequest" : {
+        "properties" : {
+          "autonomyLevel" : {
+            "enum" : [ "GUIDED", "SUPERVISED", "DELEGATED", "FINAL_REVIEW" ],
+            "type" : "string"
+          },
+          "projectType" : {
+            "enum" : [ "WEB_APP", "BACKEND", "MOBILE", "DESKTOP", "AI_ML", "GAME", "THREE_D", "DATA", "AUTOMATION", "API", "FULL_STACK", "OTHER" ],
+            "type" : "string"
+          },
+          "stack" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "workspacePath" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ProjectCreateRequest" : {
         "properties" : {
           "description" : {
@@ -284,6 +384,10 @@
       },
       "ProjectResponse" : {
         "properties" : {
+          "autonomyLevel" : {
+            "enum" : [ "GUIDED", "SUPERVISED", "DELEGATED", "FINAL_REVIEW" ],
+            "type" : "string"
+          },
           "createdAt" : {
             "format" : "date-time",
             "type" : "string"
@@ -298,12 +402,59 @@
           "name" : {
             "type" : "string"
           },
+          "planStatus" : {
+            "enum" : [ "NONE", "DRAFT", "APPROVED" ],
+            "type" : "string"
+          },
+          "projectType" : {
+            "enum" : [ "WEB_APP", "BACKEND", "MOBILE", "DESKTOP", "AI_ML", "GAME", "THREE_D", "DATA", "AUTOMATION", "API", "FULL_STACK", "OTHER" ],
+            "type" : "string"
+          },
+          "stack" : {
+            "type" : "string"
+          },
           "status" : {
             "enum" : [ "ACTIVE", "ARCHIVED" ],
             "type" : "string"
           },
           "updatedAt" : {
             "format" : "date-time",
+            "type" : "string"
+          },
+          "workspacePath" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ProjectTypeInfo" : {
+        "properties" : {
+          "agentRoles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "software" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "stack" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "type" : {
+            "enum" : [ "WEB_APP", "BACKEND", "MOBILE", "DESKTOP", "AI_ML", "GAME", "THREE_D", "DATA", "AUTOMATION", "API", "FULL_STACK", "OTHER" ],
             "type" : "string"
           }
         },
@@ -478,6 +629,18 @@
             "type" : "integer"
           },
           "userPrompt" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ScaffoldEntry" : {
+        "properties" : {
+          "outcome" : {
+            "enum" : [ "CREATED", "EXISTING" ],
+            "type" : "string"
+          },
+          "path" : {
             "type" : "string"
           }
         },
@@ -1254,6 +1417,27 @@
         "tags" : [ "llm-catalog-controller" ]
       }
     },
+    "/api/catalog/project-types" : {
+      "get" : {
+        "operationId" : "projectTypes",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ProjectTypeInfo"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      }
+    },
     "/api/catalog/providers" : {
       "get" : {
         "operationId" : "providers",
@@ -1452,6 +1636,154 @@
         "tags" : [ "project-controller" ]
       }
     },
+    "/api/projects/{id}/documents" : {
+      "get" : {
+        "operationId" : "documents",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Documents"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      }
+    },
+    "/api/projects/{id}/files" : {
+      "get" : {
+        "operationId" : "read",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      },
+      "put" : {
+        "operationId" : "write",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DocumentWrite"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Document"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      }
+    },
+    "/api/projects/{id}/profile" : {
+      "put" : {
+        "operationId" : "configure",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      }
+    },
     "/api/projects/{id}/restore" : {
       "post" : {
         "operationId" : "restore",
@@ -1484,6 +1816,36 @@
           }
         },
         "tags" : [ "project-controller" ]
+      }
+    },
+    "/api/projects/{id}/workspace" : {
+      "post" : {
+        "operationId" : "scaffold",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ScaffoldEntry"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
       }
     },
     "/api/projects/{projectId}/tasks" : {
@@ -2266,6 +2628,35 @@
           }
         },
         "tags" : [ "usage-controller" ]
+      }
+    },
+    "/api/workspace/default-folder" : {
+      "get" : {
+        "operationId" : "defaultFolder",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
       }
     }
   },

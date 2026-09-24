@@ -38,7 +38,8 @@ class ApiProblemCoverageTest {
             // by each exception itself).
             "com.aicompany.backend.software",
             "com.aicompany.backend.llm",
-            "com.aicompany.backend.usage");
+            "com.aicompany.backend.usage",
+            "com.aicompany.backend.workspace");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in
@@ -148,6 +149,10 @@ class ApiProblemCoverageTest {
                         "provider-not-found",
                         "model-not-found",
                         "quota-plan-not-found",
+                        "workspace-not-configured",
+                        "workspace-path-refused",
+                        "workspace-file-not-found",
+                        "workspace-unavailable",
                         "internal-error");
     }
 

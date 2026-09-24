@@ -7,13 +7,11 @@ import com.aicompany.backend.software.detect.SoftwareIcons;
 import com.aicompany.backend.software.launch.ProcessSoftwareLauncher;
 import com.aicompany.backend.software.launch.SoftwareLauncher;
 import com.aicompany.backend.software.service.HostEnvironment;
-import com.aicompany.backend.software.service.ProjectFolders;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
-import java.util.Optional;
 
 /**
  * The host-facing beans of the Software Hub. Tests replace all of them with
@@ -44,11 +42,5 @@ public class SoftwareConfiguration {
     SoftwareLauncher softwareLauncher(HostEnvironment host,
                                       @Value("${aicos.launcher.enabled:true}") boolean enabled) {
         return new ProcessSoftwareLauncher(enabled && host.windows());
-    }
-
-    /** Until a project workspace exists (PHASE 9) no project has a folder. */
-    @Bean
-    ProjectFolders noProjectFolders() {
-        return projectId -> Optional.empty();
     }
 }

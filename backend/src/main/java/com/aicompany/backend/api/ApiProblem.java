@@ -194,6 +194,21 @@ public enum ApiProblem {
     QUOTA_PLAN_NOT_FOUND("quota-plan-not-found", HttpStatus.NOT_FOUND,
             "Quota plan not found", "No quota window with that key"),
 
+    // --- project workspace (PHASE 9, ADR-020) ---------------------------------
+
+    WORKSPACE_NOT_CONFIGURED("workspace-not-configured", HttpStatus.CONFLICT,
+            "Project has no workspace", "Set the project's workspace folder first"),
+
+    /** ADR-020 W2/W3: outside the workspace, or not a document this API writes. */
+    WORKSPACE_PATH_REFUSED("workspace-path-refused", HttpStatus.BAD_REQUEST,
+            "Path refused", "The path is outside the project workspace or not a project document"),
+
+    WORKSPACE_FILE_NOT_FOUND("workspace-file-not-found", HttpStatus.NOT_FOUND,
+            "File not found", "No such file in the project workspace"),
+
+    WORKSPACE_UNAVAILABLE("workspace-unavailable", HttpStatus.SERVICE_UNAVAILABLE,
+            "Workspace unavailable", "The project folder could not be read or written"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**
