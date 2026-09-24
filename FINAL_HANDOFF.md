@@ -12,8 +12,8 @@
   `autonomous/phase-7-operator-console` = `670b6bf`, che resta intatto). La catena è lineare:
   `master → phase-3 → … → phase-7 → phase-8-ecosystem-realignment`. Un solo fast-forward integra
   PHASE 3–14.
-- **Suite**: **417** Java (+1 saltato: link simbolici su Windows senza privilegi) + **56** AI Engine
-  + **18** console = **491 verdi**. **CI verde** su `1835162` e su ogni commit precedente del blocco.
+- **Suite**: **417** Java (416 verdi + 1 saltato: link simbolici su Windows senza privilegi) + **56** AI
+  Engine + **18** console = **490 verdi**. **CI verde** su `1835162` e su ogni commit precedente del blocco.
 - **Stream**: `V11` → **`V19`**, tutte additive. **Live DB `aicompany`: `V11`** (migrato
   dall'operatore durante la review di PHASE 3–7); al primo avvio del nuovo backend riceverà V12–V19.
 - **MU-OS raggiunto** (fine PHASE 11) e **verificato dal vivo** sulla macchina dell'operatore.
@@ -202,7 +202,7 @@ Il clone si può eliminare quando si vuole; non è stato eliminato perché è un
 
 | Suite | Prima | Ora |
 |---|---|---|
-| Control plane (Java) | 329 | **417** (+1 saltato su Windows) |
+| Control plane (Java) | 329 | **417** (di cui 1 saltato su Windows) |
 | AI Engine (Python) | 51 | **56** |
 | Console (Vitest) | 14 | **18** |
 

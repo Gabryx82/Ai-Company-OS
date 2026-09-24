@@ -66,7 +66,7 @@ funziona, e proseguire autonomamente. Gap analysis: `docs/realignment/GAP_ANALYS
 
 - **Branch**: `autonomous/phase-8-ecosystem-realignment`, da `autonomous/phase-7-operator-console`
   (che resta intatto). **Pushato**; CI su ogni push. **`master` intoccato** (`d166870`).
-- **Suite**: **417 Java** (1 saltato: link simbolici su Windows senza privilegi) + **56 engine** +
+- **Suite**: **417 Java** (416 verdi + 1 saltato: link simbolici su Windows senza privilegi) + **56 engine** +
   **18 console**. Stream **`V19`** (V12–V19 tutte additive).
 - **Live dev DB `aicompany`**: **`V11`** (lo ha migrato l'operatore durante la sua review di PHASE
   3–7 — la riga «V3» più sotto è superata). Al prossimo avvio si applicheranno V12–V19, additive.
