@@ -50,78 +50,96 @@ public final class PlanPrompt {
               ]
             }""";
 
-    /**
-     * The same shape as {@link #SCHEMA}, as a JSON Schema for constrained
-     * decoding. Leaner on purpose: the fields a small local model must produce
-     * are required, the others are allowed and optional, and the sizes are
-     * bounded -- 2 to 6 phases, 2 to 6 tasks each -- so the grammar itself makes
-     * an empty phase impossible (measured: without it, a 9B model returned one).
+    /*
+     * The engine plans in two stages -- the phases, then the tasks of each phase --
+     * each constrained by a JSON Schema the provider enforces token by token
+     * (Ollama). Measured on the operator machine (qwen3.5:9b, about 6 tokens/s):
+     * the whole plan in one constrained call took more than ten minutes, while the
+     * stages take about 2.5 minutes and 1.5 minutes per phase. The bounds make an
+     * empty phase impossible; the maxLength values keep a small model from
+     * writing essays where a line is enough.
      */
-    public static final String JSON_SCHEMA = """
-            {
-              "type": "object",
-              "properties": {
-                "summary": {"type": "string"},
-                "stack": {"type": "array", "items": {"type": "string"}, "maxItems": 10},
-                "phases": {
-                  "type": "array", "minItems": 2, "maxItems": 6,
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "title": {"type": "string"},
-                      "objective": {"type": "string"},
-                      "scope": {"type": "string"},
-                      "strategy": {"type": "string"},
-                      "software": {"type": "array", "items": {"type": "string"}, "maxItems": 6},
-                      "risks": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
-                      "completionCriteria": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 5},
-                      "tasks": {
-                        "type": "array", "minItems": 2, "maxItems": 6,
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "title": {"type": "string"},
-                            "objective": {"type": "string"},
-                            "implementation": {"type": "string"},
-                            "agentRole": {"type": "string"},
-                            "software": {"type": "array", "items": {"type": "string"}, "maxItems": 4},
-                            "files": {"type": "array", "items": {"type": "string"}, "maxItems": 8},
-                            "tests": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 5},
-                            "completionCriteria": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 5},
-                            "priority": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"]}
-                          },
-                          "required": ["title", "objective", "implementation", "agentRole", "tests",
-                                       "completionCriteria", "priority"]
-                        }
-                      }
-                    },
-                    "required": ["title", "objective", "scope", "strategy", "completionCriteria", "tasks"]
-                  }
-                }
-              },
-              "required": ["summary", "stack", "phases"]
-            }""";
 
-    private PlanPrompt() {
+    /** Stage 1: the phases, in build order, without their tasks. */
+    public static final String PHASES_SCHEMA = """
+            {"type": "object",
+             "properties": {
+               "summary": {"type": "string", "maxLength": 400},
+               "stack": {"type": "array", "items": {"type": "string", "maxLength": 60}, "minItems": 1, "maxItems": 8},
+               "phases": {"type": "array", "minItems": 2, "maxItems": 5, "items": {"type": "object",
+                 "properties": {
+                   "title": {"type": "string", "maxLength": 90},
+                   "objective": {"type": "string", "maxLength": 300},
+                   "scope": {"type": "string", "maxLength": 300},
+                   "strategy": {"type": "string", "maxLength": 400},
+                   "completionCriteria": {"type": "array", "items": {"type": "string", "maxLength": 150},
+                                          "minItems": 1, "maxItems": 3}},
+                 "required": ["title", "objective", "scope", "strategy", "completionCriteria"]}}},
+             "required": ["summary", "stack", "phases"]}""";
+
+    /** Stage 2: the tasks of one phase. */
+    public static final String TASKS_SCHEMA = """
+            {"type": "object",
+             "properties": {
+               "tasks": {"type": "array", "minItems": 2, "maxItems": 5, "items": {"type": "object",
+                 "properties": {
+                   "title": {"type": "string", "maxLength": 90},
+                   "objective": {"type": "string", "maxLength": 250},
+                   "implementation": {"type": "string", "maxLength": 500},
+                   "agentRole": {"type": "string", "maxLength": 60},
+                   "software": {"type": "array", "items": {"type": "string", "maxLength": 40}, "maxItems": 3},
+                   "files": {"type": "array", "items": {"type": "string", "maxLength": 100}, "maxItems": 5},
+                   "tests": {"type": "array", "items": {"type": "string", "maxLength": 150}, "minItems": 1, "maxItems": 3},
+                   "completionCriteria": {"type": "array", "items": {"type": "string", "maxLength": 150},
+                                          "minItems": 1, "maxItems": 3},
+                   "priority": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"]}},
+                 "required": ["title", "objective", "implementation", "agentRole", "tests", "completionCriteria",
+                              "priority"]}}},
+             "required": ["tasks"]}""";
+
+    public static String phasesSystem() {
+        return """
+                You are the Master Orchestrator of AI Company OS, planning a software project.
+                From the MASTER PROMPT, list the phases of the implementation plan in the order they must be built.
+                The first phase sets up the project skeleton and its tests; the last covers review and release.
+                Write every text value in Italian. Be concrete and brief.""";
     }
 
-    public static String system(List<String> agentRoles, List<String> softwareKeys) {
+    public static String tasksSystem(List<String> agentRoles, List<String> softwareKeys) {
         return """
-                You are the Master Orchestrator of AI Company OS, acting as the project planner.
-                From the MASTER PROMPT you receive, produce the implementation plan of the project as ONE JSON \
-                object and nothing else: no Markdown, no comments, no text before or after it.
+                You are the Master Orchestrator of AI Company OS, planning ONE phase of a software project.
+                List the tasks of this phase only: each small enough for one agent session, with verifiable \
+                completion criteria and the tests it needs.
+                "agentRole" must be one of: %s.
+                "software" entries must be keys from: %s.
+                Write every text value in Italian. Be concrete and brief.""".formatted(
+                String.join(", ", agentRoles), String.join(", ", softwareKeys));
+    }
 
-                The JSON object has exactly this shape:
+    public static String tasksUser(Project project, String masterPrompt, String summary, List<String> phaseTitles,
+                                   int index, PlanDocument.PhasePlan phase) {
+        StringBuilder all = new StringBuilder();
+        for (int i = 0; i < phaseTitles.size(); i++) {
+            all.append(i + 1).append(". ").append(phaseTitles.get(i)).append('\n');
+        }
+        return """
                 %s
+                Plan summary: %s
+                All phases:
+                %s
+                THE PHASE TO DETAIL NOW: %d. %s
+                Objective: %s
+                Scope: %s
+                Strategy: %s
+                """.formatted(user(project, masterPrompt), summary == null ? "" : summary, all, index + 1,
+                phase.title(), nz(phase.objective()), nz(phase.scope()), nz(phase.strategy()));
+    }
 
-                Rules:
-                - 2 to 6 phases, in the order they must be built; each phase has 2 to 6 tasks.
-                - Every task is small enough for one agent session and has verifiable completion criteria.
-                - The first phase sets up the project skeleton and its tests; the last one covers review and release.
-                - "agentRole" must be one of: %s.
-                - "software" entries must be keys from: %s.
-                - Write every text value in Italian. Keys stay exactly as in the shape above.
-                """.formatted(SCHEMA, String.join(", ", agentRoles), String.join(", ", softwareKeys));
+    private static String nz(String value) {
+        return value == null ? "" : value;
+    }
+
+    private PlanPrompt() {
     }
 
     public static String user(Project project, String masterPrompt) {

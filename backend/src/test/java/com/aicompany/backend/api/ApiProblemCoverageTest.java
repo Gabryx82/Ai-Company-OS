@@ -41,7 +41,9 @@ class ApiProblemCoverageTest {
             "com.aicompany.backend.usage",
             "com.aicompany.backend.workspace",
             "com.aicompany.backend.plan",
-            "com.aicompany.backend.orchestrator");
+            "com.aicompany.backend.orchestrator",
+            "com.aicompany.backend.harness",
+            "com.aicompany.backend.daily");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in
@@ -161,6 +163,10 @@ class ApiProblemCoverageTest {
                         "plan-invalid",
                         "plan-locked",
                         "planning-in-progress",
+                        "harness-resource-not-found",
+                        "harness-resource-key-conflict",
+                        "agent-hierarchy-cycle",
+                        "daily-item-not-found",
                         "internal-error");
     }
 

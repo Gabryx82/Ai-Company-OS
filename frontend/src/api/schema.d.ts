@@ -4,6 +4,70 @@
  */
 
 export interface paths {
+    "/api/agent-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["profiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agentTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent-templates/install-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["installAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent-templates/{key}/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["install"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agents": {
         parameters: {
             query?: never;
@@ -84,6 +148,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agents/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["profile"];
+        put: operations["configure_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agents/{id}/resources/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["attach"];
+        post?: never;
+        delete: operations["detach"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agents/{id}/software/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["allow"];
+        post?: never;
+        delete: operations["disallow"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/models": {
         parameters: {
             query?: never;
@@ -127,6 +239,54 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["between"];
+        put?: never;
+        post: operations["create_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily/carry-over": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["carryOver"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["update_2"];
+        post?: never;
+        delete: operations["remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -205,7 +365,7 @@ export interface paths {
         };
         get: operations["list_1"];
         put?: never;
-        post: operations["create_1"];
+        post: operations["create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -372,6 +532,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["projectResources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/resources/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["adopt"];
+        post?: never;
+        delete: operations["drop"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/restore": {
         parameters: {
             query?: never;
@@ -414,6 +606,22 @@ export interface paths {
         get: operations["tasksOfProject"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search"];
+        put?: never;
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -807,6 +1015,28 @@ export interface components {
             role: string;
             specialization: string;
         };
+        AgentProfileResponse: {
+            active?: boolean;
+            /** Format: int64 */
+            agentId?: number;
+            contextPolicy?: string;
+            directives?: string[];
+            domain?: string;
+            limits?: string;
+            model?: string;
+            name?: string;
+            outputFormat?: string;
+            /** Format: int64 */
+            parentId?: number;
+            resources?: components["schemas"]["ResourceResponse"][];
+            responsibilities?: string;
+            role?: string;
+            software?: components["schemas"]["SoftwareRef"][];
+            specialization?: string;
+            systemPrompt?: string;
+            /** Format: int64 */
+            version?: number;
+        };
         AgentResponse: {
             active?: boolean;
             /** Format: date-time */
@@ -831,6 +1061,41 @@ export interface components {
             exists?: boolean;
             path?: string;
             why?: string;
+        };
+        DailyRequest: {
+            /** Format: date */
+            day?: string;
+            /** Format: time-local */
+            dueTime?: string;
+            notes?: string;
+            /** Format: int32 */
+            position?: number;
+            /** @enum {string} */
+            priority?: "LOW" | "MEDIUM" | "HIGH";
+            /** @enum {string} */
+            status?: "TODO" | "DOING" | "DONE";
+            /** Format: int64 */
+            taskId?: number;
+            title?: string;
+        };
+        DailyResponse: {
+            /** Format: date */
+            day?: string;
+            /** Format: time-local */
+            dueTime?: string;
+            /** Format: int64 */
+            id?: number;
+            notes?: string;
+            /** Format: int32 */
+            position?: number;
+            /** @enum {string} */
+            priority?: "LOW" | "MEDIUM" | "HIGH";
+            /** @enum {string} */
+            status?: "TODO" | "DOING" | "DONE";
+            task?: components["schemas"]["TaskRef"];
+            title?: string;
+            /** Format: int64 */
+            version?: number;
         };
         Document: {
             /** Format: date-time */
@@ -879,6 +1144,15 @@ export interface components {
             prompt?: string;
             promptToClipboard?: boolean;
             task?: components["schemas"]["TaskResponse"];
+        };
+        Installed: {
+            /** Format: int64 */
+            agentId?: number;
+            name?: string;
+            /** @enum {string} */
+            outcome?: "CREATED" | "EXISTING";
+            /** Format: int64 */
+            parentId?: number;
         };
         LaunchRequest: {
             /** Format: int64 */
@@ -1014,6 +1288,7 @@ export interface components {
             outputTokens?: number;
             /** Format: int32 */
             phases?: number;
+            progress?: string;
             /** Format: int64 */
             projectId?: number;
             requestedBy?: string;
@@ -1091,6 +1366,30 @@ export interface components {
             /** Format: int32 */
             resetWeekday?: number;
             resetZone?: string;
+        };
+        ResourceRequest: {
+            configuration?: string;
+            description?: string;
+            key: string;
+            /** @enum {string} */
+            kind: "SKILL" | "KNOWLEDGE" | "MCP" | "TOOL" | "FRAMEWORK" | "TEMPLATE_PROVIDER";
+            name: string;
+            searchUrl?: string;
+            sourceUrl?: string;
+            tags?: string[];
+        };
+        ResourceResponse: {
+            configuration?: string;
+            description?: string;
+            /** Format: int64 */
+            id?: number;
+            key?: string;
+            /** @enum {string} */
+            kind?: "SKILL" | "KNOWLEDGE" | "MCP" | "TOOL" | "FRAMEWORK" | "TEMPLATE_PROVIDER";
+            name?: string;
+            searchUrl?: string;
+            sourceUrl?: string;
+            tags?: string[];
         };
         ReviewRequest: {
             /** Format: int64 */
@@ -1172,6 +1471,10 @@ export interface components {
             launchable?: boolean;
             name?: string;
             reason?: string;
+        };
+        SoftwareRef: {
+            key?: string;
+            name?: string;
         };
         SoftwareRequest: {
             appId?: string;
@@ -1277,6 +1580,16 @@ export interface components {
             /** Format: int64 */
             projectId: number;
         };
+        TaskRef: {
+            code?: string;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            projectId?: number;
+            projectName?: string;
+            status?: string;
+            title?: string;
+        };
         TaskResponse: {
             /** Format: int64 */
             agentId?: number;
@@ -1299,6 +1612,22 @@ export interface components {
             description?: string;
             priority: string;
             title: string;
+        };
+        Template: {
+            children?: components["schemas"]["Template"][];
+            directives?: string[];
+            domain?: string;
+            key?: string;
+            limits?: string;
+            model?: string;
+            name?: string;
+            outputFormat?: string;
+            resources?: string[];
+            responsibilities?: string;
+            role?: string;
+            software?: string[];
+            specialization?: string;
+            systemPrompt?: string;
         };
         UncataloguedModel: {
             available?: boolean;
@@ -1348,6 +1677,88 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    profiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgentProfileResponse"][];
+                };
+            };
+        };
+    };
+    agentTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Template"][];
+                };
+            };
+        };
+    };
+    installAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Installed"][];
+                };
+            };
+        };
+    };
+    install: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Installed"][];
+                };
+            };
+        };
+    };
     getAgents: {
         parameters: {
             query?: {
@@ -1514,6 +1925,140 @@ export interface operations {
             };
         };
     };
+    profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgentProfileResponse"];
+                };
+            };
+        };
+    };
+    configure_1: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgentProfileResponse"];
+                };
+            };
+        };
+    };
+    attach: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    detach: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    allow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    disallow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     models: {
         parameters: {
             query?: never;
@@ -1599,6 +2144,126 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["ProviderResponse"][];
                 };
+            };
+        };
+    };
+    between: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DailyResponse"][];
+                };
+            };
+        };
+    };
+    create_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DailyResponse"];
+                };
+            };
+        };
+    };
+    carryOver: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DailyResponse"][];
+                };
+            };
+        };
+    };
+    update_2: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DailyResponse"];
+                };
+            };
+        };
+    };
+    remove: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1722,7 +2387,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -2040,6 +2705,70 @@ export interface operations {
             };
         };
     };
+    projectResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceResponse"][];
+                };
+            };
+        };
+    };
+    adopt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    drop: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     restore: {
         parameters: {
             query?: never;
@@ -2104,6 +2833,53 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TaskResponse"][];
+                };
+            };
+        };
+    };
+    search: {
+        parameters: {
+            query?: {
+                kind?: "SKILL" | "KNOWLEDGE" | "MCP" | "TOOL" | "FRAMEWORK" | "TEMPLATE_PROVIDER";
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceResponse"][];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceResponse"];
                 };
             };
         };

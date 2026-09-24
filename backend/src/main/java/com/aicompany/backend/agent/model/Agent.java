@@ -106,6 +106,34 @@ public class Agent {
     @Column(nullable = false)
     private long version;
 
+    // --- prompt engineering and hierarchy (V18, ADR-023) --------------------------
+
+    /** The agent this one specialises, or {@code null} for a top-level agent. */
+    @Column(name = "parent_id")
+    private Long parentId;
+
+    @Column(length = 120)
+    private String domain;
+
+    @Column(name = "system_prompt", length = 8000)
+    private String systemPrompt;
+
+    @Column(length = 4000)
+    private String responsibilities;
+
+    @Column(length = 4000)
+    private String limits;
+
+    @Column(name = "output_format", length = 2000)
+    private String outputFormat;
+
+    /** One directive per line, in the order they apply. */
+    @Column(length = 8000)
+    private String directives;
+
+    @Column(name = "context_policy", length = 2000)
+    private String contextPolicy;
+
     protected Agent() {
         // for JPA
     }
@@ -142,6 +170,44 @@ public class Agent {
         this.specialization = specialization;
         this.model = model;
     }
+
+    /**
+     * The agent's prompt engineering and its place in the hierarchy (ADR-023).
+     * Frozen while inactive, like the details.
+     */
+    public void configureProfile(Long parentId, String domain, String systemPrompt, String responsibilities,
+                                 String limits, String outputFormat, String directives, String contextPolicy) {
+        if (status != AgentStatus.ACTIVE) {
+            throw new InactiveAgentIsImmutableException();
+        }
+        this.parentId = parentId;
+        this.domain = blankToNull(domain);
+        this.systemPrompt = blankToNull(systemPrompt);
+        this.responsibilities = blankToNull(responsibilities);
+        this.limits = blankToNull(limits);
+        this.outputFormat = blankToNull(outputFormat);
+        this.directives = blankToNull(directives);
+        this.contextPolicy = blankToNull(contextPolicy);
+    }
+
+    /** Whether the operator gave this agent any prompt engineering of its own. */
+    public boolean hasProfile() {
+        return systemPrompt != null || responsibilities != null || limits != null || outputFormat != null
+                || directives != null;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
+    }
+
+    public Long getParentId() { return parentId; }
+    public String getDomain() { return domain; }
+    public String getSystemPrompt() { return systemPrompt; }
+    public String getResponsibilities() { return responsibilities; }
+    public String getLimits() { return limits; }
+    public String getOutputFormat() { return outputFormat; }
+    public String getDirectives() { return directives; }
+    public String getContextPolicy() { return contextPolicy; }
 
     /** The engine model id, or {@code null} for the engine's default. */
     public String getModel() {

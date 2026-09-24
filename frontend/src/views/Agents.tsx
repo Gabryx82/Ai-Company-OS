@@ -3,6 +3,7 @@ import { useApi } from "../context";
 import { ApiProblem, type Versioned } from "../api/client";
 import type { Agent, ModelInfo } from "../api/types";
 import { Field, Modal, ProblemNote } from "../components/ui";
+import { AgentStudio } from "./AgentStudio";
 
 export function Agents() {
   const api = useApi();
@@ -39,10 +40,12 @@ export function Agents() {
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1>Agents</h1><p>The registry. An agent's model is the one its runs use unless a run asks for another.</p></div>
+        <div><h1>Agenti</h1><p>Agenti e sottoagenti: ruolo, prompt engineering, harness, software e modello. Il modello di un agente è quello delle sue run, salvo richiesta diversa.</p></div>
         <button className="btn btn-primary" onClick={() => setEditing("new")}>New agent</button>
       </div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
+      <AgentStudio onChanged={reload} />
+      <div className="section-title">Registro</div>
       <div className="card">
         <table>
           <thead><tr><th>Name</th><th>Role</th><th>Specialization</th><th>Model</th><th>Status</th><th /></tr></thead>

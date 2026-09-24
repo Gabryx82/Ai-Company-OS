@@ -61,6 +61,10 @@ public class PlanRun {
     @Column(name = "output_tokens")
     private Integer outputTokens;
 
+    /** Which stage a generation is in ("Fase 2/4: task"), for the operator watching it. */
+    @Column(length = 200)
+    private String progress;
+
     @Column(name = "requested_by", nullable = false, length = 120)
     private String requestedBy;
 
@@ -78,6 +82,10 @@ public class PlanRun {
         this.source = source;
         this.requestedModel = requestedModel;
         this.requestedBy = requestedBy;
+    }
+
+    public void progress(String progress) {
+        this.progress = progress == null || progress.length() <= 200 ? progress : progress.substring(0, 200);
     }
 
     public void succeed(int phases, int tasks, String output, String servedModel, Integer inputTokens,
@@ -113,6 +121,7 @@ public class PlanRun {
     public Integer getInputTokens() { return inputTokens; }
     public Integer getOutputTokens() { return outputTokens; }
     public String getRequestedBy() { return requestedBy; }
+    public String getProgress() { return progress; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getFinishedAt() { return finishedAt; }
 }

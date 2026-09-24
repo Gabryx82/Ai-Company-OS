@@ -38,12 +38,12 @@ public class PlanController {
     public record PlanRunResponse(Long id, Long projectId, PlanRun.Source source, PlanRun.Status status,
                                   String requestedModel, String servedModel, String failureDetail, Integer phases,
                                   Integer tasks, Integer inputTokens, Integer outputTokens, String requestedBy,
-                                  Instant createdAt, Instant finishedAt, String output) {
+                                  Instant createdAt, Instant finishedAt, String output, String progress) {
         public static PlanRunResponse from(PlanRun run) {
             return new PlanRunResponse(run.getId(), run.getProjectId(), run.getSource(), run.getStatus(),
                     run.getRequestedModel(), run.getServedModel(), run.getFailureDetail(), run.getPhases(),
                     run.getTasks(), run.getInputTokens(), run.getOutputTokens(), run.getRequestedBy(),
-                    run.getCreatedAt(), run.getFinishedAt(), run.getOutput());
+                    run.getCreatedAt(), run.getFinishedAt(), run.getOutput(), run.getProgress());
         }
     }
 

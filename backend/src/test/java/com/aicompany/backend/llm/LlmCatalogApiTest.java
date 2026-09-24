@@ -40,7 +40,7 @@ class LlmCatalogApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.models[?(@.key == 'echo:default')].engineAvailable").value(true))
                 .andExpect(jsonPath("$.models[?(@.key == 'ollama:qwen3.5:9b')].role").value("PLANNER"))
                 .andExpect(jsonPath("$.models[?(@.key == 'ollama:qwen3.5:9b')].engineAvailable").value(false))
-                .andExpect(jsonPath("$.models[?(@.key == 'ollama:qwen3.5:4b')].lifecycle").value("CANDIDATE"));
+                .andExpect(jsonPath("$.models[?(@.key == 'ollama:llama3.2:3b')].lifecycle").value("DEPRECATED"));
     }
 
     @Test

@@ -40,6 +40,8 @@ public abstract class AbstractPostgresTest {
 
     @BeforeEach
     void clearRunsAndTheScriptedEngine() {
+        // PHASE 13: daily items reference tasks that other tests delete.
+        baseJdbc.update("DELETE FROM daily_items");
         // PHASE 11: reviews and handoffs reference runs and tasks; they go first.
         baseJdbc.update("DELETE FROM task_reviews");
         baseJdbc.update("DELETE FROM task_handoffs");
@@ -49,6 +51,11 @@ public abstract class AbstractPostgresTest {
         baseJdbc.update("UPDATE tasks SET phase_id = NULL WHERE phase_id IS NOT NULL");
         baseJdbc.update("DELETE FROM project_phases");
         baseJdbc.update("DELETE FROM plan_runs");
+        // PHASE 12: links reference projects and agents that other tests delete.
+        baseJdbc.update("DELETE FROM project_resources");
+        baseJdbc.update("DELETE FROM agent_resources");
+        baseJdbc.update("DELETE FROM agent_software");
+        baseJdbc.update("UPDATE agents SET parent_id = NULL WHERE parent_id IS NOT NULL");
         baseEngine.reset();
         baseHost.reset();
     }

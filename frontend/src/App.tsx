@@ -13,6 +13,9 @@ import { Usage } from "./views/Usage";
 import { Integrations } from "./views/Integrations";
 import { Terminal } from "./views/Terminal";
 import { Settings } from "./views/Settings";
+import { KnowledgeHub } from "./views/KnowledgeHub";
+import { DailyWork } from "./views/DailyWork";
+import { MockupHub } from "./views/MockupHub";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { Icon, type IconName } from "./components/icons";
 import { displayName } from "./preferences";
@@ -25,6 +28,7 @@ const NAV: { group: string; items: { key: string; label: string; icon: IconName 
     { key: "projects", label: "Progetti", icon: "projects" },
     { key: "tasks", label: "Task", icon: "tasks" },
     { key: "agents", label: "Agenti", icon: "agents" },
+    { key: "daily", label: "Daily Work", icon: "daily" },
   ] },
   { group: "Strumenti", items: [
     { key: "software", label: "Software Hub", icon: "software" },
@@ -32,6 +36,8 @@ const NAV: { group: string; items: { key: string; label: string; icon: IconName 
     { key: "integrations", label: "Integrazioni", icon: "integrations" },
   ] },
   { group: "Risorse", items: [
+    { key: "knowledge", label: "Knowledge Hub", icon: "knowledge" },
+    { key: "mockups", label: "Mockup Hub", icon: "mockups" },
     { key: "models", label: "Modelli LLM", icon: "models" },
     { key: "usage", label: "Consumi", icon: "usage" },
     { key: "settings", label: "Impostazioni", icon: "settings" },
@@ -133,9 +139,12 @@ export function App() {
             {page === "projects" && <Projects selected={detail} navigate={navigate} />}
             {page === "tasks" && <TaskBoard />}
             {page === "agents" && <Agents />}
+            {page === "daily" && <DailyWork />}
             {page === "software" && <SoftwareHub selected={detail} navigate={navigate} />}
             {page === "terminal" && <Terminal />}
             {page === "integrations" && <Integrations selected={detail} navigate={navigate} />}
+            {page === "knowledge" && <KnowledgeHub />}
+            {page === "mockups" && <MockupHub />}
             {page === "models" && <Models />}
             {page === "usage" && <Usage />}
             {page === "settings" && <Settings />}

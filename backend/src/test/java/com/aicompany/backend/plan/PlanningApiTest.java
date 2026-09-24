@@ -50,6 +50,21 @@ public class PlanningApiTest extends AbstractPostgresTest {
              ]}
             ```""";
 
+    /** Stage 2 answers: the tasks of phase 1 and of phase 2, as the engine returns them. */
+    static final String TASKS_OF_PHASE_1 = """
+            {"tasks":[
+              {"title":"Creare lo scheletro backend","objective":"Progetto Spring Boot che compila",
+               "implementation":"Spring Initializr, poi un test di contesto","agentRole":"Backend Engineer",
+               "software":["intellij-junie"],"tests":["contesto si avvia"],"completionCriteria":["build verde"],
+               "priority":"HIGH"},
+              {"title":"Configurare la CI","objective":"Pipeline verde","implementation":"GitHub Actions",
+               "agentRole":"Nessuno che esiste","tests":["la pipeline gira"],"completionCriteria":["badge verde"],
+               "priority":"MEDIUM"}]}""";
+    static final String TASKS_OF_PHASE_2 = """
+            {"tasks":[{"title":"CRUD clienti","objective":"API clienti","implementation":"Controller e servizio",
+              "agentRole":"Backend Engineer","tests":["test API"],"completionCriteria":["CRUD completo"],
+              "priority":"MEDIUM"}]}""";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -90,6 +105,13 @@ public class PlanningApiTest extends AbstractPostgresTest {
         mockMvc.perform(post("/api/projects/" + projectId + "/workspace")).andExpect(status().isOk());
     }
 
+    /** The three answers of a staged generation: the phases, then the tasks of each of the two phases. */
+    private void scriptPlan() {
+        engine.answer(PLAN);
+        engine.answer(TASKS_OF_PHASE_1);
+        engine.answer(TASKS_OF_PHASE_2);
+    }
+
     private void writeMasterPrompt() throws Exception {
         mockMvc.perform(put("/api/projects/" + projectId + "/files").param("path", "MASTER_PROMPT.md")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -123,7 +145,7 @@ public class PlanningApiTest extends AbstractPostgresTest {
     @Test
     void aGeneratedPlanBecomesPhasesTasksAndTheirDocuments() throws Exception {
         writeMasterPrompt();
-        engine.answer(PLAN);
+        scriptPlan();
 
         JsonNode run = generateAndWait();
 
@@ -131,12 +153,17 @@ public class PlanningApiTest extends AbstractPostgresTest {
         assertThat(run.path("phases").asInt()).isEqualTo(2);
         assertThat(run.path("tasks").asInt()).isEqualTo(3);
 
-        EngineClient.Request request = engine.requests().getLast();
-        assertThat(request.responseFormat()).isEqualTo("json");
-        assertThat(request.responseSchema()).contains("\"minItems\": 2").contains("\"tasks\"");
-        assertThat(request.model()).isEqualTo("ollama:qwen3.5:9b");
-        assertThat(request.system()).contains("Backend Engineer").contains("claude-code");
-        assertThat(request.user()).contains("Gestione clienti e interventi").contains("FULL_STACK");
+        // Staged (ADR-021 §2): the phases, then the tasks of each phase, each call constrained.
+        assertThat(engine.requests()).hasSize(3);
+        EngineClient.Request phases = engine.requests().get(0);
+        assertThat(phases.responseFormat()).isEqualTo("json");
+        assertThat(phases.responseSchema()).contains("\"phases\"").contains("\"minItems\": 2");
+        assertThat(phases.model()).isEqualTo("ollama:qwen3.5:9b");
+        assertThat(phases.user()).contains("Gestione clienti e interventi").contains("FULL_STACK");
+        EngineClient.Request tasksOfPhase2 = engine.requests().get(2);
+        assertThat(tasksOfPhase2.responseSchema()).contains("\"tasks\"");
+        assertThat(tasksOfPhase2.system()).contains("Backend Engineer").contains("claude-code");
+        assertThat(tasksOfPhase2.user()).contains("THE PHASE TO DETAIL NOW: 2. Funzionalità");
 
         mockMvc.perform(get("/api/projects/" + projectId + "/plan"))
                 .andExpect(jsonPath("$.project.planStatus").value("DRAFT"))
@@ -158,7 +185,7 @@ public class PlanningApiTest extends AbstractPostgresTest {
     @Test
     void aTaskIsGivenTheAgentItsRoleNamesAndLeftUnassignedWhenNobodyFits() throws Exception {
         writeMasterPrompt();
-        engine.answer(PLAN);
+        scriptPlan();
         generateAndWait();
 
         JsonNode phases = json.readTree(mockMvc.perform(get("/api/projects/" + projectId + "/plan"))
@@ -222,7 +249,7 @@ public class PlanningApiTest extends AbstractPostgresTest {
     @Test
     void aTaskOfAnUnapprovedPhaseDoesNotStartNorRunUntilTheOperatorApprovesIt() throws Exception {
         writeMasterPrompt();
-        engine.answer(PLAN);
+        scriptPlan();
         generateAndWait();
         JsonNode phase = json.readTree(mockMvc.perform(get("/api/projects/" + projectId + "/plan"))
                 .andReturn().getResponse().getContentAsString()).path("phases").path(0);
@@ -251,10 +278,10 @@ public class PlanningApiTest extends AbstractPostgresTest {
     @Test
     void anApprovedPlanIsLockedAndADraftWithWorkDoneIsLockedToo() throws Exception {
         writeMasterPrompt();
-        engine.answer(PLAN);
+        scriptPlan();
         generateAndWait();
 
-        engine.answer(PLAN);
+        scriptPlan();
         assertThat(generateAndWait().path("status").asString())
                 .as("a draft nobody touched can be regenerated").isEqualTo("SUCCEEDED");
         mockMvc.perform(get("/api/projects/" + projectId + "/plan"))

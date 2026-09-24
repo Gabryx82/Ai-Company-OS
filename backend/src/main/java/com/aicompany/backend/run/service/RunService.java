@@ -108,7 +108,7 @@ public class RunService {
         String model = requestedModel != null ? requestedModel : agent.getModel();
 
         // ADR-021 §6: a planned task carries its files; any other task, PHASE 6's prompt unchanged.
-        RunPrompt prompt = context.enrich(RunPrompt.of(task, agent, project), task, project);
+        RunPrompt prompt = context.enrich(RunPrompt.of(task, agent, project), task, agent, project);
         TaskRun run = runs.saveAndFlush(new TaskRun(taskId, agent.getId(), model,
                 prompt.system(), prompt.user(), "run-" + UUID.randomUUID(), requestedBy));
         tasks.saveAndFlush(task);

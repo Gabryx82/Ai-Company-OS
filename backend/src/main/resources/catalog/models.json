@@ -8,15 +8,15 @@
   {
     "key": "ollama:qwen3.5:4b", "providerKey": "ollama", "displayName": "Qwen 3.5 4B", "role": "FAST",
     "capabilities": ["tools", "thinking", "vision", "long-context"],
-    "contextWindow": 262144, "sizeGb": 3.4, "parameters": "4B", "lifecycle": "CANDIDATE",
-    "notes": "Sostituto candidato di llama3.2:3b per il ruolo veloce/economico (2026, tools, 256K). Diventa ACTIVE solo dopo la verifica sul flusso reale."
+    "contextWindow": 262144, "sizeGb": 3.4, "parameters": "4B", "lifecycle": "ACTIVE",
+    "notes": "Sostituto di llama3.2:3b per il ruolo veloce (2026, tools, 256K). Verificato il 2026-09-24 sul flusso reale: run di TASK-001 in 226 s con contesto dai file e istruzioni GUIDED rispettate."
   },
   {
     "key": "ollama:llama3.2:3b", "providerKey": "ollama", "displayName": "Llama 3.2 3B", "role": "FAST",
     "capabilities": ["chat", "summarization", "classification"],
-    "contextWindow": 131072, "sizeGb": 2.0, "parameters": "3.2B", "lifecycle": "ACTIVE",
+    "contextWindow": 131072, "sizeGb": 2.0, "parameters": "3.2B", "lifecycle": "DEPRECATED",
     "replacedBy": "ollama:qwen3.5:4b",
-    "notes": "Modello del 2024 usato negli smoke test di PHASE 5–6. Resta finché il sostituto non è verificato (regola della direttiva §26)."
+    "notes": "Modello del 2024. Sostituto verificato (qwen3.5:4b); resta installato finché gli agenti che lo usano non sono migrati — la rimozione è una scelta dell'operatore (direttiva §26)."
   },
   {
     "key": "ollama:deepseek-coder-v2:16b", "providerKey": "ollama", "displayName": "DeepSeek Coder V2 16B", "role": "CODER",

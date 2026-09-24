@@ -52,6 +52,74 @@
         "required" : [ "name", "role", "specialization" ],
         "type" : "object"
       },
+      "AgentProfileResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "agentId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "contextPolicy" : {
+            "type" : "string"
+          },
+          "directives" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "domain" : {
+            "type" : "string"
+          },
+          "limits" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "outputFormat" : {
+            "type" : "string"
+          },
+          "parentId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "resources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceResponse"
+            },
+            "type" : "array"
+          },
+          "responsibilities" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "software" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SoftwareRef"
+            },
+            "type" : "array"
+          },
+          "specialization" : {
+            "type" : "string"
+          },
+          "systemPrompt" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "AgentResponse" : {
         "properties" : {
           "active" : {
@@ -124,6 +192,87 @@
           },
           "why" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DailyRequest" : {
+        "properties" : {
+          "day" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "dueTime" : {
+            "format" : "time-local",
+            "type" : "string"
+          },
+          "notes" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "position" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "priority" : {
+            "enum" : [ "LOW", "MEDIUM", "HIGH" ],
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "TODO", "DOING", "DONE" ],
+            "type" : "string"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "title" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DailyResponse" : {
+        "properties" : {
+          "day" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "dueTime" : {
+            "format" : "time-local",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "position" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "priority" : {
+            "enum" : [ "LOW", "MEDIUM", "HIGH" ],
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "TODO", "DOING", "DONE" ],
+            "type" : "string"
+          },
+          "task" : {
+            "$ref" : "#/components/schemas/TaskRef"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -271,6 +420,26 @@
           },
           "task" : {
             "$ref" : "#/components/schemas/TaskResponse"
+          }
+        },
+        "type" : "object"
+      },
+      "Installed" : {
+        "properties" : {
+          "agentId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "outcome" : {
+            "enum" : [ "CREATED", "EXISTING" ],
+            "type" : "string"
+          },
+          "parentId" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -651,6 +820,9 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "progress" : {
+            "type" : "string"
+          },
           "projectId" : {
             "format" : "int64",
             "type" : "integer"
@@ -873,6 +1045,95 @@
         },
         "type" : "object"
       },
+      "ResourceRequest" : {
+        "properties" : {
+          "configuration" : {
+            "maxLength" : 4000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "key" : {
+            "minLength" : 1,
+            "pattern" : "^[a-z0-9][a-z0-9-]{1,63}$",
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "SKILL", "KNOWLEDGE", "MCP", "TOOL", "FRAMEWORK", "TEMPLATE_PROVIDER" ],
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "searchUrl" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "pattern" : "^(https?://.*)?$",
+            "type" : "string"
+          },
+          "sourceUrl" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "pattern" : "^(https?://.*)?$",
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "maxLength" : 40,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 20,
+            "minItems" : 0,
+            "type" : "array"
+          }
+        },
+        "required" : [ "key", "kind", "name" ],
+        "type" : "object"
+      },
+      "ResourceResponse" : {
+        "properties" : {
+          "configuration" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "SKILL", "KNOWLEDGE", "MCP", "TOOL", "FRAMEWORK", "TEMPLATE_PROVIDER" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "searchUrl" : {
+            "type" : "string"
+          },
+          "sourceUrl" : {
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ReviewRequest" : {
         "properties" : {
           "handoffId" : {
@@ -1070,6 +1331,17 @@
             "type" : "string"
           },
           "reason" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SoftwareRef" : {
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
             "type" : "string"
           }
         },
@@ -1424,6 +1696,31 @@
         "required" : [ "projectId" ],
         "type" : "object"
       },
+      "TaskRef" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "projectId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "projectName" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "TaskResponse" : {
         "properties" : {
           "agentId" : {
@@ -1483,6 +1780,65 @@
           }
         },
         "required" : [ "priority", "title" ],
+        "type" : "object"
+      },
+      "Template" : {
+        "properties" : {
+          "children" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Template"
+            },
+            "type" : "array"
+          },
+          "directives" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "domain" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "limits" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "outputFormat" : {
+            "type" : "string"
+          },
+          "resources" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "responsibilities" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "software" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "specialization" : {
+            "type" : "string"
+          },
+          "systemPrompt" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "UncataloguedModel" : {
@@ -1596,6 +1952,98 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/agent-profiles" : {
+      "get" : {
+        "operationId" : "profiles",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentProfileResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
+    "/api/agent-templates" : {
+      "get" : {
+        "operationId" : "agentTemplates",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Template"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
+    "/api/agent-templates/install-all" : {
+      "post" : {
+        "operationId" : "installAll",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Installed"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
+    "/api/agent-templates/{key}/install" : {
+      "post" : {
+        "operationId" : "install",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Installed"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
     "/api/agents" : {
       "get" : {
         "operationId" : "getAgents",
@@ -1818,6 +2266,179 @@
         "tags" : [ "agent-controller" ]
       }
     },
+    "/api/agents/{id}/profile" : {
+      "get" : {
+        "operationId" : "profile",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentProfileResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      },
+      "put" : {
+        "operationId" : "configure_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentProfileResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
+    "/api/agents/{id}/resources/{key}" : {
+      "delete" : {
+        "operationId" : "detach",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      },
+      "put" : {
+        "operationId" : "attach",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
+    "/api/agents/{id}/software/{key}" : {
+      "delete" : {
+        "operationId" : "disallow",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      },
+      "put" : {
+        "operationId" : "allow",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
     "/api/catalog/models" : {
       "get" : {
         "operationId" : "models",
@@ -1917,6 +2538,177 @@
           }
         },
         "tags" : [ "llm-catalog-controller" ]
+      }
+    },
+    "/api/daily" : {
+      "get" : {
+        "operationId" : "between",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/DailyResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "daily-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_3",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DailyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DailyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "daily-controller" ]
+      }
+    },
+    "/api/daily/carry-over" : {
+      "post" : {
+        "operationId" : "carryOver",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/DailyResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "daily-controller" ]
+      }
+    },
+    "/api/daily/{id}" : {
+      "delete" : {
+        "operationId" : "remove",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "daily-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DailyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DailyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "daily-controller" ]
       }
     },
     "/api/engine/models" : {
@@ -2080,7 +2872,7 @@
         "tags" : [ "project-controller" ]
       },
       "post" : {
-        "operationId" : "create_1",
+        "operationId" : "create_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2516,6 +3308,88 @@
         "tags" : [ "project-workspace-controller" ]
       }
     },
+    "/api/projects/{id}/resources" : {
+      "get" : {
+        "operationId" : "projectResources",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ResourceResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
+    "/api/projects/{id}/resources/{key}" : {
+      "delete" : {
+        "operationId" : "drop",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      },
+      "put" : {
+        "operationId" : "adopt",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
     "/api/projects/{id}/restore" : {
       "post" : {
         "operationId" : "restore",
@@ -2608,6 +3482,69 @@
           }
         },
         "tags" : [ "project-task-controller" ]
+      }
+    },
+    "/api/resources" : {
+      "get" : {
+        "operationId" : "search",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "SKILL", "KNOWLEDGE", "MCP", "TOOL", "FRAMEWORK", "TEMPLATE_PROVIDER" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ResourceResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResourceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResourceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
       }
     },
     "/api/routing/suggestions" : {

@@ -1,5 +1,7 @@
 package com.aicompany.backend.catalog;
 
+import com.aicompany.backend.harness.model.HarnessResource;
+import com.aicompany.backend.harness.repository.HarnessResourceRepository;
 import com.aicompany.backend.llm.model.Billing;
 import com.aicompany.backend.llm.model.LlmModel;
 import com.aicompany.backend.llm.model.ModelLifecycle;
@@ -59,6 +61,10 @@ public class CatalogBootstrap implements ApplicationRunner {
                       String replacedBy, String notes) {
     }
 
+    record ResourceEntry(String key, HarnessResource.Kind kind, String name, String description, List<String> tags,
+                         String sourceUrl, String searchUrl, String configuration) {
+    }
+
     record QuotaEntry(String key, String name, String subject, UsageSource source, WindowKind windowKind,
                       Integer resetWeekday, String resetTime, String resetZone, String limitNote, String usageUrl) {
     }
@@ -67,17 +73,20 @@ public class CatalogBootstrap implements ApplicationRunner {
     private final ModelProviderRepository providers;
     private final LlmModelRepository models;
     private final QuotaPlanRepository quotas;
+    private final HarnessResourceRepository resources;
     private final TransactionTemplate transactions;
     private final JsonMapper json = JsonMapper.builder()
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build();
 
     public CatalogBootstrap(SoftwareRepository software, ModelProviderRepository providers, LlmModelRepository models,
-                            QuotaPlanRepository quotas, TransactionTemplate transactions) {
+                            QuotaPlanRepository quotas, HarnessResourceRepository resources,
+                            TransactionTemplate transactions) {
         this.software = software;
         this.providers = providers;
         this.models = models;
         this.quotas = quotas;
+        this.resources = resources;
         this.transactions = transactions;
     }
 
@@ -111,6 +120,13 @@ public class CatalogBootstrap implements ApplicationRunner {
                     quotas.save(new QuotaPlan(q.key(), q.name(), q.subject(), q.source(), q.windowKind(),
                             q.resetWeekday(), q.resetTime() == null ? null : LocalTime.parse(q.resetTime()),
                             q.resetZone(), q.limitNote(), q.usageUrl()));
+                    added++;
+                }
+            }
+            for (ResourceEntry r : read("catalog/resources.json", ResourceEntry[].class)) {
+                if (!resources.existsByKey(r.key())) {
+                    resources.save(new HarnessResource(r.key(), r.kind(), r.name(), r.description(), r.tags(),
+                            r.sourceUrl(), r.searchUrl(), r.configuration()));
                     added++;
                 }
             }

@@ -161,3 +161,14 @@ export type Handoff = Deep<S["HandoffResponse"]>;
 export type Review = Deep<S["ReviewResponse"]>;
 export type AutonomyLevel = NonNullable<S["ProjectResponse"]["autonomyLevel"]>;
 export type ProjectType = NonNullable<S["ProjectResponse"]["projectType"]>;
+
+// --- PHASE 12-13: agent ecosystem and daily work (ADR-023) ---------------------
+
+export type Resource = Deep<S["ResourceResponse"]>;
+export type AgentProfile = Omit<Deep<S["AgentProfileResponse"]>, "parentId" | "model"> & {
+  parentId: number | null;
+  model: string | null;
+};
+export type AgentTemplate = Deep<S["Template"]>;
+export type InstalledAgent = Deep<S["Installed"]>;
+export type DailyItem = Omit<Deep<S["DailyResponse"]>, "task"> & { task: Deep<S["TaskRef"]> | null };

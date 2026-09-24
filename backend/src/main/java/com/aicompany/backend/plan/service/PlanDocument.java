@@ -68,6 +68,54 @@ public record PlanDocument(Integer version, String summary, List<String> stack, 
         return parsed.validated();
     }
 
+    /** Stage 1 of an engine plan: the phases, whose tasks come in stage 2. Not validated yet. */
+    static PlanDocument parseSkeleton(String text) {
+        PlanDocument skeleton = read(text, PlanDocument.class);
+        if (skeleton.phases() == null || skeleton.phases().isEmpty()) {
+            throw new PlanInvalidException("The answer has no phases", Map.of("phases", "at least one phase is required"));
+        }
+        return skeleton;
+    }
+
+    /** The tasks of one phase, as stage 2 answers them. */
+    record Tasks(List<TaskPlan> tasks) {
+    }
+
+    /** Stage 2 of an engine plan: the tasks of one phase. */
+    static List<TaskPlan> parseTasks(String text) {
+        Tasks tasks = read(text, Tasks.class);
+        return tasks.tasks() == null ? List.of() : tasks.tasks();
+    }
+
+    /** Stage 1 plus the tasks of each phase, validated like any other plan. */
+    PlanDocument withTasks(List<List<TaskPlan>> tasksByPhase) {
+        List<PhasePlan> filled = new ArrayList<>();
+        for (int i = 0; i < phases.size(); i++) {
+            PhasePlan p = phases.get(i);
+            filled.add(new PhasePlan(p.title(), p.objective(), p.scope(), p.strategy(), p.architecture(),
+                    p.prerequisites(), p.agents(), p.software(), p.risks(), p.completionCriteria(),
+                    p.reviewCriteria(), tasksByPhase.get(i)));
+        }
+        return new PlanDocument(version, summary, stack, filled).validated();
+    }
+
+    private static <T> T read(String text, Class<T> type) {
+        if (text == null || text.isBlank()) {
+            throw new PlanInvalidException("The answer is empty", Map.of("plan", "empty"));
+        }
+        int start = text.indexOf('{');
+        int end = text.lastIndexOf('}');
+        if (start < 0 || end <= start) {
+            throw new PlanInvalidException("No JSON object in the answer", Map.of("plan", "no JSON object found"));
+        }
+        try {
+            return JSON.readValue(text.substring(start, end + 1), type);
+        } catch (JacksonException e) {
+            throw new PlanInvalidException("The answer is not valid JSON: " + e.getOriginalMessage(),
+                    Map.of("plan", "not valid JSON"));
+        }
+    }
+
     public String toJson() {
         return JSON.writerWithDefaultPrettyPrinter().writeValueAsString(this) + "\n";
     }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApi } from "../context";
-import type { Agent, ModelList, Project, Software, Task } from "../api/types";
+import type { Agent, DailyItem, ModelList, Project, Software, Task } from "../api/types";
 import { PriorityBadge, ProblemNote, StatusBadge } from "../components/ui";
 import { AppIcon } from "../components/AppIcon";
 import { Icon } from "../components/icons";
@@ -22,6 +22,7 @@ export function Dashboard({ navigate }: { navigate: (page: string, detail?: stri
   const [models, setModels] = useState<ModelList | null>(null);
   const [engineDown, setEngineDown] = useState(false);
   const [problem, setProblem] = useState<unknown>(null);
+  const [today, setToday] = useState<DailyItem[]>([]);
   const { launch, outcome } = useLauncher();
 
   useEffect(() => {
@@ -30,6 +31,9 @@ export function Dashboard({ navigate }: { navigate: (page: string, detail?: stri
       .catch(setProblem);
     api.software().then(setSoftware).catch(() => setSoftware([]));
     api.engineModels().then(setModels).catch(() => setEngineDown(true));
+    const d = new Date();
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    api.daily(key, key).then(setToday).catch(() => setToday([]));
   }, [api]);
 
   const active = data?.projects.filter((p) => p.status === "ACTIVE") ?? [];
@@ -98,6 +102,18 @@ export function Dashboard({ navigate }: { navigate: (page: string, detail?: stri
               </div>
             );
           })}
+        </div>
+        <div className="card">
+          <div className="card-head"><h2>Oggi</h2><span className="muted">{today.filter((i) => i.status === "DONE").length}/{today.length}</span>
+            <span className="spacer" /><button className="btn btn-small" onClick={() => navigate("daily")}>Daily Work</button></div>
+          {today.length === 0 && <div className="list-item muted">Niente pianificato per oggi.</div>}
+          {today.map((item) => (
+            <div key={item.id} className="list-item" style={{ opacity: item.status === "DONE" ? 0.55 : 1 }}>
+              <Icon name={item.status === "DONE" ? "check" : "clock"} size={15} />
+              <span style={{ flex: 1 }}>{item.title}</span>
+              {item.task && <span className="chip">{item.task.projectName ?? item.task.code}</span>}
+            </div>
+          ))}
         </div>
         <div className="card">
           <div className="card-head"><h2>Task da seguire</h2><span className="spacer" />

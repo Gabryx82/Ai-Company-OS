@@ -9,6 +9,9 @@ import com.aicompany.backend.usage.service.UsageService;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import com.aicompany.backend.plan.service.PlanningService;
 import com.aicompany.backend.orchestrator.service.ExecutionService;
+import com.aicompany.backend.harness.service.AgentTemplates;
+import com.aicompany.backend.harness.service.HarnessService;
+import com.aicompany.backend.daily.service.DailyService;
 import com.aicompany.backend.task.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +48,8 @@ class PreconditionCoverageTest {
     private static final List<Class<?>> SERVICES =
             List.of(TaskService.class, ProjectService.class, AgentService.class, RunService.class,
                     SoftwareService.class, LlmCatalogService.class, UsageService.class,
-                    ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class);
+                    ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class,
+                    HarnessService.class, AgentTemplates.class, DailyService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -58,7 +62,15 @@ class PreconditionCoverageTest {
             // once it is approved or worked on (PlanLockedException), which is the
             // staleness a tag would otherwise have guarded. recoverInterrupted runs
             // at startup, not on a client's request.
-            "generate", "importFromWorkspace", "recoverInterrupted");
+            "generate", "importFromWorkspace", "recoverInterrupted",
+            // PHASE 12 (ADR-023): set membership -- an agent's harness and software, a
+            // project's adopted resources -- is added by an idempotent PUT and removed
+            // by an idempotent DELETE; neither mutates the agent or the project row.
+            // Installing a template creates agents, and leaves existing ones untouched.
+            "attach", "detach", "allowSoftware", "disallowSoftware", "adopt", "drop", "install", "installAll",
+            // PHASE 13: carrying a day's unfinished items to another day is the
+            // operator's bulk gesture on their own list; no single tag describes it.
+            "carryOver");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {
@@ -160,6 +172,15 @@ class PreconditionCoverageTest {
         // PHASE 11 (ADR-021 §4-5). Both may move the task, so both take its tag.
         assertThat(writePaths(ExecutionService.class))
                 .containsExactlyInAnyOrder("handoff:Precondition", "review:Precondition");
+
+        assertThat(writePaths(HarnessService.class))
+                .containsExactlyInAnyOrder("create", "configure:Precondition", "attach", "detach", "allowSoftware",
+                        "disallowSoftware", "adopt", "drop");
+
+        assertThat(writePaths(AgentTemplates.class)).containsExactlyInAnyOrder("install", "installAll");
+
+        assertThat(writePaths(DailyService.class))
+                .containsExactlyInAnyOrder("create", "update:Precondition", "remove:Precondition", "carryOver");
     }
 
     /**

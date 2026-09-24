@@ -55,7 +55,7 @@ import java.util.UUID;
 public class PlanningService {
 
     private static final Logger log = LoggerFactory.getLogger(PlanningService.class);
-    static final int PLAN_MAX_TOKENS = 12_000;
+    static final int PLAN_MAX_TOKENS = 4_000;
 
     public record PhaseView(ProjectPhase phase, List<Task> tasks) {
     }
@@ -142,37 +142,82 @@ public class PlanningService {
         return run;
     }
 
+    /**
+     * The generation, in stages (ADR-021 §2): the phases, then the tasks of each
+     * phase, every call constrained by its JSON Schema. The run records which
+     * stage it is in, every raw answer (for diagnosis when a stage fails), and
+     * the tokens of all stages together.
+     */
     void execute(Long runId, Long projectId, String model, String masterPrompt) {
-        String output = null;
+        StringBuilder output = new StringBuilder();
         String served = null;
+        int tokensIn = 0;
+        int tokensOut = 0;
         try {
             Project project = transactions.execute(status -> projects.findById(projectId).orElseThrow());
-            EngineClient.Completion completion = engine.complete(new EngineClient.Request(model,
-                    PlanPrompt.system(agentRoles(), softwareKeys()), PlanPrompt.user(project, masterPrompt),
-                    PLAN_MAX_TOKENS, "plan-" + runId + "-" + UUID.randomUUID().toString().substring(0, 8),
-                    Map.of("purpose", "plan", "project", String.valueOf(projectId)), "json", PlanPrompt.JSON_SCHEMA));
-            output = completion.output();
-            served = completion.model();
-            PlanDocument plan = PlanDocument.parse(output);
+            progress(runId, "Fase del piano: elenco delle fasi");
+            EngineClient.Completion skeletonAnswer = engine.complete(new EngineClient.Request(model,
+                    PlanPrompt.phasesSystem(), PlanPrompt.user(project, masterPrompt), PLAN_MAX_TOKENS,
+                    correlation(runId, 0), Map.of("purpose", "plan-phases", "project", String.valueOf(projectId)),
+                    "json", PlanPrompt.PHASES_SCHEMA));
+            output.append(skeletonAnswer.output());
+            served = skeletonAnswer.model();
+            tokensIn += skeletonAnswer.inputTokens();
+            tokensOut += skeletonAnswer.outputTokens();
+            PlanDocument skeleton = PlanDocument.parseSkeleton(skeletonAnswer.output());
+
+            List<String> titles = skeleton.phases().stream().map(PlanDocument.PhasePlan::title).toList();
+            List<String> roles = agentRoles();
+            List<String> keys = softwareKeys();
+            List<List<PlanDocument.TaskPlan>> tasksByPhase = new java.util.ArrayList<>();
+            for (int i = 0; i < skeleton.phases().size(); i++) {
+                progress(runId, "Task della fase " + (i + 1) + "/" + titles.size() + ": " + titles.get(i));
+                EngineClient.Completion tasksAnswer = engine.complete(new EngineClient.Request(model,
+                        PlanPrompt.tasksSystem(roles, keys),
+                        PlanPrompt.tasksUser(project, masterPrompt, skeleton.summary(), titles, i, skeleton.phases().get(i)),
+                        PLAN_MAX_TOKENS, correlation(runId, i + 1),
+                        Map.of("purpose", "plan-tasks", "project", String.valueOf(projectId)),
+                        "json", PlanPrompt.TASKS_SCHEMA));
+                output.append("\n\n").append(tasksAnswer.output());
+                tokensIn += tasksAnswer.inputTokens();
+                tokensOut += tasksAnswer.outputTokens();
+                tasksByPhase.add(PlanDocument.parseTasks(tasksAnswer.output()));
+            }
+
+            progress(runId, "Scrittura di piano, fasi e task");
+            PlanDocument plan = skeleton.withTasks(tasksByPhase);
             PlanImporter.Imported imported = importer.importPlan(projectId, plan, "AI Engine, " + served);
             String finalServed = served;
-            String finalOutput = output;
-            transactions.executeWithoutResult(status -> planRuns.findById(runId).orElseThrow()
-                    .succeed(imported.phases(), imported.tasks(), finalOutput, finalServed,
-                            completion.inputTokens(), completion.outputTokens()));
+            String finalOutput = output.toString();
+            int finalIn = tokensIn;
+            int finalOut = tokensOut;
+            transactions.executeWithoutResult(status -> {
+                PlanRun run = planRuns.findById(runId).orElseThrow();
+                run.progress(null);
+                run.succeed(imported.phases(), imported.tasks(), finalOutput, finalServed, finalIn, finalOut);
+            });
         } catch (EngineFailure failure) {
-            finish(runId, failure.type() + ": " + failure.detail(), output, served);
+            finish(runId, failure.type() + ": " + failure.detail(), output.toString(), served);
         } catch (ProblemException refused) {
             finish(runId, refused.problem().slug() + ": " + refused.getMessage()
-                    + (refused.errors().isEmpty() ? "" : " " + refused.errors()), output, served);
+                    + (refused.errors().isEmpty() ? "" : " " + refused.errors()), output.toString(), served);
         } catch (RuntimeException unexpected) {
             log.error("Plan run {} failed unexpectedly", runId, unexpected);
-            finish(runId, "internal: " + unexpected.getClass().getSimpleName(), output, served);
+            finish(runId, "internal: " + unexpected.getClass().getSimpleName(), output.toString(), served);
         }
     }
 
+    private void progress(Long runId, String text) {
+        transactions.executeWithoutResult(status -> planRuns.findById(runId).orElseThrow().progress(text));
+    }
+
+    private static String correlation(Long runId, int stage) {
+        return "plan-" + runId + "-" + stage + "-" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
     private void finish(Long runId, String detail, String output, String served) {
-        transactions.executeWithoutResult(status -> planRuns.findById(runId).orElseThrow().fail(detail, output, served));
+        transactions.executeWithoutResult(status -> planRuns.findById(runId).orElseThrow()
+                .fail(detail, output == null || output.isEmpty() ? null : output, served));
     }
 
     /** A plan run the process never finished (a restart mid-generation) ends as a failure with a reason. */

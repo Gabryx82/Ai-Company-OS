@@ -230,6 +230,23 @@ public enum ApiProblem {
     PLANNING_IN_PROGRESS("planning-in-progress", HttpStatus.CONFLICT,
             "Planning in progress", "A plan is already being generated for this project"),
 
+    // --- agent ecosystem (PHASE 12, ADR-023) -------------------------------------
+
+    HARNESS_RESOURCE_NOT_FOUND("harness-resource-not-found", HttpStatus.NOT_FOUND,
+            "Resource not found", "No skill, knowledge, MCP, tool, framework or template provider with that key"),
+
+    HARNESS_RESOURCE_KEY_CONFLICT("harness-resource-key-conflict", HttpStatus.CONFLICT,
+            "Resource key already exists", "Another catalog resource already uses that key"),
+
+    /** An agent cannot become the sub-agent of itself or of one of its own sub-agents. */
+    AGENT_HIERARCHY_CYCLE("agent-hierarchy-cycle", HttpStatus.CONFLICT,
+            "Agent hierarchy cycle", "That parent would make the agent its own ancestor"),
+
+    // --- daily work (PHASE 13) --------------------------------------------------------
+
+    DAILY_ITEM_NOT_FOUND("daily-item-not-found", HttpStatus.NOT_FOUND,
+            "Daily item not found", "No daily item with that identifier"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

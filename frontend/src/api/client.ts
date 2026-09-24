@@ -8,7 +8,7 @@
 //  - every error is a problem detail with a stable `type` (ADR-007), turned
 //    into an ApiProblem the views can branch on.
 import type {
-  Agent, AgentWrite, AutonomyLevel, Handoff, HandoffOutcome, LaunchResult, ModelCatalog, ModelList, Orchestration,
+  Agent, AgentProfile, AgentTemplate, AgentWrite, AutonomyLevel, DailyItem, InstalledAgent, Resource, Handoff, HandoffOutcome, LaunchResult, ModelCatalog, ModelList, Orchestration,
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments,
@@ -57,7 +57,7 @@ export interface Session {
   token: string;
 }
 
-type Method = "GET" | "POST" | "PUT";
+type Method = "GET" | "POST" | "PUT" | "DELETE";
 
 export class ControlPlane {
   constructor(private readonly session: Session, private readonly fetcher: typeof fetch = fetch.bind(globalThis)) {}
@@ -320,6 +320,86 @@ export class ControlPlane {
 
   reviews(taskId: number): Promise<Review[]> {
     return this.plain("GET", `/api/tasks/${taskId}/reviews`);
+  }
+
+  // --- daily work (directive §18) ----------------------------------------------
+
+  daily(from: string, to: string): Promise<DailyItem[]> {
+    return this.plain("GET", `/api/daily?from=${from}&to=${to}`);
+  }
+
+  createDaily(item: Record<string, unknown>): Promise<DailyItem> {
+    return this.plain("POST", "/api/daily", { body: item });
+  }
+
+  updateDaily(item: DailyItem, changes: Record<string, unknown>): Promise<DailyItem> {
+    return this.plain("PUT", `/api/daily/${item.id}`, {
+      body: { day: item.day, title: item.task ? null : item.title, notes: item.notes, status: item.status,
+        priority: item.priority, dueTime: item.dueTime, position: item.position, ...changes },
+      ifMatch: `"${item.version}"`,
+    });
+  }
+
+  removeDaily(item: DailyItem): Promise<void> {
+    return this.plain("DELETE", `/api/daily/${item.id}`, { ifMatch: `"${item.version}"` });
+  }
+
+  carryOver(from: string, to: string): Promise<DailyItem[]> {
+    return this.plain("POST", `/api/daily/carry-over?from=${from}&to=${to}`);
+  }
+
+  // --- agent ecosystem (ADR-023) -----------------------------------------------
+
+  agentProfiles(): Promise<AgentProfile[]> {
+    return this.plain("GET", "/api/agent-profiles");
+  }
+
+  agentProfile(id: number): Promise<Versioned<AgentProfile>> {
+    return this.versioned("GET", `/api/agents/${id}/profile`);
+  }
+
+  configureAgent(id: number, etag: string, profile: Record<string, unknown>): Promise<Versioned<AgentProfile>> {
+    return this.versioned("PUT", `/api/agents/${id}/profile`, { body: profile, ifMatch: etag });
+  }
+
+  attachResource(agentId: number, key: string): Promise<void> {
+    return this.plain("PUT", `/api/agents/${agentId}/resources/${encodeURIComponent(key)}`);
+  }
+
+  detachResource(agentId: number, key: string): Promise<void> {
+    return this.plain("DELETE", `/api/agents/${agentId}/resources/${encodeURIComponent(key)}`);
+  }
+
+  allowSoftware(agentId: number, key: string): Promise<void> {
+    return this.plain("PUT", `/api/agents/${agentId}/software/${encodeURIComponent(key)}`);
+  }
+
+  disallowSoftware(agentId: number, key: string): Promise<void> {
+    return this.plain("DELETE", `/api/agents/${agentId}/software/${encodeURIComponent(key)}`);
+  }
+
+  resources(kind?: string, q?: string): Promise<Resource[]> {
+    const params = new URLSearchParams();
+    if (kind) params.set("kind", kind);
+    if (q) params.set("q", q);
+    const query = params.toString();
+    return this.plain("GET", `/api/resources${query ? `?${query}` : ""}`);
+  }
+
+  adoptResource(projectId: number, key: string): Promise<void> {
+    return this.plain("PUT", `/api/projects/${projectId}/resources/${encodeURIComponent(key)}`);
+  }
+
+  agentTemplates(): Promise<AgentTemplate[]> {
+    return this.plain("GET", "/api/agent-templates");
+  }
+
+  installAgentTemplate(key: string): Promise<InstalledAgent[]> {
+    return this.plain("POST", `/api/agent-templates/${encodeURIComponent(key)}/install`);
+  }
+
+  installAllAgentTemplates(): Promise<InstalledAgent[]> {
+    return this.plain("POST", "/api/agent-templates/install-all");
   }
 
   // --- software hub (ADR-019) -------------------------------------------------
