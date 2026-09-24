@@ -264,4 +264,24 @@ def test_a_json_request_asks_ollama_for_its_json_format_and_a_plain_one_does_not
         client.post("/v1/completions", headers=AUTH, json=completion(model="ollama:m"))
 
     assert seen[0]["format"] == "json"
+    assert seen[0]["think"] is False
     assert "format" not in seen[1]
+    assert "think" not in seen[1]
+
+
+def test_a_schema_is_handed_to_ollama_as_its_format_for_constrained_decoding():
+    seen = []
+
+    def handler(request: httpx.Request):
+        seen.append(json.loads(request.content))
+        return httpx.Response(200, json={"model": "m", "message": {"role": "assistant", "content": "{}"},
+                                         "done_reason": "stop", "prompt_eval_count": 1, "eval_count": 1})
+
+    schema = {"type": "object", "properties": {"phases": {"type": "array", "minItems": 2}}, "required": ["phases"]}
+    with app_with(ollama(handler)) as client:
+        response = client.post("/v1/completions", headers=AUTH,
+                               json=completion(model="ollama:m", response_format="json", response_schema=schema))
+
+    assert response.status_code == 200
+    assert seen[0]["format"] == schema
+    assert seen[0]["think"] is False

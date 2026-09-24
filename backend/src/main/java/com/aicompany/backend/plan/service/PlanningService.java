@@ -150,7 +150,7 @@ public class PlanningService {
             EngineClient.Completion completion = engine.complete(new EngineClient.Request(model,
                     PlanPrompt.system(agentRoles(), softwareKeys()), PlanPrompt.user(project, masterPrompt),
                     PLAN_MAX_TOKENS, "plan-" + runId + "-" + UUID.randomUUID().toString().substring(0, 8),
-                    Map.of("purpose", "plan", "project", String.valueOf(projectId)), "json"));
+                    Map.of("purpose", "plan", "project", String.valueOf(projectId)), "json", PlanPrompt.JSON_SCHEMA));
             output = completion.output();
             served = completion.model();
             PlanDocument plan = PlanDocument.parse(output);

@@ -22,12 +22,22 @@ public interface EngineClient {
 
     /** What is sent. {@code model} null means the engine's own default. */
     record Request(String model, String system, String user, int maxTokens,
-                   String correlationId, Map<String, String> metadata, String responseFormat) {
+                   String correlationId, Map<String, String> metadata, String responseFormat,
+                   String responseSchema) {
 
         /** A plain-text completion, as every request was before PHASE 10. */
         public Request(String model, String system, String user, int maxTokens,
                        String correlationId, Map<String, String> metadata) {
-            this(model, system, user, maxTokens, correlationId, metadata, null);
+            this(model, system, user, maxTokens, correlationId, metadata, null, null);
+        }
+
+        /**
+         * A JSON completion constrained by {@code responseSchema} (a JSON Schema,
+         * as text) where the provider supports it (PHASE 10).
+         */
+        public Request(String model, String system, String user, int maxTokens,
+                       String correlationId, Map<String, String> metadata, String responseFormat) {
+            this(model, system, user, maxTokens, correlationId, metadata, responseFormat, null);
         }
     }
 

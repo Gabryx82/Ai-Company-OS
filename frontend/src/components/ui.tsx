@@ -52,7 +52,7 @@ export function ProblemNote({ problem, onDismiss }: { problem: unknown; onDismis
   );
 }
 
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -60,7 +60,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   }, [onClose]);
   return (
     <div className="overlay center" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={title} style={wide ? { width: "min(860px, calc(100% - 32px))" } : undefined}>
         <div className="row"><h2>{title}</h2><span className="spacer" /><button className="btn btn-small" onClick={onClose}>Close</button></div>
         {children}
       </div>

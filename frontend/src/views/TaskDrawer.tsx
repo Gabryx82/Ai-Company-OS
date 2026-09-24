@@ -6,6 +6,7 @@ import {
   type TaskPriority, type Transition,
 } from "../api/types";
 import { Field, PriorityBadge, ProblemNote, StatusBadge, when } from "../components/ui";
+import { OrchestratorPanel } from "./OrchestratorPanel";
 
 const STEP_LABEL: Record<Transition, string> = { start: "Start", complete: "Mark done", stop: "Stop", reopen: "Reopen" };
 
@@ -108,6 +109,8 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
                 ))}
               </div>
             </div>
+
+            {task.code && <OrchestratorPanel task={task} busy={busy} act={act} />}
 
             <RunSection task={task} agent={agent} runs={runs} models={models} busy={busy}
                         onLaunch={(model) => act((etag) => api.launchRun(task.id, etag, model))} />

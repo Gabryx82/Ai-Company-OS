@@ -53,8 +53,16 @@ class OllamaProvider:
                 "stream": False,
                 "options": {"num_predict": request.max_tokens},
             }
-            if request.response_format == "json":
+            if request.response_schema is not None:
+                body["format"] = request.response_schema
+                body["think"] = False
+            elif request.response_format == "json":
                 body["format"] = "json"
+                # Measured on the operator's machine (2026-09-24): with thinking on,
+                # qwen3.5:9b spent more than 120 s before the first byte of a plan.
+                # A JSON answer is validated by the caller anyway; the thinking is
+                # what does not fit, not the answer.
+                body["think"] = False
             response = await self._client.post("/api/chat", json=body)
         except httpx.TimeoutException as error:
             raise EngineError(EngineProblem.PROVIDER_TIMEOUT, f"Ollama did not answer in time ({type(error).__name__})")

@@ -133,6 +133,7 @@ public class PlanningApiTest extends AbstractPostgresTest {
 
         EngineClient.Request request = engine.requests().getLast();
         assertThat(request.responseFormat()).isEqualTo("json");
+        assertThat(request.responseSchema()).contains("\"minItems\": 2").contains("\"tasks\"");
         assertThat(request.model()).isEqualTo("ollama:qwen3.5:9b");
         assertThat(request.system()).contains("Backend Engineer").contains("claude-code");
         assertThat(request.user()).contains("Gestione clienti e interventi").contains("FULL_STACK");

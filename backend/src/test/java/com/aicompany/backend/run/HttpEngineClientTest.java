@@ -89,6 +89,25 @@ class HttpEngineClientTest {
         assertThat(body.get("metadata").get("run_id").asString()).isEqualTo("1");
     }
 
+    /** PHASE 10: a plain request carries neither field; a planning request carries both, the schema as an object. */
+    @Test
+    void theJsonFormatAndItsSchemaTravelOnlyWhenAsked() {
+
+        responder = reply(200, "application/json", """
+                {"output":"{}","finish_reason":"stop","model":"m","usage":{"input_tokens":1,"output_tokens":1}}""");
+
+        client(Duration.ofSeconds(5)).complete(request("m"));
+        JsonNode plain = json.readTree(lastBody.get());
+        assertThat(plain.has("response_format")).isFalse();
+        assertThat(plain.has("response_schema")).isFalse();
+
+        client(Duration.ofSeconds(5)).complete(new EngineClient.Request("m", "s", "u", 64, "plan-1", Map.of(), "json",
+                "{\"type\":\"object\",\"required\":[\"phases\"]}"));
+        JsonNode planning = json.readTree(lastBody.get());
+        assertThat(planning.get("response_format").asString()).isEqualTo("json");
+        assertThat(planning.get("response_schema").get("required").get(0).asString()).isEqualTo("phases");
+    }
+
     @Test
     void noModelMeansTheFieldIsAbsentAndTheEngineChooses() {
 

@@ -50,6 +50,58 @@ public final class PlanPrompt {
               ]
             }""";
 
+    /**
+     * The same shape as {@link #SCHEMA}, as a JSON Schema for constrained
+     * decoding. Leaner on purpose: the fields a small local model must produce
+     * are required, the others are allowed and optional, and the sizes are
+     * bounded -- 2 to 6 phases, 2 to 6 tasks each -- so the grammar itself makes
+     * an empty phase impossible (measured: without it, a 9B model returned one).
+     */
+    public static final String JSON_SCHEMA = """
+            {
+              "type": "object",
+              "properties": {
+                "summary": {"type": "string"},
+                "stack": {"type": "array", "items": {"type": "string"}, "maxItems": 10},
+                "phases": {
+                  "type": "array", "minItems": 2, "maxItems": 6,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {"type": "string"},
+                      "objective": {"type": "string"},
+                      "scope": {"type": "string"},
+                      "strategy": {"type": "string"},
+                      "software": {"type": "array", "items": {"type": "string"}, "maxItems": 6},
+                      "risks": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
+                      "completionCriteria": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 5},
+                      "tasks": {
+                        "type": "array", "minItems": 2, "maxItems": 6,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "title": {"type": "string"},
+                            "objective": {"type": "string"},
+                            "implementation": {"type": "string"},
+                            "agentRole": {"type": "string"},
+                            "software": {"type": "array", "items": {"type": "string"}, "maxItems": 4},
+                            "files": {"type": "array", "items": {"type": "string"}, "maxItems": 8},
+                            "tests": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 5},
+                            "completionCriteria": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 5},
+                            "priority": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"]}
+                          },
+                          "required": ["title", "objective", "implementation", "agentRole", "tests",
+                                       "completionCriteria", "priority"]
+                        }
+                      }
+                    },
+                    "required": ["title", "objective", "scope", "strategy", "completionCriteria", "tasks"]
+                  }
+                }
+              },
+              "required": ["summary", "stack", "phases"]
+            }""";
+
     private PlanPrompt() {
     }
 

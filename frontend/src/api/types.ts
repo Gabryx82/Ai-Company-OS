@@ -133,3 +133,31 @@ export type UsageWindow = Wire<S["UsageWindowResponse"]> & {
   byModel: { model: string; tokens: number }[];
   version: number;
 };
+
+// --- PHASE 9-11: workspace, plan, orchestration (ADR-020, 021, 022) -----------
+//
+// These responses nest objects, and `Wire<T>` only reaches the first level.
+// `Deep<T>` makes every nested field present; fields the server may send as
+// null are still read defensively where it matters (`?? "—"`), because the
+// generated schema cannot say which ones are nullable.
+type Deep<T> = T extends (infer U)[] ? Deep<U>[]
+  : T extends object ? { [K in keyof T]-?: Deep<Exclude<T[K], undefined>> } : T;
+
+export type ProjectTypeInfo = Deep<S["ProjectTypeInfo"]>;
+export type ScaffoldEntry = Deep<S["ScaffoldEntry"]>;
+export type WorkspaceDocument = Deep<S["Document"]>;
+export type WorkspaceDocuments = Omit<Deep<S["Documents"]>, "masterPrompt" | "agents" | "implementationPlan" | "planJson"> & {
+  masterPrompt: WorkspaceDocument | null;
+  agents: WorkspaceDocument | null;
+  implementationPlan: WorkspaceDocument | null;
+  planJson: WorkspaceDocument | null;
+};
+export type Phase = Deep<S["PhaseResponse"]> & { tasks: Task[] };
+export type PlanRun = Deep<S["PlanRunResponse"]>;
+export type Plan = { project: Project; phases: Phase[]; runs: PlanRun[] };
+export type Orchestration = Deep<S["Orchestration"]>;
+export type HandoffOutcome = Deep<S["HandoffResult"]>;
+export type Handoff = Deep<S["HandoffResponse"]>;
+export type Review = Deep<S["ReviewResponse"]>;
+export type AutonomyLevel = NonNullable<S["ProjectResponse"]["autonomyLevel"]>;
+export type ProjectType = NonNullable<S["ProjectResponse"]["projectType"]>;

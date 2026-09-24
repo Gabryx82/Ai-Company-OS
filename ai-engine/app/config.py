@@ -34,7 +34,7 @@ class Settings:
     # Local models: Ollama. Enabled by default because it costs nothing and is
     # reported as unavailable, not as an error, when nothing listens there.
     ollama_url: str | None = "http://127.0.0.1:11434"
-    ollama_timeout_seconds: float = 120.0
+    ollama_timeout_seconds: float = 600.0
 
     # Cloud models: Anthropic. Disabled unless a key is configured -- a model
     # that bills per token is never reachable by accident (charter hard stop #6).
@@ -88,7 +88,7 @@ class Settings:
             engine_token=token,
             default_model=env.get("AICOS_ENGINE_DEFAULT_MODEL", "echo:default"),
             ollama_url=ollama_url or None,
-            ollama_timeout_seconds=float(env.get("AICOS_ENGINE_OLLAMA_TIMEOUT_SECONDS", "120")),
+            ollama_timeout_seconds=float(env.get("AICOS_ENGINE_OLLAMA_TIMEOUT_SECONDS", "600")),
             anthropic_api_key=env.get("ANTHROPIC_API_KEY") or None,
             anthropic_models=_csv(env.get("AICOS_ENGINE_ANTHROPIC_MODELS")) or ("claude-opus-5",),
             anthropic_timeout_seconds=float(env.get("AICOS_ENGINE_ANTHROPIC_TIMEOUT_SECONDS", "600")),

@@ -7,7 +7,7 @@ anything else is ``/v2``.
 """
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -38,6 +38,10 @@ class CompletionRequest(BaseModel):
     # addition is compatible; a provider without a JSON mode ignores it and the
     # caller validates what comes back anyway.
     response_format: Literal["json"] | None = None
+    # PHASE 10: a JSON Schema the answer must follow. A provider with constrained
+    # decoding (Ollama) enforces it token by token -- measured necessary: a local
+    # 9B planner asked only for "json" returned a phase with no tasks.
+    response_schema: dict[str, Any] | None = None
 
 
 class Usage(BaseModel):

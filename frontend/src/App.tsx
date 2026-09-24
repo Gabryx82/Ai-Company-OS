@@ -130,7 +130,7 @@ export function App() {
           </header>
           <div className="content">
             {page === "dashboard" && <Dashboard navigate={navigate} />}
-            {page === "projects" && <Projects />}
+            {page === "projects" && <Projects selected={detail} navigate={navigate} />}
             {page === "tasks" && <TaskBoard />}
             {page === "agents" && <Agents />}
             {page === "software" && <SoftwareHub selected={detail} navigate={navigate} />}

@@ -58,6 +58,9 @@ public class HttpEngineClient implements EngineClient {
             // PHASE 10: an optional field of contract v1 -- compatible by its own rule.
             body.put("response_format", request.responseFormat());
         }
+        if (request.responseSchema() != null) {
+            body.set("response_schema", json.readTree(request.responseSchema()));
+        }
         ObjectNode metadata = body.putObject("metadata");
         request.metadata().forEach(metadata::put);
 

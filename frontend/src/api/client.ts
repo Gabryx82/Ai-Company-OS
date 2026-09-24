@@ -8,8 +8,10 @@
 //  - every error is a problem detail with a stable `type` (ADR-007), turned
 //    into an ApiProblem the views can branch on.
 import type {
-  Agent, AgentWrite, LaunchResult, ModelCatalog, ModelList, Project, ProjectWrite, Provider, Run, Software,
-  Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow,
+  Agent, AgentWrite, AutonomyLevel, Handoff, HandoffOutcome, LaunchResult, ModelCatalog, ModelList, Orchestration,
+  Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
+  Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
+  WorkspaceDocuments,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -210,6 +212,114 @@ export class ControlPlane {
 
   setProjectArchived(id: number, etag: string, archived: boolean): Promise<Versioned<Project>> {
     return this.versioned("POST", `/api/projects/${id}/${archived ? "archive" : "restore"}`, { ifMatch: etag });
+  }
+
+  // --- project workspace (ADR-020) --------------------------------------------
+
+  projectTypes(): Promise<ProjectTypeInfo[]> {
+    return this.plain("GET", "/api/catalog/project-types");
+  }
+
+  defaultFolder(name: string): Promise<{ path: string }> {
+    return this.plain("GET", `/api/workspace/default-folder?name=${encodeURIComponent(name)}`);
+  }
+
+  configureProject(id: number, etag: string, profile: { projectType?: ProjectType | null; stack?: string | null;
+    workspacePath?: string | null; autonomyLevel?: AutonomyLevel | null }): Promise<Versioned<Project>> {
+    return this.versioned("PUT", `/api/projects/${id}/profile`, { body: profile, ifMatch: etag });
+  }
+
+  scaffold(id: number): Promise<ScaffoldEntry[]> {
+    return this.plain("POST", `/api/projects/${id}/workspace`);
+  }
+
+  documents(id: number): Promise<WorkspaceDocuments> {
+    return this.plain("GET", `/api/projects/${id}/documents`);
+  }
+
+  async readFile(id: number, path: string): Promise<string> {
+    const response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "")
+      + `/api/projects/${id}/files?path=${encodeURIComponent(path)}`,
+      { headers: { Authorization: `Bearer ${this.session.token}` } });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new ApiProblem(response.status, (text ? safeJson(text) : {}) as object);
+    }
+    return response.text();
+  }
+
+  async fileUrl(id: number, path: string): Promise<string | null> {
+    try {
+      const response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "")
+        + `/api/projects/${id}/files?path=${encodeURIComponent(path)}`,
+        { headers: { Authorization: `Bearer ${this.session.token}` } });
+      return response.ok ? URL.createObjectURL(await response.blob()) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  writeFile(id: number, path: string, content: string): Promise<WorkspaceDocument> {
+    return this.plain("PUT", `/api/projects/${id}/files?path=${encodeURIComponent(path)}`, { body: { content } });
+  }
+
+  // --- planning (ADR-021) -----------------------------------------------------
+
+  plan(id: number): Promise<Plan> {
+    return this.plain("GET", `/api/projects/${id}/plan`);
+  }
+
+  generatePlan(id: number, model?: string): Promise<PlanRun> {
+    return this.plain("POST", `/api/projects/${id}/plan/generate`, { body: model ? { model } : {} });
+  }
+
+  /** The planning request as an external agent reads it (text). */
+  async readPlanHandoff(id: number): Promise<string> {
+    const response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "") + `/api/projects/${id}/plan/handoff`,
+      { headers: { Authorization: `Bearer ${this.session.token}`, Accept: "text/plain, application/problem+json" } });
+    const text = await response.text();
+    if (!response.ok) throw new ApiProblem(response.status, (text ? safeJson(text) : {}) as object);
+    return text;
+  }
+
+  importPlan(id: number): Promise<PlanRun> {
+    return this.plain("POST", `/api/projects/${id}/plan/import`);
+  }
+
+  planRun(runId: number): Promise<PlanRun> {
+    return this.plain("GET", `/api/plan-runs/${runId}`);
+  }
+
+  approvePlan(id: number, etag: string, approveAllPhases: boolean): Promise<Versioned<Project>> {
+    return this.versioned("POST", `/api/projects/${id}/plan/approve?approveAllPhases=${approveAllPhases}`, { ifMatch: etag });
+  }
+
+  reviewPhase(phase: Phase, approve: boolean, note?: string): Promise<Phase> {
+    return this.plain("POST", `/api/phases/${phase.id}/${approve ? "approve" : "request-changes"}`,
+      { body: note ? { note } : {}, ifMatch: `"${phase.version}"` });
+  }
+
+  // --- orchestration (ADR-021 §3-5) -------------------------------------------
+
+  orchestration(taskId: number): Promise<Orchestration> {
+    return this.plain("GET", `/api/tasks/${taskId}/orchestration`);
+  }
+
+  handoff(taskId: number, etag: string, target: string): Promise<HandoffOutcome> {
+    return this.plain("POST", `/api/tasks/${taskId}/handoffs`, { body: { target }, ifMatch: etag });
+  }
+
+  handoffs(taskId: number): Promise<Handoff[]> {
+    return this.plain("GET", `/api/tasks/${taskId}/handoffs`);
+  }
+
+  review(taskId: number, etag: string, verdict: "ACCEPTED" | "CHANGES_REQUESTED", note?: string,
+    link: { runId?: number; handoffId?: number } = {}): Promise<unknown> {
+    return this.plain("POST", `/api/tasks/${taskId}/reviews`, { body: { verdict, note, ...link }, ifMatch: etag });
+  }
+
+  reviews(taskId: number): Promise<Review[]> {
+    return this.plain("GET", `/api/tasks/${taskId}/reviews`);
   }
 
   // --- software hub (ADR-019) -------------------------------------------------
