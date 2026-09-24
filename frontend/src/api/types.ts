@@ -75,3 +75,61 @@ export const TRANSITIONS = {
   reopen: "DONE",
 } as const satisfies Record<string, TaskStatus>;
 export type Transition = keyof typeof TRANSITIONS;
+
+// --- PHASE 8: the ecosystem catalogs (ADR-018, ADR-019) -----------------------
+
+export type Software = Wire<S["SoftwareResponse"]> & {
+  id: number;
+  key: string;
+  name: string;
+  category: NonNullable<S["SoftwareResponse"]["category"]>;
+  role: string;
+  capabilities: string[];
+  projectTypes: string[];
+  launchKind: NonNullable<S["SoftwareResponse"]["launchKind"]>;
+  executableArgs: string[];
+  openFolder: boolean;
+  embeddable: boolean;
+  executionTarget: boolean;
+  enabled: boolean;
+  availability: NonNullable<S["SoftwareResponse"]["availability"]>;
+  launchable: boolean;
+  version: number;
+};
+export type SoftwareCategory = Software["category"];
+export type Availability = Software["availability"];
+export type LaunchResult = Wire<S["LaunchResponse"]> & { key: string; command: string[]; folderOpened: boolean };
+
+export type Provider = Wire<S["ProviderResponse"]> & {
+  key: string;
+  name: string;
+  kind: NonNullable<S["ProviderResponse"]["kind"]>;
+  billing: NonNullable<S["ProviderResponse"]["billing"]>;
+  status: NonNullable<S["ProviderResponse"]["status"]>;
+};
+export type CatalogModel = Wire<S["ModelResponse"]> & {
+  key: string;
+  providerKey: string;
+  displayName: string;
+  role: NonNullable<S["ModelResponse"]["role"]>;
+  capabilities: string[];
+  lifecycle: NonNullable<S["ModelResponse"]["lifecycle"]>;
+  version: number;
+};
+export type ModelCatalog = {
+  models: CatalogModel[];
+  uncatalogued: { key: string; provider: string; available: boolean; billed: boolean }[];
+  engineReachable: boolean;
+  engineDefault: string | null;
+};
+
+export type UsageWindow = Wire<S["UsageWindowResponse"]> & {
+  key: string;
+  name: string;
+  subject: string;
+  source: NonNullable<S["UsageWindowResponse"]["source"]>;
+  windowKind: NonNullable<S["UsageWindowResponse"]["windowKind"]>;
+  status: NonNullable<S["UsageWindowResponse"]["status"]>;
+  byModel: { model: string; tokens: number }[];
+  version: number;
+};

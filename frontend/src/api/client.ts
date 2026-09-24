@@ -8,8 +8,8 @@
 //  - every error is a problem detail with a stable `type` (ADR-007), turned
 //    into an ApiProblem the views can branch on.
 import type {
-  Agent, AgentWrite, ModelList, Project, ProjectWrite, Run, Suggestion, Task, TaskCreate, TaskStatus,
-  TaskUpdate, Transition,
+  Agent, AgentWrite, LaunchResult, ModelCatalog, ModelList, Project, ProjectWrite, Provider, Run, Software,
+  Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -210,6 +210,68 @@ export class ControlPlane {
 
   setProjectArchived(id: number, etag: string, archived: boolean): Promise<Versioned<Project>> {
     return this.versioned("POST", `/api/projects/${id}/${archived ? "archive" : "restore"}`, { ifMatch: etag });
+  }
+
+  // --- software hub (ADR-019) -------------------------------------------------
+
+  software(): Promise<Software[]> {
+    return this.plain("GET", "/api/software");
+  }
+
+  softwareEntry(key: string): Promise<Versioned<Software>> {
+    return this.versioned("GET", `/api/software/${encodeURIComponent(key)}`);
+  }
+
+  updateSoftware(key: string, etag: string, entry: Record<string, unknown>): Promise<Versioned<Software>> {
+    return this.versioned("PUT", `/api/software/${encodeURIComponent(key)}`, { body: entry, ifMatch: etag });
+  }
+
+  createSoftware(entry: Record<string, unknown>): Promise<Versioned<Software>> {
+    return this.versioned("POST", "/api/software", { body: entry });
+  }
+
+  /** The body may name a project; the command line always comes from the catalog. */
+  launch(key: string, projectId?: number): Promise<LaunchResult> {
+    return this.plain("POST", `/api/software/${encodeURIComponent(key)}/launch`,
+      { body: projectId ? { projectId } : {} });
+  }
+
+  refreshSoftware(): Promise<void> {
+    return this.plain("POST", "/api/software/refresh");
+  }
+
+  /** The program's real icon, fetched with the token and handed back as an object URL (or null). */
+  async softwareIcon(key: string): Promise<string | null> {
+    try {
+      const response = await this.fetcher(
+        this.session.baseUrl.replace(/\/+$/, "") + `/api/software/${encodeURIComponent(key)}/icon`,
+        { headers: { Authorization: `Bearer ${this.session.token}` } });
+      if (response.status !== 200) return null;
+      return URL.createObjectURL(await response.blob());
+    } catch {
+      return null;
+    }
+  }
+
+  // --- catalogs of providers and models (ADR-018) -------------------------------
+
+  providers(): Promise<Provider[]> {
+    return this.plain("GET", "/api/catalog/providers");
+  }
+
+  modelCatalog(): Promise<ModelCatalog> {
+    return this.plain("GET", "/api/catalog/models");
+  }
+
+  // --- usage ------------------------------------------------------------------
+
+  usage(): Promise<UsageWindow[]> {
+    return this.plain("GET", "/api/usage");
+  }
+
+  anchorQuota(key: string, etag: string, anchor: { resetWeekday?: number | null; resetTime?: string | null;
+    resetZone?: string | null; limitNote?: string | null }): Promise<void> {
+    return this.plain("PUT", `/api/usage/plans/${encodeURIComponent(key)}`, { body: anchor, ifMatch: etag });
   }
 }
 

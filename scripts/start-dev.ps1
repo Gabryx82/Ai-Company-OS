@@ -5,7 +5,7 @@
 .DESCRIPTION
   1. PostgreSQL (docker compose), and waits until it accepts connections.
   2. The AI Engine (ai-engine, Python), creating its virtualenv on first use.   -> http://127.0.0.1:8090
-  3. The control plane (backend, Spring Boot, profile dev).                    -> http://localhost:8080
+  3. The control plane (backend, Spring Boot, profile dev).                    -> http://localhost:8081
   4. The operator console (frontend, Vite).                                    -> http://localhost:5173
 
   A service whose port is already listening is not started again, so the script can be re-run after
@@ -89,11 +89,11 @@ if (Test-Listening 8090) {
 }
 
 Write-Host "== Control plane (database: $Database)" -ForegroundColor Cyan
-if (Test-Listening 8080) {
-  Write-Host "   already listening on 8080, not started again (its database is whatever it was started with)"
+if (Test-Listening 8081) {
+  Write-Host "   already listening on 8081, not started again (its database is whatever it was started with)"
 } else {
   $backend = Join-Path $root "backend"
-  Start-Window "AICOS control plane :8080" $backend `
+  Start-Window "AICOS control plane :8081" $backend `
     "`$env:POSTGRES_DB = '$Database'; .\mvnw.cmd spring-boot:run '-Dspring-boot.run.jvmArguments=-Dspring.devtools.restart.enabled=false'"
 }
 
@@ -118,7 +118,7 @@ for ($i = 0; $i -lt 180; $i++) {
   try {
     # 127.0.0.1, not localhost: the backend listens on IPv4 loopback only, and "localhost" costs a
     # refused IPv6 attempt (about 2 s) on every poll.
-    $health = Invoke-RestMethod -Uri "http://127.0.0.1:8080/actuator/health" -TimeoutSec 2
+    $health = Invoke-RestMethod -Uri "http://127.0.0.1:8081/actuator/health" -TimeoutSec 2
     if ($health.status -eq "UP") { $up = $true; break }
   } catch { Start-Sleep -Seconds 1 }
 }
@@ -127,9 +127,9 @@ Write-Host ""
 if (-not $up) {
   # Saying the stack is up when the backend is not is how a console ends up reporting
   # "control plane unreachable" with no clue why. Say it here, where the cause is.
-  Write-Host "The control plane did not come up. Read the window titled 'AICOS control plane :8080'." -ForegroundColor Red
+  Write-Host "The control plane did not come up. Read the window titled 'AICOS control plane :8081'." -ForegroundColor Red
   exit 1
 }
 Write-Host "Console:        http://localhost:5173" -ForegroundColor Green
-Write-Host "Control plane:  http://localhost:8080   (token: `$env:AICOS_OPERATOR_TOKEN or dev-operator-token-change-me)"
+Write-Host "Control plane:  http://localhost:8081   (token: `$env:AICOS_OPERATOR_TOKEN or dev-operator-token-change-me)"
 Write-Host "AI Engine:      http://127.0.0.1:8090   (local models through Ollama if it is running)"

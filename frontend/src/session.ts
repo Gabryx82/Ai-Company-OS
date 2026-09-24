@@ -5,7 +5,7 @@ import type { Session } from "./api/client";
 // attach it by itself (ADR-013 §3), which is what keeps CSRF out of the picture.
 const KEY = "aicos.session";
 
-export const DEFAULT_BASE_URL = "http://localhost:8080";
+export const DEFAULT_BASE_URL = "http://localhost:8081";
 
 export function loadSession(): Session | null {
   try {

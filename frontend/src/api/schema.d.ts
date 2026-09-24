@@ -84,7 +84,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/engine/models": {
+    "/api/catalog/models": {
         parameters: {
             query?: never;
             header?: never;
@@ -92,6 +92,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["models"];
+        put: operations["classify"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["providers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/engine/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["models_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -107,9 +139,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list"];
+        get: operations["list_1"];
         put?: never;
-        post: operations["create"];
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -124,7 +156,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getById"];
-        put: operations["update"];
+        put: operations["update_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -206,6 +238,86 @@ export interface paths {
         get: operations["run"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/software": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/software/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/software/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get"];
+        put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/software/{key}/icon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["icon"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/software/{key}/launch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["launch_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -372,6 +484,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/usage/plans/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["anchor"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -402,6 +546,30 @@ export interface components {
             role: string;
             specialization: string;
         };
+        LaunchRequest: {
+            /** Format: int64 */
+            projectId?: number;
+        };
+        LaunchResponse: {
+            command?: string[];
+            folderOpened?: boolean;
+            key?: string;
+            workingDirectory?: string;
+        };
+        ModelCatalogResponse: {
+            engineDefault?: string;
+            engineReachable?: boolean;
+            models?: components["schemas"]["ModelResponse"][];
+            uncatalogued?: components["schemas"]["UncataloguedModel"][];
+        };
+        ModelClassificationRequest: {
+            /** @enum {string} */
+            lifecycle: "ACTIVE" | "CANDIDATE" | "DEPRECATED" | "RETIRED";
+            notes?: string;
+            replacedBy?: string;
+            /** @enum {string} */
+            role: "FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST";
+        };
         ModelInfo: {
             available?: boolean;
             billed?: boolean;
@@ -412,6 +580,31 @@ export interface components {
         ModelList: {
             defaultModel?: string;
             models?: components["schemas"]["ModelInfo"][];
+        };
+        ModelResponse: {
+            capabilities?: string[];
+            /** Format: int32 */
+            contextWindow?: number;
+            displayName?: string;
+            engineAvailable?: boolean;
+            engineDetail?: string;
+            key?: string;
+            /** @enum {string} */
+            lifecycle?: "ACTIVE" | "CANDIDATE" | "DEPRECATED" | "RETIRED";
+            notes?: string;
+            parameters?: string;
+            providerKey?: string;
+            replacedBy?: string;
+            /** @enum {string} */
+            role?: "FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST";
+            sizeGb?: number;
+            /** Format: int64 */
+            version?: number;
+        };
+        ModelTokens: {
+            model?: string;
+            /** Format: int64 */
+            tokens?: number;
         };
         ProjectCreateRequest: {
             description?: string;
@@ -432,6 +625,27 @@ export interface components {
         ProjectUpdateRequest: {
             description?: string;
             name: string;
+        };
+        ProviderResponse: {
+            baseUrl?: string;
+            /** @enum {string} */
+            billing?: "FREE" | "PAY_PER_TOKEN" | "SUBSCRIPTION";
+            docsUrl?: string;
+            engineProvider?: string;
+            key?: string;
+            /** @enum {string} */
+            kind?: "LOCAL" | "CLOUD_API" | "ROUTER" | "SUBSCRIPTION" | "TEST";
+            name?: string;
+            notes?: string;
+            /** @enum {string} */
+            status?: "ENABLED" | "DISABLED" | "INCOMPATIBLE_HARDWARE";
+        };
+        QuotaAnchorRequest: {
+            limitNote?: string;
+            resetTime?: string;
+            /** Format: int32 */
+            resetWeekday?: number;
+            resetZone?: string;
         };
         RoutingRequest: {
             text: string;
@@ -470,6 +684,73 @@ export interface components {
             /** Format: int64 */
             taskId?: number;
             userPrompt?: string;
+        };
+        SoftwareRequest: {
+            appId?: string;
+            capabilities?: string[];
+            /** @enum {string} */
+            category: "AGENTIC_IDE" | "IDE" | "EDITOR" | "TERMINAL" | "AI_CLOUD" | "AI_LOCAL" | "DATABASE" | "API" | "INFRASTRUCTURE" | "DIAGRAM" | "DESIGN" | "THREE_D" | "VCS" | "HOSTING" | "PRODUCTIVITY";
+            cliCommand?: string;
+            configuration?: string;
+            embedNote?: string;
+            embeddable?: boolean;
+            enabled?: boolean;
+            executable?: string;
+            executableArgs?: string[];
+            executionTarget?: boolean;
+            healthUrl?: string;
+            iconUrl?: string;
+            incompatibleReason?: string;
+            key?: string;
+            /** @enum {string} */
+            launchKind: "DESKTOP" | "CLI" | "WEB" | "LOCAL_SERVICE";
+            name: string;
+            openFolder?: boolean;
+            projectTypes?: string[];
+            purpose?: string;
+            requirements?: string;
+            role: string;
+            url?: string;
+        };
+        SoftwareResponse: {
+            appId?: string;
+            /** @enum {string} */
+            availability?: "INSTALLED" | "NOT_INSTALLED" | "WEB" | "RUNNING" | "STOPPED" | "INCOMPATIBLE_HARDWARE" | "UNKNOWN";
+            availabilityDetail?: string;
+            capabilities?: string[];
+            /** @enum {string} */
+            category?: "AGENTIC_IDE" | "IDE" | "EDITOR" | "TERMINAL" | "AI_CLOUD" | "AI_LOCAL" | "DATABASE" | "API" | "INFRASTRUCTURE" | "DIAGRAM" | "DESIGN" | "THREE_D" | "VCS" | "HOSTING" | "PRODUCTIVITY";
+            cliCommand?: string;
+            configuration?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            embedNote?: string;
+            embeddable?: boolean;
+            enabled?: boolean;
+            executable?: string;
+            executableArgs?: string[];
+            executionTarget?: boolean;
+            healthUrl?: string;
+            iconUrl?: string;
+            /** Format: int64 */
+            id?: number;
+            incompatibleReason?: string;
+            key?: string;
+            /** @enum {string} */
+            launchKind?: "DESKTOP" | "CLI" | "WEB" | "LOCAL_SERVICE";
+            launchable?: boolean;
+            name?: string;
+            openFolder?: boolean;
+            projectTypes?: string[];
+            purpose?: string;
+            requirements?: string;
+            resolvedExecutable?: string;
+            role?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            url?: string;
+            /** Format: int64 */
+            version?: number;
         };
         Suggestion: {
             /** Format: int64 */
@@ -518,6 +799,45 @@ export interface components {
             description?: string;
             priority: string;
             title: string;
+        };
+        UncataloguedModel: {
+            available?: boolean;
+            billed?: boolean;
+            key?: string;
+            provider?: string;
+        };
+        UsageWindowResponse: {
+            byModel?: components["schemas"]["ModelTokens"][];
+            detail?: string;
+            key?: string;
+            limitNote?: string;
+            name?: string;
+            /** Format: date-time */
+            nextResetAt?: string;
+            /** Format: date-time */
+            observedAt?: string;
+            /** Format: int64 */
+            outputTokens?: number;
+            resetTime?: string;
+            /** Format: int32 */
+            resetWeekday?: number;
+            resetZone?: string;
+            /** @enum {string} */
+            source?: "CODEX_LOCAL" | "CLAUDE_CODE_LOCAL" | "ENGINE_RUNS" | "MANUAL";
+            /** @enum {string} */
+            status?: "MEASURED" | "COUNTED" | "RESET_SINCE_OBSERVATION" | "NO_DATA" | "CONFIGURATION_NEEDED";
+            subject?: string;
+            /** Format: int64 */
+            tokens?: number;
+            usageUrl?: string;
+            /** Format: double */
+            usedPercent?: number;
+            /** Format: int64 */
+            version?: number;
+            /** @enum {string} */
+            windowKind?: "ROLLING_5H" | "DAILY" | "WEEKLY" | "MONTHLY";
+            /** Format: date-time */
+            windowStart?: string;
         };
     };
     responses: never;
@@ -709,12 +1029,80 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "*/*": components["schemas"]["ModelCatalogResponse"];
+                };
+            };
+        };
+    };
+    classify: {
+        parameters: {
+            query: {
+                key: string;
+            };
+            header?: {
+                "If-Match"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelClassificationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ModelResponse"];
+                };
+            };
+        };
+    };
+    providers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProviderResponse"][];
+                };
+            };
+        };
+    };
+    models_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "*/*": components["schemas"]["ModelList"];
                 };
             };
         };
     };
-    list: {
+    list_1: {
         parameters: {
             query?: {
                 status?: "ACTIVE" | "ARCHIVED";
@@ -736,7 +1124,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    create_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -782,7 +1170,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_1: {
         parameters: {
             query?: never;
             header?: {
@@ -922,6 +1310,166 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RunResponse"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SoftwareResponse"][];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoftwareRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SoftwareResponse"];
+                };
+            };
+        };
+    };
+    refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SoftwareResponse"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoftwareRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SoftwareResponse"];
+                };
+            };
+        };
+    };
+    icon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+        };
+    };
+    launch_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LaunchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LaunchResponse"];
                 };
             };
         };
@@ -1243,6 +1791,52 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["RunResponse"];
                 };
+            };
+        };
+    };
+    report: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UsageWindowResponse"][];
+                };
+            };
+        };
+    };
+    anchor: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotaAnchorRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

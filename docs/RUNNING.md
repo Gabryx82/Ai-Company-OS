@@ -11,7 +11,7 @@ token (ADR-013); **AI Engine** Python (ADR-015, §2b); **console dell'operatore*
 ```
 
 Avvia PostgreSQL, l'AI Engine, il backend (`dev`) e la console, ciascuno nella propria finestra, poi
-apre gli URL: console `http://localhost:5173`, backend `http://localhost:8080`, engine
+apre gli URL: console `http://localhost:5173`, backend `http://localhost:8081`, engine
 `http://127.0.0.1:8090`. ⚠️ Su un database dietro la testa dello stream il backend applica le
 migrazioni mancanti all'avvio (compresa `V8`, l'unica distruttiva, autorizzata il 2026-09-19):
 per provare senza toccare i dati, clonare prima (vedi l'intestazione dello script).
@@ -63,7 +63,7 @@ Così un errore di avvio produce `BUILD FAILURE` ed exit code `1`. Non usare l'e
 
 Il profilo di default è `dev`. All'avvio Flyway applica le migrazioni e, solo in `dev`, il seed dimostrativo di tre agent.
 
-L'applicazione risponde su `http://localhost:8080`.
+L'applicazione risponde su `http://localhost:8081`.
 
 ### Prima di tutto: ogni richiesta richiede un token
 
@@ -77,7 +77,7 @@ L'applicazione risponde su `http://localhost:8080`.
 
 ```bash
 TOKEN=dev-operator-token-change-me
-curl -i http://localhost:8080/api/projects -H "Authorization: Bearer $TOKEN"
+curl -i http://localhost:8081/api/projects -H "Authorization: Bearer $TOKEN"
 ```
 
 L'unica rotta pubblica è `GET /actuator/health`, che risponde soltanto `{"status":"UP"}`.
@@ -115,12 +115,12 @@ rimanda in `If-Match`.
 
 ```bash
 # 1. leggere, e tenere l'ETag
-curl -i http://localhost:8080/api/tasks/1
+curl -i http://localhost:8081/api/tasks/1
 # ... HTTP/1.1 200
 # ... ETag: "0"
 
 # 2. scrivere, citandolo
-curl -i -X PUT http://localhost:8080/api/tasks/1/project \
+curl -i -X PUT http://localhost:8081/api/tasks/1/project \
   -H 'Content-Type: application/json' -H 'If-Match: "0"' \
   -d '{"projectId":1}'
 ```
@@ -154,7 +154,7 @@ Non esiste `DELETE /api/tasks/{id}` (risponde `405`, «non per questa via»). Il
 riguarda i soli dettagli: le due associazioni sono sotto-risorse, e lo stato si muove lungo archi.
 
 ```bash
-curl -i -X POST http://localhost:8080/api/tasks -H 'Content-Type: application/json' \
+curl -i -X POST http://localhost:8081/api/tasks -H 'Content-Type: application/json' \
   -d '{"title":"Primo task","description":"descrizione","status":"OPEN","priority":"HIGH"}'
 ```
 
@@ -235,9 +235,9 @@ Richiede l'**AI Engine** in esecuzione (§2b). Il backend in `dev` lo cerca su
 - All'avvio, le run rimaste `QUEUED`/`RUNNING` da un processo precedente sono fallite `interrupted`.
 
 ```bash
-ETAG=$(curl -si http://localhost:8080/api/tasks/7 -H "Authorization: Bearer $TOKEN" | grep -i etag | awk '{print $2}' | tr -d '\r')
-curl -s -X POST http://localhost:8080/api/tasks/7/runs -H "Authorization: Bearer $TOKEN" -H "If-Match: $ETAG"
-curl -s http://localhost:8080/api/runs/1 -H "Authorization: Bearer $TOKEN"
+ETAG=$(curl -si http://localhost:8081/api/tasks/7 -H "Authorization: Bearer $TOKEN" | grep -i etag | awk '{print $2}' | tr -d '\r')
+curl -s -X POST http://localhost:8081/api/tasks/7/runs -H "Authorization: Bearer $TOKEN" -H "If-Match: $ETAG"
+curl -s http://localhost:8081/api/runs/1 -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Routing: quale agente per quale lavoro (TD-08)
