@@ -37,6 +37,12 @@ def default_providers(settings: Settings) -> list[Provider]:
         providers.append(OllamaProvider(settings.ollama_url, settings.ollama_timeout_seconds))
     from app.providers.anthropic_provider import AnthropicProvider
     providers.append(AnthropicProvider(settings))
+    # PHASE 8: OpenRouter, the optional router to cloud models. Off without a key.
+    from app.providers.openai_compatible import OpenAICompatibleProvider
+    providers.append(OpenAICompatibleProvider(
+        name="openrouter", base_url=settings.openrouter_url, api_key=settings.openrouter_api_key,
+        models=settings.openrouter_models, timeout_seconds=settings.openrouter_timeout_seconds, billed=True,
+        enable_hint="Set AICOS_ENGINE_OPENROUTER_API_KEY to enable; billed per token"))
     return providers
 
 

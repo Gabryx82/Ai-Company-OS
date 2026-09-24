@@ -43,6 +43,13 @@ class Settings:
     anthropic_timeout_seconds: float = 600.0
     anthropic_max_retries: int = 2
 
+    # PHASE 8: OpenRouter, an OpenAI-compatible router. Disabled unless a key is
+    # configured, for the same reason as Anthropic.
+    openrouter_api_key: str | None = None
+    openrouter_url: str = "https://openrouter.ai/api/v1"
+    openrouter_models: tuple[str, ...] = ("openrouter/auto",)
+    openrouter_timeout_seconds: float = 600.0
+
     cors_origins: tuple[str, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
@@ -86,4 +93,9 @@ class Settings:
             anthropic_models=_csv(env.get("AICOS_ENGINE_ANTHROPIC_MODELS")) or ("claude-opus-5",),
             anthropic_timeout_seconds=float(env.get("AICOS_ENGINE_ANTHROPIC_TIMEOUT_SECONDS", "600")),
             anthropic_max_retries=int(env.get("AICOS_ENGINE_ANTHROPIC_MAX_RETRIES", "2")),
+            openrouter_api_key=env.get("AICOS_ENGINE_OPENROUTER_API_KEY") or None,
+            openrouter_url=env.get("AICOS_ENGINE_OPENROUTER_URL", "https://openrouter.ai/api/v1"),
+            openrouter_models=_csv(env.get("AICOS_ENGINE_OPENROUTER_MODELS"))
+            or ("openrouter/auto",),
+            openrouter_timeout_seconds=float(env.get("AICOS_ENGINE_OPENROUTER_TIMEOUT_SECONDS", "600")),
         )
