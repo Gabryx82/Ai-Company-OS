@@ -241,6 +241,43 @@ public class ProjectWorkspaceService implements ProjectFolders {
         }
     }
 
+    // --- the inbox: a working folder for a task that has no project (PHASE 17) ---------
+
+    /**
+     * {@code <root>/_inbox/task-<id>}: where a handoff of a task without a
+     * project is prepared, so that an application or a CLI always has a folder
+     * with the task and its context in it. Created on first use.
+     */
+    @Transactional(readOnly = true)
+    public Path inbox(Long taskId) {
+        Path folder = root.resolve("_inbox").resolve("task-" + taskId);
+        try {
+            Files.createDirectories(folder);
+        } catch (IOException e) {
+            throw new WorkspaceUnavailableException("The folder " + folder + " could not be created: " + e.getMessage());
+        }
+        return folder;
+    }
+
+    /** Writes a document inside a folder this service handed out (a project's or an inbox), under W2/W3. */
+    @Transactional(readOnly = true)
+    public void writeIn(Path folder, String relative, String content) {
+        Path path = WorkspacePaths.writableDocument(folder, relative);
+        try {
+            Files.createDirectories(path.getParent());
+            Files.writeString(path, content, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+        } catch (IOException e) {
+            throw new WorkspaceUnavailableException("'" + relative + "' could not be written: " + e.getMessage());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<String> readIn(Path folder, String relative) {
+        Path path = WorkspacePaths.inside(folder, relative);
+        return Files.isRegularFile(path) ? Optional.of(readTextOrEmpty(path)) : Optional.empty();
+    }
+
     /** Reads a text document, or empty when it does not exist. For the orchestrator's own use. */
     @Transactional(readOnly = true)
     public Optional<String> readText(Long projectId, String relative) {

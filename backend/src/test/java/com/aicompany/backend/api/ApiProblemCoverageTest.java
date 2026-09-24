@@ -45,7 +45,9 @@ class ApiProblemCoverageTest {
             "com.aicompany.backend.harness",
             "com.aicompany.backend.daily",
             // PHASE 15 (ADR-024): people, sessions, authorization.
-            "com.aicompany.backend.user");
+            "com.aicompany.backend.user",
+            // PHASE 16 (ADR-025): agent binding and configuration.
+            "com.aicompany.backend.binding");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in
@@ -172,6 +174,7 @@ class ApiProblemCoverageTest {
                         "invalid-credentials", "too-many-login-attempts", "access-denied", "weak-password",
                         "current-password-wrong", "username-taken", "user-not-found", "last-admin",
                         "not-a-user-session",
+                        "binding-invalid", "agent-works-elsewhere", "target-not-found", "no-baseline",
                         "internal-error");
     }
 

@@ -49,8 +49,12 @@ public class RunService {
     private final ApplicationEventPublisher events;
     private final RunContext context;
 
+    private final com.aicompany.backend.binding.AgentBindingService binding;
+
     public RunService(TaskRunRepository runs, TaskRepository tasks, ProjectRepository projects,
-                      AgentRepository agents, ApplicationEventPublisher events, RunContext context) {
+                      AgentRepository agents, ApplicationEventPublisher events, RunContext context,
+                      com.aicompany.backend.binding.AgentBindingService binding) {
+        this.binding = binding;
         this.runs = runs;
         this.tasks = tasks;
         this.projects = projects;
@@ -94,6 +98,9 @@ public class RunService {
                 .orElseThrow(() -> new AgentNotFoundException(agentId));
 
         task.requireRunnable(project, agent);
+        // PHASE 16 (ADR-025): the engine runs engine models; an agent bound to an
+        // application or a CLI is handed off instead.
+        binding.requireEngineRun(agent, requestedModel);
 
         if (runs.existsByTaskIdAndStatusIn(taskId, UNFINISHED)) {
             throw new TaskRunInProgressException(taskId);

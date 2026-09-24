@@ -14,6 +14,7 @@ import com.aicompany.backend.harness.service.HarnessService;
 import com.aicompany.backend.daily.service.DailyService;
 import com.aicompany.backend.task.service.TaskService;
 import com.aicompany.backend.user.service.AuthService;
+import com.aicompany.backend.binding.AgentConfigurationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,7 +51,8 @@ class PreconditionCoverageTest {
             List.of(TaskService.class, ProjectService.class, AgentService.class, RunService.class,
                     SoftwareService.class, LlmCatalogService.class, UsageService.class,
                     ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class,
-                    HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class);
+                    HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class,
+                    AgentConfigurationService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller

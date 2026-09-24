@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useApi } from "../context";
 import { ApiProblem, type Versioned } from "../api/client";
 import {
-  TASK_PRIORITIES, TRANSITIONS, type Agent, type ModelInfo, type Project, type Run, type Suggestion, type Task,
-  type TaskPriority, type Transition,
+  TASK_PRIORITIES, TRANSITIONS, type Agent, type AgentConfiguration, type ModelInfo, type Project, type Run,
+  type Suggestion, type Task, type TaskPriority, type Transition,
 } from "../api/types";
-import { Field, PriorityBadge, ProblemNote, StatusBadge, when } from "../components/ui";
+import { Field, Modal, PriorityBadge, ProblemNote, StatusBadge, when } from "../components/ui";
+import { BindingChain } from "../components/BindingChain";
+import { Icon } from "../components/icons";
 import { OrchestratorPanel } from "./OrchestratorPanel";
 
 const STEP_LABEL: Record<Transition, string> = { start: "Avvia", complete: "Completa", stop: "Ferma", reopen: "Riapri" };
@@ -26,6 +28,7 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
   const [runs, setRuns] = useState<Run[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [models, setModels] = useState<ModelInfo[]>([]);
+  const [bindings, setBindings] = useState<AgentConfiguration[]>([]);
   const [problem, setProblem] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,6 +42,7 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
   useEffect(() => {
     load().catch(setProblem);
     api.engineModels().then((list) => setModels(list.models.filter((m) => m.available))).catch(() => setModels([]));
+    api.ecosystemBindings().then(setBindings).catch(() => setBindings([]));
   }, [api, load]);
 
   useEffect(() => {
@@ -80,6 +84,7 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
   const task = version?.body;
   const agent = agents.find((a) => a.id === task?.agentId);
   const project = projects.find((p) => p.id === task?.projectId);
+  const binding = bindings.find((b) => b.id === task?.agentId);
 
   return (
     <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -110,14 +115,15 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
               </div>
             </div>
 
-            {task.code && <OrchestratorPanel task={task} busy={busy} act={act} />}
-
-            <RunSection task={task} agent={agent} runs={runs} models={models} busy={busy}
-                        onLaunch={(model) => act((etag) => api.launchRun(task.id, etag, model))} />
-
-            <AssignSection task={task} agents={agents} projects={projects} suggestions={suggestions} busy={busy}
+            <AssignSection task={task} agent={agent} binding={binding} bindings={bindings} project={project}
+                           projects={projects} suggestions={suggestions} busy={busy}
                            onAgent={(id) => act((etag) => api.assignAgent(task.id, etag, id))}
                            onProject={(id) => act((etag) => api.assignProject(task.id, etag, id))} />
+
+            <OrchestratorPanel task={task} busy={busy} act={act} />
+
+            <RunSection task={task} agent={agent} binding={binding} runs={runs} models={models} busy={busy}
+                        onLaunch={(model) => act((etag) => api.launchRun(task.id, etag, model))} />
 
             <DetailsSection key={version.etag} task={task} busy={busy}
                             onSave={(details) => act((etag) => api.updateTask(task.id, etag, details))} />
@@ -128,21 +134,25 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
   );
 }
 
-function RunSection({ task, agent, runs, models, busy, onLaunch }: {
-  task: Task; agent: Agent | undefined; runs: Run[]; models: ModelInfo[]; busy: boolean; onLaunch: (model?: string) => void;
+function RunSection({ task, agent, binding, runs, models, busy, onLaunch }: {
+  task: Task; agent: Agent | undefined; binding: AgentConfiguration | undefined; runs: Run[]; models: ModelInfo[];
+  busy: boolean; onLaunch: (model?: string) => void;
 }) {
   const [model, setModel] = useState("");
+  const elsewhere = binding && binding.executionTarget !== "engine" ? binding.binding.target.name : null;
   const blocked = task.status === "DONE" ? "Riapri la task per eseguirla di nuovo."
     : !agent ? "Assegna prima un agente."
       : !agent.active ? "L'agente è inattivo: attivalo o riassegna la task."
-        : runs.some((r) => r.status === "QUEUED" || r.status === "RUNNING") ? "Un'esecuzione è in corso." : null;
+        : runs.some((r) => r.status === "QUEUED" || r.status === "RUNNING") ? "Un'esecuzione è in corso."
+          : elsewhere && !model ? `${agent.name} lavora con ${elsewhere}: consegna la task dal Master Orchestrator, oppure scegli qui un modello dell'AI Engine per questa sola esecuzione.`
+            : null;
 
   return (
     <div className="section">
       <div className="section-title">Esecuzioni (AI Engine)</div>
       <div className="row">
         <select aria-label="Model" value={model} onChange={(e) => setModel(e.target.value)} style={{ maxWidth: 320 }}>
-          <option value="">{agent?.model ? `Modello dell'agente (${agent.model})` : "Default dell'engine"}</option>
+          <option value="">{elsewhere ? `Modello dell'agente (usato in ${elsewhere})` : agent?.model ? `Modello dell'agente (${agent.model})` : "Default dell'engine"}</option>
           {models.map((m) => <option key={m.id} value={m.id}>{m.id}{m.billed ? " — a consumo" : ""}</option>)}
         </select>
         <button className="btn btn-primary" disabled={busy || blocked !== null} onClick={() => onLaunch(model || undefined)}>
@@ -194,40 +204,128 @@ function RunCard({ run }: { run: Run }) {
   );
 }
 
-function AssignSection({ task, agents, projects, suggestions, busy, onAgent, onProject }: {
-  task: Task; agents: Agent[]; projects: Project[]; suggestions: Suggestion[]; busy: boolean;
+/**
+ * Directive §1: what is assigned, to whom, with which model, through which
+ * software -- visible before and after any change, never an anonymous id.
+ */
+function AssignSection({ task, agent, binding, bindings, project, projects, suggestions, busy, onAgent, onProject }: {
+  task: Task; agent: Agent | undefined; binding: AgentConfiguration | undefined; bindings: AgentConfiguration[];
+  project: Project | undefined; projects: Project[]; suggestions: Suggestion[]; busy: boolean;
   onAgent: (id: number) => void; onProject: (id: number) => void;
 }) {
-  const [agentId, setAgentId] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [choosing, setChoosing] = useState(false);
+  const [moving, setMoving] = useState(false);
   const best = suggestions[0];
   return (
     <div className="section">
       <div className="section-title">Assegnazione</div>
+      <WhatBox task={task} project={project} />
+      {agent && binding
+        ? <BindingChain agentName={agent.name} agentRole={binding.parent ? `${agent.role} · sottoagente di ${binding.parent.name}` : agent.role} binding={binding.binding} />
+        : agent ? <div className="muted">Assegnata a <strong>{agent.name}</strong> ({agent.role}).</div>
+          : <div className="notice notice-warn">Nessun agente: la task non può partire.</div>}
       {best && best.score > 0 && best.agentId !== task.agentId && (
         <div className="notice">
           <div className="row">
-            <span>Suggerito: <strong>{best.name}</strong> — corrisponde a {best.matchedTerms.map((t) => <code key={t}>{t} </code>)}</span>
+            <span>Il routing suggerisce <strong>{best.name}</strong> — corrisponde a {best.matchedTerms.map((t) => <code key={t}>{t} </code>)}</span>
             <span className="spacer" />
-            <button className="btn btn-small" disabled={busy} onClick={() => onAgent(best.agentId)}>Assegna</button>
+            <button className="btn btn-small" disabled={busy} onClick={() => setChoosing(true)}>Vedi e assegna</button>
           </div>
         </div>
       )}
       <div className="row">
-        <select aria-label="Agent" value={agentId} onChange={(e) => setAgentId(e.target.value)} style={{ maxWidth: 280 }}>
-          <option value="">Scegli un agente…</option>
-          {agents.filter((a) => a.active).map((a) => <option key={a.id} value={a.id}>{a.name} — {a.role}</option>)}
-        </select>
-        <button className="btn" disabled={busy || !agentId} onClick={() => onAgent(Number(agentId))}>Assegna agente</button>
+        <button className="btn" disabled={busy} onClick={() => setChoosing(true)}>{agent ? "Cambia agente" : "Assegna agente"}</button>
+        <button className="btn" disabled={busy} onClick={() => setMoving(true)}>{project ? "Cambia progetto" : "Associa a un progetto"}</button>
       </div>
-      <div className="row">
-        <select aria-label="Project" value={projectId} onChange={(e) => setProjectId(e.target.value)} style={{ maxWidth: 280 }}>
-          <option value="">Scegli un progetto…</option>
-          {projects.filter((p) => p.status === "ACTIVE").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <button className="btn" disabled={busy || !projectId} onClick={() => onProject(Number(projectId))}>Sposta nel progetto</button>
-      </div>
+      {choosing && (
+        <AssignModal task={task} project={project} bindings={bindings} suggestions={suggestions} current={task.agentId}
+                     onClose={() => setChoosing(false)} onConfirm={(id) => { setChoosing(false); onAgent(id); }} />
+      )}
+      {moving && (
+        <Modal title="Associa la task a un progetto" onClose={() => setMoving(false)}>
+          <div className="stack">
+            <WhatBox task={task} project={project} />
+            {projects.filter((p) => p.status === "ACTIVE").map((p) => (
+              <button key={p.id} className="agent-card" aria-pressed={p.id === task.projectId}
+                      onClick={() => { setMoving(false); onProject(p.id); }}>
+                <strong>{p.name}</strong>
+                <small className="muted">{p.description ?? "Nessuna descrizione"}{p.projectType ? ` · ${p.projectType}` : ""}</small>
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
     </div>
+  );
+}
+
+function WhatBox({ task, project }: { task: Task; project: Project | undefined }) {
+  return (
+    <div className="what-box">
+      <span className="chain-label">Cosa stai assegnando</span>
+      <strong>{task.code ? `${task.code} — ` : ""}{task.title}</strong>
+      {task.description && <span className="muted" style={{ fontSize: 12.5 }}>{task.description.slice(0, 220)}{task.description.length > 220 ? "…" : ""}</span>}
+      <span className="muted" style={{ fontSize: 12 }}>{project ? `Progetto ${project.name}` : "Nessun progetto"}{task.phaseId ? " · task di una fase del piano" : ""} · priorità {task.priority}</span>
+    </div>
+  );
+}
+
+function AssignModal({ task, project, bindings, suggestions, current, onClose, onConfirm }: {
+  task: Task; project: Project | undefined; bindings: AgentConfiguration[]; suggestions: Suggestion[];
+  current: number | null; onClose: () => void; onConfirm: (id: number) => void;
+}) {
+  const active = bindings.filter((b) => b.status === "ACTIVE");
+  const ranked = [...active].sort((a, b) => score(b.id) - score(a.id));
+  const [selected, setSelected] = useState<number | null>(current ?? ranked[0]?.id ?? null);
+  const chosen = active.find((b) => b.id === selected);
+  function score(id: number) { return suggestions.find((s) => s.agentId === id)?.score ?? 0; }
+  const reason = (id: number) => {
+    const s = suggestions.find((x) => x.agentId === id);
+    return s && s.score > 0 ? `Il routing lo propone: corrisponde a ${s.matchedTerms.join(", ")}` : null;
+  };
+  return (
+    <Modal title="Assegna la task" onClose={onClose} wide>
+      <div className="assign-grid">
+        <div className="stack">
+          <WhatBox task={task} project={project} />
+          {chosen && (
+            <div className="stack" style={{ gap: 6 }}>
+              <span className="chain-label">A chi, con quale modello, attraverso cosa</span>
+              <BindingChain agentName={chosen.name} agentRole={chosen.parent ? `${chosen.role} · sottoagente di ${chosen.parent.name}` : chosen.role} binding={chosen.binding} />
+              {reason(chosen.id) && <div className="muted" style={{ fontSize: 12.5 }}><Icon name="orchestrator" size={12} /> {reason(chosen.id)}</div>}
+              <div className="notice">
+                Stai assegnando <strong>«{task.title}»</strong> a <strong>{chosen.name}</strong> ({chosen.role}), che userà{" "}
+                <strong>{chosen.binding.model?.displayName ?? (chosen.executionTarget === "engine" ? "il modello di default dell'engine" : "il modello scelto nell'app")}</strong>
+                {chosen.binding.provider ? <> di <strong>{chosen.binding.provider.name}</strong></> : null} attraverso <strong>{chosen.binding.target.name}</strong>.
+              </div>
+              {!chosen.binding.valid && <div className="notice notice-danger">Il legame di questo agente non è valido: correggilo nella pagina Agenti.</div>}
+            </div>
+          )}
+        </div>
+        <div className="stack" style={{ maxHeight: "62vh", overflow: "auto" }}>
+          {ranked.map((b) => (
+            <button key={b.id} className="agent-card" aria-pressed={selected === b.id} onClick={() => setSelected(b.id)}>
+              <div className="row">
+                <strong>{b.name}</strong><span className="muted" style={{ fontSize: 12 }}>{b.role}</span>
+                {b.parent && <span className="chip">sottoagente di {b.parent.name}</span>}
+                <span className="spacer" />
+                {reason(b.id) && <span className="badge badge-accent">proposto</span>}
+                {b.id === current && <span className="badge">attuale</span>}
+              </div>
+              {b.description && <small className="muted">{b.description}</small>}
+              <BindingChain binding={b.binding} compact />
+            </button>
+          ))}
+          {ranked.length === 0 && <div className="muted">Nessun agente attivo.</div>}
+        </div>
+      </div>
+      <div className="row" style={{ marginTop: 12 }}>
+        <span className="spacer" />
+        <button className="btn" onClick={onClose}>Annulla</button>
+        <button className="btn btn-primary" disabled={!chosen || chosen.id === current} onClick={() => chosen && onConfirm(chosen.id)}>
+          {chosen ? `Assegna a ${chosen.name}` : "Assegna"}</button>
+      </div>
+    </Modal>
   );
 }
 

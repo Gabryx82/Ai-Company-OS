@@ -270,6 +270,19 @@ public enum ApiProblem {
     NOT_A_USER_SESSION("not-a-user-session", HttpStatus.CONFLICT,
             "Not a user session", "This operation needs a signed-in person, not a service token"),
 
+    // --- agent binding (PHASE 16, ADR-025) --------------------------------------------
+
+    /** Model and execution target that do not go together, or an unknown one of either. */
+    BINDING_INVALID("binding-invalid", HttpStatus.BAD_REQUEST,
+            "Binding refused", "The model cannot run on that execution target"),
+    /** A run through the AI Engine asked of an agent bound to an application or a CLI. */
+    AGENT_WORKS_ELSEWHERE("agent-works-elsewhere", HttpStatus.CONFLICT,
+            "The agent works elsewhere", "This agent works through an application or a CLI: hand the task off instead"),
+    TARGET_NOT_FOUND("target-not-found", HttpStatus.NOT_FOUND,
+            "Execution target not found", "No execution target with that key"),
+    NO_BASELINE("no-baseline", HttpStatus.CONFLICT,
+            "No initial configuration", "Only seed and template agents have an initial configuration to restore"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

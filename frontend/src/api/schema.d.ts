@@ -196,6 +196,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agents/{id}/configuration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["configuration"];
+        put: operations["configure_2"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agents/{id}/configuration/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agents/{id}/deactivate": {
         parameters: {
             query?: never;
@@ -420,6 +452,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ecosystem/bindings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["bindings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/engine/models": {
         parameters: {
             query?: never;
@@ -428,6 +476,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["models_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/execution-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["targets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/execution-targets/{key}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["check"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1201,6 +1281,69 @@ export interface components {
             role: string;
             specialization: string;
         };
+        Binding: {
+            model?: components["schemas"]["ModelRef"];
+            problems?: string[];
+            provider?: components["schemas"]["ProviderRef"];
+            summary?: string;
+            target?: components["schemas"]["TargetRef"];
+            valid?: boolean;
+            warnings?: string[];
+        };
+        ConfigurationRequest: {
+            capabilities?: string;
+            contextPolicy?: string;
+            description?: string;
+            directives?: string;
+            domain?: string;
+            executionTarget?: string;
+            limits?: string;
+            model?: string;
+            name?: string;
+            outputFormat?: string;
+            /** Format: int64 */
+            parentId?: number;
+            responsibilities?: string;
+            role: string;
+            specialization: string;
+            systemPrompt?: string;
+        };
+        ConfigurationResponse: {
+            binding?: components["schemas"]["Binding"];
+            capabilities?: string[];
+            children?: components["schemas"]["Ref"][];
+            contextPolicy?: string;
+            /** Format: date-time */
+            customizedAt?: string;
+            customizedBy?: string;
+            defaults?: {
+                [key: string]: unknown;
+            };
+            description?: string;
+            directives?: string[];
+            domain?: string;
+            executionTarget?: string;
+            /** Format: int64 */
+            id?: number;
+            limits?: string;
+            model?: string;
+            modified?: string[];
+            name?: string;
+            origin?: string;
+            outputFormat?: string;
+            parent?: components["schemas"]["Ref"];
+            resources?: {
+                [key: string]: components["schemas"]["ResourceRef"][];
+            };
+            responsibilities?: string;
+            role?: string;
+            software?: components["schemas"]["SoftwareRef"][];
+            specialization?: string;
+            status?: string;
+            systemPrompt?: string;
+            /** Format: int64 */
+            version?: number;
+        };
         ContextFile: {
             exists?: boolean;
             path?: string;
@@ -1279,6 +1422,17 @@ export interface components {
             source?: string;
             type?: string;
         };
+        ExecutionTarget: {
+            contextFile?: string;
+            /** @enum {string} */
+            delivery?: "ENGINE_RUN" | "CLI_PROMPT" | "IDE_FOLDER" | "APP_PASTE" | "WEB_PASTE" | "MANUAL";
+            engine?: boolean;
+            howItWorks?: string;
+            key?: string;
+            name?: string;
+            providers?: string[];
+            software?: string;
+        };
         GenerateRequest: {
             model?: string;
         };
@@ -1303,10 +1457,15 @@ export interface components {
             taskId?: number;
         };
         HandoffResult: {
+            delivery?: string;
+            folder?: string;
+            fullPrompt?: string;
             handoff?: components["schemas"]["HandoffResponse"];
+            openUrl?: string;
             prompt?: string;
             promptToClipboard?: boolean;
             task?: components["schemas"]["TaskResponse"];
+            written?: string[];
         };
         Installed: {
             /** Format: int64 */
@@ -1376,6 +1535,15 @@ export interface components {
             defaultModel?: string;
             models?: components["schemas"]["ModelInfo"][];
         };
+        ModelRef: {
+            catalogued?: boolean;
+            displayName?: string;
+            engineRunnable?: boolean;
+            key?: string;
+            lifecycle?: string;
+            replacedBy?: string;
+            role?: string;
+        };
         ModelResponse: {
             capabilities?: string[];
             /** Format: int32 */
@@ -1422,6 +1590,7 @@ export interface components {
             /** @enum {string} */
             autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
             autonomyRules?: string;
+            binding?: components["schemas"]["Binding"];
             blockers?: string[];
             code?: string;
             context?: components["schemas"]["ContextFile"][];
@@ -1550,6 +1719,13 @@ export interface components {
             description?: string;
             name: string;
         };
+        ProviderRef: {
+            billing?: string;
+            key?: string;
+            kind?: string;
+            name?: string;
+            status?: string;
+        };
         ProviderResponse: {
             baseUrl?: string;
             /** @enum {string} */
@@ -1570,6 +1746,19 @@ export interface components {
             /** Format: int32 */
             resetWeekday?: number;
             resetZone?: string;
+        };
+        Ref: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+            role?: string;
+        };
+        ResourceRef: {
+            configuration?: string;
+            description?: string;
+            key?: string;
+            kind?: string;
+            name?: string;
         };
         ResourceRequest: {
             configuration?: string;
@@ -1760,11 +1949,23 @@ export interface components {
         };
         Target: {
             available?: boolean;
+            delivery?: string;
             detail?: string;
             key?: string;
             /** @enum {string} */
-            kind?: "ENGINE" | "CLI" | "DESKTOP" | "MANUAL";
+            kind?: "ENGINE" | "CLI" | "DESKTOP" | "WEB" | "MANUAL";
             name?: string;
+            recommended?: boolean;
+        };
+        TargetRef: {
+            availability?: string;
+            contextFile?: string;
+            delivery?: string;
+            howItWorks?: string;
+            key?: string;
+            name?: string;
+            providers?: string[];
+            software?: string;
         };
         TaskAgentAssignmentRequest: {
             /** Format: int64 */
@@ -1818,9 +2019,12 @@ export interface components {
             title: string;
         };
         Template: {
+            capabilities?: string[];
             children?: components["schemas"]["Template"][];
+            description?: string;
             directives?: string[];
             domain?: string;
+            executionTarget?: string;
             key?: string;
             limits?: string;
             model?: string;
@@ -2245,6 +2449,80 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AgentResponse"];
+                };
+            };
+        };
+    };
+    configuration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationResponse"];
+                };
+            };
+        };
+    };
+    configure_2: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigurationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationResponse"];
+                };
+            };
+        };
+    };
+    reset: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationResponse"];
                 };
             };
         };
@@ -2699,6 +2977,26 @@ export interface operations {
             };
         };
     };
+    bindings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfigurationResponse"][];
+                };
+            };
+        };
+    };
     models_1: {
         parameters: {
             query?: never;
@@ -2715,6 +3013,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ModelList"];
+                };
+            };
+        };
+    };
+    targets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ExecutionTarget"][];
+                };
+            };
+        };
+    };
+    check: {
+        parameters: {
+            query?: {
+                model?: string;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Binding"];
                 };
             };
         };

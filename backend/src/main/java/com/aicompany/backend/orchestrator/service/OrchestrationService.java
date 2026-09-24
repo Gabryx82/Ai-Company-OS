@@ -1,7 +1,11 @@
 package com.aicompany.backend.orchestrator.service;
 
 import com.aicompany.backend.agent.model.Agent;
+import com.aicompany.backend.agent.repository.AgentRepository;
 import com.aicompany.backend.agent.routing.AgentRouter;
+import com.aicompany.backend.binding.AgentBindingService;
+import com.aicompany.backend.binding.ExecutionTargetCatalog;
+import com.aicompany.backend.binding.ExecutionTargetCatalog.ExecutionTarget;
 import com.aicompany.backend.hitl.AutonomyPolicy;
 import com.aicompany.backend.llm.model.ModelLifecycle;
 import com.aicompany.backend.llm.model.ModelRole;
@@ -59,9 +63,15 @@ public class OrchestrationService {
     public record ContextFile(String path, boolean exists, String why) {
     }
 
-    public enum TargetKind { ENGINE, CLI, DESKTOP, MANUAL }
+    public enum TargetKind { ENGINE, CLI, DESKTOP, WEB, MANUAL }
 
-    public record Target(String key, String name, TargetKind kind, boolean available, String detail) {
+    /**
+     * One place the task can be done (ADR-025 §2). {@code recommended} marks the
+     * execution target the agent is bound to; {@code delivery} says how the
+     * prompt gets there.
+     */
+    public record Target(String key, String name, TargetKind kind, boolean available, String detail, String delivery,
+                         boolean recommended) {
     }
 
     public record Orchestration(Long taskId, String code, String title, TaskStatus status, Long projectId,
@@ -69,7 +79,7 @@ public class OrchestrationService {
                                 boolean phaseApproved, AutonomyLevel autonomyLevel, String autonomyRules,
                                 AgentChoice agent, ModelChoice model, List<SoftwareChoice> software,
                                 List<ContextFile> context, String prompt, List<Target> targets,
-                                List<String> blockers) {
+                                List<String> blockers, AgentBindingService.Binding binding) {
     }
 
     private static final Pattern CODE_WORK = Pattern.compile(
@@ -88,9 +98,17 @@ public class OrchestrationService {
     private final SoftwareService software;
     private final ProjectTypeCatalog types;
     private final ProjectWorkspaceService workspace;
+    private final ExecutionTargetCatalog targetCatalog;
+    private final AgentBindingService bindings;
+    private final AgentRepository agents;
 
     public OrchestrationService(TaskRepository tasks, AgentRouter router, LlmCatalogService models,
-                                SoftwareService software, ProjectTypeCatalog types, ProjectWorkspaceService workspace) {
+                                SoftwareService software, ProjectTypeCatalog types, ProjectWorkspaceService workspace,
+                                ExecutionTargetCatalog targetCatalog, AgentBindingService bindings,
+                                AgentRepository agents) {
+        this.targetCatalog = targetCatalog;
+        this.bindings = bindings;
+        this.agents = agents;
         this.tasks = tasks;
         this.router = router;
         this.models = models;
@@ -118,22 +136,30 @@ public class OrchestrationService {
             blockers.add("Nessun agente assegnato: assegna quello proposto o un altro.");
         }
         boolean hasFolder = project != null && workspace.folderOf(project.getId()).isPresent();
-        if (task.getDocumentPath() != null && !hasFolder) {
-            blockers.add("La cartella del progetto non esiste: prepara il workspace.");
+        // PHASE 17 (ADR-025 §4): a handoff prepares the folder itself -- the project's (created when
+        // missing, once its path is configured) or an inbox folder for a task without a project.
+        boolean folderPossible = project == null || project.getWorkspacePath() != null;
+        if (!folderPossible) {
+            blockers.add("Il progetto non ha una cartella di lavoro: impostala nel profilo per gli handoff.");
         }
 
+        Agent bound = agent.agentId() == null ? null : agents.findById(agent.agentId()).orElse(null);
+        AgentBindingService.Binding binding = bound == null ? null : bindings.describe(bound);
         List<SoftwareService.Detected> catalog = software.findAll();
         List<SoftwareChoice> tools = software(task, project, work, planned, catalog);
-        List<Target> targets = targets(agent, catalog, hasFolder && task.getDocumentPath() != null);
+        List<Target> targets = targets(agent, bound, binding, catalog, folderPossible);
         AutonomyLevel level = project == null ? AutonomyLevel.GUIDED : project.getAutonomyLevel();
 
         return new Orchestration(task.getId(), task.getCode(), task.getTitle(), task.getStatus(),
                 project == null ? null : project.getId(), project == null ? null : project.getName(),
                 phase == null ? null : phase.getId(), phase == null ? null : phase.getNumber(),
                 phase == null ? null : phase.getTitle(), phase == null || phase.isApproved(), level,
-                AutonomyPolicy.rules(level), agent, model(agent, work), tools,
+                AutonomyPolicy.rules(level), agent, model(agent, bound, work), tools,
                 context(task, project, phase, work, planned, hasFolder),
-                task.getCode() == null ? null : PlanMarkdown.compactPrompt(task.getCode()), targets, blockers);
+                task.getCode() == null
+                        ? "Esegui TASK-" + task.getId() + " seguendo il pacchetto di handoff in `.aicos/handoffs/` e la governance in `AGENTS.md`."
+                        : PlanMarkdown.compactPrompt(task.getCode()),
+                targets, blockers, binding);
     }
 
     // --- agent ---------------------------------------------------------------------
@@ -155,13 +181,19 @@ public class OrchestrationService {
 
     // --- model ---------------------------------------------------------------------
 
-    private ModelChoice model(AgentChoice agent, String work) {
+    private ModelChoice model(AgentChoice agent, Agent bound, String work) {
         if (agent.model() != null) {
             Optional<Boolean> available = models.catalog().models().stream()
                     .filter(view -> view.model().getKey().equals(agent.model()))
                     .map(LlmCatalogService.ModelView::engineAvailable)
                     .findFirst();
-            return new ModelChoice(agent.model(), null, available.orElse(null), "Il modello dell'agente");
+            String where = bound == null || ExecutionTargetCatalog.ENGINE.equals(bound.getExecutionTarget()) ? ""
+                    : targetCatalog.find(bound.getExecutionTarget()).map(t -> ", usato tramite " + t.name()).orElse("");
+            return new ModelChoice(agent.model(), null, available.orElse(null), "Il modello dell'agente" + where);
+        }
+        if (bound != null && !ExecutionTargetCatalog.ENGINE.equals(bound.getExecutionTarget())) {
+            return new ModelChoice(null, null, null, "Il modello lo sceglie "
+                    + targetCatalog.find(bound.getExecutionTarget()).map(ExecutionTarget::name).orElse("lo strumento"));
         }
         ModelRole wanted = CODE_WORK.matcher(work).find() ? ModelRole.CODER : ModelRole.GENERAL;
         LlmCatalogService.Catalog catalog = models.catalog();
@@ -261,28 +293,48 @@ public class OrchestrationService {
 
     // --- targets -------------------------------------------------------------------
 
-    private static List<Target> targets(AgentChoice agent, List<SoftwareService.Detected> catalog,
-                                        boolean handoffPossible) {
-        List<Target> targets = new ArrayList<>();
-        targets.add(new Target("engine", "AI Engine", TargetKind.ENGINE, agent.assigned(),
-                agent.assigned() ? "Run con il modello scelto; esito nella console"
-                        : "Serve un agente assegnato"));
-        for (SoftwareService.Detected d : catalog) {
-            Software s = d.software();
-            if (!s.isExecutionTarget() || !s.isEnabled()) {
-                continue;
+    private List<Target> targets(AgentChoice agent, Agent bound, AgentBindingService.Binding binding,
+                                 List<SoftwareService.Detected> catalog, boolean folderPossible) {
+        Map<String, SoftwareService.Detected> byKey = new LinkedHashMap<>();
+        catalog.forEach(d -> byKey.put(d.software().getKey(), d));
+        String boundTarget = bound == null ? null : bound.getExecutionTarget();
+        List<Target> out = new ArrayList<>();
+        for (ExecutionTarget t : targetCatalog.all()) {
+            boolean recommended = t.key().equals(boundTarget);
+            TargetKind kind = switch (t.delivery()) {
+                case ENGINE_RUN -> TargetKind.ENGINE;
+                case CLI_PROMPT -> TargetKind.CLI;
+                case WEB_PASTE -> TargetKind.WEB;
+                case MANUAL -> TargetKind.MANUAL;
+                default -> TargetKind.DESKTOP;
+            };
+            boolean available;
+            String detail;
+            if (t.isEngine()) {
+                boolean runnable = binding == null || binding.model() == null || binding.model().engineRunnable();
+                available = agent.assigned() && runnable && (bound == null || ExecutionTargetCatalog.ENGINE.equals(boundTarget));
+                detail = !agent.assigned() ? "Serve un agente assegnato"
+                        : !runnable ? "Il modello dell'agente si usa tramite la sua app, non nell'AI Engine"
+                        : !available ? "L'agente lavora con un'app o una CLI: usa l'handoff" : t.howItWorks();
+            } else if (t.delivery() == ExecutionTargetCatalog.Delivery.MANUAL) {
+                available = agent.assigned() && folderPossible;
+                detail = t.howItWorks();
+            } else {
+                SoftwareService.Detected d = t.software() == null ? null : byKey.get(t.software());
+                boolean installed = t.delivery() == ExecutionTargetCatalog.Delivery.WEB_PASTE
+                        || (d != null && d.software().isEnabled()
+                        && (d.detection().availability() == Availability.INSTALLED
+                        || d.detection().availability() == Availability.RUNNING));
+                available = installed && agent.assigned() && folderPossible;
+                detail = !installed ? "Non installato su questa macchina"
+                        : !agent.assigned() ? "Serve un agente assegnato"
+                        : !folderPossible ? "Serve la cartella di lavoro del progetto" : t.howItWorks();
             }
-            boolean installed = d.detection().availability() == Availability.INSTALLED;
-            TargetKind kind = s.getLaunchKind() == LaunchKind.CLI ? TargetKind.CLI : TargetKind.DESKTOP;
-            String detail = !installed ? "Non installato su questa macchina"
-                    : !handoffPossible ? "Serve una task di piano con il workspace pronto"
-                    : kind == TargetKind.CLI ? "Si apre nel terminale, nella cartella del progetto, con il prompt"
-                    : "Si apre sull'app; il prompt compatto va incollato (copiato dalla console)";
-            targets.add(new Target(s.getKey(), s.getName(), kind, installed && handoffPossible && agent.assigned(), detail));
+            out.add(new Target(t.key(), t.name(), kind, available,
+                    recommended ? "Consigliato: l'agente è configurato per lavorare qui. " + detail : detail,
+                    t.delivery().name(), recommended));
         }
-        targets.add(new Target("manual", "Manuale", TargetKind.MANUAL, true,
-                "Lavori tu, con il documento della task come guida"));
-        return targets;
+        return out;
     }
 
     // --- the plan entry of this task -----------------------------------------------

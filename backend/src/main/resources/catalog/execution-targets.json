@@ -1,0 +1,80 @@
+[
+  {
+    "key": "engine", "name": "AI Engine (in AI Company OS)", "software": null, "delivery": "ENGINE_RUN",
+    "providers": ["ollama", "openrouter", "anthropic", "echo"],
+    "contextFile": null,
+    "howItWorks": "Il control plane invia il prompt (con ruolo, direttive e documenti della task) all'AI Engine, che lo esegue con il modello dell'agente. La risposta torna nella console."
+  },
+  {
+    "key": "claude-code", "name": "Claude Code (CLI)", "software": "claude-code", "delivery": "CLI_PROMPT",
+    "providers": ["claude-subscription"],
+    "contextFile": "CLAUDE.md",
+    "howItWorks": "Si apre Windows Terminal nella cartella del progetto con `claude \"<prompt>\"`. Claude Code legge CLAUDE.md e il pacchetto di handoff. Usa il tuo abbonamento Claude, nessuna API."
+  },
+  {
+    "key": "codex", "name": "ChatGPT / Codex (app)", "software": "codex", "delivery": "APP_PASTE",
+    "providers": ["chatgpt-subscription"],
+    "contextFile": "AGENTS.md",
+    "howItWorks": "Si apre l'app Codex; il prompt compatto è copiato negli appunti: incollalo e scegli la cartella del progetto. Codex legge AGENTS.md. Usa il tuo abbonamento ChatGPT, nessuna API."
+  },
+  {
+    "key": "opencode", "name": "OpenCode (CLI)", "software": "opencode", "delivery": "CLI_PROMPT",
+    "providers": ["ollama", "openrouter", "claude-subscription", "chatgpt-subscription"],
+    "contextFile": "AGENTS.md",
+    "howItWorks": "Si apre Windows Terminal nella cartella con `opencode --prompt \"<prompt>\"`. OpenCode legge AGENTS.md e usa il modello configurato in OpenCode (anche locale con Ollama)."
+  },
+  {
+    "key": "antigravity-ide", "name": "Antigravity IDE", "software": "antigravity-ide", "delivery": "IDE_FOLDER",
+    "providers": ["google-subscription"],
+    "contextFile": "AGENTS.md",
+    "howItWorks": "Si apre Antigravity IDE sulla cartella del progetto; il prompt è copiato negli appunti per l'agente dell'IDE."
+  },
+  {
+    "key": "antigravity", "name": "Antigravity (agent manager)", "software": "antigravity", "delivery": "APP_PASTE",
+    "providers": ["google-subscription"],
+    "contextFile": "AGENTS.md",
+    "howItWorks": "Si apre l'agent manager di Antigravity; il prompt è copiato negli appunti: incollalo e indica la cartella del progetto."
+  },
+  {
+    "key": "vscode-continue", "name": "VS Code + Continue", "software": "vscode-continue", "delivery": "IDE_FOLDER",
+    "providers": ["ollama", "openrouter"],
+    "contextFile": ".continue/rules/aicos.md",
+    "howItWorks": "Si apre VS Code sulla cartella; Continue carica le regole da .continue/rules/ e usa i modelli configurati (anche locali con Ollama). Il prompt è negli appunti."
+  },
+  {
+    "key": "intellij-junie", "name": "IntelliJ IDEA + Junie", "software": "intellij-junie", "delivery": "IDE_FOLDER",
+    "providers": ["jetbrains-ai"],
+    "contextFile": ".junie/guidelines.md",
+    "howItWorks": "Si apre IntelliJ sulla cartella; Junie legge .junie/guidelines.md. Il prompt è negli appunti da incollare in Junie."
+  },
+  {
+    "key": "devin", "name": "Devin (app)", "software": "devin", "delivery": "APP_PASTE",
+    "providers": ["cognition"], "contextFile": "AGENTS.md",
+    "howItWorks": "Si apre l'app Devin; il prompt completo è negli appunti."
+  },
+  {
+    "key": "kimi", "name": "Kimi (app)", "software": "kimi", "delivery": "APP_PASTE",
+    "providers": ["moonshot"], "contextFile": null,
+    "howItWorks": "Si apre l'app Kimi; il prompt completo, con il contesto incluso, è negli appunti."
+  },
+  {
+    "key": "verdent", "name": "Verdent (app)", "software": "verdent", "delivery": "APP_PASTE",
+    "providers": ["verdent"], "contextFile": "AGENTS.md",
+    "howItWorks": "Si apre l'app Verdent; il prompt è negli appunti: incollalo e indica la cartella del progetto."
+  },
+  {
+    "key": "chatgpt", "name": "ChatGPT Classic (app)", "software": "chatgpt-classic", "delivery": "APP_PASTE",
+    "providers": ["chatgpt-subscription"], "contextFile": null,
+    "howItWorks": "Si apre ChatGPT Classic; il prompt completo, con il contesto incluso, è negli appunti. Adatto a brainstorming e revisioni, non a modificare file."
+  },
+  {
+    "key": "gemini", "name": "Gemini (web)", "software": "gemini", "delivery": "WEB_PASTE",
+    "providers": ["google-subscription"], "contextFile": null,
+    "howItWorks": "Si apre Gemini nel browser; il prompt completo è negli appunti. Adatto a reference visive e immagini, che poi tornano in references/ del progetto."
+  },
+  {
+    "key": "manual", "name": "Manuale (lavoro io)", "software": null, "delivery": "MANUAL",
+    "providers": [], "contextFile": null,
+    "howItWorks": "Nessuno strumento viene aperto: il pacchetto di handoff è scritto nella cartella e il prompt è negli appunti, come guida."
+  }
+]

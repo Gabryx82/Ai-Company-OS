@@ -27,7 +27,10 @@ public class AgentService {
 
     private final AgentRepository repository;
 
-    public AgentService(AgentRepository repository) {
+    private final com.aicompany.backend.binding.AgentBindingService binding;
+
+    public AgentService(AgentRepository repository, com.aicompany.backend.binding.AgentBindingService binding) {
+        this.binding = binding;
         this.repository = repository;
     }
 
@@ -36,6 +39,8 @@ public class AgentService {
         if (repository.existsByNormalisedName(name)) {
             throw new AgentNameConflictException(name);
         }
+        // PHASE 16 (ADR-025): a new agent works through the AI Engine until configured otherwise.
+        binding.requireValid(model, "engine");
 
         return saveGuardingUniqueName(new Agent(name, role, specialization, model), name);
     }
@@ -66,8 +71,14 @@ public class AgentService {
             throw new AgentNameConflictException(name);
         }
 
+        // PHASE 16 (ADR-025): the model must be one the agent's execution target can run.
+        binding.requireValid(model, agent.getExecutionTarget());
+
         // Rejects an inactive agent; the rule is on the entity, not here.
         agent.updateDetails(name, role, specialization, model);
+        if (agent.getOrigin() != com.aicompany.backend.agent.model.AgentOrigin.USER) {
+            agent.markCustomized(null);
+        }
         return saveGuardingUniqueName(agent, name);
     }
 

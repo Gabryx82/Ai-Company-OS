@@ -134,6 +134,37 @@ public class Agent {
     @Column(name = "context_policy", length = 2000)
     private String contextPolicy;
 
+    // --- binding and origin (V21, ADR-025) ------------------------------------------
+
+    @Column(length = 2000)
+    private String description;
+
+    /** One capability per line. */
+    @Column(length = 2000)
+    private String capabilities;
+
+    /**
+     * Where the agent works: {@code "engine"} or an execution target of
+     * {@code catalog/execution-targets.json}. {@code null} (rows older than V21)
+     * means the engine.
+     */
+    @Column(name = "execution_target", length = 64)
+    private String executionTarget;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private AgentOrigin origin = AgentOrigin.USER;
+
+    /** The configuration the agent was born with (seed or template), as JSON; {@code null} for USER agents. */
+    @Column(length = 16000)
+    private String baseline;
+
+    @Column(name = "customized_at")
+    private Instant customizedAt;
+
+    @Column(name = "customized_by", length = 64)
+    private String customizedBy;
+
     protected Agent() {
         // for JPA
     }
@@ -189,6 +220,42 @@ public class Agent {
         this.directives = blankToNull(directives);
         this.contextPolicy = blankToNull(contextPolicy);
     }
+
+    /**
+     * Description, capabilities and binding (ADR-025). Frozen while inactive,
+     * like the rest of the configuration. The model is validated against the
+     * target by the service, which knows the catalogs.
+     */
+    public void configureBinding(String description, String capabilities, String model, String executionTarget) {
+        if (status != AgentStatus.ACTIVE) {
+            throw new InactiveAgentIsImmutableException();
+        }
+        this.description = blankToNull(description);
+        this.capabilities = blankToNull(capabilities);
+        this.model = blankToNull(model);
+        this.executionTarget = blankToNull(executionTarget);
+    }
+
+    /** Records who last changed a SEED or TEMPLATE agent, and when. */
+    public void markCustomized(String by) {
+        this.customizedAt = Instant.now();
+        this.customizedBy = by;
+    }
+
+    /** Where this agent came from, and the configuration it came with. */
+    public void recordOrigin(AgentOrigin origin, String baseline) {
+        this.origin = origin;
+        this.baseline = baseline;
+    }
+
+    public String getDescription() { return description; }
+    public String getCapabilities() { return capabilities; }
+    /** The execution target key; {@code "engine"} when none was ever set. */
+    public String getExecutionTarget() { return executionTarget == null ? "engine" : executionTarget; }
+    public AgentOrigin getOrigin() { return origin; }
+    public String getBaseline() { return baseline; }
+    public Instant getCustomizedAt() { return customizedAt; }
+    public String getCustomizedBy() { return customizedBy; }
 
     /** Whether the operator gave this agent any prompt engineering of its own. */
     public boolean hasProfile() {

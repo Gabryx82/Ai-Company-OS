@@ -12,7 +12,8 @@ import type {
   Agent, AgentProfile, AgentTemplate, AgentWrite, AutonomyLevel, DailyItem, InstalledAgent, Resource, Handoff, HandoffOutcome, LaunchResult, ModelCatalog, ModelList, Orchestration,
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
-  WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo,
+  WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
+  ExecutionTarget,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -495,6 +496,32 @@ export class ControlPlane {
     } catch {
       return null;
     }
+  }
+
+  // --- agent configuration and binding (ADR-025) --------------------------------
+
+  agentConfiguration(id: number): Promise<Versioned<AgentConfiguration>> {
+    return this.versioned("GET", `/api/agents/${id}/configuration`);
+  }
+
+  saveAgentConfiguration(id: number, etag: string, body: AgentConfigurationWrite): Promise<Versioned<AgentConfiguration>> {
+    return this.versioned("PUT", `/api/agents/${id}/configuration`, { body, ifMatch: etag });
+  }
+
+  resetAgentConfiguration(id: number, etag: string): Promise<Versioned<AgentConfiguration>> {
+    return this.versioned("POST", `/api/agents/${id}/configuration/reset`, { ifMatch: etag });
+  }
+
+  ecosystemBindings(): Promise<AgentConfiguration[]> {
+    return this.plain("GET", "/api/ecosystem/bindings");
+  }
+
+  executionTargets(): Promise<ExecutionTarget[]> {
+    return this.plain("GET", "/api/execution-targets");
+  }
+
+  checkBinding(target: string, model: string | null): Promise<Binding> {
+    return this.plain("GET", `/api/execution-targets/${encodeURIComponent(target)}/check${model ? `?model=${encodeURIComponent(model)}` : ""}`);
   }
 
   // --- catalogs of providers and models (ADR-018) -------------------------------

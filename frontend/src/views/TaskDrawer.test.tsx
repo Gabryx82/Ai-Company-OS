@@ -32,7 +32,7 @@ function renderDrawer(routes: Parameters<typeof fakeFetch>[0]) {
 describe("TaskDrawer", () => {
   it("offers only the edges that leave the current state (ADR-014)", async () => {
     renderDrawer({ "GET /api/tasks/7": () => ({ body: TASK, etag: '"0"' }) });
-    await screen.findByText("Design the planner");
+    await screen.findByRole("heading", { name: "Design the planner" });
     expect(screen.getByRole("button", { name: "Avvia" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Completa" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Riapri" })).toBeNull();
@@ -62,7 +62,7 @@ describe("TaskDrawer", () => {
     });
     fireEvent.click(await screen.findByRole("button", { name: "Avvia" }));
     await screen.findByText("Modificato da qualcun altro");
-    await screen.findByText("Renamed meanwhile");
+    await screen.findByRole("heading", { name: "Renamed meanwhile" });
     expect(calls.filter((c) => c.method === "POST")).toHaveLength(1);
   });
 
@@ -98,5 +98,39 @@ describe("TaskDrawer", () => {
     });
     await screen.findByText("The plan: three endpoints");
     expect(screen.getByText("urn:ai-company-os:engine:problem:unknown-model")).toBeTruthy();
+  });
+
+  it("assigns through a card that says what, to whom, with which model and through what (directive §1)", async () => {
+    const binding = (id: number, name: string, role: string, model: string, provider: string, target: string) => ({
+      id, name, role, specialization: "", description: `${name} descritto`, capabilities: [], status: "ACTIVE", parent: null,
+      children: [], domain: null, systemPrompt: null, responsibilities: null, limits: null, outputFormat: null,
+      directives: [], contextPolicy: null, resources: {}, software: [], model, executionTarget: target === "AI Engine" ? "engine" : "claude-code",
+      origin: "USER", defaults: null, modified: [], customizedAt: null, customizedBy: null, version: 0,
+      binding: { model: { key: model, displayName: model, role: null, lifecycle: "ACTIVE", replacedBy: null, catalogued: true, engineRunnable: true },
+        provider: { key: provider, name: provider, kind: null, billing: "FREE", status: "ENABLED" },
+        target: { key: "t", name: target, delivery: "ENGINE_RUN", software: null, availability: null, providers: [], contextFile: null, howItWorks: null },
+        valid: true, problems: [], warnings: [], summary: "" },
+    });
+    const calls = renderDrawer({
+      "GET /api/tasks/7": () => ({ body: { ...TASK, agentId: null }, etag: '"3"' }),
+      "GET /api/ecosystem/bindings": () => ({ body: [
+        binding(1, "Code Architect", "Software Engineer", "Qwen 3.5 9B", "Ollama (locale)", "AI Engine"),
+        binding(2, "Claude Code Engineer", "Software Engineer", "Claude (abbonamento)", "Abbonamento Claude", "Claude Code (CLI)"),
+      ] }),
+      "PUT /api/tasks/7/agent": () => ({ body: { ...TASK, agentId: 2 }, etag: '"4"' }),
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Assegna agente" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Claude Code Engineer/ }));
+    const sentence = await screen.findByText(/Stai assegnando/);
+    expect(sentence.textContent).toContain("Design the planner");
+    expect(sentence.textContent).toContain("Claude (abbonamento)");
+    expect(sentence.textContent).toContain("Claude Code (CLI)");
+
+    fireEvent.click(screen.getByRole("button", { name: "Assegna a Claude Code Engineer" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT" && c.path === "/api/tasks/7/agent")).toBe(true));
+    const put = calls.find((c) => c.method === "PUT" && c.path === "/api/tasks/7/agent")!;
+    expect(put.headers["If-Match"]).toBe('"3"');
+    expect(put.body).toEqual({ agentId: 2 });
   });
 });

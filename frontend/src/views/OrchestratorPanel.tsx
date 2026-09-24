@@ -1,19 +1,29 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApi } from "../context";
-import type { Handoff, Orchestration, Review, Task } from "../api/types";
-import { ProblemNote, when } from "../components/ui";
+import type { Binding, Handoff, HandoffOutcome, Orchestration, Review, Task } from "../api/types";
+import { Modal, ProblemNote, when } from "../components/ui";
 import { Icon } from "../components/icons";
+import { BindingChain } from "../components/BindingChain";
 
 const AVAILABILITY_TONE: Record<string, string> = {
   INSTALLED: "badge badge-ok", RUNNING: "badge badge-ok", WEB: "badge badge-ok", STOPPED: "badge badge-warn",
   NOT_INSTALLED: "badge", INCOMPATIBLE_HARDWARE: "badge badge-danger", UNKNOWN: "badge",
 };
+const DELIVERY_HINT: Record<string, string> = {
+  CLI_PROMPT: "si apre nel terminale, nella cartella, con il prompt",
+  IDE_FOLDER: "si apre sulla cartella; prompt negli appunti",
+  APP_PASTE: "si apre l'app; prompt negli appunti",
+  WEB_PASTE: "si apre nel browser; prompt negli appunti",
+  MANUAL: "nessuno strumento: pacchetto e prompt pronti",
+};
+
+type Target = Orchestration["targets"][number];
 
 /**
- * The Master Orchestrator's view of one task (ADR-021 §3–5): what it would use
- * and why, the targets it can hand the task to, and the operator's review.
- *
- * Every action takes the task's tag through `act`, like the rest of the drawer.
+ * The Master Orchestrator's view of one task (ADR-021 §3–5, ADR-025 §4): the
+ * chain Agent → Model → Provider → Execution Target, what it would use and why,
+ * where the task can be handed off -- with the agent's own target first -- and
+ * the operator's review. Every action takes the task's tag through `act`.
  */
 export function OrchestratorPanel({ task, busy, act }: {
   task: Task; busy: boolean; act: (mutation: (etag: string) => Promise<unknown>) => Promise<void>;
@@ -24,7 +34,8 @@ export function OrchestratorPanel({ task, busy, act }: {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [problem, setProblem] = useState<unknown>(null);
   const [note, setNote] = useState("");
-  const [lastPrompt, setLastPrompt] = useState<{ text: string; copied: boolean } | null>(null);
+  const [confirming, setConfirming] = useState<Target | null>(null);
+  const [outcome, setOutcome] = useState<(HandoffOutcome & { copied: boolean }) | null>(null);
   const [document, setDocument] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -36,14 +47,17 @@ export function OrchestratorPanel({ task, busy, act }: {
   // Reload whenever the task changed (its tag moves with every write).
   useEffect(load, [load, task.status, task.agentId]);
 
-  async function handoff(target: string) {
+  async function handoff(target: Target) {
+    setConfirming(null);
     await act(async (etag) => {
-      const outcome = await api.handoff(task.id, etag, target);
+      const result = await api.handoff(task.id, etag, target.key);
       let copied = false;
-      if (outcome.promptToClipboard) {
-        try { await navigator.clipboard.writeText(outcome.prompt); copied = true; } catch { copied = false; }
+      if (result.promptToClipboard) {
+        const text = target.delivery === "APP_PASTE" || target.delivery === "WEB_PASTE" ? result.fullPrompt || result.prompt : result.prompt;
+        try { await navigator.clipboard.writeText(text); copied = true; } catch { copied = false; }
       }
-      setLastPrompt({ text: outcome.promptToClipboard ? outcome.prompt : "", copied });
+      if (result.openUrl) window.open(result.openUrl, `aicos-${target.key}`, "noopener");
+      setOutcome({ ...result, copied });
     });
     load();
   }
@@ -61,9 +75,17 @@ export function OrchestratorPanel({ task, busy, act }: {
     api.readFile(decision.projectId, task.documentPath).then(setDocument).catch((e) => setDocument(String(e)));
   }
 
+  async function copy(text: string) {
+    try { await navigator.clipboard.writeText(text); } catch { /* the text is on screen anyway */ }
+  }
+
   if (!decision) {
     return problem ? <ProblemNote problem={problem} /> : null;
   }
+
+  const handoffTargets = decision.targets.filter((t) => t.kind !== "ENGINE")
+    .sort((a, b) => Number(b.recommended) - Number(a.recommended));
+  const binding = decision.binding as Binding | null;
 
   return (
     <div className="section">
@@ -76,7 +98,7 @@ export function OrchestratorPanel({ task, busy, act }: {
           <span className={decision.phaseApproved ? "badge badge-ok" : "badge badge-warn"}>
             {decision.phaseApproved ? "fase approvata" : "fase da approvare"}</span>
           <span className="spacer" />
-          <button className="btn btn-small" onClick={showDocument}><Icon name="file" size={13} /> {task.documentPath}</button>
+          {task.documentPath && <button className="btn btn-small" onClick={showDocument}><Icon name="file" size={13} /> {task.documentPath}</button>}
         </div>
       )}
       {document && <pre className="doc">{document}</pre>}
@@ -84,12 +106,14 @@ export function OrchestratorPanel({ task, busy, act }: {
         <div className="notice notice-warn">{decision.blockers.map((b) => <div key={b}>• {b}</div>)}</div>
       )}
 
+      {binding && <BindingChain agentName={decision.agent.name ?? undefined} agentRole={decision.agent.role ?? undefined} binding={binding} compact />}
+
       <dl className="kv">
         <dt>Agente</dt>
         <dd>{decision.agent.name ?? "—"} {decision.agent.role && <span className="muted">({decision.agent.role})</span>}
           <div className="muted" style={{ fontSize: 12 }}>{decision.agent.reason}</div></dd>
         <dt>Modello</dt>
-        <dd className="mono">{decision.model.model ?? "default dell'engine"}
+        <dd className="mono">{decision.model.model ?? "scelto dallo strumento o default dell'engine"}
           <div className="muted" style={{ fontSize: 12, fontFamily: "inherit" }}>{decision.model.reason}</div></dd>
         <dt>Autonomia</dt><dd>{decision.autonomyLevel}</dd>
       </dl>
@@ -121,21 +145,37 @@ export function OrchestratorPanel({ task, busy, act }: {
         </div>
       )}
 
-      {decision.code && (
-        <div>
-          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Consegna a un agente esterno</div>
-          <div className="row">
-            {decision.targets.filter((t) => t.kind === "CLI" || t.kind === "DESKTOP").map((t) => (
-              <button key={t.key} className="btn" disabled={busy || !t.available} title={t.detail} onClick={() => handoff(t.key)}>
-                <Icon name={t.kind === "CLI" ? "terminal" : "external"} size={13} /> {t.name}
-              </button>
-            ))}
-          </div>
-          {lastPrompt && (lastPrompt.text
-            ? <div className="notice" style={{ marginTop: 6 }}>Incolla nell'app {lastPrompt.copied ? "(già negli appunti)" : ""}: <code>{lastPrompt.text}</code></div>
-            : <div className="notice" style={{ marginTop: 6 }}>Aperto nel terminale, nella cartella del progetto, con il prompt.</div>)}
+      <div>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
+          Consegna a uno strumento — senza API: AI Company OS prepara cartella, contesto e prompt, poi apre lo strumento</div>
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 6 }}>
+          {handoffTargets.map((t) => (
+            <button key={t.key} className="agent-card" disabled={busy || !t.available} title={t.detail}
+                    onClick={() => setConfirming(t)} style={{ opacity: t.available ? 1 : 0.55 }}>
+              <span className="row" style={{ gap: 6 }}>
+                <Icon name={t.kind === "CLI" ? "terminal" : t.kind === "MANUAL" ? "file" : "external"} size={13} />
+                <strong style={{ fontSize: 13 }}>{t.name}</strong>
+              </span>
+              {t.recommended && <span className="badge badge-accent">consigliato</span>}
+              <small className="muted">{DELIVERY_HINT[t.delivery] ?? ""}</small>
+            </button>
+          ))}
         </div>
-      )}
+        {outcome && (
+          <div className="notice" style={{ marginTop: 8, display: "grid", gap: 6 }}>
+            <div><Icon name="check" size={13} /> Pronto in <code>{outcome.folder}</code>
+              {(outcome.written ?? []).length > 0 && <> — scritti: {(outcome.written ?? []).map((w) => <code key={w} style={{ marginRight: 6 }}>{w}</code>)}</>}</div>
+            {outcome.promptToClipboard
+              ? <div>{outcome.copied ? "Il prompt è già negli appunti: incollalo nello strumento." : "Copia il prompt e incollalo nello strumento."}</div>
+              : <div>Aperto nel terminale, nella cartella, con il prompt.</div>}
+            <div className="row">
+              <button className="btn btn-small" onClick={() => copy(outcome.prompt)}>Copia prompt compatto</button>
+              {outcome.fullPrompt && <button className="btn btn-small" onClick={() => copy(outcome.fullPrompt)}>Copia prompt completo</button>}
+              {outcome.openUrl && <a className="btn btn-small" href={outcome.openUrl} target="_blank" rel="noreferrer">Apri di nuovo</a>}
+            </div>
+          </div>
+        )}
+      </div>
 
       {(task.status === "IN_PROGRESS" || task.status === "DONE") && (
         <div className="stack" style={{ gap: 6 }}>
@@ -166,6 +206,31 @@ export function OrchestratorPanel({ task, busy, act }: {
               {r.note ? `: ${r.note}` : ""} <span className="muted">({r.reviewer})</span></div>
           ))}
         </details>
+      )}
+
+      {confirming && (
+        <Modal title="Conferma la consegna" onClose={() => setConfirming(null)}>
+          <div className="stack">
+            <div className="what-box">
+              <span className="chain-label">Cosa</span>
+              <strong>{decision.code ? `${decision.code} — ` : ""}{decision.title}</strong>
+              {task.description && <span className="muted" style={{ fontSize: 12.5 }}>{task.description.slice(0, 220)}{task.description.length > 220 ? "…" : ""}</span>}
+              <span className="muted" style={{ fontSize: 12 }}>
+                {decision.projectName ? `Progetto ${decision.projectName}` : "Nessun progetto: cartella dedicata alla task"}
+                {decision.phaseNumber != null ? ` · Fase ${decision.phaseNumber} — ${decision.phaseTitle}` : ""}</span>
+            </div>
+            {binding && <BindingChain agentName={decision.agent.name ?? undefined} agentRole={decision.agent.role ?? undefined}
+                                      binding={{ ...binding, target: { ...binding.target, key: confirming.key, name: confirming.name,
+                                        delivery: confirming.delivery as Binding["target"]["delivery"] } }} compact />}
+            <div className="notice">
+              <strong>Attraverso {confirming.name}</strong>: {DELIVERY_HINT[confirming.delivery] ?? ""}.
+              <div className="muted" style={{ fontSize: 12.5 }}>{confirming.detail}</div>
+            </div>
+            <div className="row"><span className="spacer" />
+              <button className="btn" onClick={() => setConfirming(null)}>Annulla</button>
+              <button className="btn btn-primary" onClick={() => handoff(confirming)}>Prepara e apri</button></div>
+          </div>
+        </Modal>
       )}
     </div>
   );

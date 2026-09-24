@@ -149,7 +149,8 @@ class OrchestratorApiTest extends AbstractPostgresTest {
         assertThat(host.launches().getFirst().command()).endsWith("-d", folder.toString(), "claude",
                 "Leggi .aicos/handoffs/TASK-001-claude-code.md ed esegui la task che descrive.");
         assertThat(Files.readString(folder.resolve(".aicos/handoffs/TASK-001-claude-code.md")))
-                .contains("Esegui TASK-001").contains("GUIDED").contains("Backend Bot");
+                .contains("TASK-001").contains("tasks/TASK-001.md").contains("GUIDED").contains("Backend Bot")
+                .contains("Cartella di lavoro").contains("Human-in-the-Loop");
         assertThat(planPhase(0).path("status").asString()).isEqualTo("IN_PROGRESS");
         mockMvc.perform(get("/api/tasks/" + task(0) + "/handoffs"))
                 .andExpect(jsonPath("$[0].target").value("claude-code"));

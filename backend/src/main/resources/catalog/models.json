@@ -1,44 +1,206 @@
 [
   {
-    "key": "ollama:qwen3.5:9b", "providerKey": "ollama", "displayName": "Qwen 3.5 9B", "role": "PLANNER",
-    "capabilities": ["tools", "thinking", "vision", "long-context", "planning", "coding", "italian"],
-    "contextWindow": 262144, "sizeGb": 6.6, "parameters": "9.7B", "lifecycle": "ACTIVE",
+    "key": "ollama:qwen3.5:9b",
+    "providerKey": "ollama",
+    "displayName": "Qwen 3.5 9B",
+    "role": "PLANNER",
+    "capabilities": [
+      "tools",
+      "thinking",
+      "vision",
+      "long-context",
+      "planning",
+      "coding",
+      "italian"
+    ],
+    "contextWindow": 262144,
+    "sizeGb": 6.6,
+    "parameters": "9.7B",
+    "lifecycle": "ACTIVE",
     "notes": "Modello locale più capace installato: pianificazione (IMPLEMENTATION_PLAN), ragionamento, codice in attesa di un coder dedicato."
   },
   {
-    "key": "ollama:qwen3.5:4b", "providerKey": "ollama", "displayName": "Qwen 3.5 4B", "role": "FAST",
-    "capabilities": ["tools", "thinking", "vision", "long-context"],
-    "contextWindow": 262144, "sizeGb": 3.4, "parameters": "4B", "lifecycle": "ACTIVE",
+    "key": "ollama:qwen3.5:4b",
+    "providerKey": "ollama",
+    "displayName": "Qwen 3.5 4B",
+    "role": "FAST",
+    "capabilities": [
+      "tools",
+      "thinking",
+      "vision",
+      "long-context"
+    ],
+    "contextWindow": 262144,
+    "sizeGb": 3.4,
+    "parameters": "4B",
+    "lifecycle": "ACTIVE",
     "notes": "Sostituto di llama3.2:3b per il ruolo veloce (2026, tools, 256K). Verificato il 2026-09-24 sul flusso reale: run di TASK-001 in 226 s con contesto dai file e istruzioni GUIDED rispettate."
   },
   {
-    "key": "ollama:llama3.2:3b", "providerKey": "ollama", "displayName": "Llama 3.2 3B", "role": "FAST",
-    "capabilities": ["chat", "summarization", "classification"],
-    "contextWindow": 131072, "sizeGb": 2.0, "parameters": "3.2B", "lifecycle": "DEPRECATED",
+    "key": "ollama:llama3.2:3b",
+    "providerKey": "ollama",
+    "displayName": "Llama 3.2 3B",
+    "role": "FAST",
+    "capabilities": [
+      "chat",
+      "summarization",
+      "classification"
+    ],
+    "contextWindow": 131072,
+    "sizeGb": 2.0,
+    "parameters": "3.2B",
+    "lifecycle": "DEPRECATED",
     "replacedBy": "ollama:qwen3.5:4b",
     "notes": "Modello del 2024. Sostituto verificato (qwen3.5:4b); resta installato finché gli agenti che lo usano non sono migrati — la rimozione è una scelta dell'operatore (direttiva §26)."
   },
   {
-    "key": "ollama:deepseek-coder-v2:16b", "providerKey": "ollama", "displayName": "DeepSeek Coder V2 16B", "role": "CODER",
-    "capabilities": ["coding", "code-completion"],
-    "contextWindow": 163840, "sizeGb": 8.9, "parameters": "15.7B", "lifecycle": "ACTIVE",
-    "notes": "Coder del 2024, senza tool calling. Sostituto moderno: qwen3-coder:30b (19 GB, MoE 3B attivi) — richiede decisione umana su disco/RAM."
+    "key": "ollama:deepseek-coder-v2:16b",
+    "providerKey": "ollama",
+    "displayName": "DeepSeek Coder V2 16B",
+    "role": "CODER",
+    "capabilities": [
+      "coding",
+      "code-completion"
+    ],
+    "contextWindow": 163840,
+    "sizeGb": 8.9,
+    "parameters": "15.7B",
+    "lifecycle": "ACTIVE",
+    "notes": "Verificato con Ollama il 2026-09-25: deepseek-coder-v2:16b, 15.7B parametri, quantizzazione Q4_0, famiglia deepseek2. Coder del 2024 senza tool calling: adatto a generare codice e SQL su richiesta, non a lavorare da agente con strumenti. Modello di default del seed per Frontend Developer e Database Specialist. Sostituto moderno: qwen3-coder:30b (19 GB) — decisione umana su disco/RAM."
   },
   {
-    "key": "ollama:gemma4:e4b", "providerKey": "ollama", "displayName": "Gemma 4 E4B", "role": "VISION",
-    "capabilities": ["vision", "multimodal", "reference-analysis"],
-    "contextWindow": 131072, "sizeGb": 9.6, "parameters": "8B", "lifecycle": "ACTIVE",
+    "key": "ollama:gemma4:e4b",
+    "providerKey": "ollama",
+    "displayName": "Gemma 4 E4B",
+    "role": "VISION",
+    "capabilities": [
+      "vision",
+      "multimodal",
+      "reference-analysis"
+    ],
+    "contextWindow": 131072,
+    "sizeGb": 9.6,
+    "parameters": "8B",
+    "lifecycle": "ACTIVE",
     "notes": "Multimodale: analisi di reference, screenshot e mockup del progetto."
   },
   {
-    "key": "anthropic:claude-opus-5", "providerKey": "anthropic", "displayName": "Claude Opus 5 (API)", "role": "PREMIUM",
-    "capabilities": ["tools", "coding", "planning", "long-context", "vision"],
+    "key": "anthropic:claude-opus-5",
+    "providerKey": "anthropic",
+    "displayName": "Claude Opus 5 (API)",
+    "role": "PREMIUM",
+    "capabilities": [
+      "tools",
+      "coding",
+      "planning",
+      "long-context",
+      "vision"
+    ],
     "lifecycle": "ACTIVE",
     "notes": "Via API a consumo: spento finché ANTHROPIC_API_KEY non è configurata e TD-40 non è chiuso."
   },
   {
-    "key": "echo:default", "providerKey": "echo", "displayName": "Echo", "role": "TEST",
-    "capabilities": ["deterministic"], "lifecycle": "ACTIVE",
+    "key": "claude-subscription:default",
+    "providerKey": "claude-subscription",
+    "displayName": "Claude (modello scelto in Claude Code / app Claude)",
+    "role": "PREMIUM",
+    "capabilities": [
+      "tools",
+      "coding",
+      "planning",
+      "long-context",
+      "vision"
+    ],
+    "lifecycle": "ACTIVE",
+    "notes": "Modello cloud usato tramite l'applicazione, senza API a consumo: l'AI Engine non lo esegue. Il Master Orchestrator prepara l'handoff (cartella, contesto, prompt) e apre l'app o la CLI."
+  },
+  {
+    "key": "chatgpt-subscription:default",
+    "providerKey": "chatgpt-subscription",
+    "displayName": "ChatGPT / Codex (modello scelto nell'app)",
+    "role": "PREMIUM",
+    "capabilities": [
+      "tools",
+      "coding",
+      "planning",
+      "vision"
+    ],
+    "lifecycle": "ACTIVE",
+    "notes": "Modello cloud usato tramite l'applicazione, senza API a consumo: l'AI Engine non lo esegue. Il Master Orchestrator prepara l'handoff (cartella, contesto, prompt) e apre l'app o la CLI."
+  },
+  {
+    "key": "google-subscription:gemini",
+    "providerKey": "google-subscription",
+    "displayName": "Gemini (in Antigravity / app Gemini)",
+    "role": "PREMIUM",
+    "capabilities": [
+      "tools",
+      "coding",
+      "planning",
+      "vision",
+      "image-generation"
+    ],
+    "lifecycle": "ACTIVE",
+    "notes": "Modello cloud usato tramite l'applicazione, senza API a consumo: l'AI Engine non lo esegue. Il Master Orchestrator prepara l'handoff (cartella, contesto, prompt) e apre l'app o la CLI."
+  },
+  {
+    "key": "jetbrains-ai:junie",
+    "providerKey": "jetbrains-ai",
+    "displayName": "Junie (modello gestito da JetBrains)",
+    "role": "PREMIUM",
+    "capabilities": [
+      "tools",
+      "coding"
+    ],
+    "lifecycle": "ACTIVE",
+    "notes": "Modello cloud usato tramite l'applicazione, senza API a consumo: l'AI Engine non lo esegue. Il Master Orchestrator prepara l'handoff (cartella, contesto, prompt) e apre l'app o la CLI."
+  },
+  {
+    "key": "cognition:devin",
+    "providerKey": "cognition",
+    "displayName": "Devin",
+    "role": "PREMIUM",
+    "capabilities": [
+      "tools",
+      "coding",
+      "planning"
+    ],
+    "lifecycle": "ACTIVE",
+    "notes": "Modello cloud usato tramite l'applicazione, senza API a consumo: l'AI Engine non lo esegue. Il Master Orchestrator prepara l'handoff (cartella, contesto, prompt) e apre l'app o la CLI."
+  },
+  {
+    "key": "moonshot:kimi",
+    "providerKey": "moonshot",
+    "displayName": "Kimi",
+    "role": "PREMIUM",
+    "capabilities": [
+      "coding",
+      "long-context"
+    ],
+    "lifecycle": "ACTIVE",
+    "notes": "Modello cloud usato tramite l'applicazione, senza API a consumo: l'AI Engine non lo esegue. Il Master Orchestrator prepara l'handoff (cartella, contesto, prompt) e apre l'app o la CLI."
+  },
+  {
+    "key": "verdent:default",
+    "providerKey": "verdent",
+    "displayName": "Verdent",
+    "role": "PREMIUM",
+    "capabilities": [
+      "tools",
+      "coding"
+    ],
+    "lifecycle": "ACTIVE",
+    "notes": "Modello cloud usato tramite l'applicazione, senza API a consumo: l'AI Engine non lo esegue. Il Master Orchestrator prepara l'handoff (cartella, contesto, prompt) e apre l'app o la CLI."
+  },
+  {
+    "key": "echo:default",
+    "providerKey": "echo",
+    "displayName": "Echo",
+    "role": "TEST",
+    "capabilities": [
+      "deterministic"
+    ],
+    "lifecycle": "ACTIVE",
     "notes": "Default dell'AI Engine: risponde con il proprio input."
   }
 ]

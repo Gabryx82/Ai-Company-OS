@@ -191,3 +191,38 @@ export interface Me { name: string; role: Role; kind: "USER" | "SERVICE"; user: 
 export interface SecurityEventInfo {
   id: number; occurredAt: string; type: string; principal: string | null; source: string | null; detail: string | null;
 }
+
+// --- PHASE 16: Agent -> Model -> Provider -> Execution Target (ADR-025) -----------
+
+export type Delivery = "ENGINE_RUN" | "CLI_PROMPT" | "IDE_FOLDER" | "APP_PASTE" | "WEB_PASTE" | "MANUAL";
+export interface ExecutionTarget {
+  key: string; name: string; software: string | null; delivery: Delivery; providers: string[];
+  contextFile: string | null; howItWorks: string;
+}
+export interface Binding {
+  model: { key: string; displayName: string; role: string | null; lifecycle: string | null; replacedBy: string | null;
+    catalogued: boolean; engineRunnable: boolean } | null;
+  provider: { key: string; name: string; kind: string | null; billing: string | null; status: string | null } | null;
+  target: { key: string; name: string; delivery: Delivery | null; software: string | null; availability: string | null;
+    providers: string[]; contextFile: string | null; howItWorks: string | null };
+  valid: boolean; problems: string[]; warnings: string[]; summary: string;
+}
+export interface AgentRef { id: number; name: string; role: string }
+export interface ResourceRef { key: string; name: string; kind: string; description: string | null; configuration: string | null }
+export type AgentOrigin = "SEED" | "TEMPLATE" | "USER";
+export interface AgentConfiguration {
+  id: number; name: string; role: string; specialization: string; description: string | null; capabilities: string[];
+  status: "ACTIVE" | "INACTIVE"; parent: AgentRef | null; children: AgentRef[];
+  domain: string | null; systemPrompt: string | null; responsibilities: string | null; limits: string | null;
+  outputFormat: string | null; directives: string[]; contextPolicy: string | null;
+  resources: Record<string, ResourceRef[]>; software: { key: string; name: string }[];
+  model: string | null; executionTarget: string; binding: Binding;
+  origin: AgentOrigin; defaults: Record<string, unknown> | null; modified: string[];
+  customizedAt: string | null; customizedBy: string | null; version: number;
+}
+export interface AgentConfigurationWrite {
+  name?: string; role: string; specialization: string; description?: string | null; capabilities?: string;
+  domain?: string | null; systemPrompt?: string | null; responsibilities?: string | null; limits?: string | null;
+  outputFormat?: string | null; directives?: string; contextPolicy?: string | null; parentId?: number | null;
+  model?: string | null; executionTarget: string;
+}

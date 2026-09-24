@@ -22,8 +22,11 @@ import java.util.regex.Pattern;
 public final class WorkspacePaths {
 
     /** Where the API may write documents. */
-    static final List<String> WRITABLE_ROOTS = List.of("docs/", "tasks/", "references/", ".aicos/");
-    static final List<String> WRITABLE_FILES = List.of("MASTER_PROMPT.md", "AGENTS.md", "CLAUDE.md");
+    // PHASE 17 (ADR-025 §4): the rules folders of Junie and Continue, and the TASK.md of an inbox folder,
+    // are where a handoff prepares the environment of the tool that will do the work.
+    static final List<String> WRITABLE_ROOTS = List.of("docs/", "tasks/", "references/", ".aicos/", ".junie/",
+            ".continue/rules/");
+    static final List<String> WRITABLE_FILES = List.of("MASTER_PROMPT.md", "AGENTS.md", "CLAUDE.md", "TASK.md");
     static final List<String> TEXT_EXTENSIONS = List.of(".md", ".json", ".txt");
     static final List<String> IMAGE_EXTENSIONS = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif");
 

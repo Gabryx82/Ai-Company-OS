@@ -5,19 +5,19 @@ import com.aicompany.backend.agent.model.Agent;
 import com.aicompany.backend.agent.repository.AgentRepository;
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.api.RequestValidationException;
-import com.aicompany.backend.hitl.AutonomyPolicy;
+import com.aicompany.backend.binding.AgentBindingService;
+import com.aicompany.backend.binding.ExecutionTargetCatalog;
+import com.aicompany.backend.binding.ExecutionTargetCatalog.ExecutionTarget;
+import com.aicompany.backend.harness.service.HarnessService;
 import com.aicompany.backend.orchestrator.model.TaskHandoff;
 import com.aicompany.backend.orchestrator.model.TaskReview;
 import com.aicompany.backend.orchestrator.repository.TaskHandoffRepository;
 import com.aicompany.backend.orchestrator.repository.TaskReviewRepository;
 import com.aicompany.backend.plan.model.ProjectPhase;
-import com.aicompany.backend.plan.service.PlanMarkdown;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.software.exception.SoftwareNotLaunchableException;
-import com.aicompany.backend.software.launch.LaunchPlan;
-import com.aicompany.backend.software.model.LaunchKind;
 import com.aicompany.backend.software.model.Software;
 import com.aicompany.backend.software.repository.SoftwareRepository;
 import com.aicompany.backend.software.service.SoftwareService;
@@ -27,12 +27,14 @@ import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.model.TaskTransition;
 import com.aicompany.backend.task.repository.TaskRepository;
-import com.aicompany.backend.workspace.exception.WorkspaceNotConfiguredException;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Optional;
 import java.util.List;
 
 /**
@@ -46,7 +48,8 @@ import java.util.List;
 @Transactional
 public class ExecutionService {
 
-    public record HandoffResult(TaskHandoff handoff, Task task, String prompt, boolean promptToClipboard) {
+    public record HandoffResult(TaskHandoff handoff, Task task, String prompt, String fullPrompt, String delivery,
+                                String folder, String openUrl, List<String> written, boolean promptToClipboard) {
     }
 
     public record ReviewResult(TaskReview review, Task task) {
@@ -60,11 +63,18 @@ public class ExecutionService {
     private final ProjectWorkspaceService workspace;
     private final TaskHandoffRepository handoffs;
     private final TaskReviewRepository reviews;
+    private final ExecutionTargetCatalog targets;
+    private final AgentBindingService binding;
+    private final HarnessService harness;
 
     public ExecutionService(TaskRepository tasks, ProjectRepository projects, AgentRepository agents,
                             SoftwareRepository softwareCatalog, SoftwareService software,
                             ProjectWorkspaceService workspace, TaskHandoffRepository handoffs,
-                            TaskReviewRepository reviews) {
+                            TaskReviewRepository reviews, ExecutionTargetCatalog targets,
+                            AgentBindingService binding, HarnessService harness) {
+        this.targets = targets;
+        this.binding = binding;
+        this.harness = harness;
         this.tasks = tasks;
         this.projects = projects;
         this.agents = agents;
@@ -76,10 +86,15 @@ public class ExecutionService {
     }
 
     /**
-     * Writes {@code .aicos/handoffs/TASK-NNN-<target>.md}, opens the target in the
-     * project folder, and starts the task if it is open. Refused -- before anything
-     * is written or launched -- by the same rules as a run: frozen, done, no
-     * active agent, phase not approved (ADR-022).
+     * Hands a task to an application or a CLI (ADR-021 §5, ADR-025 §4), with no
+     * API in between: prepares the working folder (the project's, created if
+     * missing, or an inbox folder for a task without a project), the task
+     * document, the tool's own rules file, and the package
+     * {@code .aicos/handoffs/<TASK>-<target>.md} with role, skills, context and
+     * Human-in-the-Loop rules; then opens the tool as its delivery says, and
+     * starts the task if it is open. Refused -- before anything is written or
+     * launched -- by the same rules as a run: frozen, done, no active agent,
+     * phase not approved (ADR-022).
      */
     public HandoffResult handoff(Long taskId, String targetKey, String requestedBy, Precondition precondition) {
         Task task = tasks.findByIdForUpdate(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
@@ -90,32 +105,90 @@ public class ExecutionService {
                 .orElseThrow(() -> new AgentNotFoundException(task.getAgentId()));
 
         task.requireRunnable(project, agent);
-        if (project == null || task.getCode() == null || task.getDocumentPath() == null) {
-            throw new SoftwareNotLaunchableException(
-                    "Only a task of a project plan can be handed off: it needs its TASK-NNN document");
-        }
-        Path folder = workspace.folderOf(project.getId()).orElseThrow(() -> new WorkspaceNotConfiguredException(
-                "The folder of project " + project.getId() + " does not exist: prepare the workspace first"));
-        Software target = softwareCatalog.findByKey(targetKey)
-                .filter(Software::isExecutionTarget)
+        ExecutionTarget target = targets.find(targetKey).filter(t -> !t.isEngine())
                 .orElseThrow(() -> new RequestValidationException("target",
-                        "'" + targetKey + "' is not an execution target of the Software Hub"));
+                        "'" + targetKey + "' is not an execution target a task can be handed off to"));
 
-        String document = ".aicos/handoffs/" + task.getCode() + "-" + target.getKey() + ".md";
-        String prompt = "Leggi " + document + " ed esegui la task che descrive.";
-        workspace.write(project.getId(), document, handoffDocument(task, project, agent, target));
+        // Where: the project's folder -- prepared if it does not exist yet -- or an inbox folder.
+        Path folder;
+        if (project != null) {
+            folder = workspace.workspaceOf(project.getId());
+            if (!Files.isDirectory(folder)) {
+                workspace.scaffold(project.getId());
+            }
+        } else {
+            folder = workspace.inbox(task.getId());
+        }
+        String label = HandoffPackager.label(task);
+        String packagePath = ".aicos/handoffs/" + label + "-" + target.key() + ".md";
+        List<String> written = new ArrayList<>();
+
+        String taskDocument = project != null && task.getDocumentPath() != null ? task.getDocumentPath()
+                : project != null ? "tasks/" + label + ".md" : "TASK.md";
+        if (workspace.readIn(folder, taskDocument).isEmpty()) {
+            workspace.writeIn(folder, taskDocument, HandoffPackager.adHocTaskDocument(task, project, agent));
+            written.add(taskDocument);
+        }
+        if (project == null) {
+            for (String governance : List.of("AGENTS.md", "CLAUDE.md")) {
+                writeIfOurs(folder, governance, HandoffPackager.inboxGovernance(packagePath), written);
+            }
+        }
+        if (target.contextFile() != null && !List.of("AGENTS.md", "CLAUDE.md").contains(target.contextFile())) {
+            writeIfOurs(folder, target.contextFile(), HandoffPackager.targetRules(target, packagePath), written);
+        }
+
+        HandoffPackager.Package pkg = HandoffPackager.build(task, project, agent, harness.of(agent.getId()).resources(),
+                binding.describe(agent), target, folder, taskDocument,
+                workspace.readIn(folder, taskDocument).orElse(null), packagePath);
+        workspace.writeIn(folder, packagePath, pkg.document());
+        written.add(packagePath);
 
         if (task.getStatus() == TaskStatus.OPEN) {
             task.apply(TaskTransition.START, project, agent);
         }
         markPhaseStarted(task.getPhase());
 
-        List<String> arguments = target.getLaunchKind() == LaunchKind.CLI ? cliArguments(target, prompt) : List.of();
-        LaunchPlan launched = software.launchIn(target.getKey(), folder, arguments);
-        TaskHandoff handoff = handoffs.save(new TaskHandoff(taskId, target.getKey(), document, prompt,
-                String.join(" ", launched.command()), requestedBy));
+        String command = null;
+        String openUrl = null;
+        switch (target.delivery()) {
+            case CLI_PROMPT -> {
+                Software cli = softwareOf(target);
+                command = String.join(" ", software.launchIn(cli.getKey(), folder,
+                        cliArguments(cli, pkg.compactPrompt())).command());
+            }
+            case IDE_FOLDER, APP_PASTE -> command = String.join(" ",
+                    software.launchIn(softwareOf(target).getKey(), folder, List.of()).command());
+            case WEB_PASTE -> {
+                openUrl = softwareOf(target).getUrl();
+                command = openUrl;
+            }
+            default -> {
+                // MANUAL: the package is written, nothing is opened.
+            }
+        }
+        String recorded = project != null ? packagePath : folder.resolve(packagePath).toString();
+        TaskHandoff handoff = handoffs.save(new TaskHandoff(taskId, target.key(), recorded, pkg.compactPrompt(),
+                command, requestedBy));
         tasks.saveAndFlush(task);
-        return new HandoffResult(handoff, task, prompt, target.getLaunchKind() != LaunchKind.CLI);
+        return new HandoffResult(handoff, task, pkg.compactPrompt(), pkg.fullPrompt(), target.delivery().name(),
+                folder.toString(), openUrl, List.copyOf(written),
+                target.delivery() != ExecutionTargetCatalog.Delivery.CLI_PROMPT);
+    }
+
+    /** Writes a generated file, unless the operator wrote their own there. */
+    private void writeIfOurs(Path folder, String relative, String content, List<String> written) {
+        Optional<String> existing = workspace.readIn(folder, relative);
+        if (existing.isEmpty() || existing.get().startsWith(HandoffPackager.MARKER)) {
+            workspace.writeIn(folder, relative, content);
+            written.add(relative);
+        }
+    }
+
+    private Software softwareOf(ExecutionTarget target) {
+        return softwareCatalog.findByKey(target.software())
+                .orElseThrow(() -> new SoftwareNotLaunchableException("The software of " + target.name()
+                        + " ('" + target.software() + "') is not in the Software Hub"));
     }
 
     /**
@@ -162,39 +235,6 @@ public class ExecutionService {
             case "opencode" -> List.of("--prompt", prompt);
             default -> List.of(prompt);
         };
-    }
-
-    private static String handoffDocument(Task task, Project project, Agent agent, Software target) {
-        return """
-                # Handoff — %s → %s
-
-                > Preparato dal Master Orchestrator di AI Company OS per il progetto «%s».
-                > Agente responsabile: %s (%s).
-
-                ## Prompt
-
-                %s
-
-                ## Contesto da leggere, in quest'ordine
-
-                1. `AGENTS.md` — la governance del progetto
-                2. `%s` — la task: obiettivo, scope, file, test, criteri di completamento
-                3. `%s` — la fase a cui appartiene
-                4. solo i file che la task elenca
-
-                ## Livello di Human-in-the-Loop: %s
-
-                %s
-
-                ## Alla fine
-
-                - Compila la sezione **Esito** di `%s`: cosa hai fatto, file toccati, test eseguiti, cosa resta.
-                - Non considerare chiusa la task: la chiude l'operatore dopo la review in AI Company OS.
-                """.formatted(task.getCode(), target.getName(), project.getName(), agent.getName(), agent.getRole(),
-                PlanMarkdown.compactPrompt(task.getCode()), task.getDocumentPath(),
-                task.getPhase() == null ? "docs/IMPLEMENTATION_PLAN.md" : task.getPhase().getDocumentPath(),
-                AutonomyPolicy.label(project.getAutonomyLevel()), AutonomyPolicy.rules(project.getAutonomyLevel()),
-                task.getDocumentPath());
     }
 
     private static void markPhaseStarted(ProjectPhase phase) {

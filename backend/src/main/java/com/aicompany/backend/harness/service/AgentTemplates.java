@@ -1,6 +1,8 @@
 package com.aicompany.backend.harness.service;
 
 import com.aicompany.backend.agent.model.Agent;
+import com.aicompany.backend.agent.model.AgentOrigin;
+import com.aicompany.backend.binding.AgentConfigurationService;
 import com.aicompany.backend.agent.repository.AgentRepository;
 import com.aicompany.backend.agent.service.AgentService;
 import com.aicompany.backend.harness.exception.HarnessResourceNotFoundException;
@@ -32,7 +34,8 @@ public class AgentTemplates {
     public record Template(String key, String name, String role, String specialization, String model, String domain,
                            String systemPrompt, String responsibilities, String limits, String outputFormat,
                            List<String> directives, List<String> resources, List<String> software,
-                           List<Template> children) {
+                           List<Template> children, String executionTarget, String description,
+                           List<String> capabilities) {
         /**
          * A template without sub-agents, directives or resources has empty lists,
          * never nulls: the catalog omits them, and a null crashed the Knowledge Hub
@@ -43,6 +46,7 @@ public class AgentTemplates {
             resources = resources == null ? List.of() : List.copyOf(resources);
             software = software == null ? List.of() : List.copyOf(software);
             children = children == null ? List.of() : List.copyOf(children);
+            capabilities = capabilities == null ? List.of() : List.copyOf(capabilities);
         }
     }
 
@@ -99,9 +103,13 @@ public class AgentTemplates {
             agent = existing.get();
             out.add(new Installed(agent.getName(), agent.getId(), agent.getParentId(), Outcome.EXISTING));
         } else {
-            agent = agentService.create(t.name(), t.role(), t.specialization(), t.model());
+            agent = agentService.create(t.name(), t.role(), t.specialization(), null);
             agent.configureProfile(parentId, t.domain(), t.systemPrompt(), t.responsibilities(), t.limits(),
                     t.outputFormat(), t.directives() == null ? null : String.join("\n", t.directives()), null);
+            // PHASE 16 (ADR-025): the template's binding, and the baseline that records it.
+            agent.configureBinding(t.description(), String.join("\n", t.capabilities()), t.model(),
+                    t.executionTarget() == null ? "engine" : t.executionTarget());
+            agent.recordOrigin(AgentOrigin.TEMPLATE, AgentConfigurationService.baselineOf(agent, t.resources(), t.software()));
             agents.flush();
             for (String resource : t.resources() == null ? List.<String>of() : t.resources()) {
                 harness.attach(agent.getId(), resource);

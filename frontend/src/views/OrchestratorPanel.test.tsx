@@ -25,9 +25,9 @@ function decision(overrides: Record<string, unknown> = {}) {
     context: [{ path: "tasks/TASK-001.md", exists: true, why: "Il documento della task" }],
     prompt: "Esegui TASK-001 seguendo `tasks/TASK-001.md` e la governance in `AGENTS.md`.",
     targets: [
-      { key: "engine", name: "AI Engine", kind: "ENGINE", available: true, detail: "" },
-      { key: "claude-code", name: "Claude Code CLI", kind: "CLI", available: true, detail: "" },
-      { key: "codex", name: "ChatGPT / Codex", kind: "DESKTOP", available: true, detail: "" },
+      { key: "engine", name: "AI Engine", kind: "ENGINE", available: true, detail: "", delivery: "ENGINE_RUN", recommended: true },
+      { key: "claude-code", name: "Claude Code CLI", kind: "CLI", available: true, detail: "", delivery: "CLI_PROMPT", recommended: false },
+      { key: "codex", name: "ChatGPT / Codex", kind: "DESKTOP", available: true, detail: "", delivery: "APP_PASTE", recommended: false },
     ],
     blockers: [],
     ...overrides,
@@ -70,10 +70,15 @@ describe("OrchestratorPanel", () => {
       "POST /api/tasks/9/handoffs": () => ({ status: 202, body: {
         handoff: { id: 1, taskId: 9, target: "claude-code", documentPath: ".aicos/handoffs/TASK-001-claude-code.md",
           prompt: "Leggi …", command: "wt …", requestedBy: "operator", createdAt: null },
-        task: { ...PLANNED, status: "IN_PROGRESS" }, prompt: "Leggi …", promptToClipboard: false } }),
+        task: { ...PLANNED, status: "IN_PROGRESS" }, prompt: "Leggi …", fullPrompt: "Sei Backend Bot…", delivery: "CLI_PROMPT",
+        folder: "C:/Officina", openUrl: null, written: [".aicos/handoffs/TASK-001-claude-code.md"], promptToClipboard: false } }),
     });
 
     fireEvent.click(await screen.findByRole("button", { name: /Claude Code CLI/ }));
+    // A confirmation says what, to whom, with what and through what, before anything opens.
+    expect(await screen.findByText("Cosa")).toBeTruthy();
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Prepara e apri" }));
 
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/api/tasks/9/handoffs")).toBe(true));
     const post = calls.find((c) => c.method === "POST" && c.path === "/api/tasks/9/handoffs")!;
@@ -85,20 +90,24 @@ describe("OrchestratorPanel", () => {
     renderPlanned({
       "GET /api/tasks/9/orchestration": () => ({ body: decision({
         phaseApproved: false, blockers: ["La fase 1 non è approvata (Human-in-the-Loop)."],
-        targets: [{ key: "claude-code", name: "Claude Code CLI", kind: "CLI", available: false, detail: "" }] }) }),
+        targets: [{ key: "claude-code", name: "Claude Code CLI", kind: "CLI", available: false, detail: "",
+          delivery: "CLI_PROMPT", recommended: false }] }) }),
     });
 
     expect(await screen.findByText(/non è approvata/)).toBeTruthy();
     expect((screen.getByRole("button", { name: /Claude Code CLI/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("does not appear for a task outside a plan", async () => {
+  it("also serves a task outside a plan: its handoff is prepared without a plan document (PHASE 17)", async () => {
     const calls = renderPlanned({
       "GET /api/tasks/9": () => ({ body: { ...PLANNED, code: null, phaseId: null, documentPath: null }, etag: '"4"' }),
+      "GET /api/tasks/9/orchestration": () => ({ body: decision({ code: null, phaseId: null, phaseNumber: null,
+        phaseTitle: null, prompt: "Esegui TASK-9 seguendo il pacchetto di handoff in `.aicos/handoffs/` e la governance in `AGENTS.md`." }) }),
     });
 
-    await screen.findByText("Creare lo scheletro");
-    expect(screen.queryByText("Master Orchestrator", { exact: false })).toBeNull();
-    expect(calls.some((c) => c.path.endsWith("/orchestration"))).toBe(false);
+    await screen.findByText("Master Orchestrator", { exact: false });
+    expect(calls.some((c) => c.path.endsWith("/orchestration"))).toBe(true);
+    expect(screen.getByText(/Esegui TASK-9 seguendo il pacchetto/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: /Claude Code CLI/ }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

@@ -182,6 +182,229 @@
         "required" : [ "name", "role", "specialization" ],
         "type" : "object"
       },
+      "Binding" : {
+        "properties" : {
+          "model" : {
+            "$ref" : "#/components/schemas/ModelRef"
+          },
+          "problems" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "provider" : {
+            "$ref" : "#/components/schemas/ProviderRef"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "target" : {
+            "$ref" : "#/components/schemas/TargetRef"
+          },
+          "valid" : {
+            "type" : "boolean"
+          },
+          "warnings" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ConfigurationRequest" : {
+        "properties" : {
+          "capabilities" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contextPolicy" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "description" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "directives" : {
+            "maxLength" : 8000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "domain" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "executionTarget" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "limits" : {
+            "maxLength" : 4000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "model" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "outputFormat" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "parentId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "responsibilities" : {
+            "maxLength" : 4000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "role" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "specialization" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "systemPrompt" : {
+            "maxLength" : 8000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "role", "specialization" ],
+        "type" : "object"
+      },
+      "ConfigurationResponse" : {
+        "properties" : {
+          "binding" : {
+            "$ref" : "#/components/schemas/Binding"
+          },
+          "capabilities" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "children" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Ref"
+            },
+            "type" : "array"
+          },
+          "contextPolicy" : {
+            "type" : "string"
+          },
+          "customizedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "customizedBy" : {
+            "type" : "string"
+          },
+          "defaults" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "directives" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "domain" : {
+            "type" : "string"
+          },
+          "executionTarget" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "limits" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "modified" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "outputFormat" : {
+            "type" : "string"
+          },
+          "parent" : {
+            "$ref" : "#/components/schemas/Ref"
+          },
+          "resources" : {
+            "additionalProperties" : {
+              "items" : {
+                "$ref" : "#/components/schemas/ResourceRef"
+              },
+              "type" : "array"
+            },
+            "type" : "object"
+          },
+          "responsibilities" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "software" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SoftwareRef"
+            },
+            "type" : "array"
+          },
+          "specialization" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "systemPrompt" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ContextFile" : {
         "properties" : {
           "exists" : {
@@ -393,6 +616,39 @@
         },
         "type" : "object"
       },
+      "ExecutionTarget" : {
+        "properties" : {
+          "contextFile" : {
+            "type" : "string"
+          },
+          "delivery" : {
+            "enum" : [ "ENGINE_RUN", "CLI_PROMPT", "IDE_FOLDER", "APP_PASTE", "WEB_PASTE", "MANUAL" ],
+            "type" : "string"
+          },
+          "engine" : {
+            "type" : "boolean"
+          },
+          "howItWorks" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "providers" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "software" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "GenerateRequest" : {
         "properties" : {
           "model" : {
@@ -465,8 +721,20 @@
       },
       "HandoffResult" : {
         "properties" : {
+          "delivery" : {
+            "type" : "string"
+          },
+          "folder" : {
+            "type" : "string"
+          },
+          "fullPrompt" : {
+            "type" : "string"
+          },
           "handoff" : {
             "$ref" : "#/components/schemas/HandoffResponse"
+          },
+          "openUrl" : {
+            "type" : "string"
           },
           "prompt" : {
             "type" : "string"
@@ -476,6 +744,12 @@
           },
           "task" : {
             "$ref" : "#/components/schemas/TaskResponse"
+          },
+          "written" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -677,6 +951,32 @@
         },
         "type" : "object"
       },
+      "ModelRef" : {
+        "properties" : {
+          "catalogued" : {
+            "type" : "boolean"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "engineRunnable" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "lifecycle" : {
+            "type" : "string"
+          },
+          "replacedBy" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ModelResponse" : {
         "properties" : {
           "capabilities" : {
@@ -800,6 +1100,9 @@
           },
           "autonomyRules" : {
             "type" : "string"
+          },
+          "binding" : {
+            "$ref" : "#/components/schemas/Binding"
           },
           "blockers" : {
             "items" : {
@@ -1163,6 +1466,26 @@
         "required" : [ "name" ],
         "type" : "object"
       },
+      "ProviderRef" : {
+        "properties" : {
+          "billing" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ProviderResponse" : {
         "properties" : {
           "baseUrl" : {
@@ -1219,6 +1542,41 @@
           "resetZone" : {
             "maxLength" : 64,
             "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Ref" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ResourceRef" : {
+        "properties" : {
+          "configuration" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "name" : {
             "type" : "string"
           }
         },
@@ -1803,6 +2161,9 @@
           "available" : {
             "type" : "boolean"
           },
+          "delivery" : {
+            "type" : "string"
+          },
           "detail" : {
             "type" : "string"
           },
@@ -1810,10 +2171,45 @@
             "type" : "string"
           },
           "kind" : {
-            "enum" : [ "ENGINE", "CLI", "DESKTOP", "MANUAL" ],
+            "enum" : [ "ENGINE", "CLI", "DESKTOP", "WEB", "MANUAL" ],
             "type" : "string"
           },
           "name" : {
+            "type" : "string"
+          },
+          "recommended" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "TargetRef" : {
+        "properties" : {
+          "availability" : {
+            "type" : "string"
+          },
+          "contextFile" : {
+            "type" : "string"
+          },
+          "delivery" : {
+            "type" : "string"
+          },
+          "howItWorks" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "providers" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "software" : {
             "type" : "string"
           }
         },
@@ -1963,11 +2359,20 @@
       },
       "Template" : {
         "properties" : {
+          "capabilities" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "children" : {
             "items" : {
               "$ref" : "#/components/schemas/Template"
             },
             "type" : "array"
+          },
+          "description" : {
+            "type" : "string"
           },
           "directives" : {
             "items" : {
@@ -1976,6 +2381,9 @@
             "type" : "array"
           },
           "domain" : {
+            "type" : "string"
+          },
+          "executionTarget" : {
             "type" : "string"
           },
           "key" : {
@@ -2632,6 +3040,109 @@
         "tags" : [ "agent-controller" ]
       }
     },
+    "/api/agents/{id}/configuration" : {
+      "get" : {
+        "operationId" : "configuration",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfigurationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-configuration-controller" ]
+      },
+      "put" : {
+        "operationId" : "configure_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfigurationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfigurationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-configuration-controller" ]
+      }
+    },
+    "/api/agents/{id}/configuration/reset" : {
+      "post" : {
+        "operationId" : "reset",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfigurationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-configuration-controller" ]
+      }
+    },
     "/api/agents/{id}/deactivate" : {
       "post" : {
         "operationId" : "deactivateAgent",
@@ -3189,6 +3700,27 @@
         "tags" : [ "daily-controller" ]
       }
     },
+    "/api/ecosystem/bindings" : {
+      "get" : {
+        "operationId" : "bindings",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConfigurationResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-configuration-controller" ]
+      }
+    },
     "/api/engine/models" : {
       "get" : {
         "operationId" : "models_1",
@@ -3205,6 +3737,60 @@
           }
         },
         "tags" : [ "engine-controller" ]
+      }
+    },
+    "/api/execution-targets" : {
+      "get" : {
+        "operationId" : "targets",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ExecutionTarget"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-configuration-controller" ]
+      }
+    },
+    "/api/execution-targets/{key}/check" : {
+      "get" : {
+        "operationId" : "check",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "model",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Binding"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-configuration-controller" ]
       }
     },
     "/api/graph" : {

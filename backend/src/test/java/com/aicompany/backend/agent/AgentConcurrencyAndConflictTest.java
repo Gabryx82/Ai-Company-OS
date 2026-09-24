@@ -176,7 +176,7 @@ class AgentConcurrencyAndConflictTest extends AbstractPostgresTest {
     void anyOtherIntegrityViolationIsNotMaskedAsADuplicateName() {
 
         AgentRepository doubled = mock(AgentRepository.class);
-        AgentService isolated = new AgentService(doubled);
+        AgentService isolated = new AgentService(doubled, mock(com.aicompany.backend.binding.AgentBindingService.class));
 
         DataIntegrityViolationException unrelated = new DataIntegrityViolationException(
                 "could not execute statement",

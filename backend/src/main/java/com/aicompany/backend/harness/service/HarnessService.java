@@ -167,7 +167,11 @@ public class HarnessService {
     // --- helpers ------------------------------------------------------------------
 
     /** Walks up from the proposed parent; meeting the agent itself means a cycle. */
-    private void requireNoCycle(Long agentId, Long parentId) {
+    @Transactional(readOnly = true)
+    public void requireNoCycle(Long agentId, Long parentId) {
+        if (parentId == null) {
+            return;
+        }
         Set<Long> seen = new HashSet<>();
         Long current = parentId;
         while (current != null) {

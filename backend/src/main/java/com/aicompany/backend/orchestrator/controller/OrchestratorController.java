@@ -43,7 +43,9 @@ public class OrchestratorController {
         }
     }
 
-    public record HandoffResult(HandoffResponse handoff, TaskResponse task, String prompt, boolean promptToClipboard) {
+    public record HandoffResult(HandoffResponse handoff, TaskResponse task, String prompt, String fullPrompt,
+                                String delivery, String folder, String openUrl, List<String> written,
+                                boolean promptToClipboard) {
     }
 
     public record ReviewResponse(Long id, Long taskId, TaskReview.Verdict verdict, String note, Long runId,
@@ -80,7 +82,8 @@ public class OrchestratorController {
                 Precondition.fromHeader(ifMatch));
         return ResponseEntity.accepted().eTag(ETags.of(result.task().getVersion()))
                 .body(new HandoffResult(HandoffResponse.from(result.handoff()), TaskResponse.from(result.task()),
-                        result.prompt(), result.promptToClipboard()));
+                        result.prompt(), result.fullPrompt(), result.delivery(), result.folder(), result.openUrl(),
+                        result.written(), result.promptToClipboard()));
     }
 
     @GetMapping("/api/tasks/{id}/handoffs")

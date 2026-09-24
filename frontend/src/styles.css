@@ -284,3 +284,23 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .menu button { display: flex; align-items: center; gap: 8px; background: transparent; border: 0; border-radius: 8px;
   padding: 8px 10px; text-align: left; cursor: pointer; }
 .menu button:hover { background: var(--surface-3); }
+
+/* PHASE 16: Agent -> Model -> Provider -> Execution Target. */
+.chain { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; }
+.chain-step { display: grid; align-content: start; gap: 2px; min-width: 140px; flex: 1 1 140px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.chain-step small { color: var(--muted); font-size: 11.5px; overflow-wrap: anywhere; }
+.chain-label { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; }
+.chain-arrow { align-self: center; color: var(--accent); font-weight: 700; }
+.chain-notes { flex-basis: 100%; display: grid; gap: 4px; }
+.chain-compact .chain-step { min-width: 0; flex-basis: 100px; padding: 5px 8px; }
+.chain-compact .chain-step strong { font-size: 12.5px; }
+.origin-badge { font-size: 11px; }
+.field-state { font-size: 10.5px; margin-left: 6px; }
+.agent-card { display: grid; gap: 6px; width: 100%; text-align: left; cursor: pointer; color: inherit;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+.agent-card:hover { border-color: var(--border-strong); }
+.agent-card[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.assign-grid { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.6fr); gap: 14px; }
+@media (max-width: 860px) { .assign-grid { grid-template-columns: 1fr; } }
+.what-box { border: 1px dashed var(--border-strong); border-radius: 12px; padding: 12px; display: grid; gap: 6px; }
