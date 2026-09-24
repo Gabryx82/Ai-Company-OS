@@ -16,6 +16,7 @@ import com.aicompany.backend.task.service.TaskService;
 import com.aicompany.backend.user.service.AuthService;
 import com.aicompany.backend.binding.AgentConfigurationService;
 import com.aicompany.backend.harness.library.SkillLibrary;
+import com.aicompany.backend.deletion.DeletionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,7 +54,7 @@ class PreconditionCoverageTest {
                     SoftwareService.class, LlmCatalogService.class, UsageService.class,
                     ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class,
                     HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class,
-                    AgentConfigurationService.class, SkillLibrary.class);
+                    AgentConfigurationService.class, SkillLibrary.class, DeletionService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -193,6 +194,10 @@ class PreconditionCoverageTest {
                         "disallowSoftware", "adopt", "drop");
 
         assertThat(writePaths(AgentTemplates.class)).containsExactlyInAnyOrder("install", "installAll");
+
+        // PHASE 20 (ADR-027): a delete is a write to the row it removes, under its tag.
+        assertThat(writePaths(DeletionService.class))
+                .containsExactlyInAnyOrder("deleteTask:Precondition", "deleteProject:Precondition");
 
         assertThat(writePaths(DailyService.class))
                 .containsExactlyInAnyOrder("create", "update:Precondition", "remove:Precondition", "carryOver");

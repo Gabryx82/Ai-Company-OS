@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiProblem, ControlPlane, type Session } from "./api/client";
-import { ApiContext } from "./context";
+import { ApiContext, SessionContext } from "./context";
 import { clearSession, loadSession, saveSession } from "./session";
 import { Login } from "./views/Login";
 import { Dashboard } from "./views/Dashboard";
@@ -119,6 +119,7 @@ export function App() {
 
   return (
     <ApiContext.Provider value={api}>
+      <SessionContext.Provider value={session}>
       <div className="app">
         <nav className="sidebar" aria-label="Sections">
           <div className="brand">
@@ -194,6 +195,7 @@ export function App() {
           </div>
         </main>
       </div>
+      </SessionContext.Provider>
     </ApiContext.Provider>
   );
 }

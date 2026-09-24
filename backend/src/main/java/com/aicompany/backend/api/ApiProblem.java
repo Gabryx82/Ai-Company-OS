@@ -294,6 +294,11 @@ public enum ApiProblem {
     LIBRARY_UNAVAILABLE("library-unavailable", HttpStatus.SERVICE_UNAVAILABLE,
             "Library unavailable", "The library folder could not be read or written"),
 
+    // --- deleting for real (PHASE 20, ADR-027) --------------------------------------------
+
+    DELETE_CONFIRMATION_MISMATCH("delete-confirmation-mismatch", HttpStatus.BAD_REQUEST,
+            "Confirmation required", "A delete needs the name of what is deleted, typed back"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { useApi } from "../context";
+import { useApi, useIsAdmin } from "../context";
+import { DeleteDialog } from "../components/DeleteDialog";
+import type { TasksPolicy } from "../api/types";
 import type { AutonomyLevel, Project, ProjectType, ProjectTypeInfo, Task } from "../api/types";
 import { Field, Modal, ProblemNote } from "../components/ui";
 import { Icon, type IconName } from "../components/icons";
@@ -31,6 +33,8 @@ export function Projects({ selected, navigate }: { selected: string | null; navi
   const [problem, setProblem] = useState<unknown>(null);
   const [creating, setCreating] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [deleting, setDeleting] = useState<Project | null>(null);
+  const isAdmin = useIsAdmin();
 
   const reload = useCallback(() => {
     api.projects().then(setProjects).catch(setProblem);
@@ -61,7 +65,7 @@ export function Projects({ selected, navigate }: { selected: string | null; navi
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1>Progetti</h1><p>Idea → Master Prompt → Piano → Fasi → Task → Esecuzione → Review. Archiviare congela i task; nulla si cancella.</p></div>
+        <div><h1>Progetti</h1><p>Idea → Master Prompt → Piano → Fasi → Task → Esecuzione → Review. Archiviare congela i task ed è reversibile; eliminare è definitivo e riservato agli admin.</p></div>
         <div className="row">
           <label className="muted row" style={{ gap: 6 }}>
             <input type="checkbox" style={{ width: "auto" }} checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
@@ -102,15 +106,42 @@ export function Projects({ selected, navigate }: { selected: string | null; navi
                 <span className="spacer" />
                 <button className="btn btn-small" onClick={() => toggle(project)}>
                   {project.status === "ACTIVE" ? "Archivia" : "Ripristina"}</button>
+                {isAdmin && <button className="btn btn-small btn-danger" onClick={() => setDeleting(project)}>Elimina</button>}
               </div>
             </div>
           );
         })}
       </div>
       {projects?.length === 0 && <div className="card card-body muted">Nessun progetto ancora: creane uno.</div>}
+      {deleting && <DeleteProject project={deleting} onClose={() => setDeleting(null)}
+                                  onDeleted={() => { setDeleting(null); reload(); }} />}
       {creating && <CreateProject types={types} onClose={() => setCreating(false)}
                                   onCreated={(id) => { setCreating(false); reload(); navigate("projects", String(id)); }} />}
     </div>
+  );
+}
+
+/** ADR-027: the tasks' fate is chosen, never defaulted; archiving stays the reversible way. */
+function DeleteProject({ project, onClose, onDeleted }: { project: Project; onClose: () => void; onDeleted: () => void }) {
+  const api = useApi();
+  const [policy, setPolicy] = useState<TasksPolicy>("DETACH");
+  const load = useCallback(() => api.projectDeletionPreview(project.id, policy), [api, project.id, policy]);
+  return (
+    <DeleteDialog key={policy} what="il progetto" name={project.name} loadImpact={load} onClose={onClose}
+                  archiveHint={project.status === "ACTIVE" ? "Se vuoi solo metterlo da parte, usa «Archivia»: si ripristina quando vuoi." : undefined}
+                  onConfirm={async (confirm) => {
+                    const current = await api.project(project.id);
+                    await api.deleteProject(project.id, current.etag, policy, confirm);
+                    onDeleted();
+                  }}>
+      <div className="stack" style={{ gap: 4 }}>
+        <strong>Le task del progetto</strong>
+        <label className="row" style={{ gap: 6 }}><input type="radio" style={{ width: "auto" }} checked={policy === "DETACH"}
+               onChange={() => setPolicy("DETACH")} /> Restano, senza progetto</label>
+        <label className="row" style={{ gap: 6 }}><input type="radio" style={{ width: "auto" }} checked={policy === "DELETE"}
+               onChange={() => setPolicy("DELETE")} /> Vengono eliminate anche loro</label>
+      </div>
+    </DeleteDialog>
   );
 }
 

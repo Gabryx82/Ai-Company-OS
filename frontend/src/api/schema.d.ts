@@ -670,7 +670,7 @@ export interface paths {
         get: operations["getById"];
         put: operations["update_1"];
         post?: never;
-        delete?: never;
+        delete: operations["deleteProject"];
         options?: never;
         head?: never;
         patch?: never;
@@ -686,6 +686,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["previewProject"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1086,7 +1102,7 @@ export interface paths {
         get: operations["getTask"];
         put: operations["updateTask"];
         post?: never;
-        delete?: never;
+        delete: operations["deleteTask"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1134,6 +1150,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{id}/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["previewTask"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1576,6 +1608,31 @@ export interface components {
             promptToClipboard?: boolean;
             task?: components["schemas"]["TaskResponse"];
             written?: string[];
+        };
+        Impact: {
+            /** Format: int32 */
+            dailyItems?: number;
+            folder?: string;
+            /** Format: int32 */
+            handoffs?: number;
+            /** Format: int64 */
+            id?: number;
+            kind?: string;
+            name?: string;
+            notes?: string[];
+            /** Format: int32 */
+            phases?: number;
+            /** Format: int32 */
+            planRuns?: number;
+            /** Format: int32 */
+            resources?: number;
+            /** Format: int32 */
+            reviews?: number;
+            runInProgress?: boolean;
+            /** Format: int32 */
+            runs?: number;
+            /** Format: int32 */
+            tasks?: number;
         };
         Import: {
             url: string;
@@ -3481,6 +3538,33 @@ export interface operations {
             };
         };
     };
+    deleteProject: {
+        parameters: {
+            query: {
+                tasks: "DETACH" | "DELETE";
+                confirm?: string;
+            };
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Impact"];
+                };
+            };
+        };
+    };
     archive: {
         parameters: {
             query?: never;
@@ -3501,6 +3585,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProjectResponse"];
+                };
+            };
+        };
+    };
+    previewProject: {
+        parameters: {
+            query: {
+                tasks: "DETACH" | "DELETE";
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Impact"];
                 };
             };
         };
@@ -4300,6 +4408,32 @@ export interface operations {
             };
         };
     };
+    deleteTask: {
+        parameters: {
+            query?: {
+                confirm?: string;
+            };
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Impact"];
+                };
+            };
+        };
+    };
     assignToAgent: {
         parameters: {
             query?: never;
@@ -4370,6 +4504,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TaskResponse"];
+                };
+            };
+        };
+    };
+    previewTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Impact"];
                 };
             };
         };

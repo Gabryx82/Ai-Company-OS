@@ -235,3 +235,12 @@ export interface ResourceFile {
   modified: string | null; version: number;
 }
 export interface LibrarySync { root: string; created: string[]; updated: string[]; invalid: string[] }
+
+// --- PHASE 20: deleting for real (ADR-027) ------------------------------------------
+
+export interface DeletionImpact {
+  kind: "TASK" | "PROJECT"; id: number; name: string; tasks: number; runs: number; handoffs: number; reviews: number;
+  dailyItems: number; phases: number; planRuns: number; resources: number; runInProgress: boolean; folder: string | null;
+  notes: string[];
+}
+export type TasksPolicy = "DETACH" | "DELETE";

@@ -47,7 +47,9 @@ class ApiProblemCoverageTest {
             // PHASE 15 (ADR-024): people, sessions, authorization.
             "com.aicompany.backend.user",
             // PHASE 16 (ADR-025): agent binding and configuration.
-            "com.aicompany.backend.binding");
+            "com.aicompany.backend.binding",
+            // PHASE 20 (ADR-027): deleting for real.
+            "com.aicompany.backend.deletion");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in
@@ -176,6 +178,7 @@ class ApiProblemCoverageTest {
                         "not-a-user-session",
                         "binding-invalid", "agent-works-elsewhere", "target-not-found", "no-baseline",
                         "resource-not-file-backed", "skill-document-invalid", "skill-import-refused", "library-unavailable",
+                        "delete-confirmation-mismatch",
                         "internal-error");
     }
 

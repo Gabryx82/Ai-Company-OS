@@ -793,6 +793,65 @@
         },
         "type" : "object"
       },
+      "Impact" : {
+        "properties" : {
+          "dailyItems" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "folder" : {
+            "type" : "string"
+          },
+          "handoffs" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "notes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "phases" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "planRuns" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "resources" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "reviews" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "runInProgress" : {
+            "type" : "boolean"
+          },
+          "runs" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tasks" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "Import" : {
         "properties" : {
           "url" : {
@@ -4199,6 +4258,53 @@
       }
     },
     "/api/projects/{id}" : {
+      "delete" : {
+        "operationId" : "deleteProject",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "tasks",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "DETACH", "DELETE" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "confirm",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Impact"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "deletion-controller" ]
+      },
       "get" : {
         "operationId" : "getById",
         "parameters" : [ {
@@ -4299,6 +4405,41 @@
           }
         },
         "tags" : [ "project-controller" ]
+      }
+    },
+    "/api/projects/{id}/deletion" : {
+      "get" : {
+        "operationId" : "previewProject",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "tasks",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "DETACH", "DELETE" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Impact"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "deletion-controller" ]
       }
     },
     "/api/projects/{id}/documents" : {
@@ -5266,6 +5407,45 @@
       }
     },
     "/api/tasks/{id}" : {
+      "delete" : {
+        "operationId" : "deleteTask",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "confirm",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Impact"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "deletion-controller" ]
+      },
       "get" : {
         "operationId" : "getTask",
         "parameters" : [ {
@@ -5440,6 +5620,33 @@
           }
         },
         "tags" : [ "task-controller" ]
+      }
+    },
+    "/api/tasks/{id}/deletion" : {
+      "get" : {
+        "operationId" : "previewTask",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Impact"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "deletion-controller" ]
       }
     },
     "/api/tasks/{id}/handoffs" : {

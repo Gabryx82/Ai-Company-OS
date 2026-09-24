@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useApi } from "../context";
+import { useApi, useIsAdmin } from "../context";
+import { DeleteDialog } from "../components/DeleteDialog";
 import { ApiProblem, type Versioned } from "../api/client";
 import {
   TASK_PRIORITIES, TRANSITIONS, type Agent, type AgentConfiguration, type ModelInfo, type Project, type Run,
@@ -31,6 +32,8 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
   const [bindings, setBindings] = useState<AgentConfiguration[]>([]);
   const [problem, setProblem] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isAdmin = useIsAdmin();
 
   const load = useCallback(async () => {
     const [task, taskRuns, fits] = await Promise.all([api.task(taskId), api.runs(taskId), api.suggestions(taskId)]);
@@ -127,6 +130,24 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
 
             <DetailsSection key={version.etag} task={task} busy={busy}
                             onSave={(details) => act((etag) => api.updateTask(task.id, etag, details))} />
+
+            <div className="section">
+              <div className="section-title">Eliminazione</div>
+              {isAdmin
+                ? <div className="row"><span className="muted" style={{ fontSize: 12.5 }}>Definitiva: toglie la task con esecuzioni, handoff e review. I file restano.</span>
+                    <span className="spacer" /><button className="btn btn-small btn-danger" onClick={() => setDeleting(true)}>Elimina task</button></div>
+                : <span className="muted" style={{ fontSize: 12.5 }}>Solo un admin può eliminare una task. Per metterla da parte, completala o riassegnala.</span>}
+            </div>
+            {deleting && (
+              <DeleteDialog what="la task" name={task.title} loadImpact={() => api.taskDeletionPreview(task.id)}
+                            onClose={() => setDeleting(false)}
+                            onConfirm={async (confirm) => {
+                              await api.deleteTask(task.id, version.etag, confirm);
+                              setDeleting(false);
+                              onChanged();
+                              onClose();
+                            }} />
+            )}
           </>
         )}
       </aside>
