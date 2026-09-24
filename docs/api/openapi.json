@@ -354,12 +354,43 @@
         },
         "type" : "object"
       },
+      "Edge" : {
+        "properties" : {
+          "kind" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          },
+          "target" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "GenerateRequest" : {
         "properties" : {
           "model" : {
             "maxLength" : 200,
             "minLength" : 0,
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Graph" : {
+        "properties" : {
+          "edges" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Edge"
+            },
+            "type" : "array"
+          },
+          "nodes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Node"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -633,6 +664,27 @@
           "tokens" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Node" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "meta" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -2727,6 +2779,24 @@
           }
         },
         "tags" : [ "engine-controller" ]
+      }
+    },
+    "/api/graph" : {
+      "get" : {
+        "operationId" : "graph",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Graph"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ecosystem-graph-controller" ]
       }
     },
     "/api/phases/{phaseId}/approve" : {

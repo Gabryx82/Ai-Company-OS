@@ -24,15 +24,15 @@ describe("TaskBoard", () => {
       </ApiContext.Provider>,
     );
 
-    const open = await screen.findByRole("region", { name: "Open" });
+    const open = await screen.findByRole("region", { name: "Da fare" });
     await within(open).findByText("Queue me");
-    expect(within(open).getByText("unassigned")).toBeTruthy();
+    expect(within(open).getByText("non assegnata")).toBeTruthy();
 
-    const working = screen.getByRole("region", { name: "In progress" });
+    const working = screen.getByRole("region", { name: "In corso" });
     expect(within(working).getByText("Working on it")).toBeTruthy();
     expect(within(working).getByText("Code Architect")).toBeTruthy();
     expect(within(working).getByText("· Company OS")).toBeTruthy();
 
-    expect(within(screen.getByRole("region", { name: "Done" })).getByText("Shipped")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Completate" })).getByText("Shipped")).toBeTruthy();
   });
 });

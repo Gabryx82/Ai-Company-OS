@@ -322,6 +322,13 @@ export class ControlPlane {
     return this.plain("GET", `/api/tasks/${taskId}/reviews`);
   }
 
+  // --- second brain (directive §17) ---------------------------------------------
+
+  graph(): Promise<{ nodes: { id: string; type: string; label: string; status: string | null; meta: Record<string, unknown> }[];
+    edges: { source: string; target: string; kind: string }[] }> {
+    return this.plain("GET", "/api/graph");
+  }
+
   // --- daily work (directive §18) ----------------------------------------------
 
   daily(from: string, to: string): Promise<DailyItem[]> {

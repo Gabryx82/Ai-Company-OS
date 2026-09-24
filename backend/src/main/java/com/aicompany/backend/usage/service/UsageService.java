@@ -136,18 +136,18 @@ public class UsageService {
                 .filter(w -> w.windowMinutes() == minutes).findFirst());
         if (window.isEmpty()) {
             return new Window(plan, Status.NO_DATA, null, null, null, null, null, null,
-                    "No Codex session on this machine has recorded this window yet", List.of());
+                    "Nessuna sessione di Codex su questa macchina ha ancora registrato questa finestra", List.of());
         }
         CodexRateLimits.Window w = window.get();
         Instant observed = snapshot.get().observedAt();
         Instant start = w.resetsAt().minus(Duration.ofMinutes(w.windowMinutes()));
         if (!now.isBefore(w.resetsAt())) {
             return new Window(plan, Status.RESET_SINCE_OBSERVATION, 0.0, null, null, null, null, observed,
-                    "Last observed at %.0f%% before the reset of %s; no Codex session since"
+                    "Ultima osservazione: %.0f%% prima del reset del %s; nessuna sessione di Codex da allora"
                             .formatted(w.usedPercent(), w.resetsAt()), List.of());
         }
         return new Window(plan, Status.MEASURED, w.usedPercent(), null, null, start, w.resetsAt(), observed,
-                snapshot.get().planType() == null ? null : "Plan: " + snapshot.get().planType(), List.of());
+                snapshot.get().planType() == null ? null : "Piano: " + snapshot.get().planType(), List.of());
     }
 
     private Window claudeWindow(QuotaPlan plan, Instant now) {
@@ -156,18 +156,18 @@ public class UsageService {
             Optional<ClaudeCodeUsage.Block> block = ClaudeCodeUsage.activeBlock(entries, now);
             if (block.isEmpty()) {
                 return new Window(plan, Status.NO_DATA, null, 0L, 0L, null, null, now,
-                        "No five-hour window is open: the next one starts with the next message", List.of());
+                        "Nessuna finestra di 5 ore aperta: la prossima parte col prossimo messaggio", List.of());
             }
             ClaudeCodeUsage.Block b = block.get();
             return counted(plan, b.entries(), b.start(), b.end(), now,
-                    "Window reconstructed from local logs: it opened at the hour of its first message");
+                    "Finestra ricostruita dai log locali: si è aperta all'ora del suo primo messaggio");
         }
         Optional<Instant[]> bounds = anchoredBounds(plan, now);
         if (bounds.isEmpty()) {
             Instant start = now.minus(Duration.ofDays(7));
             List<ClaudeCodeUsage.Entry> week = entries.stream().filter(e -> !e.at().isBefore(start)).toList();
             Window rolling = counted(plan, week, start, null, now,
-                    "Last 7 days. Set the weekly reset (Claude settings > Usage) to count the real window");
+                    "Ultimi 7 giorni. Imposta il reset settimanale (claude.ai → Settings → Usage) per contare la finestra reale");
             return new Window(plan, Status.CONFIGURATION_NEEDED, null, rolling.tokens(), rolling.outputTokens(),
                     start, null, now, rolling.detail(), rolling.byModel());
         }
@@ -191,7 +191,7 @@ public class UsageService {
         long total = byModel.values().stream().mapToLong(v -> v[0] + v[1]).sum();
         long output = byModel.values().stream().mapToLong(v -> v[1]).sum();
         return new Window(plan, total == 0 ? Status.NO_DATA : Status.COUNTED, null, total, output, bounds[0],
-                bounds[1], now, "Runs this control plane sent to '" + plan.getSubject() + "'",
+                bounds[1], now, "Run che AI Company OS ha inviato a '" + plan.getSubject() + "'",
                 byModel.entrySet().stream().map(e -> new ModelTokens(e.getKey(), e.getValue()[0] + e.getValue()[1]))
                         .toList());
     }
@@ -200,9 +200,9 @@ public class UsageService {
         Optional<Instant[]> bounds = anchoredBounds(plan, now);
         return bounds
                 .map(b -> new Window(plan, Status.NO_DATA, null, null, null, b[0], b[1], now,
-                        "Nothing on this machine measures this window; check the provider's usage page", List.of()))
+                        "Niente su questa macchina misura questa finestra: vedi la pagina ufficiale del fornitore", List.of()))
                 .orElseGet(() -> new Window(plan, Status.CONFIGURATION_NEEDED, null, null, null, null, null, now,
-                        "Set when this window resets", List.of()));
+                        "Indica quando si azzera questa finestra", List.of()));
     }
 
     private Window counted(QuotaPlan plan, List<ClaudeCodeUsage.Entry> entries, Instant start, Instant end,

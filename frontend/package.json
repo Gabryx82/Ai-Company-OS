@@ -13,6 +13,8 @@
     "api:types": "openapi-typescript ../docs/api/openapi.json -o src/api/schema.d.ts"
   },
   "dependencies": {
+    "@types/d3-force": "^3.0.10",
+    "d3-force": "^3.0.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

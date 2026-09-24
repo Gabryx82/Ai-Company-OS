@@ -148,7 +148,7 @@ function Overview({ project, plan, docs, onGo, onReload, setProblem }: {
                     onClick={() => api.scaffold(project.id).then(onReload).catch(setProblem)}>Prepara workspace</button></div>
         )}
         {current >= 0 && (
-          <button className="btn btn-primary" style={{ justifySelf: "start" }}
+          <button className="btn btn-primary" style={{ justifySelf: "start", alignSelf: "start" }}
                   onClick={() => onGo(current <= 1 ? "Master Prompt" : "Piano")}>
             Prossimo passo: {steps[current].label}</button>
         )}
@@ -308,7 +308,7 @@ function PlanTab({ project, plan, docs, agents, onReload, onOpenTask }: {
                         onClick={() => guard(async () => setRunning(await api.generatePlan(project.id, model || undefined)))}>
                   <Icon name="sparkle" size={14} /> Genera piano</button>
               </div>
-              <span className="muted" style={{ fontSize: 12 }}>Un modello locale da 9B impiega 1–4 minuti. Il piano resta una bozza finché non lo approvi.</span>
+              <span className="muted" style={{ fontSize: 12 }}>Misurato su questa macchina: col 9B circa 13 minuti (fasi, poi task per fase, con l'avanzamento qui sotto); col 4B circa la metà. Il piano resta una bozza finché non lo approvi.</span>
             </div>
             <div className="stack">
               <div className="section-title">Con un agente esterno</div>
@@ -326,7 +326,7 @@ function PlanTab({ project, plan, docs, agents, onReload, onOpenTask }: {
           {last && (
             <div className={last.status === "FAILED" ? "notice notice-danger" : "notice"}>
               <div className="row">
-                <strong>{last.status === "RUNNING" ? "Generazione in corso…" : last.status === "SUCCEEDED" ? "Ultima pianificazione riuscita" : "Ultima pianificazione fallita"}</strong>
+                <strong>{last.status === "RUNNING" ? `Generazione in corso… ${last.progress ?? ""}` : last.status === "SUCCEEDED" ? "Ultima pianificazione riuscita" : "Ultima pianificazione fallita"}</strong>
                 <span className="muted">{last.source === "ENGINE" ? last.servedModel ?? last.requestedModel ?? "engine" : "import"} · {when(last.createdAt)}</span>
               </div>
               {last.status === "SUCCEEDED" && <div>{last.phases} fasi, {last.tasks} task{last.outputTokens ? ` · ${last.inputTokens}→${last.outputTokens} token` : ""}</div>}

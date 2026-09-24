@@ -5,7 +5,7 @@ import { TASK_PRIORITIES, TASK_STATUSES, type Agent, type Project, type Task, ty
 import { Field, Modal, PriorityBadge, ProblemNote } from "../components/ui";
 import { TaskDrawer } from "./TaskDrawer";
 
-const COLUMN_TITLE = { OPEN: "Open", IN_PROGRESS: "In progress", DONE: "Done" } as const;
+const COLUMN_TITLE = { OPEN: "Da fare", IN_PROGRESS: "In corso", DONE: "Completate" } as const;
 
 /**
  * The board: three columns, one per status of ADR-011. Cards move only through
@@ -35,10 +35,10 @@ export function TaskBoard() {
     <div className="stack">
       <div className="page-head">
         <div>
-          <h1>Tasks</h1>
-          <p>Open a card to assign it, run it with its agent, and move it through its lifecycle.</p>
+          <h1>Task</h1>
+          <p>Apri una card per assegnarla, orchestrarla, eseguirla e portarla lungo il suo ciclo di vita.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreating(true)}>New task</button>
+        <button className="btn btn-primary" onClick={() => setCreating(true)}>Nuova task</button>
       </div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
       <div className="board">
@@ -53,12 +53,12 @@ export function TaskBoard() {
                   <div className="meta">
                     <span className="mono">#{task.id}</span>
                     <PriorityBadge priority={task.priority} />
-                    <span>{agentName(task.agentId) ?? "unassigned"}</span>
+                    <span>{agentName(task.agentId) ?? "non assegnata"}</span>
                     {task.projectId && <span>· {projectName(task.projectId)}</span>}
                   </div>
                 </button>
               ))}
-              {tasks && column.length === 0 && <div className="muted" style={{ padding: 8 }}>Nothing here.</div>}
+              {tasks && column.length === 0 && <div className="muted" style={{ padding: 8 }}>Niente qui.</div>}
             </section>
           );
         })}
@@ -101,33 +101,33 @@ function CreateTask({ agents, projects, onClose, onCreated }: {
 
   const errors = problem instanceof ApiProblem ? problem.errors : {};
   return (
-    <Modal title="New task" onClose={onClose}>
+    <Modal title="Nuova task" onClose={onClose}>
       <form className="stack" onSubmit={submit}>
-        <Field label="Title" error={errors.title}><input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus /></Field>
-        <Field label="Description" hint="What the agent will read, verbatim.">
+        <Field label="Titolo" error={errors.title}><input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus /></Field>
+        <Field label="Descrizione" hint="Ciò che l'agente leggerà, alla lettera.">
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
         <div className="row">
-          <Field label="Priority">
+          <Field label="Priorità">
             <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
               {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </Field>
-          <Field label="Agent">
+          <Field label="Agente">
             <select value={agentId} onChange={(e) => setAgentId(e.target.value)}>
-              <option value="">Unassigned</option>
+              <option value="">Non assegnata</option>
               {agents.filter((a) => a.active).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </Field>
-          <Field label="Project">
+          <Field label="Progetto">
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              <option value="">None</option>
+              <option value="">Nessuno</option>
               {projects.filter((p) => p.status === "ACTIVE").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </Field>
         </div>
         <ProblemNote problem={problem} />
-        <div className="row"><span className="spacer" /><button className="btn btn-primary" type="submit">Create</button></div>
+        <div className="row"><span className="spacer" /><button className="btn btn-primary" type="submit">Crea</button></div>
       </form>
     </Modal>
   );

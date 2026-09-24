@@ -8,7 +8,7 @@ import {
 import { Field, PriorityBadge, ProblemNote, StatusBadge, when } from "../components/ui";
 import { OrchestratorPanel } from "./OrchestratorPanel";
 
-const STEP_LABEL: Record<Transition, string> = { start: "Start", complete: "Mark done", stop: "Stop", reopen: "Reopen" };
+const STEP_LABEL: Record<Transition, string> = { start: "Avvia", complete: "Completa", stop: "Ferma", reopen: "Riapri" };
 
 /**
  * One task, with the ETag it was read at.
@@ -87,18 +87,18 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
         <div className="row">
           <span className="mono muted">Task #{taskId}</span>
           <span className="spacer" />
-          <button className="btn btn-small" onClick={onClose}>Close</button>
+          <button className="btn btn-small" onClick={onClose}>Chiudi</button>
         </div>
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        {!task ? <div className="muted">Loading…</div> : (
+        {!task ? <div className="muted">Carico…</div> : (
           <>
             <div className="section">
               <h1>{task.title}</h1>
               <div className="row">
                 <StatusBadge status={task.status} />
                 <PriorityBadge priority={task.priority} />
-                <span className="muted">{agent ? `${agent.name}${agent.active ? "" : " (inactive)"}` : "unassigned"}</span>
-                {project && <span className="muted">· {project.name}{project.status === "ARCHIVED" ? " (archived)" : ""}</span>}
+                <span className="muted">{agent ? `${agent.name}${agent.active ? "" : " (inattivo)"}` : "non assegnata"}</span>
+                {project && <span className="muted">· {project.name}{project.status === "ARCHIVED" ? " (archiviato)" : ""}</span>}
               </div>
               <div className="row">
                 {(Object.keys(TRANSITIONS) as Transition[]).filter((step) => TRANSITIONS[step] === task.status).map((step) => (
@@ -132,25 +132,25 @@ function RunSection({ task, agent, runs, models, busy, onLaunch }: {
   task: Task; agent: Agent | undefined; runs: Run[]; models: ModelInfo[]; busy: boolean; onLaunch: (model?: string) => void;
 }) {
   const [model, setModel] = useState("");
-  const blocked = task.status === "DONE" ? "Reopen the task to run it again."
-    : !agent ? "Assign an agent first."
-      : !agent.active ? "The agent is inactive: activate it or reassign the task."
-        : runs.some((r) => r.status === "QUEUED" || r.status === "RUNNING") ? "A run is in progress." : null;
+  const blocked = task.status === "DONE" ? "Riapri la task per eseguirla di nuovo."
+    : !agent ? "Assegna prima un agente."
+      : !agent.active ? "L'agente è inattivo: attivalo o riassegna la task."
+        : runs.some((r) => r.status === "QUEUED" || r.status === "RUNNING") ? "Un'esecuzione è in corso." : null;
 
   return (
     <div className="section">
-      <div className="section-title">Runs</div>
+      <div className="section-title">Esecuzioni (AI Engine)</div>
       <div className="row">
         <select aria-label="Model" value={model} onChange={(e) => setModel(e.target.value)} style={{ maxWidth: 320 }}>
-          <option value="">{agent?.model ? `Agent's model (${agent.model})` : "Engine default"}</option>
-          {models.map((m) => <option key={m.id} value={m.id}>{m.id}{m.billed ? " — billed" : ""}</option>)}
+          <option value="">{agent?.model ? `Modello dell'agente (${agent.model})` : "Default dell'engine"}</option>
+          {models.map((m) => <option key={m.id} value={m.id}>{m.id}{m.billed ? " — a consumo" : ""}</option>)}
         </select>
         <button className="btn btn-primary" disabled={busy || blocked !== null} onClick={() => onLaunch(model || undefined)}>
-          Run with {agent?.name ?? "agent"}
+          Esegui con {agent?.name ?? "agente"}
         </button>
       </div>
       {blocked && <div className="muted">{blocked}</div>}
-      {runs.length === 0 && <div className="muted">No run yet.</div>}
+      {runs.length === 0 && <div className="muted">Nessuna esecuzione.</div>}
       {runs.map((run) => <RunCard key={run.id} run={run} />)}
     </div>
   );
@@ -162,31 +162,31 @@ function RunCard({ run }: { run: Run }) {
       <div className="row">
         <StatusBadge status={run.status} />
         <span className="mono">run #{run.id}</span>
-        <span className="muted">{run.servedModel ?? run.requestedModel ?? "engine default"}</span>
+        <span className="muted">{run.servedModel ?? run.requestedModel ?? "default dell'engine"}</span>
         <span className="spacer" />
         <span className="muted">{when(run.createdAt)}</span>
       </div>
       {run.status === "SUCCEEDED" && (
         <>
-          {run.finishReason === "refusal" && <div className="notice notice-warn">The model declined this request.</div>}
-          {run.finishReason === "length" && <div className="notice notice-warn">The output was cut at the token limit.</div>}
+          {run.finishReason === "refusal" && <div className="notice notice-warn">Il modello ha rifiutato la richiesta.</div>}
+          {run.finishReason === "length" && <div className="notice notice-warn">L'output è stato troncato al limite di token.</div>}
           <pre className="output">{run.output || "(empty)"}</pre>
           <div className="muted">
-            {run.inputTokens} → {run.outputTokens} tokens · {((run.latencyMs ?? 0) / 1000).toFixed(1)} s · by {run.requestedBy}
+            {run.inputTokens} → {run.outputTokens} token · {((run.latencyMs ?? 0) / 1000).toFixed(1)} s · da {run.requestedBy}
           </div>
         </>
       )}
       {run.status === "FAILED" && (
         <div className="notice notice-danger">
-          <div>{run.failureDetail ?? "The run failed."}</div>
+          <div>{run.failureDetail ?? "L'esecuzione è fallita."}</div>
           <div className="mono">{run.failureType}</div>
         </div>
       )}
       {(run.status === "QUEUED" || run.status === "RUNNING") && (
-        <div className="muted">{run.status === "QUEUED" ? "Waiting for an executor…" : "The model is working…"}</div>
+        <div className="muted">{run.status === "QUEUED" ? "In attesa di un esecutore…" : "Il modello sta lavorando…"}</div>
       )}
       <details>
-        <summary>What was sent</summary>
+        <summary>Cosa è stato inviato</summary>
         <pre>{run.systemPrompt}{"\n\n"}{run.userPrompt}</pre>
         <div className="mono muted">{run.correlationId}</div>
       </details>
@@ -203,29 +203,29 @@ function AssignSection({ task, agents, projects, suggestions, busy, onAgent, onP
   const best = suggestions[0];
   return (
     <div className="section">
-      <div className="section-title">Assignment</div>
+      <div className="section-title">Assegnazione</div>
       {best && best.score > 0 && best.agentId !== task.agentId && (
         <div className="notice">
           <div className="row">
-            <span>Suggested: <strong>{best.name}</strong> — matches {best.matchedTerms.map((t) => <code key={t}>{t} </code>)}</span>
+            <span>Suggerito: <strong>{best.name}</strong> — corrisponde a {best.matchedTerms.map((t) => <code key={t}>{t} </code>)}</span>
             <span className="spacer" />
-            <button className="btn btn-small" disabled={busy} onClick={() => onAgent(best.agentId)}>Assign</button>
+            <button className="btn btn-small" disabled={busy} onClick={() => onAgent(best.agentId)}>Assegna</button>
           </div>
         </div>
       )}
       <div className="row">
         <select aria-label="Agent" value={agentId} onChange={(e) => setAgentId(e.target.value)} style={{ maxWidth: 280 }}>
-          <option value="">Choose an agent…</option>
+          <option value="">Scegli un agente…</option>
           {agents.filter((a) => a.active).map((a) => <option key={a.id} value={a.id}>{a.name} — {a.role}</option>)}
         </select>
-        <button className="btn" disabled={busy || !agentId} onClick={() => onAgent(Number(agentId))}>Assign agent</button>
+        <button className="btn" disabled={busy || !agentId} onClick={() => onAgent(Number(agentId))}>Assegna agente</button>
       </div>
       <div className="row">
         <select aria-label="Project" value={projectId} onChange={(e) => setProjectId(e.target.value)} style={{ maxWidth: 280 }}>
-          <option value="">Choose a project…</option>
+          <option value="">Scegli un progetto…</option>
           {projects.filter((p) => p.status === "ACTIVE").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <button className="btn" disabled={busy || !projectId} onClick={() => onProject(Number(projectId))}>Move to project</button>
+        <button className="btn" disabled={busy || !projectId} onClick={() => onProject(Number(projectId))}>Sposta nel progetto</button>
       </div>
     </div>
   );
@@ -246,15 +246,15 @@ function DetailsSection({ task, busy, onSave }: {
 
   return (
     <form className="section" onSubmit={submit}>
-      <div className="section-title">Details</div>
-      <Field label="Title"><input value={title} onChange={(e) => setTitle(e.target.value)} required /></Field>
-      <Field label="Description"><textarea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
-      <Field label="Priority">
+      <div className="section-title">Dettagli</div>
+      <Field label="Titolo"><input value={title} onChange={(e) => setTitle(e.target.value)} required /></Field>
+      <Field label="Descrizione"><textarea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+      <Field label="Priorità">
         <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} style={{ maxWidth: 160 }}>
           {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
       </Field>
-      <div className="row"><span className="spacer" /><button className="btn" type="submit" disabled={busy || !dirty}>Save details</button></div>
+      <div className="row"><span className="spacer" /><button className="btn" type="submit" disabled={busy || !dirty}>Salva dettagli</button></div>
     </form>
   );
 }

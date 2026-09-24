@@ -15,6 +15,7 @@ import { Terminal } from "./views/Terminal";
 import { Settings } from "./views/Settings";
 import { KnowledgeHub } from "./views/KnowledgeHub";
 import { DailyWork } from "./views/DailyWork";
+import { SecondBrain } from "./views/SecondBrain";
 import { MockupHub } from "./views/MockupHub";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { Icon, type IconName } from "./components/icons";
@@ -29,6 +30,7 @@ const NAV: { group: string; items: { key: string; label: string; icon: IconName 
     { key: "tasks", label: "Task", icon: "tasks" },
     { key: "agents", label: "Agenti", icon: "agents" },
     { key: "daily", label: "Daily Work", icon: "daily" },
+    { key: "brain", label: "Second Brain", icon: "brain" },
   ] },
   { group: "Strumenti", items: [
     { key: "software", label: "Software Hub", icon: "software" },
@@ -140,6 +142,7 @@ export function App() {
             {page === "tasks" && <TaskBoard />}
             {page === "agents" && <Agents />}
             {page === "daily" && <DailyWork />}
+            {page === "brain" && <SecondBrain navigate={navigate} />}
             {page === "software" && <SoftwareHub selected={detail} navigate={navigate} />}
             {page === "terminal" && <Terminal />}
             {page === "integrations" && <Integrations selected={detail} navigate={navigate} />}

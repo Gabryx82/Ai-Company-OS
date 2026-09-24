@@ -308,6 +308,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["graph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/phases/{phaseId}/approve": {
         parameters: {
             query?: never;
@@ -1120,8 +1136,17 @@ export interface components {
             tasks?: components["schemas"]["Document"][];
             workspacePath?: string;
         };
+        Edge: {
+            kind?: string;
+            source?: string;
+            target?: string;
+        };
         GenerateRequest: {
             model?: string;
+        };
+        Graph: {
+            edges?: components["schemas"]["Edge"][];
+            nodes?: components["schemas"]["Node"][];
         };
         HandoffRequest: {
             target: string;
@@ -1219,6 +1244,15 @@ export interface components {
             model?: string;
             /** Format: int64 */
             tokens?: number;
+        };
+        Node: {
+            id?: string;
+            label?: string;
+            meta?: {
+                [key: string]: unknown;
+            };
+            status?: string;
+            type?: string;
         };
         Orchestration: {
             agent?: components["schemas"]["AgentChoice"];
@@ -2283,6 +2317,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ModelList"];
+                };
+            };
+        };
+    };
+    graph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Graph"];
                 };
             };
         };

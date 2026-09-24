@@ -13,13 +13,13 @@ const STATUS_TONE: Record<TaskStatus | RunStatus, string> = {
 };
 
 const STATUS_LABEL: Record<TaskStatus | RunStatus, string> = {
-  OPEN: "Open",
-  IN_PROGRESS: "In progress",
-  DONE: "Done",
-  QUEUED: "Queued",
-  RUNNING: "Running",
-  SUCCEEDED: "Succeeded",
-  FAILED: "Failed",
+  OPEN: "Da fare",
+  IN_PROGRESS: "In corso",
+  DONE: "Completata",
+  QUEUED: "In coda",
+  RUNNING: "In esecuzione",
+  SUCCEEDED: "Riuscita",
+  FAILED: "Fallita",
 };
 
 export function StatusBadge({ status }: { status: TaskStatus | RunStatus }) {
@@ -39,11 +39,11 @@ export function ProblemNote({ problem, onDismiss }: { problem: unknown; onDismis
   return (
     <div className={stale ? "notice notice-warn" : "notice notice-danger"} role="alert">
       <div className="row">
-        <strong>{stale ? "Changed by someone else" : p?.title ?? "Something went wrong"}</strong>
+        <strong>{stale ? "Modificato da qualcun altro" : p?.title ?? "Qualcosa è andato storto"}</strong>
         <span className="spacer" />
-        {onDismiss && <button className="btn btn-small" onClick={onDismiss}>Dismiss</button>}
+        {onDismiss && <button className="btn btn-small" onClick={onDismiss}>Chiudi</button>}
       </div>
-      <div>{stale ? "The data was reloaded. Check it, then try again." : p?.detail || String(problem)}</div>
+      <div>{stale ? "I dati sono stati ricaricati. Controllali e riprova." : p?.detail || String(problem)}</div>
       {p && Object.keys(p.errors).length > 0 && (
         <ul>{Object.entries(p.errors).map(([field, message]) => <li key={field}><code>{field}</code>: {message}</li>)}</ul>
       )}
@@ -61,7 +61,7 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
   return (
     <div className="overlay center" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={title} style={wide ? { width: "min(860px, calc(100% - 32px))" } : undefined}>
-        <div className="row"><h2>{title}</h2><span className="spacer" /><button className="btn btn-small" onClick={onClose}>Close</button></div>
+        <div className="row"><h2>{title}</h2><span className="spacer" /><button className="btn btn-small" onClick={onClose}>Chiudi</button></div>
         {children}
       </div>
     </div>

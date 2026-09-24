@@ -256,6 +256,33 @@ class OrchestratorApiTest extends AbstractPostgresTest {
         assertThat(request.user()).isEqualTo("Task #" + taskId + ": Fuori piano\nPriority: LOW\nProject: none\n\nSolo testo");
     }
 
+    /**
+     * The same regression, for the case that matters most: a task that lives in a
+     * project -- with a folder and an autonomy level -- but outside its plan.
+     * (Mutation M4 survived the no-project version of this test alone.)
+     */
+    @Test
+    void aRunOfAProjectTaskOutsideThePlanAlsoSendsThePromptOfPhase6() throws Exception {
+        long agentId = agents.findAll().stream().filter(a -> a.getName().equals("Backend Bot")).findFirst()
+                .orElseThrow().getId();
+        MvcResult created = mockMvc.perform(post("/api/tasks").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Nel progetto\",\"description\":\"Senza piano\",\"status\":\"OPEN\","
+                        + "\"priority\":\"LOW\",\"projectId\":" + projectId + "}"))
+                .andExpect(status().isCreated()).andReturn();
+        long taskId = json.readTree(created.getResponse().getContentAsString()).path("id").asLong();
+        String tag = mockMvc.perform(put("/api/tasks/" + taskId + "/agent")
+                        .header(HttpHeaders.IF_MATCH, created.getResponse().getHeader(HttpHeaders.ETAG))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"agentId\":" + agentId + "}"))
+                .andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+
+        mockMvc.perform(post("/api/tasks/" + taskId + "/runs").header(HttpHeaders.IF_MATCH, tag)
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isAccepted());
+
+        EngineClient.Request request = awaitRequest();
+        assertThat(request.system()).doesNotContain("Human-in-the-Loop").endsWith("say what is missing.");
+        assertThat(request.user()).isEqualTo("Task #" + taskId + ": Nel progetto\nPriority: LOW\nProject: Officina\n\nSenza piano");
+    }
+
     private EngineClient.Request awaitRequest() throws InterruptedException {
         for (int i = 0; i < 100 && engine.requests().isEmpty(); i++) {
             Thread.sleep(50);

@@ -276,7 +276,7 @@ public class PlanningApiTest extends AbstractPostgresTest {
     }
 
     @Test
-    void anApprovedPlanIsLockedAndADraftWithWorkDoneIsLockedToo() throws Exception {
+    void anUntouchedDraftIsReplaceableAndAnApprovedPlanIsLocked() throws Exception {
         writeMasterPrompt();
         scriptPlan();
         generateAndWait();
@@ -298,6 +298,32 @@ public class PlanningApiTest extends AbstractPostgresTest {
         mockMvc.perform(post("/api/projects/" + projectId + "/plan/generate"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:plan-locked"));
+    }
+
+    /**
+     * A draft stops being replaceable the moment any of its work began -- here a
+     * task started after its phase was approved, with the plan itself still DRAFT.
+     * (Mutation M5 of the PHASE 8-14 block survived until this test existed.)
+     */
+    @Test
+    void aDraftWhoseWorkBeganCannotBeReplaced() throws Exception {
+        writeMasterPrompt();
+        scriptPlan();
+        generateAndWait();
+        JsonNode phase = json.readTree(mockMvc.perform(get("/api/projects/" + projectId + "/plan"))
+                .andReturn().getResponse().getContentAsString()).path("phases").path(0);
+        mockMvc.perform(post("/api/phases/" + phase.path("id").asLong() + "/approve")
+                .header(HttpHeaders.IF_MATCH, "\"" + phase.path("version").asLong() + "\"")).andExpect(status().isOk());
+        long taskId = phase.path("tasks").path(0).path("id").asLong();
+        String tag = mockMvc.perform(get("/api/tasks/" + taskId)).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+        mockMvc.perform(post("/api/tasks/" + taskId + "/start").header(HttpHeaders.IF_MATCH, tag)).andExpect(status().isOk());
+
+        scriptPlan();
+        JsonNode run = generateAndWait();
+
+        assertThat(run.path("status").asString()).isEqualTo("FAILED");
+        assertThat(run.path("failureDetail").asString()).startsWith("plan-locked");
+        mockMvc.perform(get("/api/tasks/" + taskId)).andExpect(jsonPath("$.status").value("IN_PROGRESS"));
     }
 
     @Test

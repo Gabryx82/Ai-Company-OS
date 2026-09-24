@@ -33,9 +33,9 @@ describe("TaskDrawer", () => {
   it("offers only the edges that leave the current state (ADR-014)", async () => {
     renderDrawer({ "GET /api/tasks/7": () => ({ body: TASK, etag: '"0"' }) });
     await screen.findByText("Design the planner");
-    expect(screen.getByRole("button", { name: "Start" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Mark done" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Reopen" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Avvia" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Completa" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Riapri" })).toBeNull();
   });
 
   it("acts with the tag it was read at", async () => {
@@ -43,7 +43,7 @@ describe("TaskDrawer", () => {
       "GET /api/tasks/7": () => ({ body: TASK, etag: '"0"' }),
       "POST /api/tasks/7/start": () => ({ body: { ...TASK, status: "IN_PROGRESS" }, etag: '"1"' }),
     });
-    fireEvent.click(await screen.findByRole("button", { name: "Start" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Avvia" }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST")).toBe(true));
     const start = calls.find((c) => c.method === "POST")!;
     expect(start.path).toBe("/api/tasks/7/start");
@@ -60,8 +60,8 @@ describe("TaskDrawer", () => {
         body: { type: "urn:ai-company-os:problem:precondition-failed", title: "Precondition failed", status: 412 },
       }),
     });
-    fireEvent.click(await screen.findByRole("button", { name: "Start" }));
-    await screen.findByText("Changed by someone else");
+    fireEvent.click(await screen.findByRole("button", { name: "Avvia" }));
+    await screen.findByText("Modificato da qualcun altro");
     await screen.findByText("Renamed meanwhile");
     expect(calls.filter((c) => c.method === "POST")).toHaveLength(1);
   });
@@ -71,7 +71,7 @@ describe("TaskDrawer", () => {
       "GET /api/tasks/7": () => ({ body: TASK, etag: '"2"' }),
       "POST /api/tasks/7/runs": () => ({ status: 202, body: { id: 1, status: "QUEUED" } }),
     });
-    fireEvent.click(await screen.findByRole("button", { name: "Run with Code Architect" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Esegui con Code Architect" }));
     await waitFor(() => expect(calls.some((c) => c.path === "/api/tasks/7/runs" && c.method === "POST")).toBe(true));
     const launch = calls.find((c) => c.method === "POST")!;
     expect(launch.headers["If-Match"]).toBe('"2"');
@@ -80,8 +80,8 @@ describe("TaskDrawer", () => {
 
   it("does not offer a run for a task nobody holds", async () => {
     renderDrawer({ "GET /api/tasks/7": () => ({ body: { ...TASK, agentId: null }, etag: '"0"' }) });
-    await screen.findByText("Assign an agent first.");
-    expect((screen.getByRole("button", { name: /Run with/ }) as HTMLButtonElement).disabled).toBe(true);
+    await screen.findByText("Assegna prima un agente.");
+    expect((screen.getByRole("button", { name: /Esegui con/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("shows a finished run's output and a failed run's type", async () => {
