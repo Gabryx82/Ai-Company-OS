@@ -44,6 +44,43 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
+## ▶▶ Riallineamento V2 — PHASE 8 → PHASE 14 — COMPLETATO il 2026-09-24, in attesa di Human Final Review
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+Direttiva umana del 2026-09-24: PHASE 3–7 verificate e funzionanti dall'operatore, **ma non da
+mergiare**; riallineare il prodotto alla visione completa dell'ecosistema, preservando ciò che
+funziona, e proseguire autonomamente. Gap analysis: `docs/realignment/GAP_ANALYSIS_V2.md`. Roadmap:
+**`.company-os/ROADMAP_V2.md`** (PHASE 8–21, MU-OS a fine PHASE 11).
+
+| Fase | Contenuto | ADR | Stato |
+|---|---|---|---|
+| **8** Ecosystem catalogs | Software Hub (rilevamento reale, launcher ad allowlist), provider/modelli, consumi e quote, OpenRouter, porta 8081, nuova shell | 018, 019 | ✅ |
+| **9** Project workspace | Profilo progetto, cartella governata, documenti sicuri | 020 | ✅ |
+| **10** Planning | `plan.json`, generazione a stadi vincolata da JSON Schema, import da agente esterno, gate HITL | 021, 022 | ✅ |
+| **11** Execution | Decisione motivata, handoff a Claude Code/Codex/Antigravity/OpenCode, review, contesto nelle run | 021, 022 | ✅ **MU-OS** |
+| **12** Agent ecosystem | Prompt engineering, sottoagenti, harness, Knowledge Hub, template di agenti, Mockup Hub | 023 | ✅ |
+| **13** Daily Work | Oggi/domani, riferimenti a task senza copie | — | ✅ |
+| **14** Second Brain | Grafo animato dell'ecosistema | — | ✅ |
+| 15–21 | Terminale PTY, graph engineering, template hub, integrazioni esterne, costi, 3D, release | — | da fare |
+
+- **Branch**: `autonomous/phase-8-ecosystem-realignment`, da `autonomous/phase-7-operator-console`
+  (che resta intatto). **Pushato**; CI su ogni push. **`master` intoccato** (`d166870`).
+- **Suite**: **417 Java** (1 saltato: link simbolici su Windows senza privilegi) + **56 engine** +
+  **18 console**. Stream **`V19`** (V12–V19 tutte additive).
+- **Live dev DB `aicompany`**: **`V11`** (lo ha migrato l'operatore durante la sua review di PHASE
+  3–7 — la riga «V3» più sotto è superata). Al prossimo avvio si applicheranno V12–V19, additive.
+  Tutte le verifiche dal vivo di questo blocco sono girate sul clone `aicompany_p8`.
+- **Smoke reale MU-OS** (2026-09-24, clone): progetto → workspace → master prompt → piano generato
+  da `qwen3.5:9b` in 12,8 min (5 fasi, 17 task) → gate 409 prima dell'approvazione → approvazione →
+  decisione → run `qwen3.5:4b` in 226 s con contesto dai file e istruzioni GUIDED rispettate →
+  review → DONE.
+- **Mutazioni**: 5 sulle guardie critiche; 3 rosse subito, **2 sopravvissute** (test che non
+  provavano ciò che dichiaravano) → test aggiunti, entrambe rosse.
+- **Debiti nuovi**: TD-41…TD-52 (`docs/DEBT_REGISTRY.md`); prossimo libero **TD-53**.
+- **Prossimo passo autonomo**: fermo per la Human Final Review (`FINAL_HANDOFF.md`). Dopo:
+  PHASE 15 (terminale PTY integrato), poi l'ordine di `ROADMAP_V2.md`.
+
 ## ▶ Blocco autonomo PHASE 3 → PHASE 7 — COMPLETATO il 2026-09-23, in attesa di Human Final Review
 
 > **Leggere prima questa sezione.** Il resto del file descrive lo stato fino a TASK-012 ed è

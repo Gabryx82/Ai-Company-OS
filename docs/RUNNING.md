@@ -1,7 +1,9 @@
 # Running AI Company OS locally
 
-Stato attuale (2026-09-23): **control plane** Spring Boot + PostgreSQL, autenticato con bearer
-token (ADR-013); **AI Engine** Python (ADR-015, §2b); **console dell'operatore** React (ADR-017, §2c).
+Stato attuale (2026-09-24): **control plane** Spring Boot + PostgreSQL, autenticato con bearer
+token (ADR-013), porta **8081**; **AI Engine** Python (ADR-015, §2b); **console dell'ecosistema**
+React (ADR-017, §2c); Software Hub, workspace dei progetti, Master Orchestrator, agenti con harness,
+Daily Work e Second Brain (ADR-018…023, `.company-os/ROADMAP_V2.md`).
 
 ## 0. Tutto insieme, in un comando
 
@@ -15,6 +17,27 @@ apre gli URL: console `http://localhost:5173`, backend `http://localhost:8081`, 
 `http://127.0.0.1:8090`. ⚠️ Su un database dietro la testa dello stream il backend applica le
 migrazioni mancanti all'avvio (compresa `V8`, l'unica distruttiva, autorizzata il 2026-09-19):
 per provare senza toccare i dati, clonare prima (vedi l'intestazione dello script).
+
+## 0b. Il percorso completo, dalla console
+
+1. **Progetti → Nuovo progetto**: tipologia, dettagli, stack proposto, cartella e livello di
+   Human-in-the-Loop. La cartella viene preparata con `MASTER_PROMPT.md`, `AGENTS.md`, `CLAUDE.md`,
+   `docs/`, `tasks/`, `references/`, `.aicos/` (nessun file esistente viene sovrascritto).
+2. **Master Prompt**: brainstorming con ChatGPT Classic (pulsante nella scheda), incolla il MASTER
+   PROMPT, salva.
+3. **Piano**: «Genera piano» con un modello locale (misurato: ~13 min col 9B, a stadi, con
+   l'avanzamento visibile) oppure «Pianifica con Claude Code» e poi «Importa .aicos/plan.json».
+4. **Approva** la fase (o il piano intero): prima dell'approvazione nessuna task parte (`409
+   phase-not-approved`).
+5. Apri una task: il pannello **Master Orchestrator** mostra agente, modello, software, contesto e
+   prompt compatto, con le ragioni. Eseguila con l'AI Engine oppure consegnala a Claude Code /
+   OpenCode (Windows Terminal nella cartella del progetto) o a Codex / Antigravity (app aperta,
+   prompt negli appunti).
+6. **Review**: «Accetta e completa» o «Richiedi modifiche», con nota.
+7. **Agenti → Installa ecosistema base** per gli agenti con sottoagenti e harness; **Second Brain**
+   per vedere tutto collegato; **Daily Work** per oggi e domani; **Consumi** per quote e reset.
+
+Open WebUI (desktop) usa la porta 8080 ed è incorporato in **Integrazioni** quando è acceso.
 
 ## Prerequisiti
 - JDK 21

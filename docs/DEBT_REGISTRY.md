@@ -12,7 +12,7 @@
 
 **La numerazione viva in `.company-os/PROJECT_STATE.md` è autoritativa.** È quella che ADR,
 artefatti di task e messaggi di commit citano, ed è quella che si usa per aprire un debito nuovo —
-il prossimo numero libero è **`TD-38`**.
+il prossimo numero libero è quello indicato in fondo alla §5.
 
 `docs/audit/TECHNICAL_DEBT.md` è uno **snapshot datato**: la fotografia di ciò che TASK-000 trovò
 nel repository iniziale. **Non va rinumerato e non va aggiornato come se fosse vivo.** Riscriverne
@@ -112,7 +112,21 @@ ferma a `TD-22`.
 | **TD-39** | Una run in corso non si può cancellare: si attende la fine o il timeout di lettura (10 min) | **aperto**, MINOR | TASK-019 |
 | **TD-40** | Nessuna contabilità né limite di costo per le run su modelli a consumo (`anthropic`): i token sono registrati per run, mai sommati o limitati | **aperto**. Innocuo finché `ANTHROPIC_API_KEY` non è impostata; **da chiudere prima** di abilitarla in modo non presidiato | TASK-019 |
 
-**Prossimo identificatore libero: `TD-41`.**
+| **TD-40** *(nota PHASE 8)* | Ora vale anche per OpenRouter (`AICOS_ENGINE_OPENROUTER_API_KEY`). La scheda Consumi **somma** i token delle run a consumo per finestra, ma non **limita** nulla | **aperto** — contabilità parziale, limite assente; resta il prerequisito di PHASE 19 | PHASE 8 |
+| **TD-41** | La fase di un task passa a `IN_PROGRESS`/`DONE` da handoff e review **senza lock di riga** sulla fase: un'approvazione concorrente può produrre un conflitto di `@Version` (500) invece di un 409 | **aperto**, MINOR | PHASE 11 |
+| **TD-42** | Il terminale integrato nella pagina (PTY nel browser) non esiste: la scheda Terminale apre Windows Terminal nella cartella del progetto | **aperto** → PHASE 15 | PHASE 8 |
+| **TD-43** | Una generazione di piano non si può annullare; col 9B locale dura ~13 minuti (misurato) | **aperto**, MINOR | PHASE 10 |
+| **TD-44** | Gmail, Drive, ClickUp, ChatGPT web, Gemini non sono incorporabili (policy di framing misurate): si aprono in finestre dedicate | **aperto** → PHASE 18, **decisione umana** (shell desktop, credenziali OAuth) | PHASE 8 |
+| **TD-45** | Nessuna metrica di apprendimento né suggerimento automatico del livello di autonomia (ADR-022 §5) | **aperto** | PHASE 11 |
+| **TD-46** | Graph engineering: il Second Brain mostra il grafo dell'ecosistema, ma non esistono ancora dependency graph e code graph del codice di un progetto | **aperto** → PHASE 16 | PHASE 14 |
+| **TD-47** | I tipi della console per le risposte annidate usano `Deep<T>`: la nullabilità dei campi interni non è espressa dal contratto generato | **aperto**, MINOR | PHASE 9 |
+| **TD-48** | Associare un MCP o un tool a un agente è metadato: AI Company OS non installa né configura il server MCP nello strumento che lo userà | **aperto** | PHASE 12 |
+| **TD-49** | Gli handoff aprono la TUI di OpenCode; l'API locale di `opencode serve` non è ancora usata per seguire l'esecuzione | **aperto** | PHASE 11 |
+| **TD-50** | Quote: Codex è misurato solo fino all'ultima sessione locale; il reset settimanale di Claude va impostato a mano; nessuna API espone le quote degli abbonamenti | **aperto**, vincolo esterno | PHASE 8 |
+| **TD-51** | `llama3.2:3b` è `DEPRECATED` (sostituto `qwen3.5:4b` verificato) ma resta il modello degli agenti del seed: migrare quegli agenti è una scelta dell'operatore sui suoi dati, poi il modello si può rimuovere | **aperto** | PHASE 8 |
+| **TD-52** | Il ruolo `CODER` è coperto da `deepseek-coder-v2:16b` (2024, senza tool calling); il candidato `qwen3-coder:30b` (19 GB) attende una decisione umana su disco e RAM | **aperto**, decisione umana | PHASE 8 |
+
+**Prossimo identificatore libero: `TD-53`.**
 
 ## 6. Come si apre un debito nuovo
 

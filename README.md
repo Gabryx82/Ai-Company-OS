@@ -1,33 +1,43 @@
 # AI Company OS
 
-A local-first control plane for running a software company with AI agents, with a human at the
-centre: projects, agents, tasks, and agents executing tasks through local or cloud models — every
-step recorded, every result reviewed by the operator before the work is closed.
+A local-first operating environment for building software with AI, with a human at the centre.
+The **Master Orchestrator** turns a project's master prompt into an implementation plan of phases
+and tasks, chooses agent, model, software and context for each task, and hands the work to the
+local AI Engine or to the operator's own tools — Claude Code, Codex, Antigravity, OpenCode — while
+the operator approves plans and phases and reviews every outcome.
 
 ## What exists today
 
 | Part | Stack | Where |
 |---|---|---|
 | **Control plane** | Java 21, Spring Boot 4.1, PostgreSQL 17, Flyway | `backend/` |
-| **AI Engine** (model gateway) | Python ≥ 3.11, FastAPI; providers `echo`, Ollama (local), Anthropic (cloud, off without a key) | `ai-engine/` |
-| **Operator console** | React 19, TypeScript, Vite | `frontend/` |
+| **AI Engine** (model gateway) | Python ≥ 3.11, FastAPI; providers `echo`, Ollama (local), Anthropic and OpenRouter (cloud, off without a key) | `ai-engine/` |
+| **Operator console** | React 19, TypeScript, Vite, d3-force | `frontend/` |
 | **API contract** | OpenAPI, generated from the code and held to it by a test | `docs/api/openapi.json` |
+
+The console covers: dashboard, projects (type, stack, workspace folder, master prompt, plan,
+phase approvals, documents, references), tasks with the orchestrator's decision, handoffs and
+reviews, agents with sub-agents, prompt engineering and harness, Daily Work, the Second Brain graph,
+the Software Hub (detection and launch of the programs installed on this machine), terminal,
+integrations (Open WebUI and 3D Omniverse embedded), Knowledge Hub, Mockup Hub, models and usage.
 
 ## Start it
 
 Prerequisites: Docker Desktop, JDK 21, Python 3.11+, Node 22+. Optional: [Ollama](https://ollama.com)
-with a model (`ollama pull llama3.2:3b`) for real local completions.
+with a model (`ollama pull qwen3.5:4b`) for real local completions.
 
 ```powershell
 .\scripts\start-dev.ps1
 ```
 
 Then open <http://localhost:5173> and sign in with the operator token (`dev-operator-token-change-me`
-in development unless `AICOS_OPERATOR_TOKEN` is set). Manual steps, every endpoint, profiles and the
-database: [`docs/RUNNING.md`](docs/RUNNING.md).
+in development unless `AICOS_OPERATOR_TOKEN` is set). The control plane listens on port **8081**
+(8080 belongs to Open WebUI). Manual steps, every endpoint, profiles and the database:
+[`docs/RUNNING.md`](docs/RUNNING.md).
 
 ## How it is built
 
 Decisions are ADRs in [`docs/adr/`](docs/adr/); the state of the project is
-[`.company-os/PROJECT_STATE.md`](.company-os/PROJECT_STATE.md). CI runs the three suites — control
+[`.company-os/PROJECT_STATE.md`](.company-os/PROJECT_STATE.md), the plan ahead
+[`.company-os/ROADMAP_V2.md`](.company-os/ROADMAP_V2.md). CI runs the three suites — control
 plane, engine, console — on every push.
