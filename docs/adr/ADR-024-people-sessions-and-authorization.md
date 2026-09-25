@@ -80,6 +80,12 @@ del browser. Nuove intestazioni su ogni risposta: `Content-Security-Policy: defa
 frame-ancestors 'none'` (l'API non serve pagine), `Referrer-Policy: no-referrer`, oltre a
 `X-Content-Type-Options`, `X-Frame-Options` e `Cache-Control` già messi da Spring Security.
 
+## 7b. Niente utente di default
+
+L'utente in memoria che Spring Boot crea quando non trova un `UserDetailsService` è escluso
+(`spring.autoconfigure.exclude`): non serviva, e scriveva una password generata nel log — trovato nello
+smoke dal vivo di PHASE 27, fissato da `AuthApiTest`. In produzione `/v3/api-docs` è spento.
+
 ## 8. Che cosa non fa, di proposito
 
 Niente OAuth/OIDC, niente MFA, niente password reset via email: un prodotto locale con un

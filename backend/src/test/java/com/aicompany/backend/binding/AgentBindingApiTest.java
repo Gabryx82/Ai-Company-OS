@@ -191,6 +191,28 @@ class AgentBindingApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:binding-invalid"));
     }
 
+    @Autowired
+    private com.aicompany.backend.harness.service.AgentTemplates templates;
+
+    /** PHASE 27: a template agent from before PHASE 16 is recognised, and nothing it has is called "changed". */
+    @Test
+    void aTemplateAgentFromBeforeOriginsExistedIsRecognisedAtStartup() throws Exception {
+        MvcResult created = mockMvc.perform(post("/api/agents").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Codex Engineer\",\"role\":\"Software Engineer\",\"specialization\":\"old\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        long id = json.readTree(created.getResponse().getContentAsString()).path("id").asLong();
+        assertThat(configuration(id).path("origin").asString()).isEqualTo("USER");
+
+        templates.recordTemplateOrigins();
+
+        JsonNode after = configuration(id);
+        assertThat(after.path("origin").asString()).isEqualTo("TEMPLATE");
+        assertThat(after.path("modified")).isEmpty();
+        long plain = agent("Binding Not A Template");
+        templates.recordTemplateOrigins();
+        assertThat(configuration(plain).path("origin").asString()).isEqualTo("USER");
+    }
+
     @Test
     void theEcosystemListsEveryAgentWithItsWholeChain() throws Exception {
         long id = agent("Binding Listed");

@@ -67,8 +67,11 @@ public class EcosystemService {
     private final long pollMillis;
     private final ExecutorService waiting = Executors.newVirtualThreadPerTaskExecutor();
 
-    public EcosystemService(JdbcTemplate jdbc, SoftwareService software, SecurityLog log,
+    private final ProcessProbe processes;
+
+    public EcosystemService(JdbcTemplate jdbc, SoftwareService software, SecurityLog log, ProcessProbe processes,
                             @Value("${aicos.ecosystem.poll-millis:2000}") long pollMillis) {
+        this.processes = processes;
         this.jdbc = jdbc;
         this.software = software;
         this.log = log;
@@ -145,6 +148,12 @@ public class EcosystemService {
         SoftwareService.Detected detected = software.findByKey(key);
         if (detected.detection().availability() == Availability.RUNNING) {
             record(key, Status.ALREADY_RUNNING, "Già attivo su " + detected.software().getUrl() + ": nessun nuovo avvio.");
+            return view(jdbc.queryForMap("SELECT * FROM ecosystem_autostart WHERE software_key = ?", key));
+        }
+        if (processes.isRunning(detected.detection().executable())) {
+            record(key, Status.ALREADY_RUNNING, "L'applicazione è già aperta, ma il suo servizio non risponde"
+                    + (detected.software().getHealthUrl() == null ? "" : " su " + detected.software().getHealthUrl())
+                    + ": avvialo dall'applicazione. Nessun nuovo avvio.");
             return view(jdbc.queryForMap("SELECT * FROM ecosystem_autostart WHERE software_key = ?", key));
         }
         LaunchPlan plan;

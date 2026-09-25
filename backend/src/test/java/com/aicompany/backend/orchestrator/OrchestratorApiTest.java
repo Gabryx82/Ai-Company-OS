@@ -291,4 +291,14 @@ class OrchestratorApiTest extends AbstractPostgresTest {
         assertThat(engine.requests()).isNotEmpty();
         return engine.requests().getLast();
     }
+
+    /** PHASE 27: found by the live smoke -- the decision must say why an archived project's task cannot move. */
+    @Test
+    void anArchivedProjectIsABlockerOfTheDecision() throws Exception {
+        String projectTag = mockMvc.perform(get("/api/projects/" + projectId)).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+        mockMvc.perform(post("/api/projects/" + projectId + "/archive").header(HttpHeaders.IF_MATCH, projectTag))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/tasks/" + task(0) + "/orchestration"))
+                .andExpect(jsonPath("$.blockers[0]").value(org.hamcrest.Matchers.containsString("archiviato")));
+    }
 }

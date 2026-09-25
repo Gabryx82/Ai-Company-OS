@@ -47,6 +47,23 @@ class EcosystemApiTest extends AbstractPostgresTest {
     /** Installed but not running: what the real detector reports for a stopped local service. */
     private static final Detection STOPPED = new Detection(Availability.STOPPED, "not answering", FakeHost.FAKE_EXECUTABLE);
 
+    @org.junit.jupiter.api.AfterEach
+    void nothingRunning() {
+        com.aicompany.backend.support.FakeHostConfiguration.RUNNING.clear();
+    }
+
+    /** PHASE 27 (found live): the app is open, its service does not answer -- it is not opened a second time. */
+    @Test
+    void anAppAlreadyOpenIsNotOpenedAgainEvenIfItsServiceDoesNotAnswer() throws Exception {
+        host.script("open-webui", STOPPED);
+        com.aicompany.backend.support.FakeHostConfiguration.RUNNING.add(FakeHost.FAKE_EXECUTABLE);
+        mockMvc.perform(post("/api/ecosystem/services/open-webui/start"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lastStatus").value("ALREADY_RUNNING"))
+                .andExpect(jsonPath("$.lastMessage").value(org.hamcrest.Matchers.containsString("avvialo dall'applicazione")));
+        assertThat(host.launches()).isEmpty();
+    }
+
     @BeforeEach
     void theDefaults() {
         host.script("omniverse-3d", STOPPED);

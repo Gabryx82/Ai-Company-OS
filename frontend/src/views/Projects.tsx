@@ -4,20 +4,10 @@ import { DeleteDialog } from "../components/DeleteDialog";
 import type { TasksPolicy } from "../api/types";
 import type { AutonomyLevel, Project, ProjectType, ProjectTypeInfo, Task } from "../api/types";
 import { Field, Modal, ProblemNote } from "../components/ui";
-import { Icon, type IconName } from "../components/icons";
+import { Icon } from "../components/icons";
+import { AUTONOMY, TYPE_ICON } from "./projectLabels";
+
 import { ProjectDetail } from "./ProjectDetail";
-
-export const TYPE_ICON: Record<string, IconName> = {
-  WEB_APP: "dashboard", BACKEND: "models", MOBILE: "file", DESKTOP: "mockups", AI_ML: "sparkle", GAME: "play",
-  THREE_D: "models", DATA: "usage", AUTOMATION: "refresh", API: "integrations", FULL_STACK: "software", OTHER: "plus",
-};
-
-export const AUTONOMY: Record<AutonomyLevel, { label: string; hint: string }> = {
-  GUIDED: { label: "Guidato — imparo facendo", hint: "Scrivi tu il codice; gli agenti spiegano, chiedono e verificano." },
-  SUPERVISED: { label: "Supervisionato", hint: "Gli agenti propongono lavoro completo; tu integri e controlli." },
-  DELEGATED: { label: "Delegato", hint: "Gli agenti implementano, testano e documentano; tu revisioni." },
-  FINAL_REVIEW: { label: "Solo review finale", hint: "Gli agenti coordinano; tu fai la verifica finale." },
-};
 
 const PLAN_LABEL: Record<string, { label: string; tone: string }> = {
   NONE: { label: "Senza piano", tone: "badge" },

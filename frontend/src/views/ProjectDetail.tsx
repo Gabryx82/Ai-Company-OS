@@ -8,7 +8,7 @@ import { PriorityBadge, ProblemNote, StatusBadge, when } from "../components/ui"
 import { AppIcon } from "../components/AppIcon";
 import { Icon } from "../components/icons";
 import { TaskDrawer } from "./TaskDrawer";
-import { AUTONOMY } from "./Projects";
+import { AUTONOMY } from "./projectLabels";
 import { useLauncher } from "./SoftwareHub";
 
 const TABS = ["Panoramica", "Master Prompt", "Piano", "Documenti", "Codice", "Reference", "Strumenti"] as const;

@@ -96,7 +96,9 @@ class PreconditionCoverageTest {
             "ensureDefaults", "add", "start", "startAll",
             // PHASE 24 (ADR-031): setBudget creates a budget without a tag and replaces one only with its tag
             // (an Optional precondition, required when the row exists -- tested in CostGovernanceApiTest).
-            "setBudget");
+            "setBudget",
+            // PHASE 27: at startup, template agents that predate PHASE 16 get their origin recorded.
+            "recordTemplateOrigins");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {
@@ -203,7 +205,8 @@ class PreconditionCoverageTest {
                 .containsExactlyInAnyOrder("create", "configure:Precondition", "attach", "detach", "allowSoftware",
                         "disallowSoftware", "adopt", "drop");
 
-        assertThat(writePaths(AgentTemplates.class)).containsExactlyInAnyOrder("install", "installAll");
+        assertThat(writePaths(AgentTemplates.class)).containsExactlyInAnyOrder("install", "installAll",
+                "recordTemplateOrigins");
 
         // PHASE 20 (ADR-027): a delete is a write to the row it removes, under its tag.
         assertThat(writePaths(DeletionService.class))

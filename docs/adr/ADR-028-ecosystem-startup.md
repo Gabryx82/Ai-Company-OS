@@ -19,6 +19,10 @@ dell'ecosistema marcati «autoavvio», nell'ordine configurato. Default su un da
 Per ciascuno:
 
 1. **già attivo?** (risponde il suo URL di salute) → `ALREADY_RUNNING`, **nessun nuovo avvio**;
+   **già aperto?** (il suo eseguibile è in esecuzione, anche se il servizio non risponde ancora) →
+   `ALREADY_RUNNING` con l'indicazione di avviare il servizio dall'app — trovato nello smoke dal vivo di
+   PHASE 27: l'app desktop di Open WebUI resta aperta col server spento, e ogni riavvio la riapriva.
+   I lanciatori generici (PowerShell, cmd, …) non contano come prova;
 2. altrimenti lo avvia **come il Software Hub** (ADR-019: eseguibile e argomenti del catalogo, con le
    variabili d'ambiente, senza shell) → `STARTING`, evento `PROCESS_STARTED` nel registro;
 3. in background interroga il suo URL di salute finché risponde (`RUNNING`) o finché scade l'attesa

@@ -95,6 +95,39 @@ public class AgentTemplates {
         return out;
     }
 
+    /**
+     * PHASE 27: agents installed from a template before PHASE 16 recorded no
+     * origin and showed as the operator's own. At startup, an agent with no
+     * baseline whose name and role are a template's is marked TEMPLATE. Its
+     * baseline is its configuration as it is now: what happened before PHASE 16
+     * cannot be reconstructed, and comparing with today's template would call
+     * "changed by you" what only the template changed. Idempotent.
+     */
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    @Transactional
+    public void recordTemplateOrigins() {
+        List<Template> flat = new ArrayList<>();
+        templates.forEach(t -> flatten(t, flat));
+        for (Agent agent : agents.findAllByOrderByIdAsc()) {
+            if (agent.getOrigin() != AgentOrigin.USER || agent.getBaseline() != null) {
+                continue;
+            }
+            boolean fromTemplate = flat.stream()
+                    .anyMatch(t -> t.name().equalsIgnoreCase(agent.getName()) && t.role().equalsIgnoreCase(agent.getRole()));
+            if (fromTemplate) {
+                HarnessService.AgentHarness h = harness.of(agent.getId());
+                agent.recordOrigin(AgentOrigin.TEMPLATE, AgentConfigurationService.baselineOf(agent,
+                        h.resources().stream().map(r -> r.getKey()).toList(),
+                        h.software().stream().map(s -> s.getKey()).toList()));
+            }
+        }
+    }
+
+    private static void flatten(Template t, List<Template> out) {
+        out.add(t);
+        t.children().forEach(c -> flatten(c, out));
+    }
+
     private void install(Template t, Long parentId, List<Installed> out) {
         Optional<Agent> existing = agents.findAllByOrderByIdAsc().stream()
                 .filter(a -> a.getName().equalsIgnoreCase(t.name())).findFirst();

@@ -59,6 +59,20 @@ public class FakeHostConfiguration {
 
     private static final FakeRemoteText WEB = new FakeRemoteText();
 
+    /** PHASE 27: which executables the fake machine has running; nothing unless a test says so. */
+    public static final java.util.Set<java.nio.file.Path> RUNNING = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    @Bean
+    @Primary
+    com.aicompany.backend.ecosystem.ProcessProbe fakeProcessProbe() {
+        return new com.aicompany.backend.ecosystem.ProcessProbe() {
+            @Override
+            public boolean isRunning(java.nio.file.Path executable) {
+                return executable != null && RUNNING.contains(executable);
+            }
+        };
+    }
+
     /** PHASE 19: the skill import never reaches the network in tests. */
     @Bean
     @Primary

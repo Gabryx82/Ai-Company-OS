@@ -125,6 +125,10 @@ public class OrchestrationService {
         Optional<PlanDocument.TaskPlan> planned = plannedTask(task);
 
         List<String> blockers = new ArrayList<>();
+        // PHASE 27 (found by the live smoke): an archived project freezes its tasks; say so here.
+        if (project != null && project.isArchived()) {
+            blockers.add("Il progetto è archiviato: ripristinalo per lavorare alle sue task.");
+        }
         if (task.getStatus() == TaskStatus.DONE) {
             blockers.add("La task è già completata: riaprila per lavorarci ancora.");
         }

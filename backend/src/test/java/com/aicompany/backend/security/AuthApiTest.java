@@ -234,6 +234,16 @@ class AuthApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:unauthenticated"));
     }
 
+    @Autowired
+    private org.springframework.context.ApplicationContext context;
+
+    /** Spring Boot's default user would print a generated password to the log (found in the PHASE 27 smoke). */
+    @Test
+    void thereIsNoDefaultInMemoryUserWhosePasswordWouldReachTheLog() {
+        assertThat(context.getBeanNamesForType(
+                org.springframework.security.core.userdetails.UserDetailsService.class)).isEmpty();
+    }
+
     @Test
     void responsesCarryTheSecurityHeaders() throws Exception {
         mockMvc.perform(get("/api/projects"))
