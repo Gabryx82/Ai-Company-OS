@@ -125,6 +125,9 @@ public class SecurityConfiguration {
                         // every destructive delete.
                         .requestMatchers(ADMIN_ONLY).hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, ADMIN_ONLY_DELETES).hasRole("ADMIN")
+                        // What the launcher may execute is an admin's decision (PHASE 21).
+                        .requestMatchers(HttpMethod.POST, "/api/software").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/software/*").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(entryPoint)

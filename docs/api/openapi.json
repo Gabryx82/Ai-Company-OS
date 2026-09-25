@@ -182,6 +182,23 @@
         "required" : [ "name", "role", "specialization" ],
         "type" : "object"
       },
+      "Autostart" : {
+        "properties" : {
+          "autostart" : {
+            "type" : "boolean"
+          },
+          "position" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "timeoutSeconds" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "autostart", "position", "timeoutSeconds" ],
+        "type" : "object"
+      },
       "Binding" : {
         "properties" : {
           "model" : {
@@ -1174,6 +1191,16 @@
         },
         "type" : "object"
       },
+      "NewService" : {
+        "properties" : {
+          "key" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "key" ],
+        "type" : "object"
+      },
       "NewUser" : {
         "properties" : {
           "displayName" : {
@@ -2008,6 +2035,55 @@
         },
         "type" : "object"
       },
+      "ServiceView" : {
+        "properties" : {
+          "autostart" : {
+            "type" : "boolean"
+          },
+          "availability" : {
+            "type" : "string"
+          },
+          "command" : {
+            "type" : "string"
+          },
+          "healthUrl" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "lastAttemptAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "lastMessage" : {
+            "type" : "string"
+          },
+          "lastStatus" : {
+            "enum" : [ "NEVER", "ALREADY_RUNNING", "STARTING", "RUNNING", "FAILED" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "position" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "timeoutSeconds" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "SoftwareChoice" : {
         "properties" : {
           "availability" : {
@@ -2779,6 +2855,77 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/admin/ecosystem/services" : {
+      "post" : {
+        "operationId" : "add",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewService"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ServiceView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ecosystem-controller" ]
+      }
+    },
+    "/api/admin/ecosystem/services/{key}" : {
+      "put" : {
+        "operationId" : "configure_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Autostart"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ServiceView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ecosystem-controller" ]
+      }
+    },
     "/api/admin/security-events" : {
       "get" : {
         "operationId" : "events",
@@ -3904,6 +4051,74 @@
           }
         },
         "tags" : [ "agent-configuration-controller" ]
+      }
+    },
+    "/api/ecosystem/services" : {
+      "get" : {
+        "operationId" : "services",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ServiceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ecosystem-controller" ]
+      }
+    },
+    "/api/ecosystem/services/{key}/start" : {
+      "post" : {
+        "operationId" : "start_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ServiceView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ecosystem-controller" ]
+      }
+    },
+    "/api/ecosystem/start-all" : {
+      "post" : {
+        "operationId" : "startAll",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ServiceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ecosystem-controller" ]
       }
     },
     "/api/engine/models" : {

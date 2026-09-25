@@ -4,6 +4,38 @@
  */
 
 export interface paths {
+    "/api/admin/ecosystem/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/ecosystem/services/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["configure_3"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/security-events": {
         parameters: {
             query?: never;
@@ -462,6 +494,54 @@ export interface paths {
         get: operations["bindings"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ecosystem/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["services"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ecosystem/services/{key}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["start_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ecosystem/start-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["startAll"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1409,6 +1489,13 @@ export interface components {
             role: string;
             specialization: string;
         };
+        Autostart: {
+            autostart: boolean;
+            /** Format: int32 */
+            position: number;
+            /** Format: int32 */
+            timeoutSeconds: number;
+        };
         Binding: {
             model?: components["schemas"]["ModelRef"];
             problems?: string[];
@@ -1748,6 +1835,9 @@ export interface components {
             /** Format: int64 */
             tokens?: number;
         };
+        NewService: {
+            key: string;
+        };
         NewUser: {
             displayName?: string;
             initialPassword: string;
@@ -2045,6 +2135,26 @@ export interface components {
             outcome?: "CREATED" | "EXISTING";
             path?: string;
         };
+        ServiceView: {
+            autostart?: boolean;
+            availability?: string;
+            command?: string;
+            healthUrl?: string;
+            key?: string;
+            /** Format: date-time */
+            lastAttemptAt?: string;
+            lastMessage?: string;
+            /** @enum {string} */
+            lastStatus?: "NEVER" | "ALREADY_RUNNING" | "STARTING" | "RUNNING" | "FAILED";
+            name?: string;
+            /** Format: int32 */
+            position?: number;
+            /** Format: int32 */
+            timeoutSeconds?: number;
+            url?: string;
+            /** Format: int64 */
+            version?: number;
+        };
         SoftwareChoice: {
             /** @enum {string} */
             availability?: "INSTALLED" | "NOT_INSTALLED" | "WEB" | "RUNNING" | "STOPPED" | "INCOMPATIBLE_HARDWARE" | "UNKNOWN";
@@ -2302,6 +2412,58 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewService"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServiceView"];
+                };
+            };
+        };
+    };
+    configure_3: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Autostart"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServiceView"];
+                };
+            };
+        };
+    };
     events: {
         parameters: {
             query?: {
@@ -3188,6 +3350,68 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ConfigurationResponse"][];
+                };
+            };
+        };
+    };
+    services: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServiceView"][];
+                };
+            };
+        };
+    };
+    start_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServiceView"];
+                };
+            };
+        };
+    };
+    startAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServiceView"][];
                 };
             };
         };

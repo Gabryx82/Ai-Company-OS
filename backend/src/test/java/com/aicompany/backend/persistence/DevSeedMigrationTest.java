@@ -30,7 +30,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = {
         "AICOS_HOME=${java.io.tmpdir}/aicos-devseed-test-home",
         "aicos.home=${java.io.tmpdir}/aicos-devseed-test-home",
-        "aicos.security.admin.password=devseed-test-secret-42"})
+        "aicos.security.admin.password=devseed-test-secret-42",
+        // PHASE 21: a test never starts programs on the developer's machine.
+        "aicos.ecosystem.autostart=false",
+        "aicos.launcher.enabled=false"})
 @ActiveProfiles("dev")
 @Import(PostgresTestcontainerConfig.class)
 class DevSeedMigrationTest {
@@ -86,7 +89,7 @@ class DevSeedMigrationTest {
         // The schema stream is the same one production runs: schema versions and
         // nothing else. No seed version may ever appear here.
         assertThat(versionsIn(DevSeedFlyway.SCHEMA_HISTORY_TABLE))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23");
 
         // The seed keeps its own history, so it never constrains schema versions.
         // "0" is the baseline row written because the schema stream had already

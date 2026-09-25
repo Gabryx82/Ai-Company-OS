@@ -13,7 +13,7 @@ import type {
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
-  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy,
+  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, EcosystemServiceInfo,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -496,6 +496,25 @@ export class ControlPlane {
     } catch {
       return null;
     }
+  }
+
+  // --- the ecosystem's start (ADR-028) -----------------------------------------
+
+  ecosystemServices(): Promise<EcosystemServiceInfo[]> {
+    return this.plain("GET", "/api/ecosystem/services");
+  }
+
+  startEcosystemService(key: string): Promise<EcosystemServiceInfo> {
+    return this.plain("POST", `/api/ecosystem/services/${encodeURIComponent(key)}/start`);
+  }
+
+  startEcosystem(): Promise<EcosystemServiceInfo[]> {
+    return this.plain("POST", "/api/ecosystem/start-all");
+  }
+
+  configureEcosystemService(key: string, version: number, body: { autostart: boolean; position: number; timeoutSeconds: number }):
+    Promise<EcosystemServiceInfo> {
+    return this.plain("PUT", `/api/admin/ecosystem/services/${encodeURIComponent(key)}`, { body, ifMatch: `"${version}"` });
   }
 
   // --- deleting for real (ADR-027) ---------------------------------------------

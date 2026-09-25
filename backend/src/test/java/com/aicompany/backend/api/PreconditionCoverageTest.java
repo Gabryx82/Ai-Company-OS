@@ -17,6 +17,7 @@ import com.aicompany.backend.user.service.AuthService;
 import com.aicompany.backend.binding.AgentConfigurationService;
 import com.aicompany.backend.harness.library.SkillLibrary;
 import com.aicompany.backend.deletion.DeletionService;
+import com.aicompany.backend.ecosystem.EcosystemService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,7 +55,8 @@ class PreconditionCoverageTest {
                     SoftwareService.class, LlmCatalogService.class, UsageService.class,
                     ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class,
                     HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class,
-                    AgentConfigurationService.class, SkillLibrary.class, DeletionService.class);
+                    AgentConfigurationService.class, SkillLibrary.class, DeletionService.class,
+                    EcosystemService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -86,7 +88,11 @@ class PreconditionCoverageTest {
             // PHASE 19 (ADR-026): creating an entry (by hand, from the folder or from the web) is creation;
             // materialize writes the file of an entry that has none and never overwrites; sync reads the folder,
             // which is the source of truth, into the index. Saving the file from the console takes the tag.
-            "materialize", "sync", "importFrom");
+            "materialize", "sync", "importFrom",
+            // PHASE 21 (ADR-028): the defaults are inserted only when missing; add creates a row; starting
+            // records the outcome of launching a process -- the server's bookkeeping, not a client's edit.
+            // Choosing what starts (configure) takes the tag.
+            "ensureDefaults", "add", "start", "startAll");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {

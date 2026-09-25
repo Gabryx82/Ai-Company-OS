@@ -45,9 +45,22 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
             {"key":"my-tool","name":"My Tool","category":"EDITOR","role":"Editor","launchKind":"DESKTOP",
              "executable":"%ProgramFiles%\\\\MyTool\\\\tool.exe","capabilities":["Text-Editing"," logs ","logs"]}""";
 
+    /** PHASE 21: what the launcher may execute is an admin's decision, so catalog writes sign in as one. */
+    private String admin;
+
     @BeforeEach
-    void removeCustomEntries() {
+    void removeCustomEntries() throws Exception {
         repository.findByKey("my-tool").ifPresent(repository::delete);
+        admin = com.aicompany.backend.support.AdminSession.bearer(mockMvc);
+    }
+
+    @Test
+    void anOperatorCannotChangeWhatTheLauncherExecutes() throws Exception {
+        mockMvc.perform(post("/api/software").contentType(MediaType.APPLICATION_JSON).content(CUSTOM))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/software/postman").header(HttpHeaders.IF_MATCH, "\"0\"")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -138,31 +151,31 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
 
     @Test
     void theOperatorAddsAndEditsEntriesUnderThePreconditionProtocol() throws Exception {
-        mockMvc.perform(post("/api/software").contentType(MediaType.APPLICATION_JSON).content(CUSTOM))
+        mockMvc.perform(post("/api/software").header(HttpHeaders.AUTHORIZATION, admin).contentType(MediaType.APPLICATION_JSON).content(CUSTOM))
                 .andExpect(status().isCreated())
                 .andExpect(header().string(HttpHeaders.LOCATION, "/api/software/my-tool"))
                 .andExpect(jsonPath("$.capabilities").value(org.hamcrest.Matchers.contains("text-editing", "logs")));
 
-        mockMvc.perform(post("/api/software").contentType(MediaType.APPLICATION_JSON).content(CUSTOM))
+        mockMvc.perform(post("/api/software").header(HttpHeaders.AUTHORIZATION, admin).contentType(MediaType.APPLICATION_JSON).content(CUSTOM))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:software-key-conflict"));
 
         String edited = CUSTOM.replace("\"My Tool\"", "\"My Tool 2\"");
-        mockMvc.perform(put("/api/software/my-tool").contentType(MediaType.APPLICATION_JSON).content(edited))
+        mockMvc.perform(put("/api/software/my-tool").header(HttpHeaders.AUTHORIZATION, admin).contentType(MediaType.APPLICATION_JSON).content(edited))
                 .andExpect(status().isPreconditionRequired());
-        mockMvc.perform(put("/api/software/my-tool").header(HttpHeaders.IF_MATCH, "\"0\"")
+        mockMvc.perform(put("/api/software/my-tool").header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, "\"0\"")
                         .contentType(MediaType.APPLICATION_JSON).content(edited))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("My Tool 2"))
                 .andExpect(header().string(HttpHeaders.ETAG, "\"1\""));
-        mockMvc.perform(put("/api/software/my-tool").header(HttpHeaders.IF_MATCH, "\"0\"")
+        mockMvc.perform(put("/api/software/my-tool").header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, "\"0\"")
                         .contentType(MediaType.APPLICATION_JSON).content(edited))
                 .andExpect(status().isPreconditionFailed());
     }
 
     @Test
     void aKeyIsAnIdentityAndCannotBeEdited() throws Exception {
-        mockMvc.perform(put("/api/software/postman").header(HttpHeaders.IF_MATCH, "\"0\"")
+        mockMvc.perform(put("/api/software/postman").header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, "\"0\"")
                         .contentType(MediaType.APPLICATION_JSON).content(CUSTOM))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.key").exists());
@@ -170,7 +183,7 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
 
     @Test
     void anEntryThatCouldNotBeOpenedIsRefusedAsAValidationFailure() throws Exception {
-        mockMvc.perform(post("/api/software").contentType(MediaType.APPLICATION_JSON).content("""
+        mockMvc.perform(post("/api/software").header(HttpHeaders.AUTHORIZATION, admin).contentType(MediaType.APPLICATION_JSON).content("""
                         {"key":"broken","name":"Broken","category":"IDE","role":"x","launchKind":"DESKTOP"}"""))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.executable").exists());
@@ -180,7 +193,7 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
     void theBootstrapNeverOverwritesWhatTheOperatorEdited() throws Exception {
         String etag = mockMvc.perform(get("/api/software/notepad-plus-plus")).andReturn()
                 .getResponse().getHeader(HttpHeaders.ETAG);
-        mockMvc.perform(put("/api/software/notepad-plus-plus").header(HttpHeaders.IF_MATCH, etag)
+        mockMvc.perform(put("/api/software/notepad-plus-plus").header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, etag)
                         .contentType(MediaType.APPLICATION_JSON).content("""
                                 {"name":"Notepad++ (mio)","category":"EDITOR","role":"Editor personale",
                                  "launchKind":"DESKTOP","executable":"%ProgramFiles%\\\\Notepad++\\\\notepad++.exe"}"""))

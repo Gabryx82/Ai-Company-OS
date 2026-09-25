@@ -5,6 +5,7 @@ import { ProblemNote } from "../components/ui";
 import { AppIcon } from "../components/AppIcon";
 import { Icon } from "../components/icons";
 import { AVAILABILITY, openWeb, useLauncher } from "./SoftwareHub";
+import { EcosystemPanel } from "../components/EcosystemPanel";
 
 /**
  * The applications that live inside the console, and the ones that cannot.
@@ -64,6 +65,7 @@ export function Integrations({ selected, navigate }: { selected: string | null; 
         </div>
       </div>
       <ProblemNote problem={problem} />
+      <EcosystemPanel />
 
       <div className="section-title">Dentro la console</div>
       <div className="tile-grid">

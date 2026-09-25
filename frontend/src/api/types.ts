@@ -244,3 +244,12 @@ export interface DeletionImpact {
   notes: string[];
 }
 export type TasksPolicy = "DETACH" | "DELETE";
+
+// --- PHASE 21: the ecosystem starts with AI Company OS (ADR-028) -----------------------
+
+export type EcosystemStatus = "NEVER" | "ALREADY_RUNNING" | "STARTING" | "RUNNING" | "FAILED";
+export interface EcosystemServiceInfo {
+  key: string; name: string; url: string | null; healthUrl: string | null; command: string | null; availability: string;
+  autostart: boolean; position: number; timeoutSeconds: number; lastStatus: EcosystemStatus; lastMessage: string | null;
+  lastAttemptAt: string | null; version: number;
+}

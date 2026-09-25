@@ -5,6 +5,7 @@ import { useApi } from "../context";
 import { displayName, setDisplayName } from "../preferences";
 import { Field, Modal, ProblemNote, when } from "../components/ui";
 import { Icon } from "../components/icons";
+import { EcosystemPanel } from "../components/EcosystemPanel";
 
 const EVENT_LABELS: Record<string, string> = {
   LOGIN_SUCCEEDED: "Accesso riuscito", LOGIN_FAILED: "Accesso fallito", ACCOUNT_LOCKED: "Account bloccato",
@@ -28,6 +29,7 @@ export function Settings({ session, onPasswordChanged }: { session: Session; onP
             <p className="muted">Questa console usa un token di servizio, non un account: non c'è una password da cambiare.</p></div>
         )}
       </div>
+      <EcosystemPanel manage />
       {isAdmin && <UsersCard self={session.user!} />}
       {isAdmin && <SecurityLogCard />}
     </div>

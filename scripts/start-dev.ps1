@@ -143,3 +143,5 @@ if (-not $up) {
 Write-Host "Console:        http://localhost:5173" -ForegroundColor Green
 Write-Host "Control plane:  http://localhost:8081   (sign in as admin: .\scripts\init-local-secrets.ps1 -Show)"
 Write-Host "AI Engine:      http://127.0.0.1:8090   (local models through Ollama if it is running)"
+Write-Host "Ecosystem:      Ollama, Open WebUI and 3D Omniverse start with the control plane when marked so"
+Write-Host "                (Impostazioni > Ecosistema all'avvio); one that fails does not stop the others."
