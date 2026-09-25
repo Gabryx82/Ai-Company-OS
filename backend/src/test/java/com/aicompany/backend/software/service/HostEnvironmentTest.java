@@ -18,15 +18,23 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class HostEnvironmentTest {
 
     @Test
-    void findsTheStoreAliasFirstThenThePath(@TempDir Path root) throws IOException {
-        Path apps = Files.createDirectories(root.resolve("Local/Microsoft/WindowsApps"));
+    void findsATerminalInstalledOnThePath(@TempDir Path root) throws IOException {
         Path elsewhere = Files.createDirectories(root.resolve("Terminal"));
         Files.createFile(elsewhere.resolve("wt.exe"));
         String path = root.resolve("nothing-here") + File.pathSeparator + elsewhere;
 
         assertThat(HostEnvironment.findWindowsTerminal(Map.of("LOCALAPPDATA", root.resolve("Local").toString(), "Path", path)))
                 .contains(elsewhere.resolve("wt.exe"));
+    }
 
+    /** Windows only: the alias location is a Windows path template, backslashes and all. */
+    @Test
+    @EnabledOnOs(OS.WINDOWS)
+    void prefersTheStoreAliasOverThePath(@TempDir Path root) throws IOException {
+        Path apps = Files.createDirectories(root.resolve("Local/Microsoft/WindowsApps"));
+        Path elsewhere = Files.createDirectories(root.resolve("Terminal"));
+        Files.createFile(elsewhere.resolve("wt.exe"));
+        String path = elsewhere.toString();
         Files.createFile(apps.resolve("wt.exe"));
         assertThat(HostEnvironment.findWindowsTerminal(Map.of("LOCALAPPDATA", root.resolve("Local").toString(), "Path", path)))
                 .contains(apps.resolve("wt.exe"));
