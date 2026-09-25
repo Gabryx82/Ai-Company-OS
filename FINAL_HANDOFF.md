@@ -1,338 +1,313 @@
-# FINAL HANDOFF — Riallineamento V2, PHASE 8 → PHASE 14
+# FINAL HANDOFF — Consolidamento, PHASE 15 → PHASE 27
 
-> **Da accettare.** Scritto per la Human Final Review richiesta dalla direttiva del 2026-09-24
-> («riallineamento architetturale prima del merge»). Nessun agente esegue il merge in `master`
-> (charter §8): è il gesto con cui un umano accetta il lavoro.
+> **Da accettare.** Scritto per la Human Final Review richiesta dalla direttiva del 2026-09-25 (UX,
+> orchestrazione, configurabilità, agenti, sicurezza, completamento della roadmap). Nessun agente
+> esegue il merge in `master` senza la tua autorizzazione (charter §8).
 >
-> Handoff precedenti: `docs/handoff/FINAL_HANDOFF_PHASE_3_7.md` (PHASE 3–7),
-> `docs/handoff/FINAL_HANDOFF_PHASE_2.md`, `docs/handoff/FINAL_HANDOFF_PHASE_1.md`.
+> Handoff precedenti: `docs/handoff/FINAL_HANDOFF_PHASE_8_14.md`, `…_PHASE_3_7.md`, `…_PHASE_2.md`,
+> `…_PHASE_1.md`.
 
-- **`master`**: `d166870`, **intoccato**. Nessun force-push, nessuna history riscritta.
-- **Da rivedere**: `autonomous/phase-8-ecosystem-realignment` (10 commit sopra
-  `autonomous/phase-7-operator-console` = `670b6bf`, che resta intatto). La catena è lineare:
-  `master → phase-3 → … → phase-7 → phase-8-ecosystem-realignment`. Un solo fast-forward integra
-  PHASE 3–14.
-- **Suite**: **417** Java (416 verdi + 1 saltato: link simbolici su Windows senza privilegi) + **56** AI
-  Engine + **18** console = **490 verdi**. **CI verde** su `1835162` e su ogni commit precedente del blocco.
-- **Stream**: `V11` → **`V19`**, tutte additive. **Live DB `aicompany`: `V11`** (migrato
-  dall'operatore durante la review di PHASE 3–7); al primo avvio del nuovo backend riceverà V12–V19.
-- **MU-OS raggiunto** (fine PHASE 11) e **verificato dal vivo** sulla macchina dell'operatore.
+- **`master`**: `e9c928c` (PHASE 3–14, integrate il 2026-09-25 con un fast-forward da te autorizzato).
+- **Da rivedere**: `autonomous/phase-15-hardening`, 11 commit lineari sopra `master`, pushato. Un
+  solo fast-forward integra tutto.
+- **Suite**: **470** Java (469 verdi + 1 saltato su Windows) + **58** AI Engine + **27** console.
+  CI verde su ogni commit del blocco fino all'ultimo verificato.
+- **Stream**: `V19` → **`V24`** (tutte additive); seed di sviluppo `V1` → **`V2`**.
+- **Smoke dal vivo**: **31/31** sul clone `aicompany_p8`, con Ollama e DeepSeek reali.
 
 ---
 
-## 1. Visione / Gap
+## 1. Fasi completate
 
-Documento completo: [`docs/realignment/GAP_ANALYSIS_V2.md`](docs/realignment/GAP_ANALYSIS_V2.md).
-
-PHASE 3–7 avevano costruito un **task tracker con esecuzione LLM**: sicurezza, ciclo di vita dei
-task, AI Engine, run, console. La visione chiede un **ecosistema operativo**: progetti con un
-workflow Idea → Master Prompt → Piano → Fasi → Task → Esecuzione → Review, un orchestratore che
-sceglie agente/modello/software/contesto, un hub dei programmi della macchina, agenti con harness,
-un secondo cervello. La gap analysis ha misurato — non supposto — che cosa c'era, che cosa mancava
-e che cosa era impossibile:
-
-| Area | Prima (PHASE 7) | Ora (PHASE 14) |
+| Fase | Contenuto | ADR |
 |---|---|---|
-| Progetto | nome + descrizione | tipo, stack, cartella di lavoro, livello di autonomia, stato del piano, documenti |
-| Piano | assente | `MASTER_PROMPT.md` → `.aicos/plan.json` → `IMPLEMENTATION_PLAN.md`, `PHASE_X.md`, `TASK-XXX.md` |
-| Orchestratore | assente (sostituito in PHASE 6 da un router lessicale) | decisione motivata, handoff, review |
-| Human-in-the-loop | approvazione implicita | gate per fase, 4 livelli di autonomia |
-| Software | assente | 38 voci a catalogo, 25 rilevate installate, lancio sicuro |
-| Modelli/provider/quote | un modello fisso | catalogo, ruoli, sostituzioni, consumi reali |
-| Agenti | nome, ruolo, modello | prompt engineering, sottoagenti, harness (skill, knowledge, MCP, tool, framework, template) |
-| Second Brain, Daily Work, Knowledge/Mockup Hub | assenti | presenti |
+| 15 | Sicurezza: utenti, account Admin, BCrypt, sessioni revocabili, ruoli, registro | 024 |
+| 16 | Legame Agente → Modello → Provider → Execution Target; iniziale vs modificato; DeepSeek | 025 |
+| 17 | Handoff senza API OpenAI/Anthropic, per ogni task | 025 |
+| 18 | UX di assegnazione COSA → A CHI → CON → ATTRAVERSO | 025 |
+| 19 | Skill e knowledge come file; Knowledge Hub riparato | 026 |
+| 20 | Eliminazione reale di progetti e task | 027 |
+| 21 | Avvio coordinato: Ollama, Open WebUI, 3D Omniverse | 028 |
+| 22 | Terminale integrato (PowerShell, Claude Code, OpenCode) | 029 |
+| 23 | Grafo del codice di un progetto | 030 |
+| 24 | Governo dei costi: prezzi, budget, blocco (chiude TD-40) | 031 |
+| 25 | Reference dalla console, dipartimento 3D | 032 |
+| 26 | Gmail, Drive, ClickUp con credenziali | **non iniziata: decisione tua** |
+| 27 | Verifica end-to-end dal vivo e correzioni emerse | — |
 
-**Ciò che era già giusto e resta** (§2 della gap analysis): il control plane come unica fonte di
-verità, ADR-009 (precondizioni), il contratto OpenAPI tenuto dal test, l'engine come gateway, la
-sicurezza di PHASE 3. Nulla di PHASE 3–7 è stato riscritto; tutto è stato esteso.
+La numerazione è in `.company-os/ROADMAP_V2.md` §5 (le vecchie fasi 15–21, mai iniziate, sono
+confluite qui).
 
-## 2. Roadmap
+## 2. Funzionalità aggiunte e modifiche UX
 
-Documento: [`.company-os/ROADMAP_V2.md`](.company-os/ROADMAP_V2.md). PHASE 1–7 non rinumerate.
+- **Accesso**: login con utente e password; menu utente (ruolo, *Account e sicurezza*, *Esci* che
+  chiude la sessione anche sul server); banner se la password è quella iniziale generata.
+- **Assegnazione** (§1 della direttiva): nel cassetto della task un riquadro **COSA** (task, codice,
+  descrizione, progetto, fase, priorità) e la catena **Agente → Modello → Provider → Execution
+  Target**; «Assegna agente» apre card con ruolo, sottoagente di, descrizione, catena e motivo del
+  routing, e prima della conferma la frase «Stai assegnando «…» a X (ruolo), che userà MODELLO di
+  PROVIDER attraverso TARGET». Niente select anonime né ID.
+- **Consegna a uno strumento**: card per target (consigliato quello dell'agente), finestra di conferma
+  con lo stesso riepilogo, poi cartella, file scritti, prompt compatto e completo da copiare.
+- **Agenti**: pagina rifatta (vedi §4).
+- **Knowledge Hub**: funziona (il crash era un `children: null` dei template) e ogni skill si apre come
+  file.
+- **Eliminazione**: pulsante «Elimina» solo per gli admin, con anteprima di cosa se ne va e il nome da
+  digitare; «Archivia» resta il gesto reversibile.
+- **Terminale** nella pagina, **Codice** nel progetto, **Costi** in Consumi, **Ecosistema all'avvio** in
+  Impostazioni e Integrazioni, **Reference** con carica/incolla.
+- Etichette dei campi collegate agli input; un errore in una vista non spegne più tutta la console
+  (error boundary per vista).
 
-| Fase | Contenuto | Stato |
+## 3. Agent → Model → Provider → Execution Target
+
+Quattro concetti in quattro posti: il modello è dell'agente, il **provider è sempre quello del
+modello** (mai scritto sull'agente), l'execution target è dell'agente. Combinazioni impossibili
+rifiutate (`400 binding-invalid`); una run nell'AI Engine di un agente legato a un'app è rifiutata
+(`409 agent-works-elsewhere`).
+
+| Execution target | Consegna | Provider dei modelli |
 |---|---|---|
-| 8 | Cataloghi dell'ecosistema: Software Hub, provider/modelli, consumi, OpenRouter, nuova shell | ✅ |
-| 9 | Workspace di progetto: profilo, cartella governata, documenti sicuri | ✅ |
-| 10 | Pianificazione: master prompt → piano a stadi, import da agente esterno, gate HITL | ✅ |
-| 11 | Esecuzione: decisione, handoff, review, contesto dai file nelle run | ✅ → **MU-OS** |
-| 12 | Ecosistema agenti: prompt/harness engineering, sottoagenti, Knowledge Hub, Mockup Hub | ✅ |
-| 13 | Daily Work | ✅ |
-| 14 | Second Brain (grafo animato) | ✅ |
-| 15 | Terminale integrato (PTY nel browser: PowerShell / claude / opencode) | da fare |
-| 16 | Graph engineering (dependency graph, code graph dei progetti) | da fare |
-| 17 | Template Hub: provider esterni di mockup e template | da fare |
-| 18 | Integrazioni esterne (Gmail, Drive, ClickUp) — **richiede decisioni umane** | da fare |
-| 19 | Governo dei costi | da fare |
-| 20 | 3D (Omniverse come dominio di progetto) | da fare |
-| 21 | Release | da fare |
+| AI Engine | run interna | Ollama, OpenRouter, Anthropic API, echo |
+| Claude Code | CLI nel terminale con il prompt | abbonamento Claude |
+| Codex | app, prompt negli appunti | abbonamento ChatGPT |
+| OpenCode | CLI con `--prompt` | Ollama, OpenRouter, abbonamenti |
+| Antigravity IDE / agent manager | IDE sulla cartella / app | account Google |
+| VS Code + Continue | IDE, `.continue/rules/` | Ollama, OpenRouter |
+| IntelliJ + Junie | IDE, `.junie/guidelines.md` | JetBrains AI |
+| Devin, Kimi, Verdent, ChatGPT | app, prompt negli appunti | i rispettivi |
+| Gemini, 3D Omniverse | web, prompt negli appunti | — |
+| Manuale | nessuno strumento | — |
 
-**Minimum Usable AI Company OS** (definito in ROADMAP_V2 §2, raggiunto): creare un progetto,
-scriverne il Master Prompt, generare il piano, avere fasi e task con i loro documenti, assegnare
-agenti, navigare il contesto, lanciare i programmi dal Software Hub, far decidere l'orchestratore,
-approvare, eseguire con un agente reale, rivedere, vedere lo stato del progetto.
+**Mappa attuale dei tuoi agenti del seed** (dopo il primo avvio sul DB live):
 
-## 3. Software Hub
+| Agente | Modello | Provider | Execution target |
+|---|---|---|---|
+| Code Architect | Qwen 3.5 9B | Ollama (locale) | AI Engine |
+| Frontend Developer | DeepSeek Coder V2 16B | Ollama (locale) | AI Engine |
+| Database Specialist | DeepSeek Coder V2 16B | Ollama (locale) | AI Engine |
 
-ADR-019. Vista **Strumenti → Software**.
+Nuovi template: **Claude Code Engineer** (abbonamento Claude → Claude Code) e **Codex Engineer**
+(abbonamento ChatGPT → Codex); **3D Artist** lavora in 3D Omniverse.
 
-- **Catalogo** (`catalog/software.json`, 38 voci) con AppID/percorsi reali misurati sulla macchina.
-  Tutti i programmi della direttiva sono presenti; GitHub, GitLab, Supabase, Vercel come
-  collegamenti con icona.
-- **Rilevamento al momento della lettura**, mai memorizzato: menu Start (`Get-StartApps`), percorsi
-  con variabili d'ambiente e wildcard (versioni in cartella), `PATH`, sonda HTTP per i servizi
-  (Ollama, Open WebUI, Omniverse). Stati: `INSTALLED`, `RUNNING`, `STOPPED`, `NOT_FOUND`,
-  `INCOMPATIBLE_HARDWARE`. **Misurato**: 25 installati, Ollama in esecuzione, DwarfStar4
-  incompatibile.
-- **Icone reali** estratte dagli eseguibili e dai manifest dello Store.
-- **Lancio** con sei invarianti (I1–I6): solo voci del catalogo; l'unico argomento variabile è la
-  cartella del progetto risolta dal database; nessuna shell; CLI dentro Windows Terminal; i servizi
-  web non si «lanciano», si aprono; fuori da Windows il lancio è dichiarato non supportato.
-- **Aprire un progetto in un IDE**: dal dettaglio del progetto, scheda *Strumenti*.
+## 4. Configurazione di agenti e sottoagenti
 
-## 4. Agent ecosystem
+Editor in cinque schede: **Identità** (nome, ruolo, specializzazione, descrizione, capability,
+sottoagente di, stato), **Modello ed esecuzione** (card dei target con disponibilità, modelli filtrati
+per compatibilità, anteprima dal vivo della catena), **Prompt e direttive** (system/role prompt,
+responsabilità, direttive, limiti, output, politica di contesto, dominio), **Skill e strumenti**
+(skill, knowledge, tool, MCP, framework), **Software**.
 
-ADR-018 (separazione dei concetti), ADR-023 (harness). Vista **Lavoro → Agenti**.
+**Iniziale o modificato**: ogni agente ha un'origine (`Seed iniziale`, `Da template`, `Creato da te`) e
+una baseline. Accanto a ogni campo compare «iniziale» o «modificato» (con il valore iniziale nel
+tooltip), in testa l'elenco delle modifiche con autore e data, e «Ripristina iniziale». Gli agenti da
+template installati prima di PHASE 16 vengono riconosciuti all'avvio, con la configurazione di oggi
+come baseline (la loro storia precedente non è ricostruibile).
 
-- **Concetti separati** nel dominio e nel database: *Agent* (chi lavora), *Model* (con che cosa
-  pensa), *Provider* (chi serve il modello), *Software* (dove si lavora), *Tool/Skill/Knowledge/MCP/
-  Framework/Template provider* (risorse dell'harness), *Subagent* (un agente con `parent_id`).
-- **Prompt engineering** per agente: obiettivo, istruzioni di sistema, stile di output, vincoli.
-- **Harness engineering**: risorse collegate all'agente, software preferito; tutto finisce nel
-  contesto della run (`RunContext`).
-- **Sottoagenti** gerarchici; **template di agenti** (`agent-templates.json`) installabili, mai
-  sovrascritti.
-- **Knowledge Hub** (risorse per tipo, collegabili ad agenti e progetti) e **Mockup Hub**
-  (reference del progetto, template).
-- **Modelli locali** (regola della direttiva applicata alla lettera): inventario → ruolo →
-  sostituto → verifica → migrazione → *solo dopo* valutare la rimozione. `qwen3.5:4b` è stato
-  **verificato** (run reale, 226 s) e marcato `ACTIVE`; `llama3.2:3b` è `DEPRECATED` con
-  `replacedBy`, **non rimosso** (gli agenti del seed lo usano ancora: TD-51). Nessun modello
-  eliminato.
+## 5. DeepSeek, Ollama e modelli disponibili
 
-## 5. Orchestrator
+Verificati con Ollama 0.33.3 il 2026-09-25:
 
-ADR-021. Il Master Orchestrator ha due metà.
+| Modello | Parametri | Quant. | Ruolo | Stato |
+|---|---|---|---|---|
+| `qwen3.5:9b` | 9.7B | Q4_K_M | pianificazione, ragionamento | attivo |
+| `qwen3.5:4b` | 4.7B | Q4_K_M | veloce | attivo (sostituto verificato di llama3.2) |
+| `deepseek-coder-v2:16b` | 15.7B | Q4_0 | codice, SQL | **attivo, associato** a Frontend Developer e Database Specialist |
+| `gemma4:e4b` | 8.0B | Q4_K_M | visione, reference | attivo |
+| `llama3.2:3b` | 3.2B | Q4_K_M | — | superato, **non usato da nessun agente**, non rimosso |
 
-**Pianificazione** — da `MASTER_PROMPT.md` a `.aicos/plan.json` (formato canonico), per due vie
-che convergono nello stesso validatore (`PlanDocument`) e nello stesso importatore:
-1. **Engine locale**: generazione *a stadi* (prima le fasi, poi i task di ciascuna fase) con
-   **decodifica vincolata da JSON Schema** su Ollama. Misurato con `qwen3.5:9b`: 12,8 minuti per
-   5 fasi e 17 task. Avanzamento visibile nella console.
-2. **Agente esterno** (Claude Code, Codex, Antigravity, OpenCode): la console prepara il prompt di
-   handoff; l'agente scrive `plan.json`; «Importa» lo valida.
+DeepSeek dal vivo: SQL corretto in 16,6 s a freddo, run complete in 45 s e 80 s. Non ha tool calling:
+va bene per generare codice, non per lavorare da agente con strumenti — per quello c'è il legame con
+Claude Code o Codex. Correzione a un debito precedente: sul tuo DB gli agenti del seed **non avevano
+nessun modello** (usavano `echo`), non `llama3.2:3b`.
 
-Un piano in bozza si rigenera finché nessun suo task è stato toccato; poi è bloccato.
+## 6. Claude Code, Codex e IDE agentici senza API OpenAI/Anthropic
 
-**Esecuzione** — per ogni task: una **decisione motivata** (agente, modello, software, file di
-contesto, prompt, destinazioni, ciascuno con il suo perché), poi:
-- **run interna** con l'engine (locale o cloud), con contesto letto dai file del progetto;
-- **handoff** verso uno strumento esterno: file `.aicos/handoffs/TASK-XXX-<destinazione>.md` scritto nel progetto
-  e strumento aperto nella cartella. **Nessuna dipendenza dalle API di Claude Code o Codex**: si
-  usano come programmi dell'operatore.
-- **review** append-only (ACCEPTED / CHANGES_REQUESTED / REJECTED) che muove il task.
+Per ogni task con un agente, anche fuori da un piano e anche senza progetto, «Prepara e apri»:
 
-## 6. Project workflow
+1. cartella: quella del progetto (creata se manca) o `…/_inbox/task-<id>`;
+2. documento della task (`tasks/TASK-<id>.md` o quello del piano), mai sovrascritto;
+3. regole dello strumento (`.junie/guidelines.md`, `.continue/rules/aicos.md`; `CLAUDE.md` e
+   `AGENTS.md` del progetto), mai sovrascrivendo file tuoi;
+4. pacchetto `.aicos/handoffs/<TASK>-<target>.md`: cartella, prompt, ruolo e istruzioni dell'agente,
+   modello e provider, skill con i percorsi dei loro file, contesto da leggere, regole HITL, esito;
+5. prompt compatto (e completo, per le app che non leggono file) negli appunti;
+6. apertura: terminale con `claude "<prompt>"` / `opencode --prompt`, IDE sulla cartella, app, sito.
 
-ADR-020, ADR-022. Vista **Lavoro → Progetti**.
+Cosa **non** c'è, di proposito: nessuna automazione dentro le app (non si preme «invio» in Codex) e
+l'esito non torna da solo (TD-55): lo leggi nel documento della task e fai la review. OpenRouter resta
+un provider API opzionale e separato, spento senza chiave.
 
-1. **Nuovo progetto** — procedura in 4 passi: idea, tipo (catalogo `project-types.json`) e stack,
-   cartella di lavoro, livello di autonomia.
-2. **Master Prompt** — scheda dedicata, modificabile, salvata in `MASTER_PROMPT.md`.
-3. **Piano** — genera o importa; fasi e task con i loro documenti.
-4. **Approvazione** — per fase (livelli `GUIDED`, `SUPERVISED`) o del piano (`DELEGATED`,
-   `FINAL_REVIEW`). Un task di una fase non approvata **non parte** (409, provato da test).
-5. **Esecuzione** — pannello dell'orchestratore nel task.
-6. **Review** — il task va a DONE solo con una review accettata.
+## 7. Skill e modifica manuale
 
-Il livello di autonomia cambia davvero il comportamento: finisce in `AGENTS.md`, nel prompt di
-sistema delle run e negli handoff (in `GUIDED` il modello ha chiesto all'operatore di prevedere
-l'esito prima di procedere — osservato nello smoke reale).
+Ogni skill è `%USERPROFILE%\.aicos\library\skills\<chiave>\SKILL.md`, ogni knowledge
+`…\knowledge\<chiave>.md`: frontmatter (`key`, `name`, `kind`, `description`, `tags`, `source`) e
+istruzioni in Markdown, la forma dei `SKILL.md` di Claude Code. Dalla console: vedi percorso e
+contenuto, crea il file per una skill di catalogo, modifica e salva, apri in VS Code, crea una skill
+nuova, importa da URL (solo https, host pubblici, niente redirect, max 256 KB, link GitHub «blob»
+convertiti). A mano: modifica il file, poi «Rileggi cartella». Versionabile con git (o sposta la
+libreria con `aicos.library.root`). Le skill arrivano ai modelli: nel prompt delle run (verificato dal
+vivo) e come percorsi nei pacchetti di handoff.
 
-**Il flusso di PHASE 3–7 resta intatto**: un task senza piano si crea, si assegna, si avvia e si
-esegue esattamente come prima, e **il prompt inviato al modello è byte per byte quello di PHASE 6**
-(due test lo fissano: task libero e task di progetto fuori piano).
+## 8. Eliminazione di progetti e task
 
-## 7. Files
+Solo admin, con il **nome digitato**, il tag della riga (If-Match) e mai durante un'esecuzione. Una
+task porta via esecuzioni, handoff e review; le voci del Daily Work restano come voci personali. Per un
+progetto scegli sempre se le task **restano** (staccate) o **vengono eliminate**: nessun default. I
+file su disco non vengono mai toccati. Ogni eliminazione finisce nel registro di sicurezza.
+Archiviare resta il gesto reversibile dell'operatore.
 
-Cartella di lavoro di ogni progetto (default `~/AI-Company-Projects/<slug>`, confinata sotto la
-radice configurata — W2/W3):
+## 9. Avvio di Open WebUI e 3D Omniverse
 
-| File | Contenuto | Chi lo scrive |
-|---|---|---|
-| `AGENTS.md`, `CLAUDE.md` | regole per gli agenti esterni, livello di autonomia | AI Company OS |
-| `MASTER_PROMPT.md` | visione, obiettivi, vincoli, stack | operatore |
-| `CONTEXT_MAP.md` | mappa dei file di contesto | AI Company OS |
-| `REFERENCES.md`, `references/` | immagini e riferimenti (anche da Gemini) | operatore |
-| `.aicos/plan.json` | piano canonico | engine o agente esterno |
-| `docs/IMPLEMENTATION_PLAN.md` | piano leggibile | AI Company OS |
-| `docs/phases/PHASE_X.md` | obiettivo, task, criteri di uscita | AI Company OS |
-| `tasks/TASK-XXX.md` | obiettivo, scope, criteri di accettazione, file, agente | AI Company OS |
-| `.aicos/handoffs/TASK-XXX-<destinazione>.md` | prompt compatto per lo strumento esterno | AI Company OS |
-| `.aicos/project.json` | manifest del progetto (profilo, mappa del contesto) | AI Company OS |
+All'avvio del control plane, in background e in ordine: Ollama → Open WebUI → 3D Omniverse. Per
+ciascuno: se risponde non si avvia (**nessun doppione**); se l'app è già aperta non si riapre; se no si
+avvia col comando del catalogo e si attende la sua salute fino al timeout. Esito registrato e visibile
+(Impostazioni, Integrazioni); un errore non blocca gli altri né il sistema. Comandi, ordine, attese e
+autoavvio si configurano (admin), con variabili d'ambiente e **senza percorsi della macchina nel
+codice**. Dal vivo: Ollama e Omniverse OK; l'app desktop di **Open WebUI** si apre ma accende il suo
+server solo dal suo interno (TD-56), e il sistema lo dice.
 
-**Context engineering**: il contesto sta nei file; i prompt restano compatti e li nominano. La
-console legge e modifica solo file dentro la cartella del progetto (niente `..`, niente link
-simbolici che escono, niente percorsi assoluti).
+## 10. Sicurezza implementata
 
-## 8. Database
+| Requisito | Come |
+|---|---|
+| Autenticazione | login utente/password → token di sessione (256 bit, conservato solo come SHA-256) |
+| Account Admin | creato al primo avvio dalla configurazione locale |
+| Password | BCrypt costo 12; min 12 caratteri, max 72 byte, niente nome utente, niente password ovvie |
+| Sessioni | scadenza 8 h di inattività / 72 h assolute; revoca a logout, cambio password, disattivazione, reset |
+| Tentativi | blocco dopo 5 errori (15 min); 20 tentativi/min per indirizzo; stessa risposta per utente ignoto e password errata |
+| Autorizzazione | `OPERATOR` e `ADMIN`; solo admin: utenti, registro, eliminazioni, terminale, catalogo software, ecosistema, prezzi e budget |
+| Endpoint | tutto `/api/**` autenticato, tranne login e health; terminale con ticket monouso |
+| Input | Bean Validation, file validati per contenuto, percorsi confinati, SSRF bloccato negli import |
+| Errori | problem detail senza dettagli interni; 500 con messaggio fisso |
+| Segreti | fuori dal repository (`%USERPROFILE%\.aicos\local.env`, ACL solo utente); nessun token di default |
+| CORS/CSRF | origini dichiarate; token in header e mai in cookie, quindi niente superficie CSRF |
+| Header | CSP `default-src 'none'`, `Referrer-Policy: no-referrer`, nosniff, no-store sul login |
+| Log di sicurezza | tabella + logger `aicos.security`: accessi, blocchi, password, utenti, accessi negati, eliminazioni, processi |
+| Test | `AuthApiTest`, `LoginThrottleTest`, contratti di autenticazione, test per ruolo in ogni area admin |
 
-Otto migrazioni, **tutte additive** (nessuna colonna rimossa, nessun dato riscritto):
+Trovato e corretto nello smoke: l'utente di default di Spring Boot stampava una password generata nel
+log (ora escluso e fissato da un test); `/v3/api-docs` spento in produzione.
+
+## 11. Credenziali Admin
+
+- **Utente**: `admin`
+- **Password iniziale**: generata a caso da `scripts/init-local-secrets.ps1`; è nel report in chat
+  e **di proposito non in questo file** (che è in git). Rivederla:
+  `.\scripts\init-local-secrets.ps1 -Show`.
+- **Dove è configurata**: `%USERPROFILE%\.aicos\local.env` (`AICOS_ADMIN_PASSWORD`), fuori dal
+  repository, leggibile solo dal tuo account.
+- **Quando vale**: al primo avvio su un database senza admin. Il tuo DB live `aicompany` non ha
+  ancora admin: lo riceverà con questa password al primo `start-dev.ps1`.
+- **Come cambiarla**: console → menu utente → *Account e sicurezza* → *Cambia password* (le altre
+  sessioni si chiudono). Se la dimentichi: nuova password in `AICOS_ADMIN_PASSWORD` nel file, avvio con
+  `AICOS_ADMIN_RESET=true`, poi togli la variabile.
+
+## 12. File e documenti principali
+
+- ADR **024–032** (`docs/adr/`), `.company-os/ROADMAP_V2.md` §5, `.company-os/PROJECT_STATE.md`,
+  `docs/RUNNING.md` (§0b percorso completo, accesso e credenziali), `docs/DEBT_REGISTRY.md`, `README.md`.
+- Backend nuovi pacchetti: `user`, `binding`, `deletion`, `ecosystem`, `terminal`, `cost`,
+  `graph/code`, `harness/library`; cataloghi `execution-targets.json`, provider e modelli ad
+  abbonamento, due template.
+- Console: `Agents`, `KnowledgeHub`, `Settings`, `Terminal`, `CodeGraphView`, `OrchestratorPanel`,
+  `TaskDrawer`; componenti `BindingChain`, `DeleteDialog`, `EcosystemPanel`, `CostsCard`,
+  `TerminalTab`, `ErrorBoundary`.
+- `scripts/init-local-secrets.ps1`; `start-dev.ps1` carica i segreti locali.
+
+## 13. Migrazioni e schema
 
 | Versione | Contenuto |
 |---|---|
-| V12 | `software` |
-| V13 | `model_providers`, `llm_models`, `quota_plans` |
-| V14 | profilo del progetto (`project_type`, `stack`, `workspace_path`, `autonomy_level` = GUIDED, `plan_status` = NONE) |
-| V15 | `project_phases`, `tasks.phase_id/code/document_path`, `plan_runs` |
-| V16 | `task_handoffs`, `task_reviews` |
-| V17 | `plan_runs.progress` |
-| V18 | profilo agenti, `parent_id`, `harness_resources`, `agent_resources`, `agent_software`, `project_resources` |
-| V19 | `daily_items` |
+| V20 | `app_users`, `auth_sessions`, `security_events` |
+| V21 | agenti: `description`, `capabilities`, `execution_target`, `origin`, `baseline`, `customized_*` |
+| V22 | risorse: `origin`, `file_path`, `file_synced_at` |
+| V23 | `ecosystem_autostart` |
+| V24 | prezzi dei modelli, `task_runs.cost_usd`, `cost_budgets` |
+| seed V2 | legami, prompt e baseline degli agenti del seed (riempie solo campi vuoti) |
 
-I cataloghi (software, provider, modelli, quote, risorse, template di agenti) sono inseriti
-all'avvio **solo se mancano**: le modifiche dell'operatore non vengono mai sovrascritte.
+Tutte additive. Il DB live `aicompany` è a **V11** e non è stato toccato: al primo avvio riceverà
+V12–V24 e il seed V2.
 
-**Live DB**: al primo avvio del nuovo backend Flyway applicherà V12–V19 su `aicompany` (oggi V11).
-Tutte le verifiche di questo blocco sono girate sul clone `aicompany_p8` (creato con
-`CREATE DATABASE … TEMPLATE aicompany`), che contiene anche i progetti di prova «Smoke Rubrica».
-Il clone si può eliminare quando si vuole; non è stato eliminato perché è un dato dell'operatore.
+## 14. Test, CI, smoke
 
-## 9. Test
+- **Suite**: 470 Java (+10 classi nuove), 58 engine, 27 console; typecheck e build della console.
+- **Mutazioni** sulle nuove guardie: legame, budget, conferma di eliminazione, ruoli, ticket del
+  terminale, SSRF, blocco del login — **7/7 rilevate**.
+- **Smoke dal vivo 31/31**: sicurezza (401, credenziali errate, registro, admin), legami del seed,
+  **regressione PHASE 3–7** (Progetto → Task → associazione → Agente → Start → risposta DeepSeek in
+  45 s), **Piano → Fase → Task → Agente → Modello → Execution Target → Risultato → Review** (piano
+  importato, 409 prima dell'approvazione, approvazione, orchestrazione, run DeepSeek in 80 s con la
+  skill e il documento della task nel prompt, review → DONE), handoff manuale con pacchetto, delete,
+  grafo del codice della console (46 file, 179 import), ecosistema, costi, shell del terminale.
+- Lo smoke ha **trovato 5 difetti**, tutti corretti con test: password nel log, Open WebUI riaperto a
+  ogni riavvio, blocco «progetto archiviato» mancante nella decisione, origine dei vecchi agenti da
+  template, e un **ciclo di import nella console stessa** trovato dal grafo del codice.
+- **CI**: verde su ogni commit del blocco verificato; controlla l'ultimo prima del merge.
 
-| Suite | Prima | Ora |
-|---|---|---|
-| Control plane (Java) | 329 | **417** (di cui 1 saltato su Windows) |
-| AI Engine (Python) | 51 | **56** |
-| Console (Vitest) | 14 | **18** |
+## 15. Debiti residui
 
-- **Regressione di PHASE 3–7**: tutte le suite precedenti verdi senza modifiche di comportamento;
-  aggiornati solo i pin che contano versioni e colonne (migrazioni, forma di `TaskResponse` con i
-  tre campi nuovi) e le etichette della console tradotte in italiano.
-- **Coperture strutturali** estese: ogni nuovo percorso di scrittura è in `PreconditionCoverageTest`
-  (lock + If-Match, o esenzione documentata per le creazioni); ogni nuovo slug d'errore in
-  `ApiProblemCoverageTest`; contratto OpenAPI rigenerato e fissato.
-- **Mutazioni** sulle guardie critiche:
+| Debito | Sintesi |
+|---|---|
+| TD-44 / PHASE 26 | Gmail, Drive, ClickUp dentro la console: servono credenziali e una scelta |
+| TD-53 | token di sessione nel `sessionStorage` (mitigato da React, scadenza, revoca) |
+| TD-54 | una run senza modello (default dell'engine) non passa dal budget; oggi il default è `echo` |
+| TD-55 | l'esito di un handoff non torna da solo: review manuale |
+| TD-56 | Open WebUI desktop accende il server solo dal suo interno |
+| TD-48, TD-49 | MCP come metadato; API di `opencode serve` non usata |
+| TD-51, TD-52 | rimozione di `llama3.2:3b`; coder più recente (19 GB) — decisioni tue |
 
-  | # | Mutazione | Esito |
-  |---|---|---|
-  | M1 | il launcher accetta sintassi da terminale in un argomento CLI | rosso |
-  | M2 | un percorso fuori dalla radice del workspace è accettato | rosso |
-  | M3 | il gate HITL rimosso: un task di una fase non approvata parte | rosso |
-  | M4 | un task di progetto fuori piano riceve istruzioni di autonomia (prompt di PHASE 6 alterato) | **sopravvissuto** → test aggiunto → rosso |
-  | M5 | una bozza di piano già lavorata si può sostituire | **sopravvissuto** → test aggiunto → rosso |
+Chiusi in questo blocco: **TD-40** (costi), **TD-42** (terminale); TD-46 in parte.
 
-- **Smoke reale** (2026-09-24, backend 8081, engine 8090, Ollama): il percorso MU-OS completo, §0
-  dello stato. Verifica visiva di tutte le viste con istantanee.
-- **CI**: tre job verdi su ogni commit del blocco.
+## 16. HEAD, branch, working tree
 
-## 10. Debiti
+- Branch `autonomous/phase-15-hardening`, pushato; `master` a `e9c928c`.
+- Working tree pulito dopo l'ultimo commit (l'unico file locale escluso da git è la configurazione
+  di anteprima `frontend/vite.preview.local.mjs`, in `.git/info/exclude`).
 
-Registro: [`docs/DEBT_REGISTRY.md`](docs/DEBT_REGISTRY.md). Nuovi: **TD-41…TD-52**; prossimo
-libero **TD-53**. I più rilevanti:
+## 17. Cosa puoi verificare a vista
 
-| Debito | Sintesi | Destinazione |
-|---|---|---|
-| TD-41 | stato della fase aggiornato da handoff/review senza lock di riga: in concorrenza, 500 invece di 409 | MINOR |
-| TD-42 | terminale nel browser assente: si apre Windows Terminal | PHASE 15 |
-| TD-43 | la generazione del piano non si annulla (~13 min col 9B) | MINOR |
-| TD-44 | Gmail/Drive/ClickUp/ChatGPT web/Gemini non incorporabili | PHASE 18, **decisione umana** |
-| TD-48 | collegare un MCP a un agente è metadato, non installazione | — |
-| TD-50 | quote: nessuna API; dati locali; reset Claude da impostare | vincolo esterno |
-| TD-51 | `llama3.2:3b` deprecato ma usato dagli agenti del seed | **decisione umana** |
-| TD-52 | ruolo CODER su `deepseek-coder-v2` (2024) | **decisione umana** (19 GB) |
+1. Accesso con `admin`, banner della password, *Account e sicurezza*, cambio password.
+2. **Agenti**: catena di ogni agente, editor, anteprima del legame, «iniziale/modificato», ripristino.
+3. **Task**: riquadro COSA, «Assegna agente» con le card e la frase di conferma; pannello Master
+   Orchestrator con i target e la conferma della consegna.
+4. **Knowledge Hub**: apri una skill, «Crea il file», modificala, salvala, «Apri in VS Code».
+5. **Impostazioni**: utenti, registro di sicurezza, ecosistema all'avvio.
+6. **Progetto → Codice** (grafo), **Reference** (incolla un'immagine con Ctrl+V), elimina una task di
+   prova digitando il nome.
+7. **Terminale**: apri PowerShell nella cartella di un progetto.
+8. **Consumi → Costi**; **Modelli** → prezzo di un modello a consumo.
 
-## 11. Applicazioni esterne
-
-Politiche di framing **misurate** (gap analysis §4), non supposte.
-
-| Applicazione | Stato | Come si usa oggi | Limite onesto |
-|---|---|---|---|
-| **Gmail** | collegamento | apertura in finestra dedicata dal Software Hub | anti-framing di Google; dati in console solo via API con OAuth (TD-44) |
-| **Google Drive** | collegamento | idem | idem |
-| **ClickUp** | collegamento | idem | `frame-ancestors`; API con token personale (TD-44) |
-| **ChatGPT** | installato | ChatGPT Classic (app desktop) dal launcher | la versione web non si incorpora |
-| **Claude Code** | installato (CLI 2.1.263) | destinazione di handoff: si apre nella cartella del progetto con il prompt compatto; consumi reali letti dai log locali | nessuna API usata, per scelta |
-| **Codex** | installato (app desktop) | destinazione di handoff; finestre di quota reali (5 h / 7 giorni) dai log locali | CLI non nel `PATH`; quota misurata solo fino all'ultima sessione |
-| **Antigravity** | installato (agent manager + IDE) | destinazione di handoff; l'IDE si apre nella cartella | — |
-| **Gemini** | collegamento | le immagini generate entrano nel progetto via `references/` e Mockup Hub | non incorporabile |
-| **OpenCode** | installato (CLI 1.18.18) | destinazione di handoff in Windows Terminal | API `opencode serve` non ancora usata (TD-49) |
-| **Open WebUI** | installato, server su 8080 | **incorporato** in *Integrazioni* (stessa origine locale) quando è acceso | per questo il backend è passato a **8081** |
-| **Ollama** | in esecuzione | provider locale dell'engine; inventario modelli | — |
-| **OpenRouter** | pronto, spento | provider OpenAI-compatibile dell'engine | si accende solo con una chiave (decisione umana) |
-| **DwarfStar4** | identificato, **non installato** | `antirez/ds4`: richiede Metal/CUDA/ROCm e ≥ 96 GB | incompatibile con Intel Arc 140V e 31,5 GB; a catalogo come `INCOMPATIBLE_HARDWARE` |
-| **Omniverse (3D)** | installato | incorporato in *Integrazioni* (`localhost:8800`) quando è acceso | dominio 3D completo in PHASE 20 |
-
-## 12. UI
-
-Console in italiano, tema scuro, orientata alle nove tavole di riferimento.
-
-- **Navigazione** a gruppi — *Lavoro*: Dashboard, Progetti, Task, Agenti, Daily Work, Second Brain;
-  *Strumenti*: Software, Terminale, Integrazioni; *Risorse*: Knowledge, Mockup, Modelli, Consumi,
-  Impostazioni. Ricerca globale.
-- **Dashboard** con progetti attivi, task, consumi, software.
-- **Progetto**: schede Panoramica, Master Prompt, Piano (fasi, approvazioni, avanzamento della
-  generazione), Documenti, Reference, Strumenti.
-- **Task**: pannello dell'orchestratore (decisione motivata, run, handoff, review).
-- **Agenti**: studio con prompt engineering, harness, sottoagenti, template.
-- **Second Brain**: grafo animato (d3-force) di progetti, fasi, task, agenti, modelli, software,
-  risorse; selezione, ricerca, trascinamento.
-- **Consumi**: finestre di quota con reset giornaliero/settimanale, token reali di Claude Code,
-  percentuali reali di Codex; ciò che è configurato a mano è dichiarato come tale.
-
-## 13. Avvio
+## 18. Avvio
 
 ```powershell
 .\scripts\start-dev.ps1
 ```
 
-Poi <http://localhost:5173>, token operatore `dev-operator-token-change-me` in sviluppo. Il
-control plane ascolta su **8081** (8080 è di Open WebUI). Il percorso completo dalla console, passo
-per passo: [`docs/RUNNING.md` §0b](docs/RUNNING.md). Per la generazione locale del piano serve
-Ollama con `qwen3.5:9b` (presente); per le run veloci `qwen3.5:4b` (presente).
+Poi <http://localhost:5173>, utente `admin`, password dal file locale (§11). Il control plane è su **8081**; all'avvio
+partono anche Ollama, Open WebUI e 3D Omniverse se non sono attivi. Per provare prima su un clone:
+`.\scripts\start-dev.ps1 -Database aicompany_try` (vedi l'intestazione dello script). Dettagli:
+`docs/RUNNING.md` §0 e §0b.
 
-## 14. HUMAN ACTION REQUIRED
-
-Nessuna di queste azioni blocca l'uso del sistema. Sono le decisioni che la direttiva riserva
-all'operatore.
+## HUMAN ACTION REQUIRED
 
 **1. Accettare il blocco e integrarlo in `master`.**
-- *Problema*: PHASE 3–14 vivono su `autonomous/phase-8-ecosystem-realignment`; `master` è a PHASE 2.
-- *Perché serve il consenso*: il merge è l'accettazione (charter §8) e la direttiva lo riserva a te.
-- *Opzioni*: (a) fast-forward di `master` a `1835162`+ (tutto PHASE 3–14); (b) merge solo di
-  `autonomous/phase-7-operator-console` e revisione separata di 8–14; (c) richiedere modifiche.
-- *Conseguenze*: (a) un solo passo, history lineare; (b) due review, stesso risultato finale.
-- *Default consigliato*: **(a)**, dopo aver provato il percorso di `docs/RUNNING.md` §0b.
+- *Problema*: PHASE 15–27 sono su `autonomous/phase-15-hardening`; `master` è a PHASE 14.
+- *Perché serve il consenso*: il merge è l'accettazione (charter §8).
+- *Opzioni*: (a) fast-forward di `master` all'ultimo commit del branch; (b) chiedere modifiche.
+- *Default consigliato*: **(a)**, dopo aver provato i punti del §17.
 
-**2. Primo avvio sul DB live.**
-- *Problema*: `aicompany` è a V11; il nuovo backend applicherà V12–V19.
-- *Perché*: tocca i tuoi dati (solo in aggiunta).
-- *Opzioni*: avviare così; oppure fare prima un dump (`pg_dump`) per sicurezza.
-- *Default consigliato*: **dump, poi avvio**. Le migrazioni sono additive e provate su un clone.
+**2. Primo avvio sul DB live `aicompany`.**
+- *Problema*: il DB è a V11; il nuovo backend applicherà V12–V24 e il seed V2, e creerà l'admin.
+- *Perché*: tocca i tuoi dati (solo in aggiunta; il seed V2 riempie solo i modelli vuoti degli agenti
+  del seed).
+- *Default consigliato*: `pg_dump` di sicurezza, poi `start-dev.ps1`.
 
-**3. Integrazioni Gmail, Drive, ClickUp «dentro» l'interfaccia (TD-44, PHASE 18).**
-- *Problema*: i servizi rifiutano l'iframe (misurato).
-- *Perché*: richiede credenziali OAuth/token e una scelta di prodotto.
-- *Opzioni*: (a) restare con l'apertura controllata; (b) shell desktop (Tauri/Electron) con
-  WebView; (c) API per mostrare i dati nella console (serve creare le credenziali Google e un token
-  ClickUp).
-- *Conseguenze*: (b) aggiunge un'applicazione da installare e mantenere; (c) dati veri in console,
-  gestione di credenziali.
-- *Default consigliato*: **(a) ora, (c) in PHASE 18**.
+**3. Integrazioni Gmail, Drive, ClickUp (PHASE 26).**
+- *Problema*: non si incorporano (policy di framing misurate); dentro la console servono le loro API.
+- *Perché*: credenziali OAuth Google e un token ClickUp sono tuoi, e la scelta cambia il prodotto.
+- *Opzioni*: (a) restare con l'apertura controllata di oggi; (b) API in sola lettura con credenziali
+  che crei tu; (c) una shell desktop con WebView.
+- *Default consigliato*: **(a) ora**, (b) quando vorrai i dati dentro la console.
 
-**4. Modelli locali (TD-51, TD-52).**
-- *Problema*: gli agenti del seed usano `llama3.2:3b` (deprecato); il ruolo CODER usa un modello
-  del 2024.
-- *Perché*: modifica i tuoi agenti; `qwen3-coder:30b` sono 19 GB di disco e molta RAM.
-- *Opzioni*: migrare gli agenti a `qwen3.5:4b` (verificato) dalla vista Agenti; scaricare o no
-  `qwen3-coder:30b`; rimuovere `llama3.2:3b` **solo dopo** la migrazione.
-- *Default consigliato*: **migrare gli agenti; non scaricare il 30B** (la macchina ha 31,5 GB
-  condivisi con la GPU); tenere `llama3.2:3b` finché non ti fidi del sostituto.
-
-**5. Chiavi cloud (Anthropic, OpenRouter).**
-- *Perché*: credenziali e costi.
-- *Default consigliato*: **nessuna chiave per ora**; il sistema lavora in locale e con i tuoi
-  strumenti tramite handoff. Da riconsiderare dopo TD-40.
-
-**6. Ancora del reset settimanale di Claude** (vista *Consumi*): un giorno e un'ora da impostare,
-perché nessuna fonte locale li espone. Default: lasciarlo vuoto finché non ti serve.
+Nessun'altra azione è necessaria per usare il sistema.

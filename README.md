@@ -16,10 +16,17 @@ the operator approves plans and phases and reviews every outcome.
 | **API contract** | OpenAPI, generated from the code and held to it by a test | `docs/api/openapi.json` |
 
 The console covers: dashboard, projects (type, stack, workspace folder, master prompt, plan,
-phase approvals, documents, references), tasks with the orchestrator's decision, handoffs and
-reviews, agents with sub-agents, prompt engineering and harness, Daily Work, the Second Brain graph,
-the Software Hub (detection and launch of the programs installed on this machine), terminal,
-integrations (Open WebUI and 3D Omniverse embedded), Knowledge Hub, Mockup Hub, models and usage.
+phase approvals, documents, code graph, visual references), tasks with the orchestrator's decision,
+handoffs and reviews, agents and sub-agents with their Agent → Model → Provider → Execution Target
+binding, prompt engineering and harness, Daily Work, the Second Brain graph, the Software Hub
+(detection and launch of the programs installed on this machine), an integrated terminal
+(PowerShell, Claude Code, OpenCode), integrations (Open WebUI and 3D Omniverse embedded, started
+with the system), a Knowledge Hub of skills kept as editable Markdown files, a Mockup Hub, models,
+usage and costs with budgets, and people with roles and a security log.
+
+Claude Code, Codex, Antigravity, OpenCode and the agentic IDEs are used through their own apps and
+CLIs, never through the OpenAI or Anthropic APIs: the Master Orchestrator prepares the folder, the
+context, the role and a compact prompt, then opens the tool.
 
 ## Start it
 

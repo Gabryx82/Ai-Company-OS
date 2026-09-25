@@ -44,6 +44,34 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
+## ▶▶▶ Consolidamento — PHASE 15 → PHASE 27 — COMPLETATO il 2026-09-25, in attesa di Human Final Review
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Merge autorizzato**: il 2026-09-25 l'operatore ha accettato PHASE 3–14 («esegui il merge»):
+  `master` è passato da `d166870` a **`e9c928c`** con un **fast-forward** (nessun merge commit,
+  nessun force). Il charter §8 è stato rispettato: merge eseguito solo su autorizzazione esplicita.
+- **Branch del blocco**: `autonomous/phase-15-hardening`, da `e9c928c`, pushato; **`master` resta a
+  `e9c928c`** fino alla prossima Human Final Review.
+- **Fasi** (numerazione in `.company-os/ROADMAP_V2.md` §5): 15 sicurezza (ADR-024) · 16–18 legame
+  Agente → Modello → Provider → Execution Target, handoff senza API OpenAI/Anthropic, UX di
+  assegnazione (ADR-025) · 19 skill come file e Knowledge Hub (ADR-026) · 20 eliminazione reale
+  (ADR-027) · 21 avvio coordinato dell'ecosistema (ADR-028) · 22 terminale integrato (ADR-029) ·
+  23 grafo del codice (ADR-030) · 24 governo dei costi (ADR-031, chiude TD-40) · 25 reference e
+  dipartimento 3D (ADR-032) · 26 integrazioni con credenziali: **decisione umana, non iniziata** ·
+  27 verifica end-to-end e correzioni.
+- **Suite**: **470 Java** (469 verdi + 1 saltato su Windows) + **58 engine** + **27 console**.
+  Stream **`V24`** (V20–V24 additive); seed di sviluppo **`V2`**.
+- **Smoke dal vivo** (2026-09-25, clone `aicompany_p8`, engine reale, Ollama reale): **31/31**
+  controlli, incluse due run DeepSeek Coder V2 (45 s e 80 s) e il percorso Piano → Fase → Task →
+  Agente → Modello → Execution Target → Risultato → Review con una skill nel prompt.
+- **Mutazioni**: 7 sulle nuove guardie (legame, budget, conferma, ruoli, ticket del terminale, SSRF,
+  blocco del login): **tutte rosse**.
+- **Segreti**: `%USERPROFILE%\.aicos\local.env` creato sulla macchina dell'operatore (fuori dal
+  repository, ACL solo utente). Il DB live `aicompany` è ancora a `V11` e **non è stato toccato**:
+  al primo avvio riceverà V12–V24 e l'admin con la password di quel file.
+- **Debiti nuovi**: TD-53…TD-56; chiusi TD-40, TD-42; TD-46 chiuso in parte; prossimo libero **TD-57**.
+
 ## ▶▶ Riallineamento V2 — PHASE 8 → PHASE 14 — COMPLETATO il 2026-09-24, in attesa di Human Final Review
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.

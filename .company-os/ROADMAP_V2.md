@@ -107,5 +107,5 @@ la storia; per PHASE ≥ 15 vale questa.**
 | **23** | Graph engineering: grafo del codice di un progetto | ex 16 | 030 | ✅ |
 | **24** | Governo dei costi: prezzi, budget, blocco delle run oltre budget (TD-40) | ex 19 | 031 | ✅ |
 | **25** | Template/Mockup Hub e dipartimento 3D | ex 17, ex 20 | 032 | ✅ |
-| **26** | Integrazioni esterne con credenziali (Gmail, Drive, ClickUp) | ex 18 | — | **decisione umana** |
-| **27** | Hardening, verifica end-to-end, release, Human Final Review | ex 21 | — | da fare |
+| **26** | Integrazioni esterne con credenziali (Gmail, Drive, ClickUp) | ex 18 | — | **decisione umana**, non iniziata |
+| **27** | Hardening, verifica end-to-end, release, Human Final Review | ex 21 | — | ✅ |

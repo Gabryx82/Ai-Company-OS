@@ -126,8 +126,11 @@ ferma a `TD-22`.
 | **TD-51** | `llama3.2:3b` è `DEPRECATED` (sostituto `qwen3.5:4b` verificato). **Correzione (PHASE 16)**: sul DB live gli agenti del seed non avevano *alcun* modello (NULL, quindi il default dell'engine `echo`), non `llama3.2:3b`; ora il seed V2 dà loro `qwen3.5:9b` e `deepseek-coder-v2:16b` (ADR-025). Nessun agente usa più `llama3.2:3b`: rimuoverlo da Ollama (2 GB) è una scelta dell'operatore | **aperto**, decisione umana (rimozione) | PHASE 8 |
 | **TD-52** | Il ruolo `CODER` è coperto da `deepseek-coder-v2:16b` (2024, senza tool calling); il candidato `qwen3-coder:30b` (19 GB) attende una decisione umana su disco e RAM | **aperto**, decisione umana | PHASE 8 |
 | **TD-53** | Il token di sessione della console vive nel `sessionStorage`: uno script iniettato nella console potrebbe leggerlo. Mitigato da React (niente HTML non fidato), scadenza e revoca; un cookie `HttpOnly` richiederebbe protezione CSRF e un proxy same-origin (ADR-024 §8) | **aperto**, MINOR | PHASE 15 |
+| **TD-54** | Una run senza modello (quello di default dell'AI Engine) non passa dal controllo del budget: se `AICOS_ENGINE_DEFAULT_MODEL` fosse un modello a consumo, spenderebbe senza limite. Oggi il default è `echo` | **aperto**, MINOR | PHASE 24 |
+| **TD-55** | L'esito di un handoff (Claude Code, Codex, IDE) non torna da solo nella console: l'operatore legge la sezione Esito del documento della task e fa la review | **aperto**, per scelta (nessuna API) | PHASE 17 |
+| **TD-56** | L'app desktop di Open WebUI si apre ma avvia il suo server locale solo dal suo interno: l'avvio coordinato lo riconosce e lo dice, ma non può accenderlo | **aperto**, vincolo esterno | PHASE 27 |
 
-**Prossimo identificatore libero: `TD-54`.**
+**Prossimo identificatore libero: `TD-57`.**
 
 ## 6. Come si apre un debito nuovo
 

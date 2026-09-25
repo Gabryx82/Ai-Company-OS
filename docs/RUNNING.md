@@ -1,9 +1,10 @@
 # Running AI Company OS locally
 
-Stato attuale (2026-09-24): **control plane** Spring Boot + PostgreSQL, autenticato con bearer
-token (ADR-013), porta **8081**; **AI Engine** Python (ADR-015, §2b); **console dell'ecosistema**
-React (ADR-017, §2c); Software Hub, workspace dei progetti, Master Orchestrator, agenti con harness,
-Daily Work e Second Brain (ADR-018…023, `.company-os/ROADMAP_V2.md`).
+Stato attuale (2026-09-25): **control plane** Spring Boot + PostgreSQL, porta **8081**, con utenti,
+ruoli e sessioni (ADR-024); **AI Engine** Python (ADR-015, §2b); **console dell'ecosistema** React
+(ADR-017, §2c); Software Hub, workspace, Master Orchestrator, agenti con legame Agente → Modello →
+Provider → Execution Target, handoff senza API, skill come file, terminale integrato, avvio
+coordinato dell'ecosistema, costi e budget (ADR-018…032, `.company-os/ROADMAP_V2.md` §5).
 
 ## 0. Tutto insieme, in un comando
 
@@ -20,24 +21,32 @@ per provare senza toccare i dati, clonare prima (vedi l'intestazione dello scrip
 
 ## 0b. Il percorso completo, dalla console
 
+0. **Accedi** come `admin` con la password del file `%USERPROFILE%\.aicos\local.env`
+   (`.\scripts\init-local-secrets.ps1 -Show`), poi cambiala da *Account e sicurezza*.
 1. **Progetti → Nuovo progetto**: tipologia, dettagli, stack proposto, cartella e livello di
    Human-in-the-Loop. La cartella viene preparata con `MASTER_PROMPT.md`, `AGENTS.md`, `CLAUDE.md`,
    `docs/`, `tasks/`, `references/`, `.aicos/` (nessun file esistente viene sovrascritto).
 2. **Master Prompt**: brainstorming con ChatGPT Classic (pulsante nella scheda), incolla il MASTER
-   PROMPT, salva.
-3. **Piano**: «Genera piano» con un modello locale (misurato: ~13 min col 9B, a stadi, con
-   l'avanzamento visibile) oppure «Pianifica con Claude Code» e poi «Importa .aicos/plan.json».
-4. **Approva** la fase (o il piano intero): prima dell'approvazione nessuna task parte (`409
-   phase-not-approved`).
-5. Apri una task: il pannello **Master Orchestrator** mostra agente, modello, software, contesto e
-   prompt compatto, con le ragioni. Eseguila con l'AI Engine oppure consegnala a Claude Code /
-   OpenCode (Windows Terminal nella cartella del progetto) o a Codex / Antigravity (app aperta,
-   prompt negli appunti).
-6. **Review**: «Accetta e completa» o «Richiedi modifiche», con nota.
-7. **Agenti → Installa ecosistema base** per gli agenti con sottoagenti e harness; **Second Brain**
-   per vedere tutto collegato; **Daily Work** per oggi e domani; **Consumi** per quote e reset.
+   PROMPT, salva. Le immagini di riferimento si aggiungono o si incollano (Ctrl+V) in *Reference*.
+3. **Piano**: «Genera piano» con un modello locale (misurato: ~13 min col 9B, a stadi) oppure
+   «Pianifica con Claude Code» e poi «Importa .aicos/plan.json».
+4. **Approva** la fase (o il piano intero): prima nessuna task parte (`409 phase-not-approved`).
+5. **Agenti**: ogni agente mostra Agente → Modello → Provider → Execution Target; nell'editor
+   scegli dove lavora (AI Engine, Claude Code, Codex, OpenCode, un IDE agentico…) e con quale modello,
+   vedi cosa è ancora «iniziale» e cosa hai modificato, ripristini la configurazione iniziale.
+6. **Task**: «Assegna agente» mostra COSA → A CHI → CON QUALE MODELLO → ATTRAVERSO; il pannello
+   **Master Orchestrator** propone il target dell'agente. Esegui con l'AI Engine oppure «Prepara e
+   apri»: cartella, documento della task, regole dello strumento e pacchetto di handoff vengono
+   scritti, lo strumento si apre, il prompt è negli appunti.
+7. **Review**: «Accetta e completa» o «Richiedi modifiche», con nota.
+8. Altro: **Knowledge Hub** (skill come file, modificabili qui o in VS Code), **Terminale** (admin),
+   **Codice** nel progetto (grafo), **Consumi** (quote, costi e budget), **Impostazioni** (utenti,
+   registro di sicurezza, ecosistema all'avvio), eliminazione di progetti e task (admin, digitando
+   il nome).
 
-Open WebUI (desktop) usa la porta 8080 ed è incorporato in **Integrazioni** quando è acceso.
+All'avvio del control plane partono anche Ollama, Open WebUI e 3D Omniverse, se non sono già attivi
+(*Impostazioni → Ecosistema all'avvio*). Open WebUI usa la porta 8080 ed è incorporato in
+**Integrazioni**; la sua app desktop accende il server dal suo interno.
 
 ## Prerequisiti
 - JDK 21
