@@ -772,6 +772,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/code-graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["last"];
+        put?: never;
+        post: operations["scan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/deletion": {
         parameters: {
             query?: never;
@@ -1537,6 +1553,23 @@ export interface components {
             valid?: boolean;
             warnings?: string[];
         };
+        CodeGraph: {
+            cycles?: string[][];
+            edges?: components["schemas"]["Edge"][];
+            /** Format: int32 */
+            externals?: number;
+            /** Format: int32 */
+            files?: number;
+            /** Format: date-time */
+            generatedAt?: string;
+            languages?: {
+                [key: string]: number;
+            };
+            mostImported?: components["schemas"]["Hotspot"][];
+            nodes?: components["schemas"]["Node"][];
+            taskLinks?: components["schemas"]["TaskLink"][];
+            truncated?: boolean;
+        };
         ConfigurationRequest: {
             capabilities?: string;
             contextPolicy?: string;
@@ -1728,6 +1761,11 @@ export interface components {
             task?: components["schemas"]["TaskResponse"];
             written?: string[];
         };
+        Hotspot: {
+            id?: string;
+            /** Format: int32 */
+            importedBy?: number;
+        };
         Impact: {
             /** Format: int32 */
             dailyItems?: number;
@@ -1886,13 +1924,13 @@ export interface components {
             username: string;
         };
         Node: {
+            directory?: string;
             id?: string;
+            kind?: string;
             label?: string;
-            meta?: {
-                [key: string]: unknown;
-            };
-            status?: string;
-            type?: string;
+            language?: string;
+            /** Format: int32 */
+            lines?: number;
         };
         Opened: {
             command?: string[];
@@ -2331,6 +2369,13 @@ export interface components {
             projectId?: number;
             status: string;
             title: string;
+        };
+        TaskLink: {
+            code?: string;
+            file?: string;
+            /** Format: int64 */
+            taskId?: number;
+            title?: string;
         };
         TaskProjectAssignmentRequest: {
             /** Format: int64 */
@@ -3860,6 +3905,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProjectResponse"];
+                };
+            };
+        };
+    };
+    last: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CodeGraph"];
+                };
+            };
+        };
+    };
+    scan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CodeGraph"];
                 };
             };
         };

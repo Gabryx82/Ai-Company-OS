@@ -104,7 +104,7 @@ la storia; per PHASE ≥ 15 vale questa.**
 | **20** | Eliminazione reale di progetti e task, distinta dall'archiviazione | nuova (§2) | 027 | ✅ |
 | **21** | Avvio coordinato dell'ecosistema (Ollama, Open WebUI, 3D Omniverse) | nuova (§7) | 028 | ✅ |
 | **22** | Terminale integrato nella console (PowerShell, Claude Code, OpenCode) | ex 15 | 029 | ✅ |
-| **23** | Graph engineering: grafo del codice di un progetto | ex 16 | — | da fare |
+| **23** | Graph engineering: grafo del codice di un progetto | ex 16 | 030 | ✅ |
 | **24** | Governo dei costi: prezzi, budget, blocco delle run oltre budget (TD-40) | ex 19 | — | da fare |
 | **25** | Template/Mockup Hub e dipartimento 3D | ex 17, ex 20 | — | da fare |
 | **26** | Integrazioni esterne con credenziali (Gmail, Drive, ClickUp) | ex 18 | — | **decisione umana** |

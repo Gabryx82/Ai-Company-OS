@@ -273,6 +273,12 @@ public class OrchestrationService {
         if (VISUAL_WORK.matcher(work).find()) {
             add(files, folder, "references/README.md", "Reference visuali: la task riguarda UI o grafica");
         }
+        // PHASE 23 (ADR-030): the code map, when a scan has written it -- for code work only.
+        if (CODE_WORK.matcher(work).find() && folder != null
+                && Files.exists(folder.resolve(com.aicompany.backend.graph.code.CodeGraphService.MARKDOWN_FILE))) {
+            add(files, folder, com.aicompany.backend.graph.code.CodeGraphService.MARKDOWN_FILE,
+                    "Mappa del codice: file più importati, cicli, dipendenze");
+        }
         return files;
     }
 

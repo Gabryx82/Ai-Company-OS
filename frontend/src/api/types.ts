@@ -258,3 +258,13 @@ export interface EcosystemServiceInfo {
 
 export interface TerminalShell { key: string; name: string; available: boolean; detail: string | null }
 export interface TerminalTicket { ticket: string; shell: string; directory: string; command: string[]; expiresAt: string }
+
+// --- PHASE 23: the code graph of a project (ADR-030) ------------------------------------
+
+export interface CodeNode { id: string; label: string; kind: "FILE" | "MANIFEST" | "EXTERNAL"; language: string; directory: string; lines: number }
+export interface CodeEdge { source: string; target: string; kind: "IMPORT" | "USES" | "DECLARES" }
+export interface CodeGraph {
+  generatedAt: string; files: number; truncated: boolean; languages: Record<string, number>; nodes: CodeNode[];
+  edges: CodeEdge[]; cycles: string[][]; mostImported: { id: string; importedBy: number }[]; externals: number;
+  taskLinks: { taskId: number; code: string | null; title: string; file: string }[];
+}

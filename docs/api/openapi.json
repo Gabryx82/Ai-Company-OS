@@ -231,6 +231,66 @@
         },
         "type" : "object"
       },
+      "CodeGraph" : {
+        "properties" : {
+          "cycles" : {
+            "items" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            },
+            "type" : "array"
+          },
+          "edges" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Edge"
+            },
+            "type" : "array"
+          },
+          "externals" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "files" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "generatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "languages" : {
+            "additionalProperties" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "object"
+          },
+          "mostImported" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Hotspot"
+            },
+            "type" : "array"
+          },
+          "nodes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Node"
+            },
+            "type" : "array"
+          },
+          "taskLinks" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TaskLink"
+            },
+            "type" : "array"
+          },
+          "truncated" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
       "ConfigurationRequest" : {
         "properties" : {
           "capabilities" : {
@@ -810,6 +870,18 @@
         },
         "type" : "object"
       },
+      "Hotspot" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "importedBy" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "Impact" : {
         "properties" : {
           "dailyItems" : {
@@ -1252,21 +1324,24 @@
       },
       "Node" : {
         "properties" : {
+          "directory" : {
+            "type" : "string"
+          },
           "id" : {
+            "type" : "string"
+          },
+          "kind" : {
             "type" : "string"
           },
           "label" : {
             "type" : "string"
           },
-          "meta" : {
-            "additionalProperties" : { },
-            "type" : "object"
-          },
-          "status" : {
+          "language" : {
             "type" : "string"
           },
-          "type" : {
-            "type" : "string"
+          "lines" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -2560,6 +2635,24 @@
           }
         },
         "required" : [ "priority", "status", "title" ],
+        "type" : "object"
+      },
+      "TaskLink" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "file" : {
+            "type" : "string"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "TaskProjectAssignmentRequest" : {
@@ -4675,6 +4768,58 @@
           }
         },
         "tags" : [ "project-controller" ]
+      }
+    },
+    "/api/projects/{id}/code-graph" : {
+      "get" : {
+        "operationId" : "last",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeGraph"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "code-graph-controller" ]
+      },
+      "post" : {
+        "operationId" : "scan",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeGraph"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "code-graph-controller" ]
       }
     },
     "/api/projects/{id}/deletion" : {

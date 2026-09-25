@@ -13,7 +13,7 @@ import type {
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
-  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, EcosystemServiceInfo, TerminalShell, TerminalTicket,
+  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, EcosystemServiceInfo, TerminalShell, TerminalTicket, CodeGraph,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -496,6 +496,17 @@ export class ControlPlane {
     } catch {
       return null;
     }
+  }
+
+  // --- the code graph (ADR-030) -------------------------------------------------
+
+  async codeGraph(projectId: number): Promise<CodeGraph | null> {
+    const graph = await this.plain<CodeGraph | null>("GET", `/api/projects/${projectId}/code-graph`);
+    return graph ?? null;
+  }
+
+  scanCodeGraph(projectId: number): Promise<CodeGraph> {
+    return this.plain("POST", `/api/projects/${projectId}/code-graph`);
   }
 
   // --- the integrated terminal (ADR-029) ---------------------------------------

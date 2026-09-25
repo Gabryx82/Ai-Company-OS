@@ -118,7 +118,7 @@ ferma a `TD-22`.
 | **TD-43** | Una generazione di piano non si può annullare; col 9B locale dura ~13 minuti (misurato) | **aperto**, MINOR | PHASE 10 |
 | **TD-44** | Gmail, Drive, ClickUp, ChatGPT web, Gemini non sono incorporabili (policy di framing misurate): si aprono in finestre dedicate | **aperto** → PHASE 18, **decisione umana** (shell desktop, credenziali OAuth) | PHASE 8 |
 | **TD-45** | Nessuna metrica di apprendimento né suggerimento automatico del livello di autonomia (ADR-022 §5) | **aperto** | PHASE 11 |
-| **TD-46** | Graph engineering: il Second Brain mostra il grafo dell'ecosistema, ma non esistono ancora dependency graph e code graph del codice di un progetto | **aperto** → PHASE 16 | PHASE 14 |
+| **TD-46** | Graph engineering: il Second Brain mostra il grafo dell'ecosistema, ma non esistevano dependency graph e code graph del codice di un progetto | **chiuso in parte** in PHASE 23 (ADR-030): grafo di file, import, dipendenze esterne e cicli per progetto, con `.aicos/CODE_GRAPH.md` come contesto; resta fuori il call graph semantico | PHASE 14 |
 | **TD-47** | I tipi della console per le risposte annidate usano `Deep<T>`: la nullabilità dei campi interni non è espressa dal contratto generato | **aperto**, MINOR | PHASE 9 |
 | **TD-48** | Associare un MCP o un tool a un agente è metadato: AI Company OS non installa né configura il server MCP nello strumento che lo userà | **aperto** | PHASE 12 |
 | **TD-49** | Gli handoff aprono la TUI di OpenCode; l'API locale di `opencode serve` non è ancora usata per seguire l'esecuzione | **aperto** | PHASE 11 |

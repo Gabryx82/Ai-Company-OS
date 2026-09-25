@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApi } from "../context";
+import { CodeGraphView } from "./CodeGraphView";
 import type {
   Agent, AutonomyLevel, ModelInfo, Phase, Plan, PlanRun, Project, ProjectTypeInfo, Software, WorkspaceDocuments,
 } from "../api/types";
@@ -10,7 +11,7 @@ import { TaskDrawer } from "./TaskDrawer";
 import { AUTONOMY } from "./Projects";
 import { useLauncher } from "./SoftwareHub";
 
-const TABS = ["Panoramica", "Master Prompt", "Piano", "Documenti", "Reference", "Strumenti"] as const;
+const TABS = ["Panoramica", "Master Prompt", "Piano", "Documenti", "Codice", "Reference", "Strumenti"] as const;
 type Tab = typeof TABS[number];
 
 const APPROVAL: Record<string, { label: string; tone: string }> = {
@@ -88,6 +89,7 @@ export function ProjectDetail({ projectId, types, navigate }: {
       {tab === "Piano" && <PlanTab project={project} plan={plan} docs={docs} agents={agents} onReload={reload}
                                    onOpenTask={setOpenTask} />}
       {tab === "Documenti" && <Documents project={project} docs={docs} />}
+      {tab === "Codice" && <CodeGraphView projectId={project.id} />}
       {tab === "Reference" && <References project={project} docs={docs} />}
       {tab === "Strumenti" && <Tools project={project} type={type} />}
 
