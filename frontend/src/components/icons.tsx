@@ -26,6 +26,7 @@ const PATHS: Record<string, string> = {
   folder: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
   file: "M6 3h8l4 4v14H6zM14 3v4h4",
   sparkle: "M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z",
+  chat: "M4 5h16v11H9l-5 4zM8 9.5h8M8 12.5h5",
   clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
   warning: "M12 3l10 18H2zM12 10v5M12 18h.01",
   logout: "M15 4h4v16h-4M10 16l-4-4 4-4M6 12h10",

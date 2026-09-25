@@ -104,7 +104,7 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
     void incorporabilityIsTheMeasuredOneOpenWebUiYesGmailNo() throws Exception {
         mockMvc.perform(get("/api/software/open-webui"))
                 .andExpect(jsonPath("$.embeddable").value(true))
-                .andExpect(jsonPath("$.url").value("http://localhost:8080"));
+                .andExpect(jsonPath("$.url").value("http://localhost:3000"));
         mockMvc.perform(get("/api/software/gmail"))
                 .andExpect(jsonPath("$.embeddable").value(false))
                 .andExpect(jsonPath("$.availability").value("WEB"));

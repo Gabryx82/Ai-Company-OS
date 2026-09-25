@@ -31,6 +31,15 @@ Per ciascuno:
 Un servizio che fallisce resta `FAILED` con il messaggio, e **il successivo parte comunque**: uno
 strumento secondario non ferma mai AI Company OS, e il control plane risponde subito, senza aspettare.
 
+### Open WebUI: il container, come in 3D Omniverse (review umana del 2026-09-25)
+
+Open WebUI è il container Docker `open-webui` su `localhost:3000`, lo stesso che 3D Omniverse crea con il
+suo docker-compose e incorpora nella scheda ChatLLM; risponde senza `X-Frame-Options`, quindi la console
+lo incorpora (voce **Chat LLM**). Se è fermo si avvia con `docker start open-webui`: l'eseguibile del
+catalogo è il comando `docker`, cercato nel PATH (un eseguibile scritto senza percorso si cerca lì), e
+`docker.exe` in esecuzione non conta come «già aperto». `V25` sposta la riga di chi era ancora sul
+vecchio default (app desktop su 8080); una riga modificata dall'operatore resta com'è. Chiude TD-56.
+
 ## 2. Configurabile, senza percorsi della macchina nel codice
 
 - **Come** si avvia: nel catalogo del Software Hub (eseguibile, argomenti, URL di salute), con

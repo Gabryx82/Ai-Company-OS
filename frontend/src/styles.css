@@ -101,6 +101,7 @@ code, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
 .field { display: grid; gap: 4px; }
 .field label { font-weight: 600; font-size: 12.5px; }
 .field .hint { color: var(--muted); font-size: 12px; }
+.hint-list { margin: 0; padding: 8px 12px 8px 28px; border-radius: 8px; background: var(--warn-soft, rgba(234, 179, 8, 0.1)); color: var(--text); font-size: 13px; }
 .field .error { color: var(--danger); font-size: 12px; }
 input, select, textarea {
   border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 7px 10px; width: 100%;

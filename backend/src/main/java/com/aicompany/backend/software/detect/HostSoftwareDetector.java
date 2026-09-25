@@ -96,7 +96,10 @@ public class HostSoftwareDetector implements SoftwareDetector {
 
     private Optional<Detection> detectInstalled(Software software) {
         if (software.getExecutable() != null) {
-            Optional<Path> executable = PathTemplate.resolveFile(software.getExecutable(), environment);
+            // A bare command ("docker") is looked up on the PATH, wherever it was installed.
+            String template = software.getExecutable().strip();
+            Optional<Path> executable = isBareCommand(template) ? onPath(template)
+                    : PathTemplate.resolveFile(template, environment);
             if (executable.isPresent()) {
                 return Optional.of(new Detection(Availability.INSTALLED, null, executable.get()));
             }
@@ -127,6 +130,11 @@ public class HostSoftwareDetector implements SoftwareDetector {
                     installed.map(Detection::executable).orElse(null));
         }
         return Detection.of(notFound(), "Not found on this machine, and nothing answers at " + probeUrl);
+    }
+
+    private static boolean isBareCommand(String executable) {
+        return !executable.contains("\\") && !executable.contains("/") && !executable.contains("%")
+                && !executable.contains(":") && !executable.contains(" ");
     }
 
     Optional<Path> onPath(String command) {

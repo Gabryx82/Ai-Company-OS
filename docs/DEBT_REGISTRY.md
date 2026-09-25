@@ -128,7 +128,7 @@ ferma a `TD-22`.
 | **TD-53** | Il token di sessione della console vive nel `sessionStorage`: uno script iniettato nella console potrebbe leggerlo. Mitigato da React (niente HTML non fidato), scadenza e revoca; un cookie `HttpOnly` richiederebbe protezione CSRF e un proxy same-origin (ADR-024 §8) | **aperto**, MINOR | PHASE 15 |
 | **TD-54** | Una run senza modello (quello di default dell'AI Engine) non passa dal controllo del budget: se `AICOS_ENGINE_DEFAULT_MODEL` fosse un modello a consumo, spenderebbe senza limite. Oggi il default è `echo` | **aperto**, MINOR | PHASE 24 |
 | **TD-55** | L'esito di un handoff (Claude Code, Codex, IDE) non torna da solo nella console: l'operatore legge la sezione Esito del documento della task e fa la review | **aperto**, per scelta (nessuna API) | PHASE 17 |
-| **TD-56** | L'app desktop di Open WebUI si apre ma avvia il suo server locale solo dal suo interno: l'avvio coordinato lo riconosce e lo dice, ma non può accenderlo | **aperto**, vincolo esterno | PHASE 27 |
+| **TD-56** | L'app desktop di Open WebUI si apre ma avvia il suo server locale solo dal suo interno: l'avvio coordinato lo riconosce e lo dice, ma non può accenderlo | **chiuso** il 2026-09-25 (review umana): Open WebUI è ora il container Docker `open-webui` su localhost:3000, quello che 3D Omniverse incorpora; si avvia con `docker start` (V25) | PHASE 27 |
 
 **Prossimo identificatore libero: `TD-57`.**
 

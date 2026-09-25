@@ -45,8 +45,10 @@ per provare senza toccare i dati, clonare prima (vedi l'intestazione dello scrip
    il nome).
 
 All'avvio del control plane partono anche Ollama, Open WebUI e 3D Omniverse, se non sono già attivi
-(*Impostazioni → Ecosistema all'avvio*). Open WebUI usa la porta 8080 ed è incorporato in
-**Integrazioni**; la sua app desktop accende il server dal suo interno.
+(*Impostazioni → Ecosistema all'avvio*). Open WebUI è il container Docker `open-webui` su
+**localhost:3000** — lo stesso che 3D Omniverse mostra nella scheda ChatLLM — e si apre nella console
+da **Chat LLM**; se il container è fermo viene avviato con `docker start open-webui` (serve Docker
+Desktop attivo). Il nome del container e l'indirizzo si cambiano da *Configura*.
 
 ## Prerequisiti
 - JDK 21
@@ -362,7 +364,7 @@ curl -s -X POST http://127.0.0.1:8090/v1/completions \
 |---|---|---|---|
 | `echo` | `echo:default` (default) | zero | sempre attivo; **deterministico, non è un modello** |
 | `ollama` | `ollama:<nome>` | zero, locale | Ollama in esecuzione su `AICOS_ENGINE_OLLAMA_URL` (default `http://127.0.0.1:11434`) e un modello scaricato (`ollama pull llama3.2:3b`) |
-| `anthropic` | `anthropic:claude-opus-5` | **a consumo** | **solo** impostando `ANTHROPIC_API_KEY`. Spento per default |
+| `anthropic` | `anthropic:<modello>` | **a consumo** | **solo** impostando `ANTHROPIC_API_KEY`. Spento per default; dal 2026-09-25 nessun modello API nel catalogo (l'operatore usa Claude via abbonamento) |
 
 Altre variabili: `AICOS_ENGINE_DEFAULT_MODEL`, `AICOS_ENGINE_ANTHROPIC_MODELS` (lista separata da
 virgole), `AICOS_ENGINE_HOST`, `AICOS_ENGINE_PORT`, `AICOS_ENGINE_PROFILE`.

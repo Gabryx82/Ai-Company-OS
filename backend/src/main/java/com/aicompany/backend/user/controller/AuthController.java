@@ -54,6 +54,9 @@ public class AuthController {
                                  @NotBlank @Size(max = 200) String newPassword) {
     }
 
+    public record ProfileChange(@Size(max = 120) String displayName) {
+    }
+
     /** Public: the one write that needs no credential, because it is how one gets one. */
     @PostMapping("/api/auth/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
@@ -81,5 +84,11 @@ public class AuthController {
                                                @Valid @RequestBody PasswordChange request, HttpServletRequest http) {
         auth.changePassword(caller, request.currentPassword(), request.newPassword(), http.getRemoteAddr());
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/api/auth/profile")
+    public UserResponse updateProfile(@AuthenticationPrincipal Caller caller,
+                                      @Valid @RequestBody ProfileChange request, HttpServletRequest http) {
+        return UserResponse.from(auth.updateOwnProfile(caller, request.displayName(), http.getRemoteAddr()));
     }
 }

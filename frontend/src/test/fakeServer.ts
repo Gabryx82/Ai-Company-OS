@@ -31,7 +31,7 @@ export function fakeFetch(routes: Record<string, Handler>) {
       "Content-Type": answer.problem ? "application/problem+json" : "application/json",
     };
     if (answer.etag) headers.ETag = answer.etag;
-    return new Response(answer.body === undefined ? "" : JSON.stringify(answer.body), { status: answer.status ?? 200, headers });
+    return new Response(answer.body === undefined ? null : JSON.stringify(answer.body), { status: answer.status ?? 200, headers });
   });
   return { fetcher: fetcher as unknown as typeof fetch, calls };
 }

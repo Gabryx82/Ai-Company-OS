@@ -177,10 +177,10 @@
     "role": "Chat ed esplorazione dei modelli locali Ollama",
     "purpose": "Ambiente separato di conversazione con i modelli locali; AI Company OS lo incorpora invece di duplicarlo.",
     "capabilities": ["chat", "local-llm", "model-exploration", "rag"],
-    "launchKind": "LOCAL_SERVICE", "url": "http://localhost:8080", "healthUrl": "http://localhost:8080/health",
-    "appId": "com.openwebui.desktop", "executable": "%LOCALAPPDATA%\\Programs\\open-webui\\open-webui.exe",
+    "launchKind": "LOCAL_SERVICE", "url": "http://localhost:3000", "healthUrl": "http://localhost:3000/health",
+    "executable": "docker", "executableArgs": ["start", "open-webui"],
     "embeddable": true,
-    "configuration": "Server locale dell'app desktop su 127.0.0.1:8080 collegato a Ollama (localhost:11434)."
+    "configuration": "Container Docker «open-webui» su localhost:3000: lo stesso che 3D Omniverse incorpora nella scheda ChatLLM e crea con il suo docker-compose. Si avvia con «docker start open-webui»; serve Docker Desktop attivo."
   },
   {
     "key": "ollama", "name": "Ollama", "category": "AI_LOCAL",

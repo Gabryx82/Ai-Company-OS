@@ -29,7 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class CostGovernanceApiTest extends AbstractPostgresTest {
 
-    private static final String PAID = "anthropic:claude-opus-5";
+    /** The catalog ships no pay-per-token model since 2026-09-25 (operator: no APIs); the test brings its own. */
+    private static final String PAID = "anthropic:cost-test-model";
 
     @Autowired
     private MockMvc mockMvc;
@@ -45,6 +46,10 @@ class CostGovernanceApiTest extends AbstractPostgresTest {
     void anAgent() throws Exception {
         jdbc.update("DELETE FROM cost_budgets");
         jdbc.update("UPDATE llm_models SET input_price_per_mtok = NULL, output_price_per_mtok = NULL");
+        jdbc.update("""
+                INSERT INTO llm_models (key, provider_key, display_name, role, lifecycle, created_at, updated_at)
+                VALUES (?, 'anthropic', 'Cost test model', 'PREMIUM', 'ACTIVE', now(), now())
+                ON CONFLICT (key) DO NOTHING""", PAID);
         admin = AdminSession.bearer(mockMvc);
         MvcResult created = mockMvc.perform(post("/api/agents").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cost Bot " + System.nanoTime() + "\",\"role\":\"Analyst\",\"specialization\":\"costs\"}")).andReturn();

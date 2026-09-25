@@ -28,6 +28,10 @@ export function Integrations({ selected, navigate }: { selected: string | null; 
     && ["PRODUCTIVITY", "VCS", "HOSTING", "AI_CLOUD"].includes(s.category));
   const current = embedded.find((s) => s.key === selected) ?? null;
 
+  if (selected && all === null && !problem) {
+    return <p className="muted">Caricamento…</p>;
+  }
+
   if (current) {
     const url = current.url!;
     return (

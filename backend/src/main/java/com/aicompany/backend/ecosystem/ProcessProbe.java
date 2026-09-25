@@ -17,7 +17,9 @@ import java.util.Set;
 public class ProcessProbe {
 
     static final Set<String> GENERIC = Set.of("powershell.exe", "pwsh.exe", "cmd.exe", "wscript.exe", "cscript.exe",
-            "explorer.exe", "python.exe", "pythonw.exe", "node.exe", "java.exe", "javaw.exe");
+            "explorer.exe", "python.exe", "pythonw.exe", "node.exe", "java.exe", "javaw.exe",
+            // a docker CLI process says nothing about whether a given container is up
+            "docker.exe");
 
     public boolean isRunning(Path executable) {
         if (executable == null || GENERIC.contains(executable.getFileName().toString().toLowerCase(Locale.ROOT))) {

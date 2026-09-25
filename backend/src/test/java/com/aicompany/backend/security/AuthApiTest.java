@@ -171,6 +171,29 @@ class AuthApiTest extends AbstractPostgresTest {
     }
 
     @Test
+    void aPersonRenamesThemselvesAndTheNameComesBackFromMe() throws Exception {
+        String admin = tokenOf("admin", ADMIN_PASSWORD);
+        createUser(admin, "marta", "OPERATOR", "first-secret-of-m-a");
+        String marta = tokenOf("marta", "first-secret-of-m-a");
+
+        mockMvc.perform(put("/api/auth/profile").header(HttpHeaders.AUTHORIZATION, bearer(marta))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"  Marta Rossi \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Marta Rossi"))
+                .andExpect(jsonPath("$.role").value("OPERATOR"));
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(marta)))
+                .andExpect(jsonPath("$.user.displayName").value("Marta Rossi"));
+
+        mockMvc.perform(put("/api/auth/profile").header(HttpHeaders.AUTHORIZATION, bearer(marta))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"" + "x".repeat(121) + "\"}"))
+                .andExpect(status().isBadRequest());
+        // A service token is not a person: it has no profile to rename.
+        mockMvc.perform(put("/api/auth/profile").contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"x\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:not-a-user-session"));
+    }
+
+    @Test
     void anOperatorWorksButCannotManagePeopleReadTheLogOrDelete() throws Exception {
         String admin = tokenOf("admin", ADMIN_PASSWORD);
         createUser(admin, "paolo", "OPERATOR", "works-here-since-2026");

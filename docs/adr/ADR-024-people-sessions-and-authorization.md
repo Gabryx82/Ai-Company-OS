@@ -86,6 +86,14 @@ L'utente in memoria che Spring Boot crea quando non trova un `UserDetailsService
 (`spring.autoconfigure.exclude`): non serviva, e scriveva una password generata nel log — trovato nello
 smoke dal vivo di PHASE 27, fissato da `AuthApiTest`. In produzione `/v3/api-docs` è spento.
 
+## 7c. Il proprio account dalla console (review umana del 2026-09-25)
+
+Il nome visualizzato è un campo **dell'account** (`PUT /api/auth/profile`, solo il proprio, registrato
+come `USER_UPDATED`): la barra in alto, il saluto e l'elenco utenti leggono quello. Prima la console lo
+salvava solo nel browser, e la barra in alto non cambiava mai. Il modulo della password controlla le
+stesse regole del server mentre si scrive e dice cosa manca, invece di lasciare il pulsante grigio senza
+spiegazione; i rifiuti del server arrivano in italiano.
+
 ## 8. Che cosa non fa, di proposito
 
 Niente OAuth/OIDC, niente MFA, niente password reset via email: un prodotto locale con un

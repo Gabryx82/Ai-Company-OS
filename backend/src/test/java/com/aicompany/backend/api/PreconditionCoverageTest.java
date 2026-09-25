@@ -84,8 +84,9 @@ class PreconditionCoverageTest {
             // client can hold a tag before it has a credential. Signing out revokes
             // one's own session. Changing one's own password is guarded by the current
             // password, a stronger precondition than a tag. Admin edits of people
-            // (update, resetPassword) do take the tag.
-            "login", "logout", "changePassword",
+            // (update, resetPassword) do take the tag. One's own display name is a label only
+            // its owner writes, from the one form that shows it: last write wins by design.
+            "login", "logout", "changePassword", "updateOwnProfile",
             // PHASE 19 (ADR-026): creating an entry (by hand, from the folder or from the web) is creation;
             // materialize writes the file of an entry that has none and never overwrites; sync reads the folder,
             // which is the source of truth, into the index. Saving the file from the console takes the tag.

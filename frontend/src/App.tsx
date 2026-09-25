@@ -36,6 +36,7 @@ const NAV: { group: string; items: { key: string; label: string; icon: IconName 
   { group: "Strumenti", items: [
     { key: "software", label: "Software Hub", icon: "software" },
     { key: "terminal", label: "Terminale", icon: "terminal" },
+    { key: "chat", label: "Chat LLM", icon: "chat" },
     { key: "integrations", label: "Integrazioni", icon: "integrations" },
   ] },
   { group: "Risorse", items: [
@@ -186,11 +187,13 @@ export function App() {
             {page === "software" && <SoftwareHub selected={detail} navigate={navigate} />}
             {page === "terminal" && <Terminal />}
             {page === "integrations" && <Integrations selected={detail} navigate={navigate} />}
+            {/* Open WebUI inside the console, as the ChatLLM tab of 3D Omniverse does. */}
+            {page === "chat" && <Integrations selected="open-webui" navigate={navigate} />}
             {page === "knowledge" && <KnowledgeHub />}
             {page === "mockups" && <MockupHub />}
             {page === "models" && <Models />}
             {page === "usage" && <Usage />}
-            {page === "settings" && <Settings session={session} onPasswordChanged={(next) => { saveSession(next); setSession(next); }} />}
+            {page === "settings" && <Settings session={session} onSessionChanged={(next) => { saveSession(next); setSession(next); }} />}
             </ErrorBoundary>
           </div>
         </main>

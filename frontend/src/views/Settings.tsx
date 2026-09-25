@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { Session } from "../api/client";
+import { ApiProblem, type Session } from "../api/client";
 import type { Role, SecurityEventInfo, UserInfo } from "../api/types";
 import { useApi } from "../context";
 import { displayName, setDisplayName } from "../preferences";
@@ -16,19 +16,28 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 /** Preferences of this console, one's own account, and -- for admins -- people and the security log. */
-export function Settings({ session, onPasswordChanged }: { session: Session; onPasswordChanged: (next: Session) => void }) {
+export function Settings({ session, onSessionChanged }: { session: Session; onSessionChanged: (next: Session) => void }) {
   const isAdmin = session.user?.role === "ADMIN";
+  // "Account e sicurezza" in the user menu lands here: bring the account card into view.
+  useEffect(() => {
+    if (window.location.hash.endsWith("/account")) document.getElementById("account")?.scrollIntoView?.({ block: "start" });
+  }, []);
   return (
     <div className="stack" style={{ maxWidth: 980 }}>
       <div className="page-head"><div><h1>Impostazioni</h1>
-        <p>Preferenze della console, il tuo account e, per gli admin, utenti e registro di sicurezza.</p></div></div>
-      <div className="grid grid-2">
-        <Preferences />
-        {session.user ? <PasswordCard session={session} onChanged={onPasswordChanged} /> : (
+        <p>Il tuo account, l'ecosistema all'avvio e, per gli admin, utenti e registro di sicurezza.</p></div></div>
+      {session.user ? (
+        <div className="grid grid-2" id="account">
+          <ProfileCard session={session} onChanged={onSessionChanged} />
+          <PasswordCard session={session} onChanged={onSessionChanged} />
+        </div>
+      ) : (
+        <div className="grid grid-2">
+          <LocalNameCard />
           <div className="card card-body"><strong>Token di servizio</strong>
             <p className="muted">Questa console usa un token di servizio, non un account: non c'è una password da cambiare.</p></div>
-        )}
-      </div>
+        </div>
+      )}
       <EcosystemPanel manage />
       {isAdmin && <UsersCard self={session.user!} />}
       {isAdmin && <SecurityLogCard />}
@@ -36,7 +45,44 @@ export function Settings({ session, onPasswordChanged }: { session: Session; onP
   );
 }
 
-function Preferences() {
+/** A signed-in person's name lives on the account: the top bar, the greeting and the user list all read it. */
+function ProfileCard({ session, onChanged }: { session: Session; onChanged: (next: Session) => void }) {
+  const api = useApi();
+  const user = session.user!;
+  const [name, setName] = useState(user.displayName ?? "");
+  const [saved, setSaved] = useState(false);
+  const [problem, setProblem] = useState<unknown>(null);
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    setProblem(null);
+    try {
+      const updated = await api.updateProfile(name);
+      onChanged({ ...session, user: updated });
+      setSaved(true);
+    } catch (error) {
+      setProblem(error);
+    }
+  }
+
+  return (
+    <form className="card card-body stack" onSubmit={save}>
+      <div className="section-title">Il mio account</div>
+      <div className="row"><Icon name="agents" size={15} /><strong>{user.username}</strong>
+        <span className="chip">{user.role === "ADMIN" ? "Admin" : "Operatore"}</span>
+        {user.lastLoginAt && <><span className="spacer" /><span className="muted" style={{ fontSize: 12 }}>ultimo accesso {when(user.lastLoginAt)}</span></>}</div>
+      <Field label="Nome visualizzato" hint="Compare in alto a destra e nel saluto della dashboard. Vuoto: si usa il nome utente.">
+        <input value={name} maxLength={120} onChange={(e) => { setName(e.target.value); setSaved(false); }} autoComplete="name" />
+      </Field>
+      <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
+      <div className="row"><span className="spacer" />{saved && <span className="badge badge-ok">Salvato</span>}
+        <button className="btn btn-primary" type="submit" disabled={name.trim() === (user.displayName ?? "")}>Salva nome</button></div>
+    </form>
+  );
+}
+
+/** Without an account (a service token) the name can only be this browser's preference. */
+function LocalNameCard() {
   const [name, setName] = useState(displayName());
   const [saved, setSaved] = useState(false);
   return (
@@ -46,47 +92,97 @@ function Preferences() {
         <input value={name} onChange={(e) => { setName(e.target.value); setSaved(false); }} />
       </Field>
       <div className="row"><span className="spacer" />{saved && <span className="badge badge-ok">Salvato</span>}
-        <button className="btn btn-primary" onClick={() => { setDisplayName(name); setSaved(true); }}>Salva</button></div>
+        <button className="btn btn-primary" onClick={() => { setDisplayName(name); setSaved(true); }}>Salva nome</button></div>
     </div>
   );
 }
 
+const MINIMUM_PASSWORD = 12;
+const MAXIMUM_PASSWORD_BYTES = 72;
+
+/** The server's rules (ADR-024 §2), checked as one types, so the button never just sits there greyed out. */
+function passwordIssues(current: string, next: string, again: string, username: string): string[] {
+  const issues: string[] = [];
+  if (!current) issues.push("Scrivi la password attuale.");
+  const length = [...next].length;
+  if (length < MINIMUM_PASSWORD) {
+    issues.push(length === 0 ? `Scrivi la nuova password (almeno ${MINIMUM_PASSWORD} caratteri).`
+      : `La nuova password è troppo corta: servono ancora ${MINIMUM_PASSWORD - length} caratteri.`);
+  }
+  if (new TextEncoder().encode(next).length > MAXIMUM_PASSWORD_BYTES) issues.push(`La nuova password supera i ${MAXIMUM_PASSWORD_BYTES} byte.`);
+  if (next && username && next.toLowerCase().includes(username.toLowerCase())) issues.push(`La nuova password non può contenere il nome utente «${username}».`);
+  if (next && current && next === current) issues.push("La nuova password deve essere diversa da quella attuale.");
+  if (length >= MINIMUM_PASSWORD && !again) issues.push("Ripeti la nuova password.");
+  if (again && again !== next) issues.push("Le due password non coincidono.");
+  return issues;
+}
+
+/** The server's refusals, in words. */
+function passwordProblem(error: unknown): unknown {
+  if (!(error instanceof ApiProblem)) return error;
+  if (error.slug === "current-password-wrong") {
+    return new ApiProblem(error.status, { type: error.type, title: "Password attuale errata",
+      detail: "La password attuale non è quella giusta. Nulla è cambiato." });
+  }
+  if (error.slug === "weak-password") {
+    const detail = error.detail.includes("at least") ? `La password deve avere almeno ${MINIMUM_PASSWORD} caratteri.`
+      : error.detail.includes("at most") ? `La password può avere al massimo ${MAXIMUM_PASSWORD_BYTES} byte.`
+      : error.detail.includes("username") ? "La password non può contenere il nome utente."
+      : error.detail.includes("differ") ? "La nuova password deve essere diversa da quella attuale."
+      : error.detail.includes("easy") ? "La password è troppo facile da indovinare: allungala o rendila meno prevedibile."
+      : error.detail;
+    return new ApiProblem(error.status, { type: error.type, title: "Password non accettata", detail });
+  }
+  return error;
+}
+
 function PasswordCard({ session, onChanged }: { session: Session; onChanged: (next: Session) => void }) {
   const api = useApi();
+  const user = session.user!;
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [again, setAgain] = useState("");
   const [problem, setProblem] = useState<unknown>(null);
   const [done, setDone] = useState(false);
-  const mismatch = again.length > 0 && again !== next;
+  const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
+  const issues = passwordIssues(current, next, again, user.username);
+  const showIssues = (tried || Boolean(current || next || again)) && issues.length > 0;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    setTried(true);
+    if (issues.length > 0 || busy) return;
     setProblem(null);
+    setBusy(true);
     try {
       await api.changePassword(current, next);
-      setCurrent(""); setNext(""); setAgain(""); setDone(true);
+      setCurrent(""); setNext(""); setAgain(""); setTried(false); setDone(true);
       const me = await api.me();
       if (me.user) onChanged({ ...session, user: me.user });
     } catch (error) {
-      setProblem(error);
+      setProblem(passwordProblem(error));
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
-    <form className="card card-body stack" onSubmit={submit} id="account">
-      <div className="section-title">Il mio account</div>
-      <div className="row"><Icon name="agents" size={15} /><strong>{session.user!.username}</strong>
-        <span className="chip">{session.user!.role === "ADMIN" ? "Admin" : "Operatore"}</span>
-        <span className="spacer" /><span className="muted" style={{ fontSize: 12 }}>password del {when(session.user!.passwordChangedAt)}</span></div>
-      <Field label="Password attuale"><input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required /></Field>
-      <Field label="Nuova password" hint="Almeno 12 caratteri, al massimo 72 byte, senza il nome utente. Le altre sessioni verranno chiuse.">
-        <input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" required /></Field>
-      <Field label="Ripeti la nuova password" error={mismatch ? "Le due password non coincidono." : undefined}>
-        <input type="password" value={again} onChange={(e) => setAgain(e.target.value)} autoComplete="new-password" required /></Field>
+    <form className="card card-body stack" onSubmit={submit}>
+      <div className="row"><div className="section-title">Password</div><span className="spacer" />
+        <span className="muted" style={{ fontSize: 12 }}>cambiata il {when(user.passwordChangedAt)}</span></div>
+      <Field label="Password attuale"><input type="password" value={current} onChange={(e) => { setCurrent(e.target.value); setDone(false); }} autoComplete="current-password" /></Field>
+      <Field label="Nuova password" hint={`Almeno ${MINIMUM_PASSWORD} caratteri, senza il nome utente. Le tue altre sessioni verranno chiuse.`}>
+        <input type="password" value={next} onChange={(e) => { setNext(e.target.value); setDone(false); }} autoComplete="new-password" /></Field>
+      <Field label="Ripeti la nuova password">
+        <input type="password" value={again} onChange={(e) => { setAgain(e.target.value); setDone(false); }} autoComplete="new-password" /></Field>
+      {showIssues && (
+        <ul className="hint-list" aria-live="polite">{issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
+      )}
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
       <div className="row"><span className="spacer" />{done && <span className="badge badge-ok">Password cambiata</span>}
-        <button className="btn btn-primary" type="submit" disabled={!current || next.length < 12 || mismatch || !again}>Cambia password</button></div>
+        <button className="btn btn-primary" type="submit" disabled={busy}>
+          {busy ? "Cambio in corso…" : "Cambia password"}</button></div>
     </form>
   );
 }

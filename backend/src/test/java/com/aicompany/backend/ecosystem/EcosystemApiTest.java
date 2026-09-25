@@ -101,7 +101,7 @@ class EcosystemApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$[*].key").value(hasItems("ollama", "open-webui", "omniverse-3d")))
                 .andExpect(jsonPath("$[0].key").value("ollama"))
                 .andExpect(jsonPath("$[?(@.key == 'omniverse-3d')].autostart").value(hasItems(true)))
-                .andExpect(jsonPath("$[?(@.key == 'open-webui')].healthUrl").value(hasItems("http://localhost:8080/health")));
+                .andExpect(jsonPath("$[?(@.key == 'open-webui')].healthUrl").value(hasItems("http://localhost:3000/health")));
     }
 
     @Test

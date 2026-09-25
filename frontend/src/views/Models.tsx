@@ -31,6 +31,8 @@ export function Models() {
     api.modelCatalog().then(setCatalog).catch(setProblem);
   };
   useEffect(load, [api]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Only what the engine actually serves: a provider switched off (an API without a key) is not an offer.
+  const served = (catalog?.uncatalogued ?? []).filter((u) => u.available);
   const paid = new Set((providers ?? []).filter((p) => p.billing === "PAY_PER_TOKEN").map((p) => p.key));
 
   return (
@@ -78,11 +80,11 @@ export function Models() {
       </div>
 
       {pricing && <PriceModal model={pricing} onClose={() => setPricing(null)} onSaved={() => { setPricing(null); load(); }} />}
-      {catalog && catalog.uncatalogued.length > 0 && (
+      {served.length > 0 && (
         <div className="card">
           <div className="card-head"><h2>Serviti dall'engine ma non catalogati</h2></div>
           <div className="card-body">
-            {catalog.uncatalogued.map((u) => (
+            {served.map((u) => (
               <span key={u.key} className="chip">{u.key}{u.available ? "" : " (non disponibile)"}{u.billed ? " · a consumo" : ""}</span>
             ))}
           </div>

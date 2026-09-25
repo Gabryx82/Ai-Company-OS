@@ -138,6 +138,10 @@ export class ControlPlane {
     return this.plain("PUT", "/api/auth/password", { body: { currentPassword, newPassword } });
   }
 
+  updateProfile(displayName: string): Promise<UserInfo> {
+    return this.plain("PUT", "/api/auth/profile", { body: { displayName } });
+  }
+
   users(): Promise<UserInfo[]> {
     return this.plain("GET", "/api/admin/users");
   }

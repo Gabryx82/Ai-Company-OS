@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type { ControlPlane, Session } from "./api/client";
+import { displayName } from "./preferences";
 
 export const ApiContext = createContext<ControlPlane | null>(null);
 
@@ -15,4 +16,10 @@ export const SessionContext = createContext<Session | null>(null);
 export function useIsAdmin(): boolean {
   const session = useContext(SessionContext);
   return session?.user?.role === "ADMIN";
+}
+
+/** The name the console greets and shows: the account's own, else its username, else this browser's preference. */
+export function useDisplayName(): string {
+  const user = useContext(SessionContext)?.user;
+  return user?.displayName || user?.username || displayName();
 }

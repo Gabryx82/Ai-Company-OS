@@ -127,6 +127,19 @@ public class AuthService {
         log.record(SecurityLog.PASSWORD_CHANGED, user.getUsername(), source, ended + " other sessions ended");
     }
 
+    /** One's own display name: what the console shows in the top bar and in the greeting. Blank clears it. */
+    @Transactional
+    public AppUser updateOwnProfile(Caller caller, String displayName, String source) {
+        if (caller.userId() == null) {
+            throw AuthProblemException.notAUser();
+        }
+        AppUser user = users.findByIdForUpdate(caller.userId()).orElseThrow(AuthProblemException::notAUser);
+        String name = displayName == null || displayName.isBlank() ? null : displayName.strip();
+        user.configure(name, user.getRole(), user.isEnabled());
+        log.record(SecurityLog.USER_UPDATED, user.getUsername(), source, "own display name");
+        return users.saveAndFlush(user);
+    }
+
     // --- people management (admin) ---------------------------------------------------
 
     @Transactional(readOnly = true)

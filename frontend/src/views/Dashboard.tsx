@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { useApi } from "../context";
+import { useApi, useDisplayName } from "../context";
 import type { Agent, DailyItem, ModelList, Project, Software, Task } from "../api/types";
 import { PriorityBadge, ProblemNote, StatusBadge } from "../components/ui";
 import { AppIcon } from "../components/AppIcon";
 import { Icon } from "../components/icons";
-import { displayName } from "../preferences";
 import { useLauncher } from "./SoftwareHub";
 
 const QUICK = ["claude-code", "codex", "antigravity-ide", "vscode-continue", "intellij-junie", "chatgpt-classic",
@@ -17,6 +16,7 @@ function greeting(): string {
 
 export function Dashboard({ navigate }: { navigate: (page: string, detail?: string) => void }) {
   const api = useApi();
+  const name = useDisplayName();
   const [data, setData] = useState<{ tasks: Task[]; agents: Agent[]; projects: Project[] } | null>(null);
   const [software, setSoftware] = useState<Software[] | null>(null);
   const [models, setModels] = useState<ModelList | null>(null);
@@ -54,7 +54,7 @@ export function Dashboard({ navigate }: { navigate: (page: string, detail?: stri
       <div className="card hero">
         <span className="brand-mark" style={{ width: 52, height: 52 }}><Icon name="sparkle" size={26} /></span>
         <div>
-          <h1>{greeting()}, {displayName()}</h1>
+          <h1>{greeting()}, {name}</h1>
           <p className="muted" style={{ margin: "4px 0 0" }}>La tua seconda mente operativa è online.</p>
         </div>
         <span className="spacer" />

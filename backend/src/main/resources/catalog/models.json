@@ -85,21 +85,6 @@
     "notes": "Multimodale: analisi di reference, screenshot e mockup del progetto."
   },
   {
-    "key": "anthropic:claude-opus-5",
-    "providerKey": "anthropic",
-    "displayName": "Claude Opus 5 (API)",
-    "role": "PREMIUM",
-    "capabilities": [
-      "tools",
-      "coding",
-      "planning",
-      "long-context",
-      "vision"
-    ],
-    "lifecycle": "ACTIVE",
-    "notes": "Via API a consumo: spento finché ANTHROPIC_API_KEY non è configurata e TD-40 non è chiuso."
-  },
-  {
     "key": "claude-subscription:default",
     "providerKey": "claude-subscription",
     "displayName": "Claude (modello scelto in Claude Code / app Claude)",

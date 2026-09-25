@@ -12,8 +12,18 @@
   solo fast-forward integra tutto.
 - **Suite**: **470** Java (469 verdi + 1 saltato su Windows) + **58** AI Engine + **27** console.
   CI verde su ogni commit del blocco fino all'ultimo verificato.
-- **Stream**: `V19` → **`V24`** (tutte additive); seed di sviluppo `V1` → **`V2`**.
+- **Stream**: `V19` → **`V25`** (V20–V24 additive; V25 corregge due righe del catalogo); seed di sviluppo `V1` → **`V2`**.
 - **Smoke dal vivo**: **31/31** sul clone `aicompany_p8`, con Ollama e DeepSeek reali.
+
+### Correzioni dalla tua prima verifica (2026-09-25)
+
+| Segnalazione | Causa | Correzione |
+|---|---|---|
+| Il cambio password «non funziona» | il pulsante restava grigio senza dire perché (meno di 12 caratteri, nome utente dentro, ripetizione diversa); i rifiuti del server erano in inglese | il modulo elenca mentre scrivi cosa manca, il pulsante è sempre premibile e spiega; errori in italiano |
+| Il nome visualizzato non cambia | la console lo salvava solo nel browser, la barra in alto legge quello dell'account | nome sull'account (`PUT /api/auth/profile`): barra, saluto ed elenco utenti lo mostrano subito |
+| Open WebUI non funziona nella console | puntava al server dell'app desktop (8080, spento); il tuo Open WebUI è il container Docker su 3000 | Open WebUI = container `open-webui` su localhost:3000, come nella scheda ChatLLM di Omniverse; voce **Chat LLM** nel menu; avvio con `docker start open-webui` (V25). Chiude TD-56 |
+| «Windows Terminal (wt.exe) is not installed» | wt.exe è un alias dello Store, che Java non riesce a seguire: `Files.exists` rispondeva «no» | l'alias si controlla senza seguirlo, e wt.exe si cerca anche nel PATH |
+| Togliere «Claude Opus 5 (API)» | voce del catalogo | tolta dal catalogo e dal DB (V25, solo se nessun agente la usa); i modelli API spenti non compaiono più neppure tra i «non catalogati» |
 
 ---
 
@@ -164,8 +174,8 @@ ciascuno: se risponde non si avvia (**nessun doppione**); se l'app è già apert
 avvia col comando del catalogo e si attende la sua salute fino al timeout. Esito registrato e visibile
 (Impostazioni, Integrazioni); un errore non blocca gli altri né il sistema. Comandi, ordine, attese e
 autoavvio si configurano (admin), con variabili d'ambiente e **senza percorsi della macchina nel
-codice**. Dal vivo: Ollama e Omniverse OK; l'app desktop di **Open WebUI** si apre ma accende il suo
-server solo dal suo interno (TD-56), e il sistema lo dice.
+codice**. Open WebUI è il container Docker `open-webui` su localhost:3000 (lo stesso di 3D Omniverse),
+incorporato nella voce **Chat LLM**, avviato con `docker start open-webui` se è fermo.
 
 ## 10. Sicurezza implementata
 
@@ -224,10 +234,11 @@ log (ora escluso e fissato da un test); `/v3/api-docs` spento in produzione.
 | V22 | risorse: `origin`, `file_path`, `file_synced_at` |
 | V23 | `ecosystem_autostart` |
 | V24 | prezzi dei modelli, `task_runs.cost_usd`, `cost_budgets` |
+| V25 | Open WebUI → container Docker su 3000 (se ancora sul vecchio default); via «Claude Opus 5 (API)» se nessun agente la usa |
 | seed V2 | legami, prompt e baseline degli agenti del seed (riempie solo campi vuoti) |
 
-Tutte additive. Il DB live `aicompany` è a **V11** e non è stato toccato: al primo avvio riceverà
-V12–V24 e il seed V2.
+V20–V24 additive; V25 corregge solo righe di catalogo ancora sui valori di fabbrica. Il DB live
+`aicompany` ha ricevuto V12–V24 e il seed V2 al tuo primo avvio; al prossimo riceve V25.
 
 ## 14. Test, CI, smoke
 
@@ -253,11 +264,10 @@ V12–V24 e il seed V2.
 | TD-53 | token di sessione nel `sessionStorage` (mitigato da React, scadenza, revoca) |
 | TD-54 | una run senza modello (default dell'engine) non passa dal budget; oggi il default è `echo` |
 | TD-55 | l'esito di un handoff non torna da solo: review manuale |
-| TD-56 | Open WebUI desktop accende il server solo dal suo interno |
 | TD-48, TD-49 | MCP come metadato; API di `opencode serve` non usata |
 | TD-51, TD-52 | rimozione di `llama3.2:3b`; coder più recente (19 GB) — decisioni tue |
 
-Chiusi in questo blocco: **TD-40** (costi), **TD-42** (terminale); TD-46 in parte.
+Chiusi in questo blocco: **TD-40** (costi), **TD-42** (terminale), **TD-56** (Open WebUI); TD-46 in parte.
 
 ## 16. HEAD, branch, working tree
 
@@ -297,11 +307,11 @@ partono anche Ollama, Open WebUI e 3D Omniverse se non sono attivi. Per provare 
 - *Opzioni*: (a) fast-forward di `master` all'ultimo commit del branch; (b) chiedere modifiche.
 - *Default consigliato*: **(a)**, dopo aver provato i punti del §17.
 
-**2. Primo avvio sul DB live `aicompany`.**
-- *Problema*: il DB è a V11; il nuovo backend applicherà V12–V24 e il seed V2, e creerà l'admin.
-- *Perché*: tocca i tuoi dati (solo in aggiunta; il seed V2 riempie solo i modelli vuoti degli agenti
-  del seed).
-- *Default consigliato*: `pg_dump` di sicurezza, poi `start-dev.ps1`.
+**2. Riavviare il backend per le correzioni.**
+- *Problema*: il backend in esecuzione è quello di prima; le correzioni (V25, nuovo endpoint, wt.exe)
+  entrano al riavvio.
+- *Perché*: V25 modifica due righe del catalogo nel tuo DB (Open WebUI, Claude Opus 5 API).
+- *Default consigliato*: chiudere le finestre di `start-dev.ps1` e rilanciarlo.
 
 **3. Integrazioni Gmail, Drive, ClickUp (PHASE 26).**
 - *Problema*: non si incorporano (policy di framing misurate); dentro la console servono le loro API.
