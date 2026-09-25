@@ -50,6 +50,16 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+		<!-- PHASE 22 (ADR-029): the integrated terminal, a PTY streamed over a WebSocket. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.jetbrains.pty4j</groupId>
+			<artifactId>pty4j</artifactId>
+			<version>0.13.10</version>
+		</dependency>
 		<dependency>
 			<!-- TASK-021: the OpenAPI description of the API, API only (no UI).
 			     Served authenticated at /v3/api-docs, and exported to

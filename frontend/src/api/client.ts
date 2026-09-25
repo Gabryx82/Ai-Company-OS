@@ -13,7 +13,7 @@ import type {
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
-  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, EcosystemServiceInfo,
+  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, EcosystemServiceInfo, TerminalShell, TerminalTicket,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -496,6 +496,21 @@ export class ControlPlane {
     } catch {
       return null;
     }
+  }
+
+  // --- the integrated terminal (ADR-029) ---------------------------------------
+
+  terminalShells(): Promise<TerminalShell[]> {
+    return this.plain("GET", "/api/terminal/shells");
+  }
+
+  terminalTicket(shell: string, projectId?: number): Promise<TerminalTicket> {
+    return this.plain("POST", "/api/terminal/tickets", { body: { shell, projectId: projectId ?? null } });
+  }
+
+  /** Where the terminal's socket is, for the base URL this session talks to. */
+  terminalSocketUrl(): string {
+    return this.session.baseUrl.replace(/\/+$/, "").replace(/^http/, "ws") + "/api/terminal/ws";
   }
 
   // --- the ecosystem's start (ADR-028) -----------------------------------------

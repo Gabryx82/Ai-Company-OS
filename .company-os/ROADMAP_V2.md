@@ -85,3 +85,27 @@ master                                        checkpoint umano (d166870), NON to
 
 Un integration branch per fase (`autonomous/phase-N-<nome>`) creato dal precedente; branch di task
 quando una task ha più commit indipendenti. Ogni branch pushato, CI su ogni push.
+
+## 5. Blocco di consolidamento — direttiva del 2026-09-25
+
+Dopo la Human Final Review di PHASE 8–14 (accettate e integrate in `master` con un fast-forward il
+2026-09-25), la direttiva ha chiesto UX, chiarezza dell'orchestrazione, configurabilità, integrazione
+degli agenti e sicurezza **prima** delle fasi restanti. Le fasi 15–21 della tabella del §1 non erano
+mai state iniziate: si rinumerano qui, in un'unica sequenza. **La tabella del §1 resta com'era, per
+la storia; per PHASE ≥ 15 vale questa.**
+
+| Fase | Contenuto | Era | ADR | Stato |
+|---|---|---|---|---|
+| **15** | Sicurezza: utenti, Admin, password hashate, sessioni revocabili, ruoli, registro | nuova (§8) | 024 | ✅ |
+| **16** | Legame Agente → Modello → Provider → Execution Target; configurazione iniziale vs modificata; DeepSeek | nuova (§4–5) | 025 | ✅ |
+| **17** | Handoff senza API OpenAI/Anthropic per ogni task: cartella, contesto, ruolo, skill, prompt | nuova (§6) | 025 | ✅ |
+| **18** | UX di assegnazione COSA → A CHI → CON → ATTRAVERSO | nuova (§1) | 025 | ✅ |
+| **19** | Skill e knowledge come file; Knowledge Hub riparato e rifatto | nuova (§3) | 026 | ✅ |
+| **20** | Eliminazione reale di progetti e task, distinta dall'archiviazione | nuova (§2) | 027 | ✅ |
+| **21** | Avvio coordinato dell'ecosistema (Ollama, Open WebUI, 3D Omniverse) | nuova (§7) | 028 | ✅ |
+| **22** | Terminale integrato nella console (PowerShell, Claude Code, OpenCode) | ex 15 | 029 | ✅ |
+| **23** | Graph engineering: grafo del codice di un progetto | ex 16 | — | da fare |
+| **24** | Governo dei costi: prezzi, budget, blocco delle run oltre budget (TD-40) | ex 19 | — | da fare |
+| **25** | Template/Mockup Hub e dipartimento 3D | ex 17, ex 20 | — | da fare |
+| **26** | Integrazioni esterne con credenziali (Gmail, Drive, ClickUp) | ex 18 | — | **decisione umana** |
+| **27** | Hardening, verifica end-to-end, release, Human Final Review | ex 21 | — | da fare |

@@ -253,3 +253,8 @@ export interface EcosystemServiceInfo {
   autostart: boolean; position: number; timeoutSeconds: number; lastStatus: EcosystemStatus; lastMessage: string | null;
   lastAttemptAt: string | null; version: number;
 }
+
+// --- PHASE 22: the integrated terminal (ADR-029) --------------------------------------
+
+export interface TerminalShell { key: string; name: string; available: boolean; detail: string | null }
+export interface TerminalTicket { ticket: string; shell: string; directory: string; command: string[]; expiresAt: string }

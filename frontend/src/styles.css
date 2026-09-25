@@ -304,3 +304,6 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .assign-grid { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.6fr); gap: 14px; }
 @media (max-width: 860px) { .assign-grid { grid-template-columns: 1fr; } }
 .what-box { border: 1px dashed var(--border-strong); border-radius: 12px; padding: 12px; display: grid; gap: 6px; }
+
+/* PHASE 22: the integrated terminal. */
+.terminal-host { height: 460px; background: #0b1222; border: 1px solid var(--border); border-radius: 10px; padding: 6px; }

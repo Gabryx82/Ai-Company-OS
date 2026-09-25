@@ -1,15 +1,17 @@
-import { useEffect, useState } from "react";
-import { useApi } from "../context";
-import type { Project, Software } from "../api/types";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { useApi, useIsAdmin } from "../context";
+import type { Project, Software, TerminalShell } from "../api/types";
+// xterm.js is loaded only when a terminal is opened: it stays out of the console's main bundle.
+const TerminalTab = lazy(() => import("../components/TerminalTab").then((m) => ({ default: m.TerminalTab })));
 import { ProblemNote } from "../components/ui";
 import { AppIcon } from "../components/AppIcon";
 import { Icon } from "../components/icons";
 import { AVAILABILITY, useLauncher } from "./SoftwareHub";
 
 /**
- * The terminal tab: PowerShell, Claude Code or OpenCode, in a project folder,
- * inside Windows Terminal. An integrated terminal in the page (a PTY streamed
- * to the browser) is PHASE 15; this opens the real one, one click away.
+ * The terminal tab: PowerShell, Claude Code or OpenCode, in a project folder --
+ * inside the page (PHASE 22, ADR-029: a pseudo-terminal streamed over a
+ * WebSocket, admins only), or in Windows Terminal, one click away.
  */
 export function Terminal() {
   const api = useApi();
@@ -18,6 +20,28 @@ export function Terminal() {
   const [projectId, setProjectId] = useState<number | "">("");
   const [problem, setProblem] = useState<unknown>(null);
   const { launch, outcome } = useLauncher();
+  const isAdmin = useIsAdmin();
+  const [shells, setShells] = useState<TerminalShell[]>([]);
+  const [tabs, setTabs] = useState<{ id: number; shell: string; name: string; projectId?: number }[]>([]);
+  const [active, setActive] = useState<number | null>(null);
+  const [nextId, setNextId] = useState(1);
+
+  useEffect(() => {
+    if (isAdmin) api.terminalShells().then(setShells).catch(() => setShells([]));
+  }, [api, isAdmin]);
+
+  function openTab(shell: TerminalShell) {
+    const id = nextId;
+    setNextId(id + 1);
+    setTabs([...tabs, { id, shell: shell.key, name: shell.name, projectId: projectId || undefined }]);
+    setActive(id);
+  }
+
+  function closeTab(id: number) {
+    const rest = tabs.filter((t) => t.id !== id);
+    setTabs(rest);
+    if (active === id) setActive(rest.length ? rest[rest.length - 1].id : null);
+  }
 
   useEffect(() => {
     api.software().then((all) => setClis(all.filter((s) => s.launchKind === "CLI"))).catch(setProblem);
@@ -40,6 +64,40 @@ export function Terminal() {
         )}
       </div>
       <ProblemNote problem={problem} />
+      {isAdmin ? (
+        <div className="card card-body stack">
+          <div className="row">
+            <div className="section-title" style={{ margin: 0 }}>Terminale nella console</div>
+            <span className="spacer" />
+            {shells.map((s) => (
+              <button key={s.key} className="btn btn-small" disabled={!s.available} title={s.detail ?? ""} onClick={() => openTab(s)}>
+                <Icon name="plus" size={12} /> {s.name}</button>
+            ))}
+          </div>
+          {tabs.length > 0 ? (
+            <>
+              <div className="tabs">
+                {tabs.map((t) => (
+                  <span key={t.id} className="row" style={{ gap: 2 }}>
+                    <button className="tab" aria-selected={active === t.id} onClick={() => setActive(t.id)}>{t.name} #{t.id}</button>
+                    <button className="btn btn-small" aria-label={`Chiudi ${t.name} #${t.id}`} onClick={() => closeTab(t.id)}><Icon name="close" size={11} /></button>
+                  </span>
+                ))}
+              </div>
+              {tabs.map((t) => (
+                <div key={t.id} style={{ display: active === t.id ? "block" : "none" }}>
+                  <Suspense fallback={<div className="muted">Carico il terminale…</div>}>
+                    <TerminalTab shell={t.shell} projectId={t.projectId} onExit={() => undefined} />
+                  </Suspense>
+                </div>
+              ))}
+            </>
+          ) : <div className="muted" style={{ fontSize: 12.5 }}>Apri una shell: parte nella cartella del progetto scelto qui sopra, o nella tua cartella home.</div>}
+        </div>
+      ) : (
+        <div className="notice">Il terminale dentro la console è riservato agli admin: è un processo sulla tua macchina. Puoi aprire il terminale di Windows qui sotto.</div>
+      )}
+      <div className="section-title">Oppure in Windows Terminal</div>
       <div className="grid grid-4">
         {clis?.map((s) => (
           <div key={s.key} className="card card-body stack" style={{ justifyItems: "start" }}>
@@ -53,10 +111,7 @@ export function Terminal() {
         ))}
       </div>
       {outcome}
-      <div className="notice">
-        Il terminale integrato nella pagina (PTY nel browser) è pianificato in PHASE 15. Oggi la console apre il
-        terminale reale di Windows, già posizionato nella cartella giusta — nessuna emulazione.
-      </div>
+
     </div>
   );
 }

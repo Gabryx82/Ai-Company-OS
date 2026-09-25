@@ -1380,6 +1380,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminal/shells": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["shells"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/terminal/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ticket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/usage": {
         parameters: {
             query?: never;
@@ -1732,6 +1764,14 @@ export interface components {
             outcome?: "CREATED" | "EXISTING";
             /** Format: int64 */
             parentId?: number;
+        };
+        Issued: {
+            command?: string[];
+            directory?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            shell?: string;
+            ticket?: string;
         };
         LaunchRequest: {
             /** Format: int64 */
@@ -2155,6 +2195,12 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        ShellView: {
+            available?: boolean;
+            detail?: string;
+            key?: string;
+            name?: string;
+        };
         SoftwareChoice: {
             /** @enum {string} */
             availability?: "INSTALLED" | "NOT_INSTALLED" | "WEB" | "RUNNING" | "STOPPED" | "INCOMPATIBLE_HARDWARE" | "UNKNOWN";
@@ -2341,6 +2387,11 @@ export interface components {
             software?: string[];
             specialization?: string;
             systemPrompt?: string;
+        };
+        TicketRequest: {
+            /** Format: int64 */
+            projectId?: number;
+            shell: string;
         };
         UncataloguedModel: {
             available?: boolean;
@@ -5022,6 +5073,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RunResponse"];
+                };
+            };
+        };
+    };
+    shells: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ShellView"][];
+                };
+            };
+        };
+    };
+    ticket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Issued"];
                 };
             };
         };

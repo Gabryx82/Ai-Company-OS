@@ -900,6 +900,30 @@
         },
         "type" : "object"
       },
+      "Issued" : {
+        "properties" : {
+          "command" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "directory" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "shell" : {
+            "type" : "string"
+          },
+          "ticket" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "LaunchRequest" : {
         "properties" : {
           "projectId" : {
@@ -2084,6 +2108,23 @@
         },
         "type" : "object"
       },
+      "ShellView" : {
+        "properties" : {
+          "available" : {
+            "type" : "boolean"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "SoftwareChoice" : {
         "properties" : {
           "availability" : {
@@ -2687,6 +2728,20 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "TicketRequest" : {
+        "properties" : {
+          "projectId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "shell" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "shell" ],
         "type" : "object"
       },
       "UncataloguedModel" : {
@@ -6250,6 +6305,55 @@
           }
         },
         "tags" : [ "run-controller" ]
+      }
+    },
+    "/api/terminal/shells" : {
+      "get" : {
+        "operationId" : "shells",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ShellView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "terminal-controller" ]
+      }
+    },
+    "/api/terminal/tickets" : {
+      "post" : {
+        "operationId" : "ticket",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TicketRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Issued"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "terminal-controller" ]
       }
     },
     "/api/usage" : {

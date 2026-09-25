@@ -114,7 +114,7 @@ ferma a `TD-22`.
 
 | **TD-40** *(nota PHASE 8)* | Ora vale anche per OpenRouter (`AICOS_ENGINE_OPENROUTER_API_KEY`). La scheda Consumi **somma** i token delle run a consumo per finestra, ma non **limita** nulla | **aperto** — contabilità parziale, limite assente; resta il prerequisito di PHASE 19 | PHASE 8 |
 | **TD-41** | La fase di un task passa a `IN_PROGRESS`/`DONE` da handoff e review **senza lock di riga** sulla fase: un'approvazione concorrente può produrre un conflitto di `@Version` (500) invece di un 409 | **aperto**, MINOR | PHASE 11 |
-| **TD-42** | Il terminale integrato nella pagina (PTY nel browser) non esiste: la scheda Terminale apre Windows Terminal nella cartella del progetto | **aperto** → PHASE 15 | PHASE 8 |
+| **TD-42** | Il terminale integrato nella pagina (PTY nel browser) non esiste: la scheda Terminale apre Windows Terminal nella cartella del progetto | **chiuso** in PHASE 22 (ADR-029): PTY + WebSocket + xterm.js, solo admin, ticket monouso | PHASE 8 |
 | **TD-43** | Una generazione di piano non si può annullare; col 9B locale dura ~13 minuti (misurato) | **aperto**, MINOR | PHASE 10 |
 | **TD-44** | Gmail, Drive, ClickUp, ChatGPT web, Gemini non sono incorporabili (policy di framing misurate): si aprono in finestre dedicate | **aperto** → PHASE 18, **decisione umana** (shell desktop, credenziali OAuth) | PHASE 8 |
 | **TD-45** | Nessuna metrica di apprendimento né suggerimento automatico del livello di autonomia (ADR-022 §5) | **aperto** | PHASE 11 |

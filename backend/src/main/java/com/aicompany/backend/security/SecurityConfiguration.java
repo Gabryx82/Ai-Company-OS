@@ -120,6 +120,9 @@ public class SecurityConfiguration {
                         // The error dispatch of a request that was already
                         // authorised or already refused: not a way in.
                         .requestMatchers("/error").permitAll()
+                        // PHASE 22 (ADR-029): the terminal's WebSocket handshake cannot carry a
+                        // header; the socket authenticates with a single-use ticket instead.
+                        .requestMatchers(com.aicompany.backend.terminal.TerminalConfiguration.SOCKET_PATH).permitAll()
                         // ADMIN only (ADR-024 §3): people, the security log, the
                         // ecosystem's process configuration, the terminal, and
                         // every destructive delete.
