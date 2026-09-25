@@ -980,6 +980,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reference"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/resources": {
         parameters: {
             query?: never;
@@ -4400,6 +4416,31 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProjectResponse"];
+                };
+            };
+        };
+    };
+    reference: {
+        parameters: {
+            query?: {
+                folder?: string;
+                name?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Document"];
                 };
             };
         };

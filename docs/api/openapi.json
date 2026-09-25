@@ -5496,6 +5496,48 @@
         "tags" : [ "project-workspace-controller" ]
       }
     },
+    "/api/projects/{id}/references" : {
+      "post" : {
+        "operationId" : "reference",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "folder",
+          "required" : false,
+          "schema" : {
+            "default" : "images",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "name",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Document"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      }
+    },
     "/api/projects/{id}/resources" : {
       "get" : {
         "operationId" : "projectResources",

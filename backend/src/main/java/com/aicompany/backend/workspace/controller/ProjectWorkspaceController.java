@@ -85,6 +85,26 @@ public class ProjectWorkspaceController {
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(file.contentType())).body(file.bytes());
     }
 
+    /**
+     * PHASE 25: an image into references/ -- the raw bytes as the body (a file
+     * chosen or pasted in the console), the folder and the original name as
+     * parameters. The service checks what the bytes really are.
+     */
+    @org.springframework.web.bind.annotation.PostMapping(value = "/api/projects/{id}/references",
+            consumes = {"image/png", "image/jpeg", "image/gif", "image/webp", "application/octet-stream"})
+    public ResponseEntity<ProjectWorkspaceService.Document> reference(
+            @PathVariable Long id, @RequestParam(defaultValue = "images") String folder,
+            @RequestParam(required = false) String name, jakarta.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        long length = request.getContentLengthLong();
+        if (length > ProjectWorkspaceService.MAX_REFERENCE_BYTES) {
+            throw new com.aicompany.backend.api.RequestValidationException("file", "must be an image of at most 10 MB");
+        }
+        byte[] bytes = request.getInputStream().readNBytes(ProjectWorkspaceService.MAX_REFERENCE_BYTES + 1);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(service.storeReference(id, folder, name, bytes));
+    }
+
     @PutMapping("/api/projects/{id}/files")
     public ProjectWorkspaceService.Document write(@PathVariable Long id, @RequestParam String path,
                                                   @Valid @RequestBody DocumentWrite body) {

@@ -206,7 +206,7 @@
     "name": "3D Artist",
     "role": "3D Artist",
     "specialization": "Modellazione, scene, rendering, pipeline 3D Omniverse",
-    "model": "ollama:gemma4:e4b",
+    "model": null,
     "domain": "3D",
     "responsibilities": "Asset e scene 3D coerenti con le reference; uso della pipeline 3D Omniverse.",
     "outputFormat": "Asset, scene e note di produzione.",
@@ -220,7 +220,9 @@
       "omniverse-3d",
       "blender",
       "gemini"
-    ]
+    ],
+    "executionTarget": "omniverse-3d",
+    "description": "Lavora nel dipartimento 3D: prepara scene, asset e rendering in 3D Omniverse (e Blender), partendo dalle reference del progetto."
   },
   {
     "key": "learning-coach",

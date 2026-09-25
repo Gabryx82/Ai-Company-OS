@@ -90,7 +90,7 @@ export function ProjectDetail({ projectId, types, navigate }: {
                                    onOpenTask={setOpenTask} />}
       {tab === "Documenti" && <Documents project={project} docs={docs} />}
       {tab === "Codice" && <CodeGraphView projectId={project.id} />}
-      {tab === "Reference" && <References project={project} docs={docs} />}
+      {tab === "Reference" && <References project={project} docs={docs} onUploaded={reload} />}
       {tab === "Strumenti" && <Tools project={project} type={type} />}
 
       {openTask !== null && (
@@ -445,10 +445,13 @@ function Documents({ project, docs }: { project: Project; docs: WorkspaceDocumen
 
 // --- references -----------------------------------------------------------------
 
-function References({ project, docs }: { project: Project; docs: WorkspaceDocuments | null }) {
+function References({ project, docs, onUploaded }: { project: Project; docs: WorkspaceDocuments | null; onUploaded: () => void }) {
   const api = useApi();
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [gemini, setGemini] = useState<Software | null>(null);
+  const [folder, setFolder] = useState("images");
+  const [problem, setProblem] = useState<unknown>(null);
+  const [busy, setBusy] = useState(false);
   const { launch } = useLauncher();
 
   useEffect(() => {
@@ -462,13 +465,54 @@ function References({ project, docs }: { project: Project; docs: WorkspaceDocume
     return () => { cancelled = true; };
   }, [api, project.id, docs]);
 
+  async function upload(files: File[]) {
+    setBusy(true);
+    setProblem(null);
+    try {
+      for (const file of files) {
+        await api.uploadReference(project.id, folder, file, file.name || `incollata-${Date.now()}.png`);
+      }
+      onUploaded();
+    } catch (error) {
+      setProblem(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Ctrl+V of an image copied from Gemini, a screenshot tool or the browser.
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const images = Array.from(event.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+      if (images.length > 0) {
+        event.preventDefault();
+        upload(images);
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="stack">
       <div className="notice">
-        Salva le immagini (reference di Gemini, mockup, screenshot, design target) in
-        <code> {project.workspacePath}\references\</code>: diventano contesto per gli agenti di UI, grafica e 3D.
+        Le immagini in <code>{project.workspacePath}\references\</code> (reference di Gemini, mockup, screenshot, design target)
+        diventano contesto per gli agenti di UI, grafica e 3D.
         {gemini && <button className="btn btn-small" style={{ marginLeft: 8 }} onClick={() => launch(gemini)}>Apri Gemini</button>}
       </div>
+      <div className="card card-body row">
+        <select value={folder} onChange={(e) => setFolder(e.target.value)} aria-label="Cartella" style={{ width: "auto" }}>
+          <option value="images">Immagini</option><option value="mockups">Mockup</option>
+          <option value="screenshots">Screenshot</option><option value="design-targets">Design target</option>
+        </select>
+        <label className="btn btn-primary" style={{ cursor: "pointer" }}>
+          {busy ? "Carico…" : "Aggiungi immagini"}
+          <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple style={{ display: "none" }}
+                 onChange={(e) => { const files = Array.from(e.target.files ?? []); e.target.value = ""; if (files.length) upload(files); }} />
+        </label>
+        <span className="muted" style={{ fontSize: 12.5 }}>…oppure incolla un'immagine con Ctrl+V. PNG, JPEG, GIF o WebP, fino a 10 MB.</span>
+      </div>
+      <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
       <div className="tile-grid">
         {(docs?.references ?? []).map((ref) => (
           <div key={ref.path} className="tile" style={{ cursor: "default" }}>

@@ -498,6 +498,26 @@ export class ControlPlane {
     }
   }
 
+  // --- visual references (PHASE 25) -----------------------------------------------
+
+  /** An image into the project's references/: the raw bytes, never JSON. */
+  async uploadReference(projectId: number, folder: string, file: Blob, name: string): Promise<WorkspaceDocument> {
+    const url = `${this.session.baseUrl.replace(/\/+$/, "")}/api/projects/${projectId}/references`
+      + `?folder=${encodeURIComponent(folder)}&name=${encodeURIComponent(name)}`;
+    let response: Response;
+    try {
+      response = await this.fetcher(url, { method: "POST", body: file, headers: {
+        Authorization: `Bearer ${this.session.token}`, Accept: "application/json, application/problem+json",
+        "Content-Type": file.type || "application/octet-stream" } });
+    } catch {
+      throw new ApiProblem(0, { type: `${PROBLEM}control-plane-unreachable`, title: "Control plane unreachable" });
+    }
+    const text = await response.text();
+    const parsed = text ? safeJson(text) : null;
+    if (!response.ok) throw new ApiProblem(response.status, (parsed as object | null) ?? {});
+    return parsed as WorkspaceDocument;
+  }
+
   // --- cost governance (ADR-031) --------------------------------------------------
 
   costs(): Promise<CostSummary> {

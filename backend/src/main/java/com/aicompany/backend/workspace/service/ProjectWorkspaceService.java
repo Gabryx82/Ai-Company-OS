@@ -241,6 +241,75 @@ public class ProjectWorkspaceService implements ProjectFolders {
         }
     }
 
+    // --- visual references (PHASE 25) ---------------------------------------------------
+
+    /** 10 MB: a screenshot or a generated image, not a video. */
+    public static final int MAX_REFERENCE_BYTES = 10 * 1024 * 1024;
+
+    /**
+     * Stores an image in {@code references/<folder>/}: the folder is one of the
+     * four the workspace defines, the name is reduced to safe characters, and the
+     * content must really be a PNG, JPEG, GIF or WebP -- the bytes decide, not the
+     * name. An existing file is never overwritten: a numeric suffix is added.
+     */
+    @Transactional(readOnly = true)
+    public Document storeReference(Long projectId, String folder, String originalName, byte[] bytes) {
+        Project project = projects.findById(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
+        requireWritable(project);
+        if (!REFERENCE_FOLDERS.contains(folder)) {
+            throw new RequestValidationException("folder", "must be one of " + String.join(", ", REFERENCE_FOLDERS));
+        }
+        if (bytes == null || bytes.length == 0 || bytes.length > MAX_REFERENCE_BYTES) {
+            throw new RequestValidationException("file", "must be an image of at most 10 MB");
+        }
+        String extension = imageExtension(bytes).orElseThrow(() ->
+                new RequestValidationException("file", "is not a PNG, JPEG, GIF or WebP image"));
+        String base = originalName == null ? "reference" : originalName.replaceAll("\\.[A-Za-z0-9]{1,5}$", "");
+        base = java.text.Normalizer.normalize(base, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9._-]+", "-").replaceAll("(^[-.]+|[-.]+$)", "");
+        if (base.isEmpty()) {
+            base = "reference";
+        }
+        if (base.length() > 60) {
+            base = base.substring(0, 60);
+        }
+        Path workspace = workspaceOf(projectId);
+        try {
+            Path directory = WorkspacePaths.inside(workspace, "references/" + folder);
+            Files.createDirectories(directory);
+            Path target = directory.resolve(base + extension);
+            for (int i = 2; Files.exists(target); i++) {
+                target = directory.resolve(base + "-" + i + extension);
+            }
+            Files.write(target, bytes, StandardOpenOption.CREATE_NEW);
+            return document(workspace, WorkspacePaths.relativeText(workspace, target));
+        } catch (IOException e) {
+            throw new WorkspaceUnavailableException("The image could not be stored: " + e.getMessage());
+        }
+    }
+
+    public static List<String> referenceFolders() {
+        return REFERENCE_FOLDERS;
+    }
+
+    /** The format the bytes are, by their signature. */
+    static Optional<String> imageExtension(byte[] b) {
+        if (b.length >= 8 && (b[0] & 0xff) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G') {
+            return Optional.of(".png");
+        }
+        if (b.length >= 3 && (b[0] & 0xff) == 0xFF && (b[1] & 0xff) == 0xD8 && (b[2] & 0xff) == 0xFF) {
+            return Optional.of(".jpg");
+        }
+        if (b.length >= 6 && b[0] == 'G' && b[1] == 'I' && b[2] == 'F' && b[3] == '8') {
+            return Optional.of(".gif");
+        }
+        if (b.length >= 12 && b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F'
+                && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') {
+            return Optional.of(".webp");
+        }
+        return Optional.empty();
+    }
+
     // --- the inbox: a working folder for a task that has no project (PHASE 17) ---------
 
     /**
