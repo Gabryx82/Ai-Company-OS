@@ -32,12 +32,14 @@ public final class LlmCatalogDtos {
     public record ModelResponse(String key, String providerKey, String displayName, ModelRole role,
                                 List<String> capabilities, Integer contextWindow, BigDecimal sizeGb,
                                 String parameters, ModelLifecycle lifecycle, String replacedBy, String notes,
-                                Boolean engineAvailable, String engineDetail, long version) {
+                                Boolean engineAvailable, String engineDetail, long version,
+                                BigDecimal inputPricePerMtok, BigDecimal outputPricePerMtok) {
         public static ModelResponse from(LlmCatalogService.ModelView view) {
             LlmModel m = view.model();
             return new ModelResponse(m.getKey(), m.getProviderKey(), m.getDisplayName(), m.getRole(),
                     m.getCapabilities(), m.getContextWindow(), m.getSizeGb(), m.getParameters(), m.getLifecycle(),
-                    m.getReplacedBy(), m.getNotes(), view.engineAvailable(), view.engineDetail(), m.getVersion());
+                    m.getReplacedBy(), m.getNotes(), view.engineAvailable(), view.engineDetail(), m.getVersion(),
+                    m.getInputPricePerMtok(), m.getOutputPricePerMtok());
         }
     }
 

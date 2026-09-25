@@ -29,8 +29,11 @@ public class RunRecorder {
 
     private final TaskRunRepository runs;
 
-    public RunRecorder(TaskRunRepository runs) {
+    private final com.aicompany.backend.cost.CostService costs;
+
+    public RunRecorder(TaskRunRepository runs, com.aicompany.backend.cost.CostService costs) {
         this.runs = runs;
+        this.costs = costs;
     }
 
     /** What the executor needs to call the engine, captured when the run started. */
@@ -53,8 +56,13 @@ public class RunRecorder {
     }
 
     public void succeed(Long runId, EngineClient.Completion completion) {
-        runs.findByIdForUpdate(runId).ifPresent(run -> run.succeed(completion.output(), completion.finishReason(),
-                completion.model(), completion.inputTokens(), completion.outputTokens(), completion.latencyMs()));
+        runs.findByIdForUpdate(runId).ifPresent(run -> {
+            run.succeed(completion.output(), completion.finishReason(), completion.model(), completion.inputTokens(),
+                    completion.outputTokens(), completion.latencyMs());
+            // PHASE 24 (ADR-031): the cost at the price of this moment; unknown stays null.
+            costs.costOf(run.getRequestedModel() != null ? run.getRequestedModel() : completion.model(),
+                    completion.inputTokens(), completion.outputTokens()).ifPresent(run::recordCost);
+        });
     }
 
     public void fail(Long runId, String failureType, String failureDetail) {

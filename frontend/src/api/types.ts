@@ -108,6 +108,8 @@ export type Provider = Wire<S["ProviderResponse"]> & {
   status: NonNullable<S["ProviderResponse"]["status"]>;
 };
 export type CatalogModel = Wire<S["ModelResponse"]> & {
+  inputPricePerMtok?: number | null;
+  outputPricePerMtok?: number | null;
   key: string;
   providerKey: string;
   displayName: string;
@@ -267,4 +269,17 @@ export interface CodeGraph {
   generatedAt: string; files: number; truncated: boolean; languages: Record<string, number>; nodes: CodeNode[];
   edges: CodeEdge[]; cycles: string[][]; mostImported: { id: string; importedBy: number }[]; externals: number;
   taskLinks: { taskId: number; code: string | null; title: string; file: string }[];
+}
+
+// --- PHASE 24: cost governance (ADR-031) --------------------------------------------------
+
+export interface CostSummary {
+  from: string; to: string; totalUsd: number;
+  providers: { providerKey: string; providerName: string; billing: string; runs: number; inputTokens: number;
+    outputTokens: number; costUsd: number; runsWithoutPrice: number }[];
+  models: { model: string; providerKey: string; runs: number; inputTokens: number; outputTokens: number; costUsd: number;
+    inputPricePerMtok: number | null; outputPricePerMtok: number | null }[];
+  agents: { agentId: number; agentName: string; runs: number; tokens: number; costUsd: number }[];
+  budgets: { providerKey: string; providerName: string | null; monthlyLimitUsd: number; alertPercent: number;
+    spentThisMonthUsd: number; percent: number; alert: boolean; exceeded: boolean; version: number }[];
 }

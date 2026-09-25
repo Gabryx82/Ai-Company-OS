@@ -91,6 +91,10 @@ public class TaskRun {
     @Column(name = "finished_at")
     private Instant finishedAt;
 
+    /** PHASE 24 (ADR-031): what the run cost, at the price of the moment it finished. */
+    @Column(name = "cost_usd", precision = 14, scale = 6)
+    private java.math.BigDecimal costUsd;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -162,6 +166,11 @@ public class TaskRun {
     public RunStatus getStatus() { return status; }
     public String getRequestedModel() { return requestedModel; }
     public String getServedModel() { return servedModel; }
+    public java.math.BigDecimal getCostUsd() { return costUsd; }
+
+    public void recordCost(java.math.BigDecimal cost) {
+        this.costUsd = cost;
+    }
     public String getSystemPrompt() { return systemPrompt; }
     public String getUserPrompt() { return userPrompt; }
     public String getOutput() { return output; }

@@ -18,6 +18,7 @@ import com.aicompany.backend.binding.AgentConfigurationService;
 import com.aicompany.backend.harness.library.SkillLibrary;
 import com.aicompany.backend.deletion.DeletionService;
 import com.aicompany.backend.ecosystem.EcosystemService;
+import com.aicompany.backend.cost.CostService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,7 +57,7 @@ class PreconditionCoverageTest {
                     ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class,
                     HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class,
                     AgentConfigurationService.class, SkillLibrary.class, DeletionService.class,
-                    EcosystemService.class);
+                    EcosystemService.class, CostService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -92,7 +93,10 @@ class PreconditionCoverageTest {
             // PHASE 21 (ADR-028): the defaults are inserted only when missing; add creates a row; starting
             // records the outcome of launching a process -- the server's bookkeeping, not a client's edit.
             // Choosing what starts (configure) takes the tag.
-            "ensureDefaults", "add", "start", "startAll");
+            "ensureDefaults", "add", "start", "startAll",
+            // PHASE 24 (ADR-031): setBudget creates a budget without a tag and replaces one only with its tag
+            // (an Optional precondition, required when the row exists -- tested in CostGovernanceApiTest).
+            "setBudget");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {

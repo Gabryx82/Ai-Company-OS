@@ -3,6 +3,7 @@ import { useApi } from "../context";
 import type { UsageWindow } from "../api/types";
 import { Modal, ProblemNote } from "../components/ui";
 import { Icon } from "../components/icons";
+import { CostsCard } from "../components/CostsCard";
 
 const STATUS: Record<UsageWindow["status"], { label: string; tone: string; hint: string }> = {
   MEASURED: { label: "Misurato", tone: "badge badge-ok", hint: "Registrato dal client del fornitore su questa macchina" },
@@ -108,6 +109,7 @@ export function Usage() {
           </div>
         ))}
       </div>
+      <CostsCard />
       {editing && <AnchorEditor window={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>
   );

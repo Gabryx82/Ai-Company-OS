@@ -13,7 +13,7 @@ import type {
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
-  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, EcosystemServiceInfo, TerminalShell, TerminalTicket, CodeGraph,
+  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, EcosystemServiceInfo, TerminalShell, TerminalTicket, CodeGraph, CostSummary,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -496,6 +496,22 @@ export class ControlPlane {
     } catch {
       return null;
     }
+  }
+
+  // --- cost governance (ADR-031) --------------------------------------------------
+
+  costs(): Promise<CostSummary> {
+    return this.plain("GET", "/api/costs");
+  }
+
+  setBudget(provider: string, monthlyLimitUsd: number, alertPercent: number, etag?: string): Promise<unknown> {
+    return this.plain("PUT", `/api/admin/costs/budgets/${encodeURIComponent(provider)}`,
+      { body: { monthlyLimitUsd, alertPercent }, ifMatch: etag });
+  }
+
+  setModelPrice(model: string, version: number, inputPricePerMtok: number | null, outputPricePerMtok: number | null): Promise<unknown> {
+    return this.plain("PUT", `/api/admin/costs/prices/${encodeURIComponent(model)}`,
+      { body: { inputPricePerMtok, outputPricePerMtok }, ifMatch: `"${version}"` });
   }
 
   // --- the code graph (ADR-030) -------------------------------------------------

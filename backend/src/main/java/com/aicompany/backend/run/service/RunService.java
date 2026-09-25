@@ -50,11 +50,14 @@ public class RunService {
     private final RunContext context;
 
     private final com.aicompany.backend.binding.AgentBindingService binding;
+    private final com.aicompany.backend.cost.CostService costs;
 
     public RunService(TaskRunRepository runs, TaskRepository tasks, ProjectRepository projects,
                       AgentRepository agents, ApplicationEventPublisher events, RunContext context,
-                      com.aicompany.backend.binding.AgentBindingService binding) {
+                      com.aicompany.backend.binding.AgentBindingService binding,
+                      com.aicompany.backend.cost.CostService costs) {
         this.binding = binding;
+        this.costs = costs;
         this.runs = runs;
         this.tasks = tasks;
         this.projects = projects;
@@ -101,6 +104,8 @@ public class RunService {
         // PHASE 16 (ADR-025): the engine runs engine models; an agent bound to an
         // application or a CLI is handed off instead.
         binding.requireEngineRun(agent, requestedModel);
+        // PHASE 24 (ADR-031): money is spent only within a budget, at a known price.
+        costs.requireBudget(requestedModel != null ? requestedModel : agent.getModel());
 
         if (runs.existsByTaskIdAndStatusIn(taskId, UNFINISHED)) {
             throw new TaskRunInProgressException(taskId);

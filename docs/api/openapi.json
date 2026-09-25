@@ -155,6 +155,29 @@
         },
         "type" : "object"
       },
+      "AgentSpend" : {
+        "properties" : {
+          "agentId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "agentName" : {
+            "type" : "string"
+          },
+          "costUsd" : {
+            "type" : "number"
+          },
+          "runs" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tokens" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "AgentUpdateRequest" : {
         "properties" : {
           "model" : {
@@ -229,6 +252,54 @@
             "type" : "array"
           }
         },
+        "type" : "object"
+      },
+      "Budget" : {
+        "properties" : {
+          "alert" : {
+            "type" : "boolean"
+          },
+          "alertPercent" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "exceeded" : {
+            "type" : "boolean"
+          },
+          "monthlyLimitUsd" : {
+            "type" : "number"
+          },
+          "percent" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "providerKey" : {
+            "type" : "string"
+          },
+          "providerName" : {
+            "type" : "string"
+          },
+          "spentThisMonthUsd" : {
+            "type" : "number"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BudgetRequest" : {
+        "properties" : {
+          "alertPercent" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "monthlyLimitUsd" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "monthlyLimitUsd" ],
         "type" : "object"
       },
       "CodeGraph" : {
@@ -1242,6 +1313,9 @@
           "engineDetail" : {
             "type" : "string"
           },
+          "inputPricePerMtok" : {
+            "type" : "number"
+          },
           "key" : {
             "type" : "string"
           },
@@ -1251,6 +1325,9 @@
           },
           "notes" : {
             "type" : "string"
+          },
+          "outputPricePerMtok" : {
+            "type" : "number"
           },
           "parameters" : {
             "type" : "string"
@@ -1270,6 +1347,38 @@
           },
           "version" : {
             "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ModelSpend" : {
+        "properties" : {
+          "costUsd" : {
+            "type" : "number"
+          },
+          "inputPricePerMtok" : {
+            "type" : "number"
+          },
+          "inputTokens" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "outputPricePerMtok" : {
+            "type" : "number"
+          },
+          "outputTokens" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "providerKey" : {
+            "type" : "string"
+          },
+          "runs" : {
+            "format" : "int32",
             "type" : "integer"
           }
         },
@@ -1604,6 +1713,35 @@
         },
         "type" : "object"
       },
+      "PriceRequest" : {
+        "properties" : {
+          "inputPricePerMtok" : {
+            "type" : "number"
+          },
+          "outputPricePerMtok" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "PriceResponse" : {
+        "properties" : {
+          "inputPricePerMtok" : {
+            "type" : "number"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "outputPricePerMtok" : {
+            "type" : "number"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ProfileRequest" : {
         "properties" : {
           "autonomyLevel" : {
@@ -1788,6 +1926,39 @@
           "status" : {
             "enum" : [ "ENABLED", "DISABLED", "INCOMPATIBLE_HARDWARE" ],
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ProviderSpend" : {
+        "properties" : {
+          "billing" : {
+            "type" : "string"
+          },
+          "costUsd" : {
+            "type" : "number"
+          },
+          "inputTokens" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "outputTokens" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "providerKey" : {
+            "type" : "string"
+          },
+          "providerName" : {
+            "type" : "string"
+          },
+          "runs" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "runsWithoutPrice" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -2507,6 +2678,46 @@
         },
         "type" : "object"
       },
+      "Summary" : {
+        "properties" : {
+          "agents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AgentSpend"
+            },
+            "type" : "array"
+          },
+          "budgets" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Budget"
+            },
+            "type" : "array"
+          },
+          "from" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "models" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ModelSpend"
+            },
+            "type" : "array"
+          },
+          "providers" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ProviderSpend"
+            },
+            "type" : "array"
+          },
+          "to" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "totalUsd" : {
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
       "SyncResponse" : {
         "properties" : {
           "created" : {
@@ -3003,6 +3214,92 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/admin/costs/budgets/{provider}" : {
+      "put" : {
+        "operationId" : "budget",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BudgetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Budget"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "cost-controller" ]
+      }
+    },
+    "/api/admin/costs/prices/{model}" : {
+      "put" : {
+        "operationId" : "price",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "model",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PriceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PriceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "cost-controller" ]
+      }
+    },
     "/api/admin/ecosystem/services" : {
       "post" : {
         "operationId" : "add",
@@ -4007,6 +4304,41 @@
           }
         },
         "tags" : [ "llm-catalog-controller" ]
+      }
+    },
+    "/api/costs" : {
+      "get" : {
+        "operationId" : "summary",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "cost-controller" ]
       }
     },
     "/api/daily" : {

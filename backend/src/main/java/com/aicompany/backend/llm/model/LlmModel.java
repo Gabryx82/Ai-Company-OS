@@ -71,6 +71,12 @@ public class LlmModel {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "input_price_per_mtok", precision = 12, scale = 4)
+    private java.math.BigDecimal inputPricePerMtok;
+
+    @Column(name = "output_price_per_mtok", precision = 12, scale = 4)
+    private java.math.BigDecimal outputPricePerMtok;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -115,6 +121,15 @@ public class LlmModel {
     }
 
     public Long getId() { return id; }
+    /** PHASE 24 (ADR-031): USD per million tokens; null when not known. */
+    public void price(java.math.BigDecimal input, java.math.BigDecimal output) {
+        this.inputPricePerMtok = input;
+        this.outputPricePerMtok = output;
+    }
+
+    public java.math.BigDecimal getInputPricePerMtok() { return inputPricePerMtok; }
+    public java.math.BigDecimal getOutputPricePerMtok() { return outputPricePerMtok; }
+
     public String getKey() { return key; }
     public String getProviderKey() { return providerKey; }
     public String getDisplayName() { return displayName; }

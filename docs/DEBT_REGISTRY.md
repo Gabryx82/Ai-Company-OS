@@ -110,9 +110,9 @@ ferma a `TD-22`.
 | **TD-37** | Nessun percorso muta lo `status` di un task esistente: vocabolario chiuso, ciclo di vita non percorribile | **chiuso** da TASK-015: quattro archi, ADR-014 | TASK-010 |
 | **TD-38** | Nessuna storia delle transizioni: non si sa chi ha mosso un task né quando | **aperto**, MINOR | TASK-015 |
 | **TD-39** | Una run in corso non si può cancellare: si attende la fine o il timeout di lettura (10 min) | **aperto**, MINOR | TASK-019 |
-| **TD-40** | Nessuna contabilità né limite di costo per le run su modelli a consumo (`anthropic`): i token sono registrati per run, mai sommati o limitati | **aperto**. Innocuo finché `ANTHROPIC_API_KEY` non è impostata; **da chiudere prima** di abilitarla in modo non presidiato | TASK-019 |
+| **TD-40** | Nessuna contabilità né limite di costo per le run su modelli a consumo (`anthropic`): i token sono registrati per run, mai sommati o limitati | **chiuso** in PHASE 24 (ADR-031): costo per run, budget mensili per provider a consumo, prezzi per modello; nessuna run a consumo senza budget e prezzo | TASK-019 |
 
-| **TD-40** *(nota PHASE 8)* | Ora vale anche per OpenRouter (`AICOS_ENGINE_OPENROUTER_API_KEY`). La scheda Consumi **somma** i token delle run a consumo per finestra, ma non **limita** nulla | **aperto** — contabilità parziale, limite assente; resta il prerequisito di PHASE 19 | PHASE 8 |
+| **TD-40** *(nota PHASE 8)* | Ora vale anche per OpenRouter (`AICOS_ENGINE_OPENROUTER_API_KEY`). La scheda Consumi **somma** i token delle run a consumo per finestra, ma non **limita** nulla | **chiuso** in PHASE 24 (ADR-031), anche per OpenRouter | PHASE 8 |
 | **TD-41** | La fase di un task passa a `IN_PROGRESS`/`DONE` da handoff e review **senza lock di riga** sulla fase: un'approvazione concorrente può produrre un conflitto di `@Version` (500) invece di un 409 | **aperto**, MINOR | PHASE 11 |
 | **TD-42** | Il terminale integrato nella pagina (PTY nel browser) non esiste: la scheda Terminale apre Windows Terminal nella cartella del progetto | **chiuso** in PHASE 22 (ADR-029): PTY + WebSocket + xterm.js, solo admin, ticket monouso | PHASE 8 |
 | **TD-43** | Una generazione di piano non si può annullare; col 9B locale dura ~13 minuti (misurato) | **aperto**, MINOR | PHASE 10 |

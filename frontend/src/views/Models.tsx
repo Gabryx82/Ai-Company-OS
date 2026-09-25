@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { useApi } from "../context";
-import type { ModelCatalog, Provider } from "../api/types";
-import { ProblemNote } from "../components/ui";
+import { useEffect, useState, type FormEvent } from "react";
+import { useApi, useIsAdmin } from "../context";
+import type { CatalogModel, ModelCatalog, Provider } from "../api/types";
+import { Field, Modal, ProblemNote } from "../components/ui";
 
 const ROLE_LABEL: Record<string, string> = {
   FAST: "Veloce", GENERAL: "Generale", CODER: "Codice", PLANNER: "Pianificazione", VISION: "Visione",
@@ -23,11 +23,15 @@ export function Models() {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [catalog, setCatalog] = useState<ModelCatalog | null>(null);
   const [problem, setProblem] = useState<unknown>(null);
+  const [pricing, setPricing] = useState<CatalogModel | null>(null);
+  const isAdmin = useIsAdmin();
 
-  useEffect(() => {
+  const load = () => {
     api.providers().then(setProviders).catch(setProblem);
     api.modelCatalog().then(setCatalog).catch(setProblem);
-  }, [api]);
+  };
+  useEffect(load, [api]); // eslint-disable-line react-hooks/exhaustive-deps
+  const paid = new Set((providers ?? []).filter((p) => p.billing === "PAY_PER_TOKEN").map((p) => p.key));
 
   return (
     <div className="stack">
@@ -47,7 +51,7 @@ export function Models() {
       <div className="card">
         <div className="card-head"><h2>Modelli</h2></div>
         <table>
-          <thead><tr><th>Modello</th><th>Ruolo</th><th>Ciclo di vita</th><th>Capability</th><th>Dimensione</th><th>Ora</th></tr></thead>
+          <thead><tr><th>Modello</th><th>Ruolo</th><th>Ciclo di vita</th><th>Capability</th><th>Dimensione</th><th>Prezzo /M token</th><th>Ora</th></tr></thead>
           <tbody>
             {catalog?.models.map((m) => (
               <tr key={m.key}>
@@ -59,6 +63,11 @@ export function Models() {
                 <td>{m.capabilities.map((c) => <span key={c} className="chip">{c}</span>)}</td>
                 <td className="muted">{m.sizeGb ? `${m.sizeGb} GB` : "—"}{m.parameters ? ` · ${m.parameters}` : ""}
                   {m.contextWindow ? <div>{Math.round(m.contextWindow / 1024)}K ctx</div> : null}</td>
+                <td>{paid.has(m.providerKey) ? (
+                  <div style={{ fontSize: 12.5 }}>
+                    {m.inputPricePerMtok != null ? <>${m.inputPricePerMtok} in · ${m.outputPricePerMtok} out</> : <span className="badge badge-warn">da impostare</span>}
+                    {isAdmin && <div><button className="btn btn-small" onClick={() => setPricing(m)}>Prezzo</button></div>}
+                  </div>) : <span className="muted" style={{ fontSize: 12 }}>nessun costo per esecuzione</span>}</td>
                 <td>{m.engineAvailable === null ? <span className="badge">?</span>
                   : m.engineAvailable ? <span className="badge badge-ok">pronto</span>
                   : <span className="badge" title={m.engineDetail ?? ""}>non servito</span>}</td>
@@ -68,6 +77,7 @@ export function Models() {
         </table>
       </div>
 
+      {pricing && <PriceModal model={pricing} onClose={() => setPricing(null)} onSaved={() => { setPricing(null); load(); }} />}
       {catalog && catalog.uncatalogued.length > 0 && (
         <div className="card">
           <div className="card-head"><h2>Serviti dall'engine ma non catalogati</h2></div>
@@ -93,5 +103,34 @@ export function Models() {
         ))}
       </div>
     </div>
+  );
+}
+
+/** ADR-031: the price per million tokens of a pay-per-token model; without it the model does not run. */
+function PriceModal({ model, onClose, onSaved }: { model: CatalogModel; onClose: () => void; onSaved: () => void }) {
+  const api = useApi();
+  const [input, setInput] = useState(model.inputPricePerMtok != null ? String(model.inputPricePerMtok) : "");
+  const [output, setOutput] = useState(model.outputPricePerMtok != null ? String(model.outputPricePerMtok) : "");
+  const [problem, setProblem] = useState<unknown>(null);
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    try {
+      await api.setModelPrice(model.key, model.version, input === "" ? null : Number(input), output === "" ? null : Number(output));
+      onSaved();
+    } catch (error) {
+      setProblem(error);
+    }
+  }
+  return (
+    <Modal title={`Prezzo di ${model.displayName}`} onClose={onClose}>
+      <form className="stack" onSubmit={submit}>
+        <div className="muted" style={{ fontSize: 12.5 }}>USD per milione di token, dal listino del provider. Serve a contare la spesa contro il budget.</div>
+        <Field label="Token in ingresso"><input type="number" step="0.0001" min="0" value={input} onChange={(e) => setInput(e.target.value)} /></Field>
+        <Field label="Token in uscita"><input type="number" step="0.0001" min="0" value={output} onChange={(e) => setOutput(e.target.value)} /></Field>
+        <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
+        <div className="row"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
+          <button className="btn btn-primary" type="submit">Salva</button></div>
+      </form>
+    </Modal>
   );
 }

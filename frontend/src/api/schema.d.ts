@@ -4,6 +4,38 @@
  */
 
 export interface paths {
+    "/api/admin/costs/budgets/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["budget"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/costs/prices/{model}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["price"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/ecosystem/services": {
         parameters: {
             query?: never;
@@ -428,6 +460,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["providers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/costs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["summary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1531,6 +1579,16 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        AgentSpend: {
+            /** Format: int64 */
+            agentId?: number;
+            agentName?: string;
+            costUsd?: number;
+            /** Format: int32 */
+            runs?: number;
+            /** Format: int64 */
+            tokens?: number;
+        };
         AgentUpdateRequest: {
             model?: string;
             name: string;
@@ -1552,6 +1610,25 @@ export interface components {
             target?: components["schemas"]["TargetRef"];
             valid?: boolean;
             warnings?: string[];
+        };
+        Budget: {
+            alert?: boolean;
+            /** Format: int32 */
+            alertPercent?: number;
+            exceeded?: boolean;
+            monthlyLimitUsd?: number;
+            /** Format: int32 */
+            percent?: number;
+            providerKey?: string;
+            providerName?: string;
+            spentThisMonthUsd?: number;
+            /** Format: int64 */
+            version?: number;
+        };
+        BudgetRequest: {
+            /** Format: int32 */
+            alertPercent?: number;
+            monthlyLimitUsd: number;
         };
         CodeGraph: {
             cycles?: string[][];
@@ -1895,10 +1972,12 @@ export interface components {
             displayName?: string;
             engineAvailable?: boolean;
             engineDetail?: string;
+            inputPricePerMtok?: number;
             key?: string;
             /** @enum {string} */
             lifecycle?: "ACTIVE" | "CANDIDATE" | "DEPRECATED" | "RETIRED";
             notes?: string;
+            outputPricePerMtok?: number;
             parameters?: string;
             providerKey?: string;
             replacedBy?: string;
@@ -1907,6 +1986,19 @@ export interface components {
             sizeGb?: number;
             /** Format: int64 */
             version?: number;
+        };
+        ModelSpend: {
+            costUsd?: number;
+            inputPricePerMtok?: number;
+            /** Format: int64 */
+            inputTokens?: number;
+            model?: string;
+            outputPricePerMtok?: number;
+            /** Format: int64 */
+            outputTokens?: number;
+            providerKey?: string;
+            /** Format: int32 */
+            runs?: number;
         };
         ModelTokens: {
             model?: string;
@@ -2025,6 +2117,17 @@ export interface components {
             /** Format: int32 */
             tasks?: number;
         };
+        PriceRequest: {
+            inputPricePerMtok?: number;
+            outputPricePerMtok?: number;
+        };
+        PriceResponse: {
+            inputPricePerMtok?: number;
+            model?: string;
+            outputPricePerMtok?: number;
+            /** Format: int64 */
+            version?: number;
+        };
         ProfileRequest: {
             /** @enum {string} */
             autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
@@ -2090,6 +2193,20 @@ export interface components {
             notes?: string;
             /** @enum {string} */
             status?: "ENABLED" | "DISABLED" | "INCOMPATIBLE_HARDWARE";
+        };
+        ProviderSpend: {
+            billing?: string;
+            costUsd?: number;
+            /** Format: int64 */
+            inputTokens?: number;
+            /** Format: int64 */
+            outputTokens?: number;
+            providerKey?: string;
+            providerName?: string;
+            /** Format: int32 */
+            runs?: number;
+            /** Format: int32 */
+            runsWithoutPrice?: number;
         };
         QuotaAnchorRequest: {
             limitNote?: string;
@@ -2330,6 +2447,17 @@ export interface components {
             score?: number;
             specialization?: string;
         };
+        Summary: {
+            agents?: components["schemas"]["AgentSpend"][];
+            budgets?: components["schemas"]["Budget"][];
+            /** Format: date */
+            from?: string;
+            models?: components["schemas"]["ModelSpend"][];
+            providers?: components["schemas"]["ProviderSpend"][];
+            /** Format: date */
+            to?: string;
+            totalUsd?: number;
+        };
         SyncResponse: {
             created?: string[];
             invalid?: string[];
@@ -2508,6 +2636,62 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    budget: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BudgetRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Budget"];
+                };
+            };
+        };
+    };
+    price: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                model: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PriceResponse"];
+                };
+            };
+        };
+    };
     add: {
         parameters: {
             query?: never;
@@ -3306,6 +3490,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProviderResponse"][];
+                };
+            };
+        };
+    };
+    summary: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Summary"];
                 };
             };
         };

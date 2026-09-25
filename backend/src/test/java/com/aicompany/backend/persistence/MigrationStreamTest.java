@@ -65,9 +65,9 @@ class MigrationStreamTest {
      * It does not, and a wrong explanation is what somebody reasons from later.
      */
     private static final List<String> TABLES_AT_HEAD =
-            List.of("agent_resources", "agent_software", "agents", "app_users", "auth_sessions", "daily_items", "ecosystem_autostart", "flyway_schema_history",
-                    "harness_resources", "llm_models", "model_providers", "plan_runs", "project_phases", "project_resources", "projects", "quota_plans",
-                    "security_events", "software", "task_handoffs", "task_reviews", "task_runs", "tasks");
+            List.of("agent_resources", "agent_software", "agents", "app_users", "auth_sessions", "cost_budgets", "daily_items", "ecosystem_autostart",
+                    "flyway_schema_history", "harness_resources", "llm_models", "model_providers", "plan_runs", "project_phases", "project_resources", "projects",
+                    "quota_plans", "security_events", "software", "task_handoffs", "task_reviews", "task_runs", "tasks");
 
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =

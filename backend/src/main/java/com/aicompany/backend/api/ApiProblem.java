@@ -299,6 +299,15 @@ public enum ApiProblem {
     DELETE_CONFIRMATION_MISMATCH("delete-confirmation-mismatch", HttpStatus.BAD_REQUEST,
             "Confirmation required", "A delete needs the name of what is deleted, typed back"),
 
+    // --- cost governance (PHASE 24, ADR-031) -----------------------------------------------
+
+    BUDGET_REQUIRED("budget-required", HttpStatus.CONFLICT,
+            "Budget required", "A pay-per-token provider needs a monthly budget before it runs"),
+    PRICE_REQUIRED("price-required", HttpStatus.CONFLICT,
+            "Price required", "A pay-per-token model needs a price before it runs"),
+    BUDGET_EXCEEDED("budget-exceeded", HttpStatus.CONFLICT,
+            "Budget exceeded", "The provider's monthly budget is spent"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**
