@@ -17,14 +17,20 @@ import java.util.TreeMap;
  * edges run rightwards. Inside a column blocks start grouped by folder and name,
  * then two barycentre sweeps (left to right, right to left) move each block
  * towards the blocks it is connected to, which is what keeps crossings down. A
- * tall column wraps into sub-columns of at most {@link #MAX_ROWS} blocks, so a
- * project with two hundred classes is wide rather than twenty metres tall.
+ * tall column wraps into sub-columns, and how many rows a sub-column holds depends
+ * on the size of the whole Blueprint: about the rows that give the canvas a
+ * screen's proportions, between {@link #MIN_ROWS} and {@link #MAX_ROWS} -- neither
+ * a ribbon twenty screens wide nor a tower twenty screens tall.
+ *
+ * <p>The row height fits a block at its closest zoom (description, pseudocode
+ * preview, relation chips), so zooming in never makes blocks overlap.
  */
 public final class BlueprintLayoutEngine {
 
     public static final int COLUMN_WIDTH = 340;
-    public static final int ROW_HEIGHT = 170;
-    public static final int MAX_ROWS = 18;
+    public static final int ROW_HEIGHT = 310;
+    public static final int MIN_ROWS = 6;
+    public static final int MAX_ROWS = 40;
 
     /** A block to place: its tier column and what orders it before the sweeps. */
     public record Item(long id, int column, String group) {
@@ -73,21 +79,31 @@ public final class BlueprintLayoutEngine {
                 }
             }
         }
+        int limit = rowsFor(items.size());
         Map<Long, Point> out = new LinkedHashMap<>();
         int x = 0;
-        int tallest = columns.values().stream().mapToInt(c -> Math.min(c.size(), MAX_ROWS)).max().orElse(0);
+        int tallest = columns.values().stream().mapToInt(c -> Math.min(c.size(), limit)).max().orElse(0);
         for (List<Item> col : columns.values()) {
-            int subColumns = (col.size() + MAX_ROWS - 1) / MAX_ROWS;
-            int rows = Math.min(col.size(), MAX_ROWS);
+            int subColumns = (col.size() + limit - 1) / limit;
+            int rows = Math.min(col.size(), limit);
             // centre short columns against the tallest one
             double offset = (tallest - rows) * ROW_HEIGHT / 2.0;
             for (int i = 0; i < col.size(); i++) {
-                int sub = i / MAX_ROWS;
-                int row = i % MAX_ROWS;
+                int sub = i / limit;
+                int row = i % limit;
                 out.put(col.get(i).id(), new Point(x + sub * COLUMN_WIDTH, offset + row * ROW_HEIGHT));
             }
             x += subColumns * COLUMN_WIDTH + 60;
         }
         return out;
+    }
+
+    /**
+     * Rows per sub-column for {@code n} blocks: width (n / rows columns) over height
+     * (rows) close to 16:10 once the cell sizes are counted.
+     */
+    static int rowsFor(int n) {
+        int rows = (int) Math.ceil(Math.sqrt(n * (double) COLUMN_WIDTH / (1.6 * ROW_HEIGHT)));
+        return Math.max(MIN_ROWS, Math.min(MAX_ROWS, rows));
     }
 }
