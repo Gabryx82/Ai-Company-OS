@@ -305,7 +305,9 @@ export type ProposalKind = NonNullable<S["BlueprintProposal"]["kind"]>;
 export type CodeMember = Present<S["CodeMember"], "name" | "annotations">;
 export type CodeMethod = Present<S["CodeMethod"], "name" | "parameters" | "annotations" | "exceptions" | "calls" | "callTargets" | "isStatic">;
 /** The server normalises every list of a structure to [] (CodeStructure.normalized): they are never null. */
-export type CodeStructure = Wire<S["CodeStructure"]> & {
+type StructureLists = "implementsTypes" | "annotations" | "fields" | "methods" | "dependencies" | "exceptions" | "relatedTests"
+  | "inputs" | "calls" | "calledBy" | "statusCodes" | "exports" | "imports" | "props" | "hooks" | "columns";
+export type CodeStructure = Omit<Wire<S["CodeStructure"]>, StructureLists> & {
   implementsTypes: string[]; annotations: string[]; fields: CodeMember[]; methods: CodeMethod[]; dependencies: string[];
   exceptions: string[]; relatedTests: string[]; inputs: string[]; calls: string[]; calledBy: string[];
   statusCodes: string[]; exports: string[]; imports: string[]; props: string[]; hooks: string[]; columns: string[];
@@ -314,9 +316,9 @@ export type CodeStructure = Wire<S["CodeStructure"]> & {
 export type BlueprintBlock = Present<S["BlueprintBlock"], "id" | "key" | "kind" | "layer" | "family" | "origin" | "status"
   | "pathState" | "name" | "tags" | "expanded" | "expandable" | "members" | "version">;
 export type BlueprintConnection = Present<S["BlueprintConnection"], "edgeId" | "relation" | "origin" | "nodeId" | "nodeName" | "nodeKind">;
-export type BlueprintBlockDetail = Present<S["BlueprintBlockDetail"], "id" | "key" | "kind" | "layer" | "family" | "section"
-  | "origin" | "status" | "pathState" | "name" | "tags" | "overrides" | "expanded" | "expandable" | "version">
-  & { structure: CodeStructure; incoming: BlueprintConnection[]; outgoing: BlueprintConnection[] };
+export type BlueprintBlockDetail = Omit<Present<S["BlueprintBlockDetail"], "id" | "key" | "kind" | "layer" | "family" | "section"
+  | "origin" | "status" | "pathState" | "name" | "tags" | "overrides" | "expanded" | "expandable" | "version">,
+  "structure" | "incoming" | "outgoing"> & { structure: CodeStructure; incoming: BlueprintConnection[]; outgoing: BlueprintConnection[] };
 export type BlueprintRelation = Present<S["BlueprintRelation"], "id" | "source" | "target" | "relation" | "family" | "origin" | "version">;
 export interface BlueprintPoint { x: number; y: number }
 export interface BlueprintCanvasLayout { positions: Record<string, BlueprintPoint>; version: number }

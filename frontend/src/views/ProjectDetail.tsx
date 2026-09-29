@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useApi } from "../context";
 import { CodeGraphView } from "./CodeGraphView";
 import type {
@@ -11,7 +11,10 @@ import { TaskDrawer } from "./TaskDrawer";
 import { AUTONOMY } from "./projectLabels";
 import { useLauncher } from "./SoftwareHub";
 
-const TABS = ["Panoramica", "Master Prompt", "Piano", "Documenti", "Codice", "Reference", "Strumenti"] as const;
+// PHASE 28: the Blueprint brings React Flow; it loads when its tab is first opened.
+const BlueprintView = lazy(() => import("./blueprint/BlueprintView").then((m) => ({ default: m.BlueprintView })));
+
+const TABS = ["Panoramica", "Master Prompt", "Piano", "Documenti", "Blueprint", "Codice", "Reference", "Strumenti"] as const;
 type Tab = typeof TABS[number];
 
 const APPROVAL: Record<string, { label: string; tone: string }> = {
@@ -89,6 +92,7 @@ export function ProjectDetail({ projectId, types, navigate }: {
       {tab === "Piano" && <PlanTab project={project} plan={plan} docs={docs} agents={agents} onReload={reload}
                                    onOpenTask={setOpenTask} />}
       {tab === "Documenti" && <Documents project={project} docs={docs} />}
+      {tab === "Blueprint" && <Suspense fallback={<div className="muted">Carico il Blueprint…</div>}><BlueprintView projectId={project.id} onOpenTask={setOpenTask} /></Suspense>}
       {tab === "Codice" && <CodeGraphView projectId={project.id} />}
       {tab === "Reference" && <References project={project} docs={docs} onUploaded={reload} />}
       {tab === "Strumenti" && <Tools project={project} type={type} />}
