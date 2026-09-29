@@ -14,6 +14,9 @@ import type {
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
   ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, EcosystemServiceInfo, TerminalShell, TerminalTicket, CodeGraph, CostSummary,
+  AiAction, BlueprintActionOutcome, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintCanvasLayout, BlueprintGraph, BlueprintPoint,
+  BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
+  BlueprintVocabulary,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -547,6 +550,96 @@ export class ControlPlane {
 
   scanCodeGraph(projectId: number): Promise<CodeGraph> {
     return this.plain("POST", `/api/projects/${projectId}/code-graph`);
+  }
+
+  // --- the Project Blueprint (ADR-033) ------------------------------------------------
+  // Blocks are read one at a time with their ETag; relations, the layout and
+  // proposals carry their version in the body, and the tag is built from it.
+
+  blueprintVocabulary(): Promise<BlueprintVocabulary> {
+    return this.plain("GET", "/api/blueprint/vocabulary");
+  }
+
+  blueprint(projectId: number): Promise<BlueprintGraph> {
+    return this.plain("GET", `/api/projects/${projectId}/blueprint`);
+  }
+
+  scanBlueprint(projectId: number): Promise<BlueprintScanReport> {
+    return this.plain("POST", `/api/projects/${projectId}/blueprint/scan`);
+  }
+
+  blueprintNode(projectId: number, nodeId: number): Promise<Versioned<BlueprintBlockDetail>> {
+    return this.versioned("GET", `/api/projects/${projectId}/blueprint/nodes/${nodeId}`);
+  }
+
+  createBlueprintNode(projectId: number, block: BlueprintBlockWrite): Promise<Versioned<BlueprintBlockDetail>> {
+    return this.versioned("POST", `/api/projects/${projectId}/blueprint/nodes`, { body: block });
+  }
+
+  updateBlueprintNode(projectId: number, nodeId: number, etag: string, block: BlueprintBlockWrite): Promise<Versioned<BlueprintBlockDetail>> {
+    return this.versioned("PUT", `/api/projects/${projectId}/blueprint/nodes/${nodeId}`, { body: block, ifMatch: etag });
+  }
+
+  async deleteBlueprintNode(projectId: number, nodeId: number, etag: string): Promise<void> {
+    await this.plain("DELETE", `/api/projects/${projectId}/blueprint/nodes/${nodeId}`, { ifMatch: etag });
+  }
+
+  revertBlueprintNode(projectId: number, nodeId: number, etag: string, fields: string[]): Promise<Versioned<BlueprintBlockDetail>> {
+    return this.versioned("POST", `/api/projects/${projectId}/blueprint/nodes/${nodeId}/revert`, { body: { fields }, ifMatch: etag });
+  }
+
+  regenerateBlueprintPseudocode(projectId: number, nodeId: number, etag: string): Promise<Versioned<BlueprintBlockDetail>> {
+    return this.versioned("POST", `/api/projects/${projectId}/blueprint/nodes/${nodeId}/pseudocode`, { ifMatch: etag });
+  }
+
+  setBlueprintNodeExpanded(projectId: number, nodeId: number, etag: string, expanded: boolean): Promise<Versioned<BlueprintBlockDetail>> {
+    return this.versioned("POST", `/api/projects/${projectId}/blueprint/nodes/${nodeId}/${expanded ? "expand" : "collapse"}`,
+      { ifMatch: etag });
+  }
+
+  blueprintSnippet(projectId: number, nodeId: number, full = false): Promise<BlueprintSnippet> {
+    return this.plain("GET", `/api/projects/${projectId}/blueprint/nodes/${nodeId}/snippet${full ? "?full=true" : ""}`);
+  }
+
+  blueprintAiAction(projectId: number, nodeId: number, action: AiAction): Promise<BlueprintActionOutcome> {
+    return this.plain("POST", `/api/projects/${projectId}/blueprint/nodes/${nodeId}/ai-actions`, { body: { action } });
+  }
+
+  createBlueprintEdge(projectId: number, relation: BlueprintRelationWrite): Promise<BlueprintRelation> {
+    return this.plain("POST", `/api/projects/${projectId}/blueprint/edges`, { body: relation });
+  }
+
+  updateBlueprintEdge(projectId: number, edgeId: number, version: number, relation: BlueprintRelationWrite): Promise<BlueprintRelation> {
+    return this.plain("PUT", `/api/projects/${projectId}/blueprint/edges/${edgeId}`, { body: relation, ifMatch: `"${version}"` });
+  }
+
+  async deleteBlueprintEdge(projectId: number, edgeId: number, version: number): Promise<void> {
+    await this.plain("DELETE", `/api/projects/${projectId}/blueprint/edges/${edgeId}`, { ifMatch: `"${version}"` });
+  }
+
+  confirmBlueprintEdge(projectId: number, edgeId: number, version: number): Promise<BlueprintRelation> {
+    return this.plain("POST", `/api/projects/${projectId}/blueprint/edges/${edgeId}/confirm`, { ifMatch: `"${version}"` });
+  }
+
+  saveBlueprintLayout(projectId: number, version: number, positions: Record<string, BlueprintPoint>): Promise<BlueprintCanvasLayout> {
+    return this.plain("PUT", `/api/projects/${projectId}/blueprint/layout`, { body: { positions }, ifMatch: `"${version}"` });
+  }
+
+  autoBlueprintLayout(projectId: number, version: number): Promise<BlueprintCanvasLayout> {
+    return this.plain("POST", `/api/projects/${projectId}/blueprint/layout/auto`, { ifMatch: `"${version}"` });
+  }
+
+  blueprintProposals(projectId: number): Promise<BlueprintProposal[]> {
+    return this.plain("GET", `/api/projects/${projectId}/blueprint/proposals`);
+  }
+
+  proposeBlueprintChange(projectId: number, proposal: BlueprintProposalWrite): Promise<BlueprintProposal> {
+    return this.plain("POST", `/api/projects/${projectId}/blueprint/proposals`, { body: proposal });
+  }
+
+  decideBlueprintProposal(projectId: number, proposalId: number, version: number, accept: boolean): Promise<BlueprintProposal> {
+    return this.plain("POST", `/api/projects/${projectId}/blueprint/proposals/${proposalId}/${accept ? "accept" : "reject"}`,
+      { ifMatch: `"${version}"` });
   }
 
   // --- the integrated terminal (ADR-029) ---------------------------------------

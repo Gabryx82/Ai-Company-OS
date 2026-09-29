@@ -254,6 +254,840 @@
         },
         "type" : "object"
       },
+      "BlueprintActionInfo" : {
+        "properties" : {
+          "action" : {
+            "enum" : [ "EXPLAIN_COMPONENT", "GENERATE_PSEUDOCODE", "DETECT_MISSING_RELATIONS", "EXPLAIN_DEPENDENCY", "SUGGEST_REFACTOR", "FIND_ARCHITECTURAL_ISSUE", "GENERATE_DOCUMENTATION", "CREATE_IMPLEMENTATION_TASK" ],
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintActionOutcome" : {
+        "properties" : {
+          "action" : {
+            "type" : "string"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "taskTitle" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintActionRequest" : {
+        "properties" : {
+          "action" : {
+            "enum" : [ "EXPLAIN_COMPONENT", "GENERATE_PSEUDOCODE", "DETECT_MISSING_RELATIONS", "EXPLAIN_DEPENDENCY", "SUGGEST_REFACTOR", "FIND_ARCHITECTURAL_ISSUE", "GENERATE_DOCUMENTATION", "CREATE_IMPLEMENTATION_TASK" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintBlock" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "expandable" : {
+            "type" : "boolean"
+          },
+          "expanded" : {
+            "type" : "boolean"
+          },
+          "family" : {
+            "enum" : [ "FILES", "CLASSES", "METHODS", "APIS", "DATA", "TESTS", "CUSTOM" ],
+            "type" : "string"
+          },
+          "filePath" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "FILE", "CLASS", "INTERFACE", "ENUM", "FUNCTION", "CONTROLLER", "SERVICE", "REPOSITORY", "DTO", "ENTITY", "CONFIGURATION", "DATABASE", "ENDPOINT", "COMPONENT", "HOOK", "STORE", "TEST", "SCRIPT", "SNIPPET", "DOCUMENT", "CUSTOM" ],
+            "type" : "string"
+          },
+          "language" : {
+            "type" : "string"
+          },
+          "layer" : {
+            "enum" : [ "BACKEND", "FRONTEND", "DATABASE", "TESTS", "DOCS", "OTHER" ],
+            "type" : "string"
+          },
+          "members" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "enum" : [ "DETECTED", "MANUAL" ],
+            "type" : "string"
+          },
+          "parentId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "pathState" : {
+            "enum" : [ "LINKED", "TO_CREATE", "DOCUMENT_REFERENCE", "VIRTUAL", "MISSING" ],
+            "type" : "string"
+          },
+          "pseudocodePreview" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "PLANNED", "IN_PROGRESS", "IMPLEMENTED", "DEPRECATED" ],
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintBlockDetail" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "detected" : {
+            "$ref" : "#/components/schemas/BlueprintDetectedValues"
+          },
+          "endLine" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "expandable" : {
+            "type" : "boolean"
+          },
+          "expanded" : {
+            "type" : "boolean"
+          },
+          "family" : {
+            "enum" : [ "FILES", "CLASSES", "METHODS", "APIS", "DATA", "TESTS", "CUSTOM" ],
+            "type" : "string"
+          },
+          "filePath" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "incoming" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BlueprintConnection"
+            },
+            "type" : "array"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "FILE", "CLASS", "INTERFACE", "ENUM", "FUNCTION", "CONTROLLER", "SERVICE", "REPOSITORY", "DTO", "ENTITY", "CONFIGURATION", "DATABASE", "ENDPOINT", "COMPONENT", "HOOK", "STORE", "TEST", "SCRIPT", "SNIPPET", "DOCUMENT", "CUSTOM" ],
+            "type" : "string"
+          },
+          "language" : {
+            "type" : "string"
+          },
+          "lastScanAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "layer" : {
+            "enum" : [ "BACKEND", "FRONTEND", "DATABASE", "TESTS", "DOCS", "OTHER" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "enum" : [ "DETECTED", "MANUAL" ],
+            "type" : "string"
+          },
+          "outgoing" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BlueprintConnection"
+            },
+            "type" : "array"
+          },
+          "overrides" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "parentId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "pathState" : {
+            "enum" : [ "LINKED", "TO_CREATE", "DOCUMENT_REFERENCE", "VIRTUAL", "MISSING" ],
+            "type" : "string"
+          },
+          "pseudocode" : {
+            "type" : "string"
+          },
+          "section" : {
+            "enum" : [ "CLASS", "FUNCTION", "ENDPOINT", "FRONTEND", "DATABASE", "NONE" ],
+            "type" : "string"
+          },
+          "startLine" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "PLANNED", "IN_PROGRESS", "IMPLEMENTED", "DEPRECATED" ],
+            "type" : "string"
+          },
+          "structure" : {
+            "$ref" : "#/components/schemas/CodeStructure"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintBlockRequest" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "filePath" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "FILE", "CLASS", "INTERFACE", "ENUM", "FUNCTION", "CONTROLLER", "SERVICE", "REPOSITORY", "DTO", "ENTITY", "CONFIGURATION", "DATABASE", "ENDPOINT", "COMPONENT", "HOOK", "STORE", "TEST", "SCRIPT", "SNIPPET", "DOCUMENT", "CUSTOM" ],
+            "type" : "string"
+          },
+          "language" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "pathState" : {
+            "enum" : [ "LINKED", "TO_CREATE", "DOCUMENT_REFERENCE", "VIRTUAL", "MISSING" ],
+            "type" : "string"
+          },
+          "pseudocode" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "PLANNED", "IN_PROGRESS", "IMPLEMENTED", "DEPRECATED" ],
+            "type" : "string"
+          },
+          "structure" : {
+            "$ref" : "#/components/schemas/CodeStructure"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "x" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "y" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintCanvasLayout" : {
+        "properties" : {
+          "positions" : {
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/BlueprintPoint"
+            },
+            "type" : "object"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintCodeReference" : {
+        "properties" : {
+          "excerpt" : {
+            "type" : "string"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintConnection" : {
+        "properties" : {
+          "edgeId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "nodeId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nodeKind" : {
+            "enum" : [ "FILE", "CLASS", "INTERFACE", "ENUM", "FUNCTION", "CONTROLLER", "SERVICE", "REPOSITORY", "DTO", "ENTITY", "CONFIGURATION", "DATABASE", "ENDPOINT", "COMPONENT", "HOOK", "STORE", "TEST", "SCRIPT", "SNIPPET", "DOCUMENT", "CUSTOM" ],
+            "type" : "string"
+          },
+          "nodeName" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "enum" : [ "DETECTED", "MANUAL", "PROPOSED" ],
+            "type" : "string"
+          },
+          "relation" : {
+            "enum" : [ "IMPORTS", "USES", "CALLS", "EXTENDS", "IMPLEMENTS", "READS", "WRITES", "CREATES", "CONTAINS", "BELONGS_TO", "VALIDATES", "EMITS", "SUBSCRIBES", "MAPS_TO", "ENDPOINT_TO_SERVICE", "SERVICE_TO_REPOSITORY", "ENTITY_TO_TABLE", "TEST_COVERS", "CUSTOM" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintDetectedValues" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "FILE", "CLASS", "INTERFACE", "ENUM", "FUNCTION", "CONTROLLER", "SERVICE", "REPOSITORY", "DTO", "ENTITY", "CONFIGURATION", "DATABASE", "ENDPOINT", "COMPONENT", "HOOK", "STORE", "TEST", "SCRIPT", "SNIPPET", "DOCUMENT", "CUSTOM" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "pseudocode" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintGraph" : {
+        "properties" : {
+          "archived" : {
+            "type" : "boolean"
+          },
+          "edges" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BlueprintRelation"
+            },
+            "type" : "array"
+          },
+          "lastScan" : {
+            "$ref" : "#/components/schemas/BlueprintScanReport"
+          },
+          "layout" : {
+            "$ref" : "#/components/schemas/BlueprintCanvasLayout"
+          },
+          "metrics" : {
+            "$ref" : "#/components/schemas/BlueprintMetrics"
+          },
+          "nodes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BlueprintBlock"
+            },
+            "type" : "array"
+          },
+          "pendingProposals" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "projectId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "workspaceReady" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintKindInfo" : {
+        "properties" : {
+          "column" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "defaultLayer" : {
+            "enum" : [ "BACKEND", "FRONTEND", "DATABASE", "TESTS", "DOCS", "OTHER" ],
+            "type" : "string"
+          },
+          "family" : {
+            "enum" : [ "FILES", "CLASSES", "METHODS", "APIS", "DATA", "TESTS", "CUSTOM" ],
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "FILE", "CLASS", "INTERFACE", "ENUM", "FUNCTION", "CONTROLLER", "SERVICE", "REPOSITORY", "DTO", "ENTITY", "CONFIGURATION", "DATABASE", "ENDPOINT", "COMPONENT", "HOOK", "STORE", "TEST", "SCRIPT", "SNIPPET", "DOCUMENT", "CUSTOM" ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "section" : {
+            "enum" : [ "CLASS", "FUNCTION", "ENDPOINT", "FRONTEND", "DATABASE", "NONE" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintLayoutRequest" : {
+        "properties" : {
+          "positions" : {
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/BlueprintPoint"
+            },
+            "type" : "object"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintMetrics" : {
+        "properties" : {
+          "byFamily" : {
+            "additionalProperties" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "object"
+          },
+          "byLayer" : {
+            "additionalProperties" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "object"
+          },
+          "classes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "databaseEntities" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "detectedRelations" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "endpoints" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "files" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "manualRelations" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "missingNodes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "proposedRelations" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tests" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalNodes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "unresolvedRelations" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintPoint" : {
+        "properties" : {
+          "x" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "y" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintProposal" : {
+        "properties" : {
+          "consequences" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "decidedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "decidedBy" : {
+            "type" : "string"
+          },
+          "diff" : {
+            "type" : "string"
+          },
+          "edgeId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "filePath" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "kind" : {
+            "enum" : [ "CREATE_FILE", "ADD_DEPENDENCY", "CUSTOM" ],
+            "type" : "string"
+          },
+          "nodeId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "proposedBy" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "PROPOSED", "ACCEPTED", "REJECTED" ],
+            "type" : "string"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintProposalRequest" : {
+        "properties" : {
+          "consequences" : {
+            "type" : "string"
+          },
+          "diff" : {
+            "type" : "string"
+          },
+          "edgeId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "filePath" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "CREATE_FILE", "ADD_DEPENDENCY", "CUSTOM" ],
+            "type" : "string"
+          },
+          "nodeId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintRelation" : {
+        "properties" : {
+          "code" : {
+            "$ref" : "#/components/schemas/BlueprintCodeReference"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "family" : {
+            "enum" : [ "DEPENDENCY", "STRUCTURE", "DATA", "EVENTS", "TESTS", "CUSTOM" ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "enum" : [ "DETECTED", "MANUAL", "PROPOSED" ],
+            "type" : "string"
+          },
+          "relation" : {
+            "enum" : [ "IMPORTS", "USES", "CALLS", "EXTENDS", "IMPLEMENTS", "READS", "WRITES", "CREATES", "CONTAINS", "BELONGS_TO", "VALIDATES", "EMITS", "SUBSCRIBES", "MAPS_TO", "ENDPOINT_TO_SERVICE", "SERVICE_TO_REPOSITORY", "ENTITY_TO_TABLE", "TEST_COVERS", "CUSTOM" ],
+            "type" : "string"
+          },
+          "source" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "target" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintRelationInfo" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "family" : {
+            "enum" : [ "DEPENDENCY", "STRUCTURE", "DATA", "EVENTS", "TESTS", "CUSTOM" ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "relation" : {
+            "enum" : [ "IMPORTS", "USES", "CALLS", "EXTENDS", "IMPLEMENTS", "READS", "WRITES", "CREATES", "CONTAINS", "BELONGS_TO", "VALIDATES", "EMITS", "SUBSCRIBES", "MAPS_TO", "ENDPOINT_TO_SERVICE", "SERVICE_TO_REPOSITORY", "ENTITY_TO_TABLE", "TEST_COVERS", "CUSTOM" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintRelationRequest" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "enum" : [ "DETECTED", "MANUAL", "PROPOSED" ],
+            "type" : "string"
+          },
+          "relation" : {
+            "enum" : [ "IMPORTS", "USES", "CALLS", "EXTENDS", "IMPLEMENTS", "READS", "WRITES", "CREATES", "CONTAINS", "BELONGS_TO", "VALIDATES", "EMITS", "SUBSCRIBES", "MAPS_TO", "ENDPOINT_TO_SERVICE", "SERVICE_TO_REPOSITORY", "ENTITY_TO_TABLE", "TEST_COVERS", "CUSTOM" ],
+            "type" : "string"
+          },
+          "sourceId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "targetId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintRevertRequest" : {
+        "properties" : {
+          "fields" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintScanReport" : {
+        "properties" : {
+          "edgesDetected" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "files" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "finishedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "languages" : {
+            "type" : "string"
+          },
+          "nodesAdded" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "nodesDetected" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "nodesMissing" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "requestedBy" : {
+            "type" : "string"
+          },
+          "startedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "truncated" : {
+            "type" : "boolean"
+          },
+          "unresolved" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintSnippet" : {
+        "properties" : {
+          "endLine" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "language" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "startLine" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "truncated" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "BlueprintVocabularyView" : {
+        "properties" : {
+          "actions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BlueprintActionInfo"
+            },
+            "type" : "array"
+          },
+          "kinds" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BlueprintKindInfo"
+            },
+            "type" : "array"
+          },
+          "pathStates" : {
+            "items" : {
+              "enum" : [ "LINKED", "TO_CREATE", "DOCUMENT_REFERENCE", "VIRTUAL", "MISSING" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "proposalKinds" : {
+            "items" : {
+              "enum" : [ "CREATE_FILE", "ADD_DEPENDENCY", "CUSTOM" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "relations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BlueprintRelationInfo"
+            },
+            "type" : "array"
+          },
+          "statuses" : {
+            "items" : {
+              "enum" : [ "PLANNED", "IN_PROGRESS", "IMPLEMENTED", "DEPRECATED" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "Budget" : {
         "properties" : {
           "alert" : {
@@ -358,6 +1192,230 @@
           },
           "truncated" : {
             "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "CodeMember" : {
+        "properties" : {
+          "annotations" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          },
+          "visibility" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CodeMethod" : {
+        "properties" : {
+          "annotations" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "callTargets" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "calls" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "endLine" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "exceptions" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "isStatic" : {
+            "type" : "boolean"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "parameters" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "pseudocode" : {
+            "type" : "string"
+          },
+          "returnType" : {
+            "type" : "string"
+          },
+          "signature" : {
+            "type" : "string"
+          },
+          "startLine" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "visibility" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CodeStructure" : {
+        "properties" : {
+          "annotations" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "authorization" : {
+            "type" : "string"
+          },
+          "calledBy" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "calls" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "className" : {
+            "type" : "string"
+          },
+          "columns" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "controller" : {
+            "type" : "string"
+          },
+          "dependencies" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "exceptions" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "exports" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "extendsType" : {
+            "type" : "string"
+          },
+          "fields" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CodeMember"
+            },
+            "type" : "array"
+          },
+          "hooks" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "httpMethod" : {
+            "type" : "string"
+          },
+          "implementsTypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "imports" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "inputs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "methods" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CodeMethod"
+            },
+            "type" : "array"
+          },
+          "output" : {
+            "type" : "string"
+          },
+          "packageName" : {
+            "type" : "string"
+          },
+          "props" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "relatedTests" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "requestDto" : {
+            "type" : "string"
+          },
+          "responseDto" : {
+            "type" : "string"
+          },
+          "route" : {
+            "type" : "string"
+          },
+          "service" : {
+            "type" : "string"
+          },
+          "signature" : {
+            "type" : "string"
+          },
+          "statusCodes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "table" : {
+            "type" : "string"
+          },
+          "visibility" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -4243,6 +5301,24 @@
         "tags" : [ "auth-controller" ]
       }
     },
+    "/api/blueprint/vocabulary" : {
+      "get" : {
+        "operationId" : "blueprintVocabulary",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintVocabularyView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
     "/api/catalog/models" : {
       "get" : {
         "operationId" : "models",
@@ -5138,6 +6214,901 @@
           }
         },
         "tags" : [ "project-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint" : {
+      "get" : {
+        "operationId" : "blueprintGraph",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintGraph"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/edges" : {
+      "post" : {
+        "operationId" : "createBlueprintEdge",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlueprintRelationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintRelation"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/edges/{edgeId}" : {
+      "delete" : {
+        "operationId" : "deleteBlueprintEdge",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "edgeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      },
+      "put" : {
+        "operationId" : "updateBlueprintEdge",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "edgeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlueprintRelationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintRelation"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/edges/{edgeId}/confirm" : {
+      "post" : {
+        "operationId" : "confirmBlueprintEdge",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "edgeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintRelation"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/layout" : {
+      "put" : {
+        "operationId" : "saveBlueprintLayout",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlueprintLayoutRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintCanvasLayout"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/layout/auto" : {
+      "post" : {
+        "operationId" : "autoBlueprintLayout",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintCanvasLayout"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/nodes" : {
+      "post" : {
+        "operationId" : "createBlueprintNode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlueprintBlockRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintBlockDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/nodes/{nodeId}" : {
+      "delete" : {
+        "operationId" : "deleteBlueprintNode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      },
+      "get" : {
+        "operationId" : "blueprintNode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintBlockDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      },
+      "put" : {
+        "operationId" : "updateBlueprintNode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlueprintBlockRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintBlockDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/ai-actions" : {
+      "post" : {
+        "operationId" : "requestBlueprintAiAction",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlueprintActionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintActionOutcome"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/collapse" : {
+      "post" : {
+        "operationId" : "collapseBlueprintNode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintBlockDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/expand" : {
+      "post" : {
+        "operationId" : "expandBlueprintNode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintBlockDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/pseudocode" : {
+      "post" : {
+        "operationId" : "regenerateBlueprintPseudocode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintBlockDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/revert" : {
+      "post" : {
+        "operationId" : "revertBlueprintNode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlueprintRevertRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintBlockDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/snippet" : {
+      "get" : {
+        "operationId" : "blueprintSnippet",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "full",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintSnippet"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/proposals" : {
+      "get" : {
+        "operationId" : "blueprintProposals",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/BlueprintProposal"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      },
+      "post" : {
+        "operationId" : "proposeBlueprintChange",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlueprintProposalRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintProposal"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/proposals/{proposalId}/accept" : {
+      "post" : {
+        "operationId" : "acceptBlueprintProposal",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "proposalId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintProposal"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/proposals/{proposalId}/reject" : {
+      "post" : {
+        "operationId" : "rejectBlueprintProposal",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "proposalId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintProposal"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/scan" : {
+      "post" : {
+        "operationId" : "blueprintScan",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlueprintScanReport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/scans" : {
+      "get" : {
+        "operationId" : "blueprintScans",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/BlueprintScanReport"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
       }
     },
     "/api/projects/{id}/code-graph" : {

@@ -283,3 +283,64 @@ export interface CostSummary {
   budgets: { providerKey: string; providerName: string | null; monthlyLimitUsd: number; alertPercent: number;
     spentThisMonthUsd: number; percent: number; alert: boolean; exceeded: boolean; version: number }[];
 }
+
+// --- PHASE 28: the Project Blueprint (ADR-033) ---------------------------------------------
+
+/** Every field present (possibly null), and the named ones never null. */
+type Present<T, K extends keyof T> = Wire<T> & { [P in K]-?: NonNullable<T[P]> };
+
+export type NodeKind = NonNullable<S["BlueprintBlock"]["kind"]>;
+export type BlueprintLayer = NonNullable<S["BlueprintBlock"]["layer"]>;
+export type BlueprintFamily = NonNullable<S["BlueprintBlock"]["family"]>;
+export type NodeOrigin = NonNullable<S["BlueprintBlock"]["origin"]>;
+export type NodeStatus = NonNullable<S["BlueprintBlock"]["status"]>;
+export type PathState = NonNullable<S["BlueprintBlock"]["pathState"]>;
+export type RelationType = NonNullable<S["BlueprintRelation"]["relation"]>;
+export type RelationFamily = NonNullable<S["BlueprintRelation"]["family"]>;
+export type EdgeOrigin = NonNullable<S["BlueprintRelation"]["origin"]>;
+export type StructureSection = NonNullable<S["BlueprintBlockDetail"]["section"]>;
+export type AiAction = NonNullable<S["BlueprintActionRequest"]["action"]>;
+export type ProposalKind = NonNullable<S["BlueprintProposal"]["kind"]>;
+
+export type CodeMember = Present<S["CodeMember"], "name" | "annotations">;
+export type CodeMethod = Present<S["CodeMethod"], "name" | "parameters" | "annotations" | "exceptions" | "calls" | "callTargets" | "isStatic">;
+/** The server normalises every list of a structure to [] (CodeStructure.normalized): they are never null. */
+export type CodeStructure = Wire<S["CodeStructure"]> & {
+  implementsTypes: string[]; annotations: string[]; fields: CodeMember[]; methods: CodeMethod[]; dependencies: string[];
+  exceptions: string[]; relatedTests: string[]; inputs: string[]; calls: string[]; calledBy: string[];
+  statusCodes: string[]; exports: string[]; imports: string[]; props: string[]; hooks: string[]; columns: string[];
+};
+
+export type BlueprintBlock = Present<S["BlueprintBlock"], "id" | "key" | "kind" | "layer" | "family" | "origin" | "status"
+  | "pathState" | "name" | "tags" | "expanded" | "expandable" | "members" | "version">;
+export type BlueprintConnection = Present<S["BlueprintConnection"], "edgeId" | "relation" | "origin" | "nodeId" | "nodeName" | "nodeKind">;
+export type BlueprintBlockDetail = Present<S["BlueprintBlockDetail"], "id" | "key" | "kind" | "layer" | "family" | "section"
+  | "origin" | "status" | "pathState" | "name" | "tags" | "overrides" | "expanded" | "expandable" | "version">
+  & { structure: CodeStructure; incoming: BlueprintConnection[]; outgoing: BlueprintConnection[] };
+export type BlueprintRelation = Present<S["BlueprintRelation"], "id" | "source" | "target" | "relation" | "family" | "origin" | "version">;
+export interface BlueprintPoint { x: number; y: number }
+export interface BlueprintCanvasLayout { positions: Record<string, BlueprintPoint>; version: number }
+export type BlueprintScanReport = Present<S["BlueprintScanReport"], "id" | "startedAt" | "finishedAt" | "files" | "nodesDetected"
+  | "edgesDetected" | "nodesAdded" | "nodesMissing" | "unresolved" | "languages">;
+export type BlueprintMetrics = Present<S["BlueprintMetrics"], "totalNodes" | "files" | "classes" | "endpoints" | "databaseEntities"
+  | "tests" | "detectedRelations" | "manualRelations" | "proposedRelations" | "unresolvedRelations" | "missingNodes"
+  | "byLayer" | "byFamily">;
+export interface BlueprintGraph {
+  projectId: number; archived: boolean; workspaceReady: boolean; nodes: BlueprintBlock[]; edges: BlueprintRelation[];
+  layout: BlueprintCanvasLayout; lastScan: BlueprintScanReport | null; metrics: BlueprintMetrics; pendingProposals: number;
+}
+export type BlueprintSnippet = Present<S["BlueprintSnippet"], "path" | "startLine" | "endLine" | "text" | "truncated">;
+export type BlueprintProposal = Present<S["BlueprintProposal"], "id" | "kind" | "status" | "filePath" | "title" | "diff"
+  | "proposedBy" | "createdAt" | "version">;
+export type BlueprintActionOutcome = Present<S["BlueprintActionOutcome"], "taskId" | "taskTitle" | "action">;
+export type BlueprintKindInfo = Present<S["BlueprintKindInfo"], "kind" | "label" | "family" | "defaultLayer" | "section" | "column">;
+export type BlueprintRelationInfo = Present<S["BlueprintRelationInfo"], "relation" | "label" | "family" | "description">;
+export type BlueprintActionInfo = Present<S["BlueprintActionInfo"], "action" | "label" | "description">;
+export interface BlueprintVocabulary {
+  kinds: BlueprintKindInfo[]; relations: BlueprintRelationInfo[]; actions: BlueprintActionInfo[];
+  statuses: NodeStatus[]; pathStates: PathState[]; proposalKinds: ProposalKind[];
+}
+/** What a client sends for a block (PUT semantics: every field). */
+export type BlueprintBlockWrite = S["BlueprintBlockRequest"];
+export type BlueprintRelationWrite = S["BlueprintRelationRequest"];
+export type BlueprintProposalWrite = S["BlueprintProposalRequest"];

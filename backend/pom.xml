@@ -61,6 +61,13 @@
 			<version>0.13.10</version>
 		</dependency>
 		<dependency>
+			<!-- PHASE 28 (ADR-033): the Blueprint reads Java through an AST, not with
+			     patterns. Parsing only: no symbol solver, nothing is compiled or run. -->
+			<groupId>com.github.javaparser</groupId>
+			<artifactId>javaparser-core</artifactId>
+			<version>3.28.2</version>
+		</dependency>
+		<dependency>
 			<!-- TASK-021: the OpenAPI description of the API, API only (no UI).
 			     Served authenticated at /v3/api-docs, and exported to
 			     docs/api/openapi.json by OpenApiContractTest, from which the

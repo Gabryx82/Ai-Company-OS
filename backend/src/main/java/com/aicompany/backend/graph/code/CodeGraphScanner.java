@@ -36,7 +36,7 @@ public final class CodeGraphScanner {
     public static final int MAX_FILES = 4000;
     public static final long MAX_BYTES = 512 * 1024;
 
-    static final Set<String> SKIPPED = Set.of("node_modules", ".git", "target", "dist", "build", "out", ".venv",
+    public static final Set<String> SKIPPED = Set.of("node_modules", ".git", "target", "dist", "build", "out", ".venv",
             "venv", "__pycache__", ".idea", ".vscode", ".gradle", ".next", "coverage", ".aicos", ".mvn");
 
     private static final Pattern JS_IMPORT = Pattern.compile(

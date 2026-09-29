@@ -40,6 +40,12 @@ public abstract class AbstractPostgresTest {
 
     @BeforeEach
     void clearRunsAndTheScriptedEngine() {
+        // PHASE 28: the Blueprint references projects and tasks that other tests delete.
+        baseJdbc.update("DELETE FROM blueprint_change_proposals");
+        baseJdbc.update("DELETE FROM blueprint_edges");
+        baseJdbc.update("DELETE FROM blueprint_nodes");
+        baseJdbc.update("DELETE FROM blueprint_scans");
+        baseJdbc.update("DELETE FROM blueprint_layouts");
         // PHASE 13: daily items reference tasks that other tests delete.
         baseJdbc.update("DELETE FROM daily_items");
         // PHASE 11: reviews and handoffs reference runs and tasks; they go first.

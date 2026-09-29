@@ -436,6 +436,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/blueprint/vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["blueprintVocabulary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/models": {
         parameters: {
             query?: never;
@@ -830,6 +846,310 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["blueprintGraph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/edges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createBlueprintEdge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/edges/{edgeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateBlueprintEdge"];
+        post?: never;
+        delete: operations["deleteBlueprintEdge"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/edges/{edgeId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmBlueprintEdge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["saveBlueprintLayout"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/layout/auto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["autoBlueprintLayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createBlueprintNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/nodes/{nodeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["blueprintNode"];
+        put: operations["updateBlueprintNode"];
+        post?: never;
+        delete: operations["deleteBlueprintNode"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/ai-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestBlueprintAiAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/collapse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["collapseBlueprintNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/expand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["expandBlueprintNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/pseudocode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["regenerateBlueprintPseudocode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/revert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["revertBlueprintNode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/nodes/{nodeId}/snippet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["blueprintSnippet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["blueprintProposals"];
+        put?: never;
+        post: operations["proposeBlueprintChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/proposals/{proposalId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["acceptBlueprintProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/proposals/{proposalId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectBlueprintProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["blueprintScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["blueprintScans"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1643,6 +1963,344 @@ export interface components {
             valid?: boolean;
             warnings?: string[];
         };
+        BlueprintActionInfo: {
+            /** @enum {string} */
+            action?: "EXPLAIN_COMPONENT" | "GENERATE_PSEUDOCODE" | "DETECT_MISSING_RELATIONS" | "EXPLAIN_DEPENDENCY" | "SUGGEST_REFACTOR" | "FIND_ARCHITECTURAL_ISSUE" | "GENERATE_DOCUMENTATION" | "CREATE_IMPLEMENTATION_TASK";
+            description?: string;
+            label?: string;
+        };
+        BlueprintActionOutcome: {
+            action?: string;
+            /** Format: int64 */
+            taskId?: number;
+            taskTitle?: string;
+        };
+        BlueprintActionRequest: {
+            /** @enum {string} */
+            action?: "EXPLAIN_COMPONENT" | "GENERATE_PSEUDOCODE" | "DETECT_MISSING_RELATIONS" | "EXPLAIN_DEPENDENCY" | "SUGGEST_REFACTOR" | "FIND_ARCHITECTURAL_ISSUE" | "GENERATE_DOCUMENTATION" | "CREATE_IMPLEMENTATION_TASK";
+        };
+        BlueprintBlock: {
+            description?: string;
+            expandable?: boolean;
+            expanded?: boolean;
+            /** @enum {string} */
+            family?: "FILES" | "CLASSES" | "METHODS" | "APIS" | "DATA" | "TESTS" | "CUSTOM";
+            filePath?: string;
+            /** Format: int64 */
+            id?: number;
+            key?: string;
+            /** @enum {string} */
+            kind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            language?: string;
+            /** @enum {string} */
+            layer?: "BACKEND" | "FRONTEND" | "DATABASE" | "TESTS" | "DOCS" | "OTHER";
+            /** Format: int32 */
+            members?: number;
+            name?: string;
+            /** @enum {string} */
+            origin?: "DETECTED" | "MANUAL";
+            /** Format: int64 */
+            parentId?: number;
+            /** @enum {string} */
+            pathState?: "LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING";
+            pseudocodePreview?: string;
+            /** @enum {string} */
+            status?: "PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED";
+            tags?: string[];
+            /** Format: int64 */
+            version?: number;
+        };
+        BlueprintBlockDetail: {
+            /** Format: date-time */
+            createdAt?: string;
+            description?: string;
+            detected?: components["schemas"]["BlueprintDetectedValues"];
+            /** Format: int32 */
+            endLine?: number;
+            expandable?: boolean;
+            expanded?: boolean;
+            /** @enum {string} */
+            family?: "FILES" | "CLASSES" | "METHODS" | "APIS" | "DATA" | "TESTS" | "CUSTOM";
+            filePath?: string;
+            /** Format: int64 */
+            id?: number;
+            incoming?: components["schemas"]["BlueprintConnection"][];
+            key?: string;
+            /** @enum {string} */
+            kind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            language?: string;
+            /** Format: date-time */
+            lastScanAt?: string;
+            /** @enum {string} */
+            layer?: "BACKEND" | "FRONTEND" | "DATABASE" | "TESTS" | "DOCS" | "OTHER";
+            name?: string;
+            notes?: string;
+            /** @enum {string} */
+            origin?: "DETECTED" | "MANUAL";
+            outgoing?: components["schemas"]["BlueprintConnection"][];
+            overrides?: string[];
+            /** Format: int64 */
+            parentId?: number;
+            /** @enum {string} */
+            pathState?: "LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING";
+            pseudocode?: string;
+            /** @enum {string} */
+            section?: "CLASS" | "FUNCTION" | "ENDPOINT" | "FRONTEND" | "DATABASE" | "NONE";
+            /** Format: int32 */
+            startLine?: number;
+            /** @enum {string} */
+            status?: "PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED";
+            structure?: components["schemas"]["CodeStructure"];
+            tags?: string[];
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        BlueprintBlockRequest: {
+            description?: string;
+            filePath?: string;
+            /** @enum {string} */
+            kind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            language?: string;
+            name?: string;
+            notes?: string;
+            /** @enum {string} */
+            pathState?: "LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING";
+            pseudocode?: string;
+            /** @enum {string} */
+            status?: "PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED";
+            structure?: components["schemas"]["CodeStructure"];
+            tags?: string[];
+            /** Format: double */
+            x?: number;
+            /** Format: double */
+            y?: number;
+        };
+        BlueprintCanvasLayout: {
+            positions?: {
+                [key: string]: components["schemas"]["BlueprintPoint"];
+            };
+            /** Format: int64 */
+            version?: number;
+        };
+        BlueprintCodeReference: {
+            excerpt?: string;
+            /** Format: int32 */
+            line?: number;
+            path?: string;
+        };
+        BlueprintConnection: {
+            /** Format: int64 */
+            edgeId?: number;
+            label?: string;
+            /** Format: int64 */
+            nodeId?: number;
+            /** @enum {string} */
+            nodeKind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            nodeName?: string;
+            /** @enum {string} */
+            origin?: "DETECTED" | "MANUAL" | "PROPOSED";
+            /** @enum {string} */
+            relation?: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
+        };
+        BlueprintDetectedValues: {
+            description?: string;
+            /** @enum {string} */
+            kind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            name?: string;
+            pseudocode?: string;
+        };
+        BlueprintGraph: {
+            archived?: boolean;
+            edges?: components["schemas"]["BlueprintRelation"][];
+            lastScan?: components["schemas"]["BlueprintScanReport"];
+            layout?: components["schemas"]["BlueprintCanvasLayout"];
+            metrics?: components["schemas"]["BlueprintMetrics"];
+            nodes?: components["schemas"]["BlueprintBlock"][];
+            /** Format: int32 */
+            pendingProposals?: number;
+            /** Format: int64 */
+            projectId?: number;
+            workspaceReady?: boolean;
+        };
+        BlueprintKindInfo: {
+            /** Format: int32 */
+            column?: number;
+            /** @enum {string} */
+            defaultLayer?: "BACKEND" | "FRONTEND" | "DATABASE" | "TESTS" | "DOCS" | "OTHER";
+            /** @enum {string} */
+            family?: "FILES" | "CLASSES" | "METHODS" | "APIS" | "DATA" | "TESTS" | "CUSTOM";
+            /** @enum {string} */
+            kind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            label?: string;
+            /** @enum {string} */
+            section?: "CLASS" | "FUNCTION" | "ENDPOINT" | "FRONTEND" | "DATABASE" | "NONE";
+        };
+        BlueprintLayoutRequest: {
+            positions?: {
+                [key: string]: components["schemas"]["BlueprintPoint"];
+            };
+        };
+        BlueprintMetrics: {
+            byFamily?: {
+                [key: string]: number;
+            };
+            byLayer?: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            classes?: number;
+            /** Format: int32 */
+            databaseEntities?: number;
+            /** Format: int32 */
+            detectedRelations?: number;
+            /** Format: int32 */
+            endpoints?: number;
+            /** Format: int32 */
+            files?: number;
+            /** Format: int32 */
+            manualRelations?: number;
+            /** Format: int32 */
+            missingNodes?: number;
+            /** Format: int32 */
+            proposedRelations?: number;
+            /** Format: int32 */
+            tests?: number;
+            /** Format: int32 */
+            totalNodes?: number;
+            /** Format: int32 */
+            unresolvedRelations?: number;
+        };
+        BlueprintPoint: {
+            /** Format: double */
+            x?: number;
+            /** Format: double */
+            y?: number;
+        };
+        BlueprintProposal: {
+            consequences?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            decidedAt?: string;
+            decidedBy?: string;
+            diff?: string;
+            /** Format: int64 */
+            edgeId?: number;
+            filePath?: string;
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            kind?: "CREATE_FILE" | "ADD_DEPENDENCY" | "CUSTOM";
+            /** Format: int64 */
+            nodeId?: number;
+            proposedBy?: string;
+            reason?: string;
+            /** @enum {string} */
+            status?: "PROPOSED" | "ACCEPTED" | "REJECTED";
+            /** Format: int64 */
+            taskId?: number;
+            title?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        BlueprintProposalRequest: {
+            consequences?: string;
+            diff?: string;
+            /** Format: int64 */
+            edgeId?: number;
+            filePath?: string;
+            /** @enum {string} */
+            kind?: "CREATE_FILE" | "ADD_DEPENDENCY" | "CUSTOM";
+            /** Format: int64 */
+            nodeId?: number;
+            reason?: string;
+            title?: string;
+        };
+        BlueprintRelation: {
+            code?: components["schemas"]["BlueprintCodeReference"];
+            description?: string;
+            /** @enum {string} */
+            family?: "DEPENDENCY" | "STRUCTURE" | "DATA" | "EVENTS" | "TESTS" | "CUSTOM";
+            /** Format: int64 */
+            id?: number;
+            label?: string;
+            /** @enum {string} */
+            origin?: "DETECTED" | "MANUAL" | "PROPOSED";
+            /** @enum {string} */
+            relation?: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
+            /** Format: int64 */
+            source?: number;
+            /** Format: int64 */
+            target?: number;
+            /** Format: int64 */
+            version?: number;
+        };
+        BlueprintRelationInfo: {
+            description?: string;
+            /** @enum {string} */
+            family?: "DEPENDENCY" | "STRUCTURE" | "DATA" | "EVENTS" | "TESTS" | "CUSTOM";
+            label?: string;
+            /** @enum {string} */
+            relation?: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
+        };
+        BlueprintRelationRequest: {
+            description?: string;
+            label?: string;
+            /** @enum {string} */
+            origin?: "DETECTED" | "MANUAL" | "PROPOSED";
+            /** @enum {string} */
+            relation?: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
+            /** Format: int64 */
+            sourceId?: number;
+            /** Format: int64 */
+            targetId?: number;
+        };
+        BlueprintRevertRequest: {
+            fields?: string[];
+        };
+        BlueprintScanReport: {
+            /** Format: int32 */
+            edgesDetected?: number;
+            /** Format: int32 */
+            files?: number;
+            /** Format: date-time */
+            finishedAt?: string;
+            /** Format: int64 */
+            id?: number;
+            languages?: string;
+            /** Format: int32 */
+            nodesAdded?: number;
+            /** Format: int32 */
+            nodesDetected?: number;
+            /** Format: int32 */
+            nodesMissing?: number;
+            requestedBy?: string;
+            /** Format: date-time */
+            startedAt?: string;
+            truncated?: boolean;
+            /** Format: int32 */
+            unresolved?: number;
+        };
+        BlueprintSnippet: {
+            /** Format: int32 */
+            endLine?: number;
+            language?: string;
+            path?: string;
+            /** Format: int32 */
+            startLine?: number;
+            text?: string;
+            truncated?: boolean;
+        };
+        BlueprintVocabularyView: {
+            actions?: components["schemas"]["BlueprintActionInfo"][];
+            kinds?: components["schemas"]["BlueprintKindInfo"][];
+            pathStates?: ("LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING")[];
+            proposalKinds?: ("CREATE_FILE" | "ADD_DEPENDENCY" | "CUSTOM")[];
+            relations?: components["schemas"]["BlueprintRelationInfo"][];
+            statuses?: ("PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED")[];
+        };
         Budget: {
             alert?: boolean;
             /** Format: int32 */
@@ -1678,6 +2336,61 @@ export interface components {
             nodes?: components["schemas"]["Node"][];
             taskLinks?: components["schemas"]["TaskLink"][];
             truncated?: boolean;
+        };
+        CodeMember: {
+            annotations?: string[];
+            name?: string;
+            type?: string;
+            visibility?: string;
+        };
+        CodeMethod: {
+            annotations?: string[];
+            callTargets?: string[];
+            calls?: string[];
+            /** Format: int32 */
+            endLine?: number;
+            exceptions?: string[];
+            isStatic?: boolean;
+            name?: string;
+            parameters?: string[];
+            pseudocode?: string;
+            returnType?: string;
+            signature?: string;
+            /** Format: int32 */
+            startLine?: number;
+            visibility?: string;
+        };
+        CodeStructure: {
+            annotations?: string[];
+            authorization?: string;
+            calledBy?: string[];
+            calls?: string[];
+            className?: string;
+            columns?: string[];
+            controller?: string;
+            dependencies?: string[];
+            exceptions?: string[];
+            exports?: string[];
+            extendsType?: string;
+            fields?: components["schemas"]["CodeMember"][];
+            hooks?: string[];
+            httpMethod?: string;
+            implementsTypes?: string[];
+            imports?: string[];
+            inputs?: string[];
+            methods?: components["schemas"]["CodeMethod"][];
+            output?: string;
+            packageName?: string;
+            props?: string[];
+            relatedTests?: string[];
+            requestDto?: string;
+            responseDto?: string;
+            route?: string;
+            service?: string;
+            signature?: string;
+            statusCodes?: string[];
+            table?: string;
+            visibility?: string;
         };
         ConfigurationRequest: {
             capabilities?: string;
@@ -3465,6 +4178,26 @@ export interface operations {
             };
         };
     };
+    blueprintVocabulary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintVocabularyView"];
+                };
+            };
+        };
+    };
     models: {
         parameters: {
             query?: never;
@@ -4171,6 +4904,582 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProjectResponse"];
+                };
+            };
+        };
+    };
+    blueprintGraph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintGraph"];
+                };
+            };
+        };
+    };
+    createBlueprintEdge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlueprintRelationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintRelation"];
+                };
+            };
+        };
+    };
+    updateBlueprintEdge: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                edgeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlueprintRelationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintRelation"];
+                };
+            };
+        };
+    };
+    deleteBlueprintEdge: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                edgeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    confirmBlueprintEdge: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                edgeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintRelation"];
+                };
+            };
+        };
+    };
+    saveBlueprintLayout: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlueprintLayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintCanvasLayout"];
+                };
+            };
+        };
+    };
+    autoBlueprintLayout: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintCanvasLayout"];
+                };
+            };
+        };
+    };
+    createBlueprintNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlueprintBlockRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintBlockDetail"];
+                };
+            };
+        };
+    };
+    blueprintNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintBlockDetail"];
+                };
+            };
+        };
+    };
+    updateBlueprintNode: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlueprintBlockRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintBlockDetail"];
+                };
+            };
+        };
+    };
+    deleteBlueprintNode: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    requestBlueprintAiAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlueprintActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintActionOutcome"];
+                };
+            };
+        };
+    };
+    collapseBlueprintNode: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintBlockDetail"];
+                };
+            };
+        };
+    };
+    expandBlueprintNode: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintBlockDetail"];
+                };
+            };
+        };
+    };
+    regenerateBlueprintPseudocode: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintBlockDetail"];
+                };
+            };
+        };
+    };
+    revertBlueprintNode: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BlueprintRevertRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintBlockDetail"];
+                };
+            };
+        };
+    };
+    blueprintSnippet: {
+        parameters: {
+            query?: {
+                full?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintSnippet"];
+                };
+            };
+        };
+    };
+    blueprintProposals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintProposal"][];
+                };
+            };
+        };
+    };
+    proposeBlueprintChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlueprintProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintProposal"];
+                };
+            };
+        };
+    };
+    acceptBlueprintProposal: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                proposalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintProposal"];
+                };
+            };
+        };
+    };
+    rejectBlueprintProposal: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+                proposalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintProposal"];
+                };
+            };
+        };
+    };
+    blueprintScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintScanReport"];
+                };
+            };
+        };
+    };
+    blueprintScans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintScanReport"][];
                 };
             };
         };

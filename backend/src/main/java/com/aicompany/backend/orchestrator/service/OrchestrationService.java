@@ -283,6 +283,12 @@ public class OrchestrationService {
             add(files, folder, com.aicompany.backend.graph.code.CodeGraphService.MARKDOWN_FILE,
                     "Mappa del codice: file più importati, cicli, dipendenze");
         }
+        // PHASE 28 (ADR-033): the components and their relations, when a Blueprint scan has written them.
+        if (CODE_WORK.matcher(work).find() && folder != null
+                && Files.exists(folder.resolve(com.aicompany.backend.blueprint.service.BlueprintScanService.SUMMARY_FILE))) {
+            add(files, folder, com.aicompany.backend.blueprint.service.BlueprintScanService.SUMMARY_FILE,
+                    "Blueprint: componenti del progetto e relazioni fra loro");
+        }
         return files;
     }
 

@@ -19,6 +19,9 @@ import com.aicompany.backend.harness.library.SkillLibrary;
 import com.aicompany.backend.deletion.DeletionService;
 import com.aicompany.backend.ecosystem.EcosystemService;
 import com.aicompany.backend.cost.CostService;
+import com.aicompany.backend.blueprint.service.BlueprintScanService;
+import com.aicompany.backend.blueprint.service.BlueprintService;
+import com.aicompany.backend.blueprint.service.ChangeProposalService;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,7 +60,8 @@ class PreconditionCoverageTest {
                     ProjectWorkspaceService.class, PlanningService.class, ExecutionService.class,
                     HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class,
                     AgentConfigurationService.class, SkillLibrary.class, DeletionService.class,
-                    EcosystemService.class, CostService.class);
+                    EcosystemService.class, CostService.class, BlueprintService.class, BlueprintScanService.class,
+                    ChangeProposalService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -99,7 +103,12 @@ class PreconditionCoverageTest {
             // (an Optional precondition, required when the row exists -- tested in CostGovernanceApiTest).
             "setBudget",
             // PHASE 27: at startup, template agents that predate PHASE 16 get their origin recorded.
-            "recordTemplateOrigins");
+            "recordTemplateOrigins",
+            // PHASE 28 (ADR-033): a manual block, a drawn relation, a proposed code change and an AI
+            // action's task are creation. A scan reconciles the derived layer with the code -- the
+            // server's bookkeeping of what the code says; what the operator wrote is protected by
+            // overrides and by origins (a scan never touches a MANUAL block or relation), not by a tag.
+            "createNode", "createEdge", "propose", "requestAiAction", "scan");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {

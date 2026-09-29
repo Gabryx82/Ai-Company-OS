@@ -308,6 +308,26 @@ public enum ApiProblem {
     BUDGET_EXCEEDED("budget-exceeded", HttpStatus.CONFLICT,
             "Budget exceeded", "The provider's monthly budget is spent"),
 
+    // --- the project blueprint (PHASE 28, ADR-033) ------------------------------------------
+
+    BLUEPRINT_NODE_NOT_FOUND("blueprint-node-not-found", HttpStatus.NOT_FOUND,
+            "Blueprint block not found", "No block with that identifier in this project's Blueprint"),
+    BLUEPRINT_EDGE_NOT_FOUND("blueprint-edge-not-found", HttpStatus.NOT_FOUND,
+            "Blueprint relation not found", "No relation with that identifier in this project's Blueprint"),
+    BLUEPRINT_PROPOSAL_NOT_FOUND("blueprint-proposal-not-found", HttpStatus.NOT_FOUND,
+            "Proposed code change not found", "No proposal with that identifier in this project"),
+    /**
+     * Deleting or reshaping what the code asserts: it would come back at the next
+     * scan, so the refusal says where the change belongs -- in the code, or in an
+     * override (ADR-033 §3).
+     */
+    BLUEPRINT_DERIVED_ELEMENT("blueprint-derived-element", HttpStatus.CONFLICT,
+            "Derived from the code", "This element is detected from the code; change the code or override a field"),
+    BLUEPRINT_RELATION_EXISTS("blueprint-relation-exists", HttpStatus.CONFLICT,
+            "Relation already present", "These two blocks already have a relation of this type"),
+    BLUEPRINT_PROPOSAL_DECIDED("blueprint-proposal-decided", HttpStatus.CONFLICT,
+            "Proposal already decided", "The proposal was already accepted or rejected"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

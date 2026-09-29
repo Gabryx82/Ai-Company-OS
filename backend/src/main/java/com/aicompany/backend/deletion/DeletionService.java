@@ -95,6 +95,13 @@ public class DeletionService {
             throw new TaskRunInProgressException(running);
         }
         List<Long> taskIds = jdbc.queryForList("SELECT id FROM tasks WHERE project_id = ?", Long.class, projectId);
+        // PHASE 28 (ADR-033): the Blueprint is the project's own description; it goes with it.
+        // Proposals first -- they point at tasks that may be deleted just below.
+        jdbc.update("DELETE FROM blueprint_change_proposals WHERE project_id = ?", projectId);
+        jdbc.update("DELETE FROM blueprint_edges WHERE project_id = ?", projectId);
+        jdbc.update("DELETE FROM blueprint_nodes WHERE project_id = ?", projectId);
+        jdbc.update("DELETE FROM blueprint_scans WHERE project_id = ?", projectId);
+        jdbc.update("DELETE FROM blueprint_layouts WHERE project_id = ?", projectId);
         if (policy == TasksPolicy.DELETE) {
             removeTaskRows(taskIds);
         } else {
@@ -120,6 +127,8 @@ public class DeletionService {
         for (Long id : taskIds) {
             jdbc.update("UPDATE daily_items d SET title = COALESCE(d.title, t.title) || ' (task eliminata)', task_id = NULL, "
                     + "version = d.version + 1, updated_at = now() FROM tasks t WHERE d.task_id = t.id AND t.id = ?", id);
+            // A proposal accepted into this task keeps its record, without the task.
+            jdbc.update("UPDATE blueprint_change_proposals SET task_id = NULL WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_reviews WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_handoffs WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_runs WHERE task_id = ?", id);
@@ -157,6 +166,11 @@ public class DeletionService {
                 : "Le " + taskCount + " task del progetto restano, senza progetto, senza fase e senza codice di piano.");
         if (project.getWorkspacePath() != null) {
             notes.add("La cartella " + project.getWorkspacePath() + " resta sul disco: eliminala tu, se vuoi.");
+        }
+        int blocks = count("SELECT count(*) FROM blueprint_nodes WHERE project_id = ?", id);
+        if (blocks > 0) {
+            notes.add("Il Blueprint del progetto (" + blocks + " blocchi, "
+                    + count("SELECT count(*) FROM blueprint_edges WHERE project_id = ?", id) + " relazioni) viene eliminato.");
         }
         boolean deleting = policy == TasksPolicy.DELETE;
         return new Impact("PROJECT", id, project.getName(), taskCount,
