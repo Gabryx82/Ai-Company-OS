@@ -315,6 +315,39 @@ curl -s http://localhost:8081/api/runs/1 -H "Authorization: Bearer $TOKEN"
 Lessicale e deterministico: suggerisce, non assegna. `POST /api/orchestrator` (il placeholder) è
 stato **rimosso** da TASK-020.
 
+### Blueprint di un progetto (PHASE 28, ADR-033)
+
+I componenti del progetto (classi, servizi, endpoint, entità, tabelle, componenti React, test…) e le
+relazioni fra loro, **letti dal codice** (Java con AST, TypeScript/Python/SQL lessicali) e
+**modificabili**. Nessun endpoint scrive un file sorgente: ciò che toccherebbe il codice diventa una
+*Proposed Code Change*, e accettarla crea una task. Nella console: scheda **Blueprint** del progetto.
+
+| Endpoint | Descrizione |
+|---|---|
+| `GET /api/blueprint/vocabulary` | tipi di blocco (con famiglia, livello, sezione), relazioni (con famiglia), azioni AI |
+| `GET /api/projects/{id}/blueprint` | blocchi, relazioni, posizioni (con la versione del layout), ultima scansione, metriche |
+| `POST /api/projects/{id}/blueprint/scan` | legge la cartella del progetto e riconcilia; rispetta override e blocchi manuali |
+| `GET /api/projects/{id}/blueprint/scans` | le ultime 10 scansioni |
+| `POST /api/projects/{id}/blueprint/nodes` | blocco manuale (`201`, `ETag`); un percorso reale diventa `LINKED` |
+| `GET` / `PUT` / `DELETE /api/projects/{id}/blueprint/nodes/{nodeId}` | leggere (con `ETag`), modificare, eliminare. **`If-Match`** |
+| `POST …/nodes/{nodeId}/revert` · `/pseudocode` · `/expand` · `/collapse` | ripristinare i valori del codice, rigenerare lo pseudocodice, espandere i metodi in blocchi. **`If-Match`** |
+| `GET …/nodes/{nodeId}/snippet[?full=true]` | l'estratto di codice del blocco (o il file intero) |
+| `POST …/nodes/{nodeId}/ai-actions` | `{"action":"EXPLAIN_COMPONENT"}` e simili: crea una **task** con il contesto del blocco |
+| `POST /api/projects/{id}/blueprint/edges` · `PUT`/`DELETE …/edges/{edgeId}` · `POST …/edges/{edgeId}/confirm` | relazioni manuali o proposte. **`If-Match`** sulle esistenti |
+| `PUT /api/projects/{id}/blueprint/layout` · `POST …/layout/auto` | posizioni dei blocchi; layout automatico. **`If-Match`** sulla versione del layout |
+| `GET` / `POST /api/projects/{id}/blueprint/proposals` · `POST …/proposals/{id}/accept\|reject` | Proposed Code Change: diff, motivo, conseguenze; accettare crea la task. **`If-Match`** |
+
+- Un blocco **rilevato** non si elimina finché il codice lo contiene (`409 blueprint-derived-element`);
+  nome, tipo, descrizione e pseudocodice si sovrascrivono (override), percorso e struttura no.
+- Una scansione non riscrive i blocchi che il codice non ha cambiato: un Inspector aperto resta valido.
+- Contesto per gli agenti: la scansione scrive `.aicos/BLUEPRINT.md`, che l'orchestratore propone alle
+  task di codice accanto a `.aicos/CODE_GRAPH.md`.
+
+```bash
+curl -s -X POST http://localhost:8081/api/projects/1/blueprint/scan -H "Authorization: Bearer $TOKEN"
+curl -s http://localhost:8081/api/projects/1/blueprint -H "Authorization: Bearer $TOKEN" | jq '.metrics'
+```
+
 ### Errori
 
 Ogni risposta d'errore è un `ProblemDetail` (RFC 9457) con un `type` **stabile**

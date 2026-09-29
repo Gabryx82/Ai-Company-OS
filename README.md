@@ -12,11 +12,13 @@ the operator approves plans and phases and reviews every outcome.
 |---|---|---|
 | **Control plane** | Java 21, Spring Boot 4.1, PostgreSQL 17, Flyway | `backend/` |
 | **AI Engine** (model gateway) | Python ≥ 3.11, FastAPI; providers `echo`, Ollama (local), Anthropic and OpenRouter (cloud, off without a key) | `ai-engine/` |
-| **Operator console** | React 19, TypeScript, Vite, d3-force | `frontend/` |
+| **Operator console** | React 19, TypeScript, Vite, d3-force, React Flow | `frontend/` |
 | **API contract** | OpenAPI, generated from the code and held to it by a test | `docs/api/openapi.json` |
 
 The console covers: dashboard, projects (type, stack, workspace folder, master prompt, plan,
-phase approvals, documents, code graph, visual references), tasks with the orchestrator's decision,
+phase approvals, documents, the **Blueprint** -- a node editor of the project's components and
+their relations, read from the code and editable, whose code changes become proposals and tasks --,
+code graph, visual references), tasks with the orchestrator's decision,
 handoffs and reviews, agents and sub-agents with their Agent → Model → Provider → Execution Target
 binding, prompt engineering and harness, Daily Work, the Second Brain graph, the Software Hub
 (detection and launch of the programs installed on this machine), an integrated terminal

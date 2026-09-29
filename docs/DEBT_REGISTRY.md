@@ -130,7 +130,15 @@ ferma a `TD-22`.
 | **TD-55** | L'esito di un handoff (Claude Code, Codex, IDE) non torna da solo nella console: l'operatore legge la sezione Esito del documento della task e fa la review | **aperto**, per scelta (nessuna API) | PHASE 17 |
 | **TD-56** | L'app desktop di Open WebUI si apre ma avvia il suo server locale solo dal suo interno: l'avvio coordinato lo riconosce e lo dice, ma non può accenderlo | **chiuso** il 2026-09-25 (review umana): Open WebUI è ora il container Docker `open-webui` su localhost:3000, quello che 3D Omniverse incorpora; si avvia con `docker start` (V25) | PHASE 27 |
 
-**Prossimo identificatore libero: `TD-57`.**
+| **TD-57** | Blueprint: TypeScript, JavaScript e Python sono letti in modo **lessicale** (un blocco per file, import e rotte), non con un AST; il punto di estensione `BlueprintLanguagePlugin` esiste, i plugin AST no (ADR-033 §5) | **aperto** | PHASE 28 |
+| **TD-58** | Blueprint Java senza symbol solver: le chiamate su risultati di catene (`a.b().c()`), su campi ereditati o su tipi qualificati per package non generano relazioni; nessun call graph interprocedurale | **aperto**, MINOR | PHASE 28 |
+| **TD-59** | springdoc nomina gli schemi con il nome **semplice** della classe: due record omonimi in package diversi si sovrascrivono in silenzio nel contratto. Trovato e evitato in PHASE 28 (prefisso `Blueprint`), ma nessun test impedisce che si ripeta | **aperto** | PHASE 28 |
+| **TD-60** | La riconciliazione di una scansione salva nodi e archi uno a uno (≈12 s per 614 blocchi e 2289 relazioni su questo repository): senza batching JDBC | **aperto**, MINOR | PHASE 28 |
+| **TD-61** | `GET …/blueprint` restituisce l'intero grafo (≈1,1 MB per 614 blocchi): nessun caricamento progressivo per livello o per area del canvas | **aperto**, MINOR | PHASE 28 |
+| **TD-62** | L'autorizzazione di un endpoint nel Blueprint viene solo dalle annotazioni (`@PreAuthorize`, `@Secured`): le regole per percorso di `SecurityConfiguration` non sono lette, e il campo dice «autenticato (regola globale)» | **aperto**, MINOR | PHASE 28 |
+| **TD-63** | Le azioni AI del Blueprint creano task, ma l'esito (spiegazione, pseudocodice, relazioni trovate) resta nella task: non torna da solo nel blocco | **aperto** | PHASE 28 |
+
+**Prossimo identificatore libero: `TD-64`.**
 
 ## 6. Come si apre un debito nuovo
 

@@ -1,3 +1,42 @@
+# FINAL HANDOFF — PHASE 28 (Project Blueprint) sopra il consolidamento PHASE 15 → 27
+
+## PHASE 28 — Project Blueprint (2026-09-29)
+
+> **Da accettare, insieme al blocco 15→27 qui sotto** (questa fase gli sta sopra in linea retta).
+> Decisioni: `docs/adr/ADR-033-project-blueprint-graph.md`.
+
+- **Branch**: `autonomous/phase-28-project-blueprint`, da `autonomous/phase-15-hardening` (`e097aa2`).
+  **Non pushato**: la direttiva non lo autorizzava. Per portarlo su `origin`:
+  `git push -u origin autonomous/phase-28-project-blueprint`.
+- **Che cosa vedi**: progetto → scheda **Blueprint**. *Analizza il codice* legge la cartella del
+  progetto (niente viene eseguito o modificato); ogni componente è un blocco con porte a sinistra
+  (ingressi) e a destra (uscite), colori per tipo, relazioni curve colorate per famiglia e tratteggiate
+  per origine (continua = dal codice, tratteggio = manuale, puntinata animata = proposta). Zoom lontano:
+  nome e tipo; medio: percorso e descrizione; vicino: pseudocodice e chip `[CHIAMA → TaskService]` che
+  portano al blocco. Ricerca, filtri (Backend/Frontend/Database/Test/Docs; File/Classi/Metodi/API/Dati/
+  Test/Custom; origini), minimappa, *Auto-layout*, metriche in alto.
+- **Modifica**: interruttore *Lettura/Modifica*. In Modifica: *+ Aggiungi blocco*, trascinare da una
+  porta destra a un blocco crea una relazione (tipo, etichetta, manuale o proposta), l'Inspector a destra
+  modifica nome, tipo, descrizione, pseudocodice, tag, note, stato — ogni campo dice *Rilevato dal
+  codice* o *Modifica manuale* con *ripristina*. Una classe si espande nei suoi metodi.
+- **Il codice non viene mai toccato**: *Proponi la creazione del file* (blocco «da creare») e *Proponi la
+  modifica al codice* (relazione manuale fra classi Java) producono un diff reale, in *Proposte*.
+  *Accetta* crea una task del progetto con il diff, che poi segue il flusso di sempre (agente/handoff,
+  review). *Chiedi all'AI* crea una task con il contesto del componente.
+- **Numeri**: sul repository stesso 469 file → 614 blocchi e 2289 relazioni in ~12 s, 0 riferimenti
+  non risolti. Suite: Java **514** (513 + 1 saltato), engine **58**, console **41**; 11 mutazioni su 11
+  rosse. Stream **`V26`** (additiva).
+- **Effetto collaterale da sapere**: durante lo smoke, il primo avvio del backend ha lanciato l'avvio
+  coordinato dell'ecosistema (Ollama, container Open WebUI, 3D Omniverse), comportamento normale di
+  ADR-028; i riavvii successivi con `AICOS_ECOSYSTEM_AUTOSTART=false`. Lo smoke ha usato un database
+  nuovo `aicompany_bp` e credenziali di test in una cartella temporanea: **il tuo DB `aicompany` e il tuo
+  `%USERPROFILE%\.aicos` non sono stati toccati**. `aicompany_bp` si può eliminare.
+- **Da verificare a vista**: la leggibilità a zoom lontano su grafi grandi (614 blocchi) e i colori; lo
+  screenshot dal vivo è stato possibile solo in parte (pannello del browser spesso nascosto).
+- **Debiti nuovi**: TD-57…TD-63 (`docs/DEBT_REGISTRY.md`).
+
+---
+
 # FINAL HANDOFF — Consolidamento, PHASE 15 → PHASE 27
 
 > **Da accettare.** Scritto per la Human Final Review richiesta dalla direttiva del 2026-09-25 (UX,

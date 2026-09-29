@@ -109,3 +109,4 @@ la storia; per PHASE ≥ 15 vale questa.**
 | **25** | Template/Mockup Hub e dipartimento 3D | ex 17, ex 20 | 032 | ✅ |
 | **26** | Integrazioni esterne con credenziali (Gmail, Drive, ClickUp) | ex 18 | — | **decisione umana**, non iniziata |
 | **27** | Hardening, verifica end-to-end, release, Human Final Review | ex 21 | — | ✅ |
+| **28** | Project Blueprint: grafo dei componenti letto dal codice (Java AST, TS/Python/SQL lessicali) e modificabile, Proposed Code Change → task (direttiva del 2026-09-29) | nuova | 033 | ✅ |

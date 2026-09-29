@@ -44,6 +44,39 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
+## ▶▶▶▶ PHASE 28 — Project Blueprint — COMPLETATA il 2026-09-29, in attesa di Human Final Review
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttiva** del 2026-09-29: per ogni progetto una scheda visuale «Blueprint» a blocchi e porte,
+  sincronizzabile con il codice, modificabile, senza mai riscrivere codice in modo implicito.
+  Decisioni in **ADR-033** (estende ADR-030, non lo sostituisce: la scheda *Codice* resta).
+- **Branch**: `autonomous/phase-28-project-blueprint`, da `autonomous/phase-15-hardening` (`e097aa2`),
+  **non pushato** (la direttiva non autorizza push: charter hard stop #4). `master` intoccato.
+  Il blocco 15→27 resta in attesa della sua review: questa fase gli sta sopra in linea retta.
+- **Modello** (`V26`, additiva, 5 tabelle): `blueprint_nodes` (21 tipi, origine DETECTED/MANUAL,
+  stato, `path_state`, struttura JSON, istantanea rilevata, override), `blueprint_edges` (19 relazioni,
+  origine DETECTED/MANUAL/PROPOSED, riferimento al codice), `blueprint_layouts` (posizioni separate dai
+  nodi), `blueprint_scans`, `blueprint_change_proposals`.
+- **API**: 24 operazioni sotto `/api/projects/{id}/blueprint` e `/api/blueprint/vocabulary`
+  (`docs/RUNNING.md`), `If-Match` su ogni mutazione di riga esistente, contratto OpenAPI solo additivo.
+- **Scanner** a plugin: Java con **AST** (JavaParser 3.28: stereotipi Spring, iniezione, chiamate,
+  endpoint con rotte da costanti, DTO, codici di stato, pseudocodice, test ↔ endpoint), TypeScript,
+  Python e SQL lessicali. Sul repository stesso: 469 file → 614 blocchi, 2289 relazioni, 0 non risolte.
+- **Mai codice scritto**: CREATE_FILE / ADD_DEPENDENCY / CUSTOM producono diff; accettare crea una task
+  (governance esistente). Le azioni AI sono task. Test d'invariante: hash dei file identici.
+- **Console**: scheda *Blueprint* (React Flow 12, caricata in lazy): canvas con pan/zoom/drag/selezione
+  multipla/minimappa, livelli di dettaglio per zoom, ricerca, filtri per livello/famiglia/origine,
+  metriche, modalità Lettura/Modifica, Inspector con provenienza dei campi, nuovo blocco, relazioni per
+  trascinamento, proposte con diff, visualizzatore di file, auto-layout del server.
+- **Suite**: Java **514** (513 verdi + 1 saltato su Windows) · engine **58** · console **41**.
+  Mutazioni: **11/11 rosse** (10 backend sulle guardie del Blueprint, 1 console su `If-Match`).
+- **Trovato e corretto fuori scope, con test**: `OrchestrationService.model()` andava in 500 con l'AI
+  Engine spento (commit `0121c26`).
+- **Debiti nuovi**: TD-57…TD-63; prossimo libero **TD-64**.
+- **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review (`FINAL_HANDOFF.md`, sezione
+  PHASE 28).
+
 ## ▶▶▶ Consolidamento — PHASE 15 → PHASE 27 — COMPLETATO il 2026-09-25, in attesa di Human Final Review
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.

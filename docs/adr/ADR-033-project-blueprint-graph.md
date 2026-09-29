@@ -77,7 +77,9 @@ riporta. La console mostra accanto a ogni campo *Rilevato dal codice* o *Modific
 3. gli archi rilevati sono **sostituiti**: sono fatti derivati, e un fatto che il codice non afferma
    più non va conservato. Archi manuali e proposti non si toccano;
 4. un nodo manuale con un percorso che adesso esiste diventa `LINKED` — «se il percorso è reale, il
-   sistema prova ad associarlo».
+   sistema prova ad associarlo»;
+5. un blocco che il codice non ha cambiato **non viene scritto**: la sua versione resta, e un
+   Inspector aperto su di lui non riceve un `412` per colpa di una scansione (verificato per mutazione).
 
 La scansione **non compila né esegue nulla** e ha gli stessi limiti di ADR-030 (4000 file, 512 KB per
 file, cartelle generate saltate).
@@ -113,8 +115,12 @@ la sua versione e il suo `If-Match`.
 Il layout automatico è calcolato **dal server** (`BlueprintLayoutEngine`): colonne per livello
 architetturale da sinistra a destra — test, frontend, endpoint e controller, servizi, repository,
 entità, database, configurazione e documenti — perché la direzione degli archi (uscite a destra,
-ingressi a sinistra) coincida con la direzione delle dipendenze; dentro ogni colonna, due passate di
-baricentro riducono gli incroci. Deterministico, quindi verificabile da un test.
+ingressi a sinistra) coincida con la direzione delle dipendenze; dentro ogni colonna, quattro passate
+di baricentro riducono gli incroci. Una colonna alta si divide in sotto-colonne, e quante righe ne
+tiene dipende dalla dimensione del Blueprint (fra 6 e 40, per un canvas di proporzioni da schermo):
+la prima versione, a 18 righe fisse, sul repository stesso produceva un nastro largo venti schermi.
+L'altezza di riga contiene un blocco al massimo dettaglio di zoom, così avvicinarsi non sovrappone i
+blocchi — anche questo trovato dal vivo. Deterministico, quindi verificabile da un test.
 
 ## 7. Modalità lettura e modifica; nessuna scrittura implicita di codice
 
@@ -152,6 +158,11 @@ Tutte le rotte sotto `/api/projects/{id}/blueprint` e `/api/blueprint/vocabulary
 archived-project-is-immutable`, ADR-004 §8). Problemi nuovi: `blueprint-node-not-found`,
 `blueprint-edge-not-found`, `blueprint-proposal-not-found`, `blueprint-derived-element` (eliminare ciò
 che il codice afferma), `blueprint-proposal-decided`.
+
+**Nomi degli schemi.** springdoc nomina gli schemi con il nome semplice della classe: i primi
+record di questa ADR (`Edge`, `Graph`) sovrascrivevano in silenzio gli schemi omonimi del grafo del
+codice (ADR-030) e cambiavano l'`operationId` di `/api/graph`. Ogni tipo esposto porta quindi il
+prefisso `Blueprint` (o `Code…` per la struttura), e il contratto cambia solo per aggiunta (TD-59).
 
 ## 10. Che cosa non fa
 
