@@ -187,10 +187,12 @@ public class OrchestrationService {
 
     private ModelChoice model(AgentChoice agent, Agent bound, String work) {
         if (agent.model() != null) {
+            // find first, then map: availability is null when the engine does not answer,
+            // and a stream cannot carry a null to findFirst (PHASE 28 smoke)
             Optional<Boolean> available = models.catalog().models().stream()
                     .filter(view -> view.model().getKey().equals(agent.model()))
-                    .map(LlmCatalogService.ModelView::engineAvailable)
-                    .findFirst();
+                    .findFirst()
+                    .map(LlmCatalogService.ModelView::engineAvailable);
             String where = bound == null || ExecutionTargetCatalog.ENGINE.equals(bound.getExecutionTarget()) ? ""
                     : targetCatalog.find(bound.getExecutionTarget()).map(t -> ", usato tramite " + t.name()).orElse("");
             return new ModelChoice(agent.model(), null, available.orElse(null), "Il modello dell'agente" + where);

@@ -40,6 +40,9 @@ class OrchestratorApiTest extends AbstractPostgresTest {
     private ScriptedEngineClient engine;
 
     @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @Autowired
     private FakeHost host;
 
     @Autowired
@@ -96,6 +99,21 @@ class OrchestratorApiTest extends AbstractPostgresTest {
 
     private String tag(long taskId) throws Exception {
         return mockMvc.perform(get("/api/tasks/" + taskId)).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+    }
+
+    /**
+     * PHASE 28, found by the Blueprint's live smoke: with the AI Engine down, a
+     * model's availability is unknown (null), and the decision for a task whose
+     * agent has a model failed with a 500 instead of saying "unknown".
+     */
+    @Test
+    void theDecisionSurvivesAnEngineThatDoesNotAnswer() throws Exception {
+        jdbc.update("UPDATE agents SET model = 'echo:default' WHERE name = 'Backend Bot'");
+        engine.modelsUnavailable();
+
+        mockMvc.perform(get("/api/tasks/" + task(0) + "/orchestration"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.model.model").value("echo:default"));
     }
 
     @Test
