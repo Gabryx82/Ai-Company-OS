@@ -15,6 +15,25 @@ MINIMUM_TOKEN_LENGTH = 16
 
 DEV_ENGINE_TOKEN = "dev-engine-token-change-me"
 
+# PHASE 29 (ADR-034): when Ollama has not pulled a model, a model that can do its
+# work answers instead, followed as a chain. The served model is reported, so a
+# fallback is never silent. lfm2.5:8b falls back to the model it replaced for the
+# Test Engineer; gemma4:e4b to its previous package; qwen3.5:9b to its smaller
+# sibling, which has the same capabilities (tools, vision, thinking).
+DEFAULT_OLLAMA_FALLBACKS = {
+    "lfm2.5:8b": "qwen3.5:4b",
+    "gemma4:e4b": "gemma4:e4b-legacy",
+    "qwen3.5:9b": "qwen3.5:4b",
+}
+DEFAULT_OLLAMA_NUM_CTX = 16384
+# Models whose context cache is heavy keep a smaller window. Measured at 16K:
+# deepseek-coder-v2:16b +3.2 GB (12.6 GB in all), llama3.2:3b +1.3 GB, against
+# +0.15-0.4 GB for qwen3.5, gemma4 and lfm2.5.
+DEFAULT_OLLAMA_NUM_CTX_BY_MODEL = {
+    "deepseek-coder-v2:16b": 4096,
+    "llama3.2:3b": 4096,
+}
+
 
 def local_secrets(path: Path | None = None) -> dict[str, str]:
     """The operator's local secrets file (ADR-024 §6): ``KEY=VALUE`` lines.
@@ -46,6 +65,26 @@ class ConfigurationError(RuntimeError):
     """The engine refuses to start. Raised at startup, never per request."""
 
 
+def _pairs(value: str) -> dict[str, str]:
+    """``"a:1=b:1, c:2=d:2"`` -> ``{"a:1": "b:1", "c:2": "d:2"}``."""
+    pairs = {}
+    for part in value.split(","):
+        key, _, target = part.partition("=")
+        if key.strip() and target.strip():
+            pairs[key.strip()] = target.strip()
+    return pairs
+
+
+def _think(value: str) -> bool | None:
+    """``true`` / ``false``, or ``model`` for the model's own default."""
+    normalized = value.strip().lower()
+    if normalized in ("model", "default", ""):
+        return None
+    if normalized in ("true", "false"):
+        return normalized == "true"
+    raise ConfigurationError(f"AICOS_ENGINE_OLLAMA_THINK must be true, false or model, not {value!r}")
+
+
 def _csv(value: str | None) -> tuple[str, ...]:
     if not value:
         return ()
@@ -62,6 +101,16 @@ class Settings:
     # reported as unavailable, not as an error, when nothing listens there.
     ollama_url: str | None = "http://127.0.0.1:11434"
     ollama_timeout_seconds: float = 600.0
+    ollama_fallbacks: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_OLLAMA_FALLBACKS))
+    # PHASE 29: the context window asked of Ollama. Without a GPU Ollama defaults to
+    # 4096 tokens, which a thinking model fills with its reasoning before it answers
+    # (measured: done_reason "length", content ""). None leaves Ollama's default.
+    ollama_num_ctx: int | None = DEFAULT_OLLAMA_NUM_CTX
+    ollama_num_ctx_by_model: dict[str, int] = field(default_factory=lambda: dict(DEFAULT_OLLAMA_NUM_CTX_BY_MODEL))
+    # PHASE 29: whether a text answer thinks first. False by default: on this CPU a
+    # thinking qwen3.5 spent its whole budget reasoning and answered nothing, while
+    # without thinking it answered correctly. None leaves the model's own default.
+    ollama_think: bool | None = False
 
     # Cloud models: Anthropic. Disabled unless a key is configured -- a model
     # that bills per token is never reachable by accident (charter hard stop #6).
@@ -116,6 +165,13 @@ class Settings:
             default_model=env.get("AICOS_ENGINE_DEFAULT_MODEL", "echo:default"),
             ollama_url=ollama_url or None,
             ollama_timeout_seconds=float(env.get("AICOS_ENGINE_OLLAMA_TIMEOUT_SECONDS", "600")),
+            ollama_fallbacks=_pairs(env["AICOS_ENGINE_OLLAMA_FALLBACKS"]) if "AICOS_ENGINE_OLLAMA_FALLBACKS" in env
+            else dict(DEFAULT_OLLAMA_FALLBACKS),
+            ollama_num_ctx=int(env.get("AICOS_ENGINE_OLLAMA_NUM_CTX", DEFAULT_OLLAMA_NUM_CTX)) or None,
+            ollama_num_ctx_by_model={model: int(size) for model, size in
+                                     _pairs(env["AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL"]).items()}
+            if "AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL" in env else dict(DEFAULT_OLLAMA_NUM_CTX_BY_MODEL),
+            ollama_think=_think(env.get("AICOS_ENGINE_OLLAMA_THINK", "false")),
             anthropic_api_key=env.get("ANTHROPIC_API_KEY") or None,
             anthropic_models=_csv(env.get("AICOS_ENGINE_ANTHROPIC_MODELS")) or ("claude-opus-5",),
             anthropic_timeout_seconds=float(env.get("AICOS_ENGINE_ANTHROPIC_TIMEOUT_SECONDS", "600")),

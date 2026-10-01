@@ -52,6 +52,81 @@ def test_ollama_turns_the_contract_into_a_chat_call_and_back():
     assert body["usage"] == {"input_tokens": 12, "output_tokens": 3}
 
 
+def test_ollama_is_asked_for_the_context_window_it_is_configured_with():
+    # PHASE 29, measured: with Ollama's 4096-token default on a machine without a GPU,
+    # qwen3.5 reasoned for 3873 tokens, reached the right answer inside its thinking
+    # and ran out of window before writing it -- done_reason "length", content "".
+    seen = {}
+
+    def handler(request):
+        seen["options"] = json.loads(request.content)["options"]
+        return httpx.Response(200, json={"message": {"content": "ok"}})
+
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(handler), num_ctx=16384)
+    with app_with(provider) as client:
+        client.post("/v1/completions", json=completion(model="ollama:qwen3.5:9b", max_tokens=64), headers=AUTH)
+    assert seen["options"] == {"num_predict": 64, "num_ctx": 16384}
+
+
+def think_sent(provider_kwargs, **request):
+    seen = {}
+
+    def handler(r):
+        seen["body"] = json.loads(r.content)
+        return httpx.Response(200, json={"message": {"content": "ok"}})
+
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(handler), **provider_kwargs)
+    with app_with(provider) as client:
+        client.post("/v1/completions", json=completion(model="ollama:qwen3.5:9b", **request), headers=AUTH)
+    return seen["body"].get("think", "absent")
+
+
+def test_text_runs_do_not_think_unless_configured_to():
+    # PHASE 29, measured on this CPU: with thinking on, qwen3.5 reasoned 3873 tokens
+    # (12 minutes) and never answered; with think false it answered 4/4 in 742 tokens.
+    assert think_sent({}) is False
+    assert think_sent({"think": True}) is True
+    assert think_sent({"think": None}) == "absent"  # the model's own default
+    # A JSON answer never thinks, whatever the setting: the plan must fit the budget.
+    assert think_sent({"think": True}, response_format="json") is False
+
+
+def test_the_think_setting_comes_from_the_environment():
+    assert Settings.from_environment({}).ollama_think is False
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_THINK": "true"}).ollama_think is True
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_THINK": "model"}).ollama_think is None
+
+
+def test_a_model_with_a_heavy_context_cache_keeps_a_smaller_window():
+    # PHASE 29, measured: at 16K deepseek-coder-v2:16b grows by 3.2 GB (to 12.6 GB),
+    # llama3.2:3b by 1.3 GB; qwen3.5, gemma4 and lfm2.5 by 0.15-0.4 GB.
+    seen = []
+
+    def handler(r):
+        seen.append(json.loads(r.content))
+        return httpx.Response(200, json={"message": {"content": "ok"}})
+
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(handler), num_ctx=16384,
+                              num_ctx_by_model={"deepseek-coder-v2:16b": 4096})
+    with app_with(provider) as client:
+        client.post("/v1/completions", json=completion(model="ollama:deepseek-coder-v2:16b"), headers=AUTH)
+        client.post("/v1/completions", json=completion(model="ollama:qwen3.5:9b"), headers=AUTH)
+    assert [b["options"]["num_ctx"] for b in seen] == [4096, 16384]
+
+
+def test_the_per_model_windows_come_from_the_environment():
+    assert Settings.from_environment({}).ollama_num_ctx_by_model == {"deepseek-coder-v2:16b": 4096, "llama3.2:3b": 4096}
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL": "x:1=8192"}).ollama_num_ctx_by_model \
+        == {"x:1": 8192}
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL": ""}).ollama_num_ctx_by_model == {}
+
+
+def test_the_context_window_comes_from_the_environment_and_zero_leaves_ollamas_default():
+    assert Settings.from_environment({}).ollama_num_ctx == 16384
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_CTX": "8192"}).ollama_num_ctx == 8192
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_CTX": "0"}).ollama_num_ctx is None
+
+
 def test_ollama_length_is_reported_as_length():
     handler = lambda r: httpx.Response(200, json={"message": {"content": "cut"}, "done_reason": "length"})
     with app_with(ollama(handler)) as client:
@@ -80,6 +155,59 @@ def test_a_model_ollama_has_not_pulled_is_an_unknown_model_with_the_fix():
     assert response.status_code == 400
     assert response.json()["type"] == PROBLEM + "unknown-model"
     assert "ollama pull nope" in response.json()["detail"]
+
+
+def fallback_ollama(handler, fallbacks):
+    return OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(handler), fallbacks=fallbacks)
+
+
+def pulled(*names):
+    """An Ollama that has pulled only ``names``: anything else is its 404."""
+    def handler(request: httpx.Request):
+        model = json.loads(request.content)["model"]
+        if model not in names:
+            return httpx.Response(404, json={"error": f"model '{model}' not found"})
+        return httpx.Response(200, json={"model": model, "message": {"content": f"from {model}"}})
+    return handler
+
+
+def test_a_model_that_is_not_pulled_falls_back_to_the_previous_one_and_says_so():
+    provider = fallback_ollama(pulled("qwen3.5:4b"), {"lfm2.5:8b": "qwen3.5:4b"})
+    with app_with(provider) as client:
+        body = client.post("/v1/completions", json=completion(model="ollama:lfm2.5:8b"), headers=AUTH).json()
+    assert body["output"] == "from qwen3.5:4b"
+    assert body["model"] == "ollama:qwen3.5:4b"  # what ran, not what was asked
+
+
+def test_the_fallback_is_followed_as_a_chain_and_never_loops():
+    chain = {"a:1": "b:1", "b:1": "c:1", "c:1": "a:1"}
+    with app_with(fallback_ollama(pulled("c:1"), chain)) as client:
+        assert client.post("/v1/completions", json=completion(model="ollama:a:1"), headers=AUTH) \
+            .json()["model"] == "ollama:c:1"
+    with app_with(fallback_ollama(pulled(), chain)) as client:
+        response = client.post("/v1/completions", json=completion(model="ollama:a:1"), headers=AUTH)
+    assert response.status_code == 400
+    assert "ollama pull a:1" in response.json()["detail"]  # the error names the model that was asked for
+
+
+def test_only_a_missing_model_falls_back_not_a_failing_one():
+    calls = []
+
+    def handler(request):
+        calls.append(json.loads(request.content)["model"])
+        return httpx.Response(500, json={"error": "runner crashed"})
+
+    with app_with(fallback_ollama(handler, {"lfm2.5:8b": "qwen3.5:4b"})) as client:
+        response = client.post("/v1/completions", json=completion(model="ollama:lfm2.5:8b"), headers=AUTH)
+    assert response.status_code == 502
+    assert calls == ["lfm2.5:8b"]
+
+
+def test_the_fallbacks_come_from_the_environment_and_can_be_switched_off():
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_FALLBACKS": "lfm2.5:8b=qwen3.5:4b, x:1 = y:2"}) \
+        .ollama_fallbacks == {"lfm2.5:8b": "qwen3.5:4b", "x:1": "y:2"}
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_FALLBACKS": ""}).ollama_fallbacks == {}
+    assert Settings.from_environment({}).ollama_fallbacks == Settings().ollama_fallbacks
 
 
 def test_an_ollama_timeout_is_a_timeout():
@@ -266,7 +394,10 @@ def test_a_json_request_asks_ollama_for_its_json_format_and_a_plain_one_does_not
     assert seen[0]["format"] == "json"
     assert seen[0]["think"] is False
     assert "format" not in seen[1]
-    assert "think" not in seen[1]
+    # PHASE 29 (ADR-034 §3.6): a plain answer does not think either, by default --
+    # on this CPU the thinking never reached the answer. AICOS_ENGINE_OLLAMA_THINK
+    # turns it back on, or leaves it to the model.
+    assert seen[1]["think"] is False
 
 
 def test_a_schema_is_handed_to_ollama_as_its_format_for_constrained_decoding():
