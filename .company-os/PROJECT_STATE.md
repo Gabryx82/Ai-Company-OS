@@ -44,9 +44,33 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶▶▶▶ PHASE 28 — Project Blueprint — COMPLETATA il 2026-09-29, in attesa di Human Final Review
+## ▶▶▶▶▶ PHASE 29 — Upgrade dei modelli locali — COMPLETATA il 2026-10-01, in attesa di Human Final Review
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttiva** del 2026-09-30: aggiornare in autonomia i modelli Ollama di AI Company OS e di
+  3D Omniverse (`%USERPROFILE%\3D Omniverse`, fuori da git), massimizzando l'intelligenza del sistema
+  sulla macchina reale, con fallback, smoke test, rollback verificato. Decisioni e misure in **ADR-034**.
+- **Branch**: `autonomous/phase-29-local-model-upgrade`, dalla punta di PHASE 28 (`75336fb`), **non
+  pushato**. `master` intoccato.
+- **Esito**: coder dei seed da `deepseek-coder-v2:16b` a `qwen3.5:9b` (seed V3), Test Engineer da
+  `qwen3.5:4b` a `lfm2.5:8b` (template e V27), nuovo pacchetto di `gemma4:e4b`, DeepSeek `DEPRECATED`
+  (V27, TD-52 chiuso); AI Engine: `think: false` per le risposte testuali, finestra 16K (4K per i modelli
+  con cache pesante), catena di fallback. In 3D Omniverse: ruolo `light` a `qwen3.5:4b`, fallback per
+  agente, finestra per agente; lo `script` resta su DeepSeek (misurato migliore sugli script Blender).
+  Qwen3.8-27B (10 GB, GSQ) installato come `CANDIDATE`: 0,3–0,9 token/s.
+- **Suite**: Java **518** (0 falliti, 1 saltato preesistente) · engine **68** · 3D Omniverse **55**.
+  Mutazioni: 3/3 rosse sulle guardie di V27 e seed V3. E2E dal vivo: engine 14/14, control plane 17/17
+  sul clone `aicompany_p29` (V25 → V27 all'avvio), smoke degli agenti di 3D Omniverse. Rollback verificato
+  nei due sensi: 3D Omniverse su una copia, database sul clone.
+- **Database di sviluppo `aicompany`**: alla **V25**, non toccato. Al primo avvio del backend su questo
+  branch riceve V26 (PHASE 28), V27 e il seed V3. Il clone `aicompany_p29` resta in Docker.
+- **Debiti**: TD-64 aperto e chiuso nella fase; aperti TD-65…TD-67; prossimo libero **TD-68**.
+  Handoff: `docs/handoff/FINAL_HANDOFF_PHASE_29.md`.
+
+## ▶▶▶▶ PHASE 28 — Project Blueprint — COMPLETATA il 2026-09-29, in attesa di Human Final Review
+
+> Sostituita, dove diverge, da PHASE 29 qui sopra.
 
 - **Direttiva** del 2026-09-29: per ogni progetto una scheda visuale «Blueprint» a blocchi e porte,
   sincronizzabile con il codice, modificabile, senza mai riscrivere codice in modo implicito.

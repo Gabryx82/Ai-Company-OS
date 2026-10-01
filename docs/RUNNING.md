@@ -264,7 +264,7 @@ riceve task nuove e le task che contiene **non si spostano** — `409` in entram
 | `POST /api/agents/{id}/activate` | riattiva. **`If-Match`** |
 
 Da TASK-020 un agente ha un campo facoltativo **`model`** (id dell'engine, per esempio
-`ollama:llama3.2:3b`): è il modello delle sue run. Il `PUT` lo sostituisce come ogni dettaglio.
+`ollama:qwen3.5:4b`): è il modello delle sue run. Il `PUT` lo sostituisce come ogni dettaglio.
 | `GET /api/agents/{agentId}/tasks` | le task dell'agent |
 
 Il nome è **unico senza distinzione di maiuscole**, imposto dal database. Un agent disattivato
@@ -284,7 +284,7 @@ Richiede l'**AI Engine** in esecuzione (§2b). Il backend in `dev` lo cerca su
 
 | Endpoint | Descrizione |
 |---|---|
-| `POST /api/tasks/{id}/runs` | lancia una run. **`If-Match` del task.** Corpo facoltativo `{"model":"ollama:llama3.2:3b"}`. `202` + `Location` |
+| `POST /api/tasks/{id}/runs` | lancia una run. **`If-Match` del task.** Corpo facoltativo `{"model":"ollama:qwen3.5:4b"}`. `202` + `Location` |
 | `GET /api/runs/{id}` | la run: `status` `QUEUED` → `RUNNING` → `SUCCEEDED`/`FAILED`, prompt inviati, output, token, latenza |
 | `GET /api/tasks/{id}/runs` | le run del task, la più recente per prima |
 
@@ -390,17 +390,29 @@ Ascolta su **`127.0.0.1:8090`**. Profilo `dev` per default, con token fra serviz
 ```bash
 curl -s -X POST http://127.0.0.1:8090/v1/completions \
   -H "Authorization: Bearer dev-engine-token-change-me" -H "Content-Type: application/json" \
-  -d '{"model":"ollama:llama3.2:3b","messages":[{"role":"user","content":"Ciao"}]}'
+  -d '{"model":"ollama:qwen3.5:4b","messages":[{"role":"user","content":"Ciao"}]}'
 ```
 
 | Provider | Id | Costo | Come si abilita |
 |---|---|---|---|
 | `echo` | `echo:default` (default) | zero | sempre attivo; **deterministico, non è un modello** |
-| `ollama` | `ollama:<nome>` | zero, locale | Ollama in esecuzione su `AICOS_ENGINE_OLLAMA_URL` (default `http://127.0.0.1:11434`) e un modello scaricato (`ollama pull llama3.2:3b`) |
+| `ollama` | `ollama:<nome>` | zero, locale | Ollama in esecuzione su `AICOS_ENGINE_OLLAMA_URL` (default `http://127.0.0.1:11434`) e un modello scaricato (`ollama pull qwen3.5:4b`) |
 | `anthropic` | `anthropic:<modello>` | **a consumo** | **solo** impostando `ANTHROPIC_API_KEY`. Spento per default; dal 2026-09-25 nessun modello API nel catalogo (l'operatore usa Claude via abbonamento) |
 
 Altre variabili: `AICOS_ENGINE_DEFAULT_MODEL`, `AICOS_ENGINE_ANTHROPIC_MODELS` (lista separata da
 virgole), `AICOS_ENGINE_HOST`, `AICOS_ENGINE_PORT`, `AICOS_ENGINE_PROFILE`.
+
+Modelli locali (PHASE 29, ADR-034):
+
+| Variabile | Default | Effetto |
+|---|---|---|
+| `AICOS_ENGINE_OLLAMA_NUM_CTX` | `16384` | finestra di contesto chiesta a Ollama. Senza GPU Ollama userebbe 4096 token: un modello che ragiona (le run testuali lasciano il *thinking* attivo) riempiva la finestra col ragionamento e chiudeva con `finish_reason: length` e risposta vuota. `0` lascia il default di Ollama |
+| `AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL` | `deepseek-coder-v2:16b=4096,llama3.2:3b=4096` | finestra più piccola per i modelli con una cache di contesto pesante: a 16K DeepSeek passa da 9,4 a 12,6 GB e Llama 3.2 da 2,4 a 3,7, contro +0,15–0,4 GB di Qwen 3.5, Gemma 4 e LFM2.5 |
+| `AICOS_ENGINE_OLLAMA_THINK` | `false` | se una risposta testuale «ragiona» prima di rispondere. Misurato su questa CPU: con il ragionamento acceso Qwen 3.5 consumava 4–6 mila token (10–20 minuti) senza arrivare alla risposta, spento rispondeva giusto in ~740 token. `true` lo riaccende, `model` lo lascia al modello. Le risposte JSON non ragionano mai |
+| `AICOS_ENGINE_OLLAMA_FALLBACKS` | `lfm2.5:8b=qwen3.5:4b,gemma4:e4b=gemma4:e4b-legacy,qwen3.5:9b=qwen3.5:4b` | se Ollama non ha un modello (404) risponde il successivo della catena; la risposta dice quale modello ha davvero lavorato (`model`). Vuota = nessun ripiego |
+
+Configurazione dei modelli per agente, misure e rollback: [ADR-034](adr/ADR-034-local-model-upgrade.md);
+`scripts\rollback-local-models.ps1` (prova a secco di default).
 
 Test dell'engine: `cd ai-engine && .venv/Scripts/python -m pytest` (nessuna rete, nessun costo).
 
