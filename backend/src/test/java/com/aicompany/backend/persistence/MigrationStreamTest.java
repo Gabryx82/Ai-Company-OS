@@ -105,8 +105,9 @@ class MigrationStreamTest {
 
         MigrateResult firstRun = DevSeedFlyway.apply(dataSource(), schema);
 
-        // V1 inserts the agents; V2 (PHASE 16) gives them their initial binding.
-        assertThat(firstRun.migrationsExecuted).isEqualTo(2);
+        // V1 inserts the agents; V2 (PHASE 16) gives them their initial binding; V3
+        // (PHASE 29) moves the two coders to the model that replaced theirs.
+        assertThat(firstRun.migrationsExecuted).isEqualTo(3);
         assertThat(agentNames(schema)).isEqualTo(SEEDED_AGENTS);
 
         // The seed is recorded in its own table and stays out of the schema history.
@@ -114,8 +115,8 @@ class MigrationStreamTest {
 
         // "0" is the baseline row the seed stream writes because the schema stream
         // already populated the schema; "1" is the seed migration itself; "2" its
-        // initial configuration (PHASE 16).
-        assertThat(appliedSeedVersions(schema)).containsExactly("0", "1", "2");
+        // initial configuration (PHASE 16); "3" the local model upgrade (PHASE 29).
+        assertThat(appliedSeedVersions(schema)).containsExactly("0", "1", "2", "3");
 
         // Re-running both streams, as every application restart does.
         MigrateResult secondRun = DevSeedFlyway.apply(dataSource(), schema);
@@ -218,8 +219,8 @@ class MigrationStreamTest {
 
         // Seeded rows were not deleted, and the seed stream does not re-insert them.
         assertThat(agentNames(schema)).isEqualTo(SEEDED_AGENTS);
-        // V1 replays without inserting (its SQL guard), V2 configures: two executed.
-        assertThat(DevSeedFlyway.apply(dataSource(), schema).migrationsExecuted).isEqualTo(2);
+        // V1 replays without inserting (its SQL guard), V2 configures, V3 upgrades: three executed.
+        assertThat(DevSeedFlyway.apply(dataSource(), schema).migrationsExecuted).isEqualTo(3);
         assertThat(agentNames(schema)).isEqualTo(SEEDED_AGENTS);
 
         // And the upgrade that used to be blocked now works.

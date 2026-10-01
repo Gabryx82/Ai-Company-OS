@@ -127,7 +127,7 @@
         "name": "Test Engineer",
         "role": "Test Engineer",
         "specialization": "Test unitari, integrazione, end-to-end, mutazione",
-        "model": "ollama:qwen3.5:4b",
+        "model": "ollama:lfm2.5:8b",
         "domain": "Qualità",
         "responsibilities": "Piani di test, test automatici, verifica che un test fallisca quando deve.",
         "outputFormat": "Test automatici e un rapporto di cosa coprono.",

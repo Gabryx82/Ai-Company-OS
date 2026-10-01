@@ -64,8 +64,10 @@ class DevSeedMigrationTest {
 
     /**
      * PHASE 16 (ADR-025): the seed agents are marked SEED, carry the configuration
-     * they were born with, and are bound to verified local models -- DeepSeek Coder
-     * V2 for code and SQL, Qwen 3.5 9B for architecture -- on the AI Engine.
+     * they were born with, and are bound to verified local models on the AI Engine.
+     * PHASE 29 (ADR-034): Qwen 3.5 9B for all three -- the coders left DeepSeek Coder
+     * V2, which it outscored on the same machine -- and the baseline moved with them,
+     * so nothing reads as modified.
      */
     @Test
     void theSeedAgentsHaveAVisibleInitialBindingAndNothingModifiedYet() {
@@ -79,8 +81,8 @@ class DevSeedMigrationTest {
             models.put(agent.getName(), agent.getModel());
         }
         assertThat(models).containsEntry("Code Architect", "ollama:qwen3.5:9b")
-                .containsEntry("Frontend Developer", "ollama:deepseek-coder-v2:16b")
-                .containsEntry("Database Specialist", "ollama:deepseek-coder-v2:16b");
+                .containsEntry("Frontend Developer", "ollama:qwen3.5:9b")
+                .containsEntry("Database Specialist", "ollama:qwen3.5:9b");
     }
 
     @Test
@@ -89,13 +91,14 @@ class DevSeedMigrationTest {
         // The schema stream is the same one production runs: schema versions and
         // nothing else. No seed version may ever appear here.
         assertThat(versionsIn(DevSeedFlyway.SCHEMA_HISTORY_TABLE))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27");
 
         // The seed keeps its own history, so it never constrains schema versions.
         // "0" is the baseline row written because the schema stream had already
         // created the tables; "1" is the seed migration; "2" (PHASE 16) gives the
-        // seed agents their initial binding and configuration.
-        assertThat(versionsIn(DevSeedFlyway.HISTORY_TABLE)).containsExactly("0", "1", "2");
+        // seed agents their initial binding and configuration; "3" (PHASE 29) the
+        // local model upgrade.
+        assertThat(versionsIn(DevSeedFlyway.HISTORY_TABLE)).containsExactly("0", "1", "2", "3");
     }
 
     @Test

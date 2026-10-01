@@ -40,7 +40,10 @@ class LlmCatalogApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.models[?(@.key == 'echo:default')].engineAvailable").value(true))
                 .andExpect(jsonPath("$.models[?(@.key == 'ollama:qwen3.5:9b')].role").value("PLANNER"))
                 .andExpect(jsonPath("$.models[?(@.key == 'ollama:qwen3.5:9b')].engineAvailable").value(false))
-                .andExpect(jsonPath("$.models[?(@.key == 'ollama:llama3.2:3b')].lifecycle").value("DEPRECATED"));
+                .andExpect(jsonPath("$.models[?(@.key == 'ollama:llama3.2:3b')].lifecycle").value("DEPRECATED"))
+                // PHASE 29 (ADR-034): measured on the operator's machine, Qwen 3.5 9B replaced it for code.
+                .andExpect(jsonPath("$.models[?(@.key == 'ollama:deepseek-coder-v2:16b')].lifecycle").value("DEPRECATED"))
+                .andExpect(jsonPath("$.models[?(@.key == 'ollama:deepseek-coder-v2:16b')].replacedBy").value("ollama:qwen3.5:9b"));
     }
 
     @Test
