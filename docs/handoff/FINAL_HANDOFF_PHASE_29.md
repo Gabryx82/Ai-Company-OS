@@ -33,10 +33,15 @@ Decisioni, misure e ragioni: [ADR-034](../adr/ADR-034-local-model-upgrade.md).
 - Docker: `%LOCALAPPDATA%\Docker\run.stale-20260930` contiene i socket orfani messi da parte durante
   la fase (nulla cancellato).
 
+## Impostazione di Ollama applicata su richiesta
+
+- `OLLAMA_MAX_LOADED_MODELS=2`, variabile utente, il 2026-10-01; Ollama riavviato e verificato (al terzo
+  modello ne restano due in memoria). Motivo: con tre modelli diversi in parallelo la RAM libera era
+  scesa a 0,1 GB (ADR-034 §3.7). Per toglierla:
+  `[Environment]::SetEnvironmentVariable('OLLAMA_MAX_LOADED_MODELS', $null, 'User')`, poi riavviare Ollama.
+
 ## Raccomandazioni non applicate
 
-- `OLLAMA_MAX_LOADED_MODELS=2` (variabile utente, poi riavvio di Ollama): con tre modelli diversi in
-  parallelo la RAM libera è scesa a 0,1 GB (ADR-034 §3.7).
 - 3D Omniverse: un promemoria delle API Blender 5 / USD nella skill `dcc-operations`. Nessun modello
   locale scrive USD corretto: tutti inventano API plausibili (ADR-034 §3.1).
 - iGPU per modello (TD-67).

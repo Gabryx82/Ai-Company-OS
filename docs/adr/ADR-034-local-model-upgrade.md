@@ -172,9 +172,10 @@ Configurazione finale, finestra 16K, tre modelli diversi chiamati insieme (plann
 JSON, gemma4:e4b, due worker lfm2.5:8b): tutte le risposte arrivano (176 s in tutto), ma Ollama tiene
 in memoria tutti e tre i modelli (14,5 GB di runner) e la RAM libera scende a **0,1 GB**, con la
 generazione rallentata di 2–3 volte. Fan-out di quattro richieste sullo stesso lfm2.5: 51 s in tutto,
-servite in sequenza (13/19/27/49 s), RAM libera sopra i 12 GB. Raccomandazione per l'operatore, non
-applicata perché è un'impostazione globale di Ollama fuori dai due repository:
-`OLLAMA_MAX_LOADED_MODELS=2`.
+servite in sequenza (13/19/27/49 s), RAM libera sopra i 12 GB. Da qui `OLLAMA_MAX_LOADED_MODELS=2`,
+impostata come variabile utente su richiesta dell'operatore il 2026-10-01 (Ollama riavviato; verificato:
+al terzo modello caricato Ollama scarica il meno recente e ne tiene due). Si toglie con
+`[Environment]::SetEnvironmentVariable('OLLAMA_MAX_LOADED_MODELS', $null, 'User')` e un riavvio di Ollama.
 
 ## 4. Decisione
 
