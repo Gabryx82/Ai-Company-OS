@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useApi } from "../context";
 import { CodeGraphView } from "./CodeGraphView";
 import type {
-  Agent, AutonomyLevel, ModelInfo, Phase, Plan, PlanRun, Project, ProjectTypeInfo, Software, WorkspaceDocuments,
+  Agent, AutonomyLevel, ModelInfo, Phase, Plan, PlanRun, Project, ProjectTypeInfo, Resource, Software, WorkspaceDocuments,
 } from "../api/types";
 import { PriorityBadge, ProblemNote, StatusBadge, when } from "../components/ui";
 import { AppIcon } from "../components/AppIcon";
@@ -10,6 +10,7 @@ import { Icon } from "../components/icons";
 import { TaskDrawer } from "./TaskDrawer";
 import { AUTONOMY } from "./projectLabels";
 import { useLauncher } from "./SoftwareHub";
+import { ConfirmDeletion, DeleteButton, SelectionBar, simplePreview, useSelection } from "../components/Deletion";
 
 // PHASE 28: the Blueprint brings React Flow; it loads when its tab is first opened.
 const BlueprintView = lazy(() => import("./blueprint/BlueprintView").then((m) => ({ default: m.BlueprintView })));
@@ -91,8 +92,8 @@ export function ProjectDetail({ projectId, types, navigate }: {
       {tab === "Master Prompt" && <MasterPrompt project={project} docs={docs} onSaved={reload} />}
       {tab === "Piano" && <PlanTab project={project} plan={plan} docs={docs} agents={agents} onReload={reload}
                                    onOpenTask={setOpenTask} />}
-      {tab === "Documenti" && <Documents project={project} docs={docs} />}
-      {tab === "Blueprint" && <Suspense fallback={<div className="muted">Carico il Blueprint…</div>}><BlueprintView projectId={project.id} onOpenTask={setOpenTask} /></Suspense>}
+      {tab === "Documenti" && <Documents project={project} docs={docs} onChanged={reload} />}
+      {tab === "Blueprint" && <Suspense fallback={<div className="muted">Carico il Blueprint…</div>}><BlueprintView projectId={project.id} projectName={project.name} onOpenTask={setOpenTask} /></Suspense>}
       {tab === "Codice" && <CodeGraphView projectId={project.id} />}
       {tab === "Reference" && <References project={project} docs={docs} onUploaded={reload} />}
       {tab === "Strumenti" && <Tools project={project} type={type} />}
@@ -406,10 +407,16 @@ function PhaseCard({ phase, agents, onOpenTask, onReview }: {
 
 // --- documents ------------------------------------------------------------------
 
-function Documents({ project, docs }: { project: Project; docs: WorkspaceDocuments | null }) {
+function Documents({ project, docs, onChanged }: { project: Project; docs: WorkspaceDocuments | null; onChanged: () => void }) {
   const api = useApi();
   const [open, setOpen] = useState<string | null>(null);
   const [content, setContent] = useState<string>("");
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const loadPreview = useCallback(() => api.documentDeletionPreview(project.id, deleting ?? ""),
+    [api, project.id, deleting]);
+  // PHASE 30 (ADR-035 §6): the project's own structure is edited, never deleted from here.
+  const deletable = (path: string) => /^(docs|tasks|\.aicos\/handoffs)\//.test(path) && project.status !== "ARCHIVED";
 
   useEffect(() => {
     if (!open) return;
@@ -440,15 +447,38 @@ function Documents({ project, docs }: { project: Project; docs: WorkspaceDocumen
         ))}
       </div>
       <div className="card card-body">
-        {open ? <><div className="mono muted" style={{ marginBottom: 8 }}>{open}</div><pre className="doc">{content}</pre></>
+        {done && <div className="notice row" role="status" style={{ marginBottom: 8 }}><Icon name="check" size={13} /> {done}
+          <span className="spacer" /><button className="btn btn-small" onClick={() => setDone(null)}>Chiudi</button></div>}
+        {open ? <>
+          <div className="row" style={{ marginBottom: 8 }}>
+            <span className="mono muted">{open}</span><span className="spacer" />
+            {deletable(open) && <DeleteButton label={`Elimina ${open}`} onClick={() => setDeleting(open)} />}
+          </div>
+          <pre className="doc">{content}</pre></>
           : <div className="muted">Scegli un documento.</div>}
       </div>
+      {deleting && (
+        <ConfirmDeletion title="Elimina documento" subject={deleting} loadPreview={loadPreview} onClose={() => setDeleting(null)}
+                         onConfirm={async () => {
+                           await api.deleteDocument(project.id, deleting);
+                           setDone(`Eliminato ${deleting}.`);
+                           setDeleting(null);
+                           setOpen(null);
+                           onChanged();
+                         }} />
+      )}
     </div>
   );
 }
 
 // --- references -----------------------------------------------------------------
 
+/**
+ * The project's references/ (PHASE 25), and since PHASE 30 every file there can
+ * be removed from here -- one with its trash button, several by selecting them
+ * -- without opening Explorer (ADR-035 §5). A delete removes the file from the
+ * disk; the list is read again from the server at once, so it shows what is there.
+ */
 function References({ project, docs, onUploaded }: { project: Project; docs: WorkspaceDocuments | null; onUploaded: () => void }) {
   const api = useApi();
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -456,7 +486,15 @@ function References({ project, docs, onUploaded }: { project: Project; docs: Wor
   const [folder, setFolder] = useState("images");
   const [problem, setProblem] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [deleting, setDeleting] = useState<string[] | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const selection = useSelection<string>();
   const { launch } = useLauncher();
+  const archived = project.status === "ARCHIVED";
+
+  const images = docs?.references ?? [];
+  const others = docs?.referenceFiles ?? [];
 
   useEffect(() => {
     let cancelled = false;
@@ -484,6 +522,16 @@ function References({ project, docs, onUploaded }: { project: Project; docs: Wor
     }
   }
 
+  async function remove(paths: string[]) {
+    await api.deleteReferences(project.id, paths);
+    paths.forEach((path) => { try { if (urls[path]) URL.revokeObjectURL(urls[path]); } catch { /* not in every runtime */ } });
+    setDeleting(null);
+    selection.clear();
+    setSelecting(false);
+    setDone(paths.length === 1 ? `Eliminato ${paths[0].replace("references/", "")}.` : `Eliminati ${paths.length} file.`);
+    onUploaded();
+  }
+
   // Ctrl+V of an image copied from Gemini, a screenshot tool or the browser.
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
@@ -496,6 +544,9 @@ function References({ project, docs, onUploaded }: { project: Project; docs: Wor
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
   }); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const name = (path: string) => path.replace("references/", "");
+  const all = [...images, ...others].map((r) => r.path);
 
   return (
     <div className="stack">
@@ -515,18 +566,60 @@ function References({ project, docs, onUploaded }: { project: Project; docs: Wor
                  onChange={(e) => { const files = Array.from(e.target.files ?? []); e.target.value = ""; if (files.length) upload(files); }} />
         </label>
         <span className="muted" style={{ fontSize: 12.5 }}>…oppure incolla un'immagine con Ctrl+V. PNG, JPEG, GIF o WebP, fino a 10 MB.</span>
+        <span className="spacer" />
+        {!archived && all.length > 0 && (
+          <button className="btn" aria-pressed={selecting} onClick={() => { setSelecting(!selecting); selection.clear(); }}>
+            <Icon name="check" size={14} /> {selecting ? "Fine selezione" : "Seleziona"}</button>
+        )}
       </div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
+      {done && <div className="notice row" role="status"><Icon name="check" size={13} /> {done}<span className="spacer" />
+        <button className="btn btn-small" onClick={() => setDone(null)}>Chiudi</button></div>}
+      {selecting && (
+        <SelectionBar count={selection.size} noun={["file", "file"]} onClear={selection.clear}
+                      onSelectAll={() => selection.setAll(all)} onDelete={() => setDeleting([...selection.selected])} />
+      )}
       <div className="tile-grid">
-        {(docs?.references ?? []).map((ref) => (
-          <div key={ref.path} className="tile" style={{ cursor: "default" }}>
+        {images.map((ref) => (
+          <div key={ref.path} className={selection.has(ref.path) ? "tile is-selected" : "tile"} style={{ cursor: selecting ? "pointer" : "default" }}
+               onClick={selecting ? () => selection.toggle(ref.path) : undefined}>
             {urls[ref.path] ? <img src={urls[ref.path]} alt={ref.path} style={{ width: "100%", borderRadius: 8, maxHeight: 160, objectFit: "cover" }} />
               : <div className="muted">…</div>}
-            <span className="mono" style={{ fontSize: 11 }}>{ref.path.replace("references/", "")}</span>
+            <span className="mono" style={{ fontSize: 11 }}>{name(ref.path)}</span>
+            <div className="tile-actions">
+              {selecting
+                ? <input type="checkbox" className="select-check" aria-label={`Seleziona ${name(ref.path)}`}
+                         checked={selection.has(ref.path)} onChange={() => selection.toggle(ref.path)} onClick={(e) => e.stopPropagation()} />
+                : !archived && <DeleteButton label={`Elimina ${name(ref.path)}`} onClick={() => setDeleting([ref.path])} />}
+            </div>
           </div>
         ))}
       </div>
-      {docs && docs.references.length === 0 && <div className="muted">Nessuna immagine ancora.</div>}
+      {docs && images.length === 0 && <div className="muted">Nessuna immagine ancora.</div>}
+      {others.length > 0 && (
+        <div className="card">
+          <div className="card-head"><div className="section-title">Altri file in references/</div></div>
+          {others.map((ref) => (
+            <div key={ref.path} className="file-row">
+              {selecting && <input type="checkbox" className="select-check" aria-label={`Seleziona ${name(ref.path)}`}
+                                   checked={selection.has(ref.path)} onChange={() => selection.toggle(ref.path)} />}
+              <Icon name="file" size={14} /><span className="mono">{name(ref.path)}</span>
+              <span className="spacer" /><span className="muted" style={{ fontSize: 11 }}>{Math.max(1, Math.round(ref.size / 1024))} KB</span>
+              {!selecting && !archived && <DeleteButton label={`Elimina ${name(ref.path)}`} onClick={() => setDeleting([ref.path])} />}
+            </div>
+          ))}
+        </div>
+      )}
+      {deleting && (
+        <ConfirmDeletion title={deleting.length === 1 ? "Elimina file" : "Elimina file selezionati"}
+                         subject={deleting.length === 1 ? name(deleting[0]) : `${deleting.length} file`}
+                         intro={deleting.length === 1
+                           ? <>Elimino <strong>«{name(deleting[0])}»</strong> dalla cartella del progetto?</>
+                           : <>Elimino <strong>{deleting.length} file</strong> dalla cartella del progetto?</>}
+                         preview={simplePreview("REFERENCE", ["Il file viene tolto dalle reference del progetto: gli agenti non lo leggono più."],
+                           deleting)}
+                         onClose={() => setDeleting(null)} onConfirm={() => remove(deleting)} />
+      )}
     </div>
   );
 }
@@ -536,11 +629,27 @@ function References({ project, docs, onUploaded }: { project: Project; docs: Wor
 function Tools({ project, type }: { project: Project; type: ProjectTypeInfo | undefined }) {
   const api = useApi();
   const [software, setSoftware] = useState<Software[]>([]);
+  const [adopted, setAdopted] = useState<Resource[]>([]);
+  const [problem, setProblem] = useState<unknown>(null);
   const { launch, outcome } = useLauncher();
 
+  const loadAdopted = useCallback(() => api.projectResources(project.id).then(setAdopted).catch(() => setAdopted([])),
+    [api, project.id]);
   useEffect(() => {
     api.software().then(setSoftware).catch(() => setSoftware([]));
-  }, [api]);
+    loadAdopted();
+  }, [api, loadAdopted]);
+
+  // PHASE 30 (ADR-035): what the Knowledge Hub adopted here can be let go from here -- a link, not the entry.
+  async function drop(key: string) {
+    setProblem(null);
+    try {
+      await api.dropResource(project.id, key);
+      await loadAdopted();
+    } catch (error) {
+      setProblem(error);
+    }
+  }
 
   const recommended = (type?.software ?? []).map((k) => software.find((s) => s.key === k)).filter((s): s is Software => !!s);
   const others = software.filter((s) => (s.openFolder || s.launchKind === "CLI") && !recommended.includes(s));
@@ -556,6 +665,20 @@ function Tools({ project, type }: { project: Project; type: ProjectTypeInfo | un
   return (
     <div className="stack">
       {outcome}
+      <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
+      <div className="section-title">Skill, knowledge e framework adottati</div>
+      {adopted.length === 0 ? <div className="muted" style={{ fontSize: 12.5 }}>Nessuno: si adottano dal Knowledge Hub («Associa»).</div> : (
+        <div className="row" style={{ flexWrap: "wrap" }}>
+          {adopted.map((r) => (
+            <span key={r.key} className="chip row" style={{ gap: 4 }}>
+              {r.kind} · {r.name}
+              <button type="button" className="btn btn-small btn-icon" aria-label={`Togli ${r.name} dal progetto`}
+                      title="Togli dal progetto (la voce resta nel catalogo)" onClick={() => drop(r.key)}>
+                <Icon name="close" size={11} /></button>
+            </span>
+          ))}
+        </div>
+      )}
       <div className="section-title">Consigliati per {type?.label ?? "questo progetto"}</div>
       <div className="tile-grid">{recommended.map(card)}</div>
       <div className="section-title">Altri IDE e terminali</div>

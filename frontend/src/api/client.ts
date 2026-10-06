@@ -13,7 +13,8 @@ import type {
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
-  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, EcosystemServiceInfo, TerminalShell, TerminalTicket, CodeGraph, CostSummary,
+  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, DeletionPreview, SubAgentsPolicy,
+  InProgressPolicy, PlannedAgent, EcosystemServiceInfo, TerminalShell, TerminalTicket, CodeGraph, CostSummary,
   AiAction, BlueprintActionOutcome, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintCanvasLayout, BlueprintGraph, BlueprintPoint,
   BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
   BlueprintVocabulary,
@@ -692,6 +693,75 @@ export class ControlPlane {
 
   deleteProject(id: number, etag: string, tasks: TasksPolicy, confirm: string): Promise<DeletionImpact> {
     return this.plain("DELETE", `/api/projects/${id}?tasks=${tasks}&confirm=${encodeURIComponent(confirm)}`, { ifMatch: etag });
+  }
+
+  // --- removing what was created here (PHASE 30, ADR-035) -----------------------
+
+  agentDeletionPreview(ids: number[], subagents: SubAgentsPolicy, inProgress: InProgressPolicy): Promise<DeletionPreview> {
+    const query = `subagents=${subagents}&inProgress=${inProgress}`;
+    return ids.length === 1
+      ? this.plain("GET", `/api/agents/${ids[0]}/deletion?${query}`)
+      : this.plain("GET", `/api/agents/deletion?ids=${ids.join(",")}&${query}`);
+  }
+
+  /** One agent under its tag; a selection with the version each one was read at. 204 either way. */
+  async deleteAgents(agents: { id: number; version: number }[], subagents: SubAgentsPolicy,
+                     inProgress: InProgressPolicy): Promise<void> {
+    if (agents.length === 1) {
+      await this.request("DELETE", `/api/agents/${agents[0].id}?subagents=${subagents}&inProgress=${inProgress}`,
+        { ifMatch: `"${agents[0].version}"` });
+      return;
+    }
+    await this.request("POST", "/api/agents/bulk-delete", { body: { agents, subagents, inProgress } });
+  }
+
+  agentTemplatePlan(key?: string): Promise<PlannedAgent[]> {
+    return this.plain("GET", `/api/agent-templates/plan${key ? `?key=${encodeURIComponent(key)}` : ""}`);
+  }
+
+  async deleteReferences(projectId: number, paths: string[]): Promise<void> {
+    if (paths.length === 1) {
+      await this.request("DELETE", `/api/projects/${projectId}/references?path=${encodeURIComponent(paths[0])}`);
+      return;
+    }
+    await this.request("POST", `/api/projects/${projectId}/references/bulk-delete`, { body: { paths } });
+  }
+
+  documentDeletionPreview(projectId: number, path: string): Promise<DeletionPreview> {
+    return this.plain("GET", `/api/projects/${projectId}/files/deletion?path=${encodeURIComponent(path)}`);
+  }
+
+  async deleteDocument(projectId: number, path: string): Promise<void> {
+    await this.request("DELETE", `/api/projects/${projectId}/files?path=${encodeURIComponent(path)}`);
+  }
+
+  resourceDeletionPreview(key: string): Promise<DeletionPreview> {
+    return this.plain("GET", `/api/resources/${encodeURIComponent(key)}/deletion`);
+  }
+
+  async deleteResource(key: string, version: number): Promise<void> {
+    await this.request("DELETE", `/api/resources/${encodeURIComponent(key)}`, { ifMatch: `"${version}"` });
+  }
+
+  projectResources(projectId: number): Promise<Resource[]> {
+    return this.plain("GET", `/api/projects/${projectId}/resources`);
+  }
+
+  dropResource(projectId: number, key: string): Promise<void> {
+    return this.plain("DELETE", `/api/projects/${projectId}/resources/${encodeURIComponent(key)}`);
+  }
+
+  blueprintDeletionPreview(projectId: number): Promise<DeletionPreview> {
+    return this.plain("GET", `/api/projects/${projectId}/blueprint/deletion`);
+  }
+
+  async deleteBlueprint(projectId: number, layoutVersion: number, confirm: string): Promise<void> {
+    await this.request("DELETE", `/api/projects/${projectId}/blueprint?confirm=${encodeURIComponent(confirm)}`,
+      { ifMatch: `"${layoutVersion}"` });
+  }
+
+  async removeBudget(provider: string, version: number): Promise<void> {
+    await this.request("DELETE", `/api/admin/costs/budgets/${encodeURIComponent(provider)}`, { ifMatch: `"${version}"` });
   }
 
   // --- the file-based library (ADR-026) -----------------------------------------

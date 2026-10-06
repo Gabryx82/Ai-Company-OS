@@ -194,6 +194,8 @@ function RunCard({ run }: { run: Run }) {
         <StatusBadge status={run.status} />
         <span className="mono">run #{run.id}</span>
         <span className="muted">{run.servedModel ?? run.requestedModel ?? "default dell'engine"}</span>
+        {run.deletedAgentName && <span className="chip" title="L'agente che ha eseguito questa run è stato eliminato">
+          {run.deletedAgentName} · eliminato</span>}
         <span className="spacer" />
         <span className="muted">{when(run.createdAt)}</span>
       </div>

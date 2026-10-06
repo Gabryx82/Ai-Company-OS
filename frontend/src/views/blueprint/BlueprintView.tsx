@@ -5,6 +5,8 @@ import { ApiProblem } from "../../api/client";
 import type { BlueprintBlock, BlueprintFamily, BlueprintGraph, BlueprintLayer, BlueprintVocabulary } from "../../api/types";
 import { ProblemNote, when } from "../../components/ui";
 import { Icon } from "../../components/icons";
+import { ConfirmDeletion } from "../../components/Deletion";
+import { useIsAdmin } from "../../context";
 import { BlueprintCanvas } from "./BlueprintCanvas";
 import { BlockInspector, RelationInspector, type InspectorActions } from "./Inspector";
 import { AddBlockDialog, FileViewer, ProposalsDialog, RelationDialog } from "./BlueprintDialogs";
@@ -27,16 +29,23 @@ type Dialog = null | { kind: "add" } | { kind: "relation"; source: number; targe
  * editing mode changes the Blueprint, and anything that would change a real file
  * becomes a Proposed Code Change, never an edit.
  */
-export function BlueprintView({ projectId, onOpenTask }: { projectId: number; onOpenTask: (taskId: number) => void }) {
+export function BlueprintView({ projectId, projectName, onOpenTask }: {
+  projectId: number; projectName?: string; onOpenTask: (taskId: number) => void;
+}) {
   return (
     <ReactFlowProvider>
-      <Workspace projectId={projectId} onOpenTask={onOpenTask} />
+      <Workspace projectId={projectId} projectName={projectName} onOpenTask={onOpenTask} />
     </ReactFlowProvider>
   );
 }
 
-function Workspace({ projectId, onOpenTask }: { projectId: number; onOpenTask: (taskId: number) => void }) {
+function Workspace({ projectId, projectName, onOpenTask }: {
+  projectId: number; projectName?: string; onOpenTask: (taskId: number) => void;
+}) {
   const api = useApi();
+  const isAdmin = useIsAdmin();
+  const [deleting, setDeleting] = useState(false);
+  const loadDeletion = useCallback(() => api.blueprintDeletionPreview(projectId), [api, projectId]);
   const flow = useReactFlow();
   const [vocabulary, setVocabulary] = useState<BlueprintVocabulary | null>(null);
   const [graph, setGraph] = useState<BlueprintGraph | null>(null);
@@ -224,6 +233,11 @@ function Workspace({ projectId, onOpenTask }: { projectId: number; onOpenTask: (
           )}
         </div>
         <span className="spacer" />
+        {isAdmin && projectName && graph.nodes.length > 0 && (
+          <button className="btn btn-small btn-danger" onClick={() => setDeleting(true)} disabled={graph.archived}
+                  title="Elimina blocchi, relazioni, disposizione e scansioni: mai il codice">
+            <Icon name="trash" size={13} /> Elimina Blueprint</button>
+        )}
         <button className="btn btn-small" onClick={() => flow.fitView({ padding: 0.12, duration: 400 })}>Adatta</button>
         <button className="btn btn-small" onClick={autoLayout} disabled={graph.archived || graph.nodes.length === 0}>Auto-layout</button>
         <button className="btn btn-small" onClick={() => setDialog({ kind: "proposals" })}>
@@ -332,6 +346,19 @@ function Workspace({ projectId, onOpenTask }: { projectId: number; onOpenTask: (
                          onOpenTask={(id) => { setDialog(null); onOpenTask(id); }} />
       )}
       {dialog?.kind === "file" && <FileViewer projectId={projectId} block={dialog.block} onClose={() => setDialog(null)} />}
+      {deleting && projectName && (
+        <ConfirmDeletion title="Elimina Blueprint" subject={`il Blueprint di ${projectName}`} typedName={projectName}
+                         loadPreview={loadDeletion} confirmLabel="Elimina definitivamente" onClose={() => setDeleting(false)}
+                         intro={<>Stai per eliminare l'intero Blueprint di <strong>«{projectName}»</strong>. Il codice non viene toccato; i blocchi disegnati a mano e la disposizione non tornano.</>}
+                         onConfirm={async () => {
+                           await api.deleteBlueprint(projectId, layoutVersion.current, projectName);
+                           setDeleting(false);
+                           setSelectedNode(null);
+                           setSelectedEdge(null);
+                           setNotice("Blueprint eliminato. «Analizza il codice» lo ricostruisce da ciò che il codice dice.");
+                           await reload();
+                         }} />
+      )}
     </div>
   );
 }

@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactEl
 import { useApi } from "../context";
 import { ApiProblem, type Versioned } from "../api/client";
 import type {
-  AgentConfiguration, AgentTemplate, Binding, CatalogModel, ExecutionTarget, Provider, Resource, Software,
+  AgentConfiguration, AgentTemplate, Binding, CatalogModel, ExecutionTarget, InProgressPolicy, PlannedAgent, Provider,
+  Resource, Software, SubAgentsPolicy,
 } from "../api/types";
 import { Field, Modal, ProblemNote, when } from "../components/ui";
 import { Icon } from "../components/icons";
 import { BindingChain, DELIVERY_LABEL } from "../components/BindingChain";
+import { ConfirmDeletion, DeleteButton, SelectionBar, useSelection } from "../components/Deletion";
+import { useIsAdmin } from "../context";
 
 const ORIGIN_LABEL = { SEED: "Seed iniziale", TEMPLATE: "Da template", USER: "Creato da te" } as const;
 const KINDS = [
@@ -32,9 +35,23 @@ export function Agents() {
   const [problem, setProblem] = useState<unknown>(null);
   const [creating, setCreating] = useState(false);
   const [templates, setTemplates] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [deleting, setDeleting] = useState<AgentConfiguration[] | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const selection = useSelection<number>();
+  const isAdmin = useIsAdmin();
 
   const reload = useCallback(() => api.ecosystemBindings().then(setAgents).catch(setProblem), [api]);
   useEffect(() => { reload(); }, [reload]);
+
+  // PHASE 30 (ADR-035): after a delete the list is read again, and what was selected or open and is gone, is let go.
+  function deleted(names: string[]) {
+    setDeleting(null);
+    selection.clear();
+    setSelecting(false);
+    setDone(names.length === 1 ? `Eliminato «${names[0]}».` : `Eliminati ${names.length} agenti.`);
+    reload().then(() => setSelected(null));
+  }
 
   const byId = new Map((agents ?? []).map((a) => [a.id, a]));
   const roots = (agents ?? []).filter((a) => !a.parent || !byId.has(a.parent.id));
@@ -42,8 +59,11 @@ export function Agents() {
 
   const node = (a: AgentConfiguration, depth: number): ReactElement => (
     <div key={a.id} style={{ display: "grid", gap: 6, marginLeft: depth * 18 }}>
-      <button className="agent-card" aria-pressed={selected === a.id} onClick={() => setSelected(a.id)}>
+      <button className="agent-card" aria-pressed={selecting ? selection.has(a.id) : selected === a.id}
+              onClick={() => selecting ? selection.toggle(a.id) : setSelected(a.id)}>
         <div className="row">
+          {selecting && <span className={selection.has(a.id) ? "select-box is-on" : "select-box"} aria-hidden="true">
+            {selection.has(a.id) && <Icon name="check" size={11} />}</span>}
           {depth > 0 && <span className="muted" title="Sottoagente">└</span>}
           <Icon name="agents" size={15} />
           <strong>{a.name}</strong>
@@ -67,20 +87,36 @@ export function Agents() {
         <div><h1>Agenti</h1>
           <p>Ogni agente: chi è, con quale modello, servito da quale provider, e dove lavora — il motore interno o un'app/CLI come Claude Code e Codex.</p></div>
         <div className="row">
+          {isAdmin && (agents?.length ?? 0) > 0 && (
+            <button className="btn" aria-pressed={selecting} onClick={() => { setSelecting(!selecting); selection.clear(); setSelected(null); }}>
+              <Icon name="check" size={14} /> {selecting ? "Fine selezione" : "Seleziona"}</button>
+          )}
           <button className="btn" onClick={() => setTemplates(true)}><Icon name="plus" size={14} /> Da template</button>
           <button className="btn btn-primary" onClick={() => setCreating(true)}><Icon name="plus" size={14} /> Nuovo agente</button>
         </div>
       </div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
+      {done && <div className="notice row" role="status"><Icon name="check" size={13} /> {done}<span className="spacer" />
+        <button className="btn btn-small" onClick={() => setDone(null)}>Chiudi</button></div>}
+      {selecting && (
+        <SelectionBar count={selection.size} noun={["agente", "agenti"]} onClear={selection.clear}
+                      onSelectAll={() => selection.setAll((agents ?? []).map((a) => a.id))}
+                      onDelete={() => setDeleting((agents ?? []).filter((a) => selection.has(a.id)))} />
+      )}
       <div className={selected ? "split" : ""}>
         <div className="stack">
           {roots.map((r) => node(r, 0))}
           {agents?.length === 0 && <div className="card card-body muted">Nessun agente: creane uno o installa un template.</div>}
         </div>
-        {selected && byId.has(selected) && (
-          <AgentEditor key={selected} id={selected} agents={agents ?? []} onClose={() => setSelected(null)} onSaved={reload} />
+        {selected && byId.has(selected) && !selecting && (
+          <AgentEditor key={selected} id={selected} agents={agents ?? []} onClose={() => setSelected(null)} onSaved={reload}
+                       onDelete={isAdmin ? (agent) => setDeleting([agent]) : undefined} />
         )}
       </div>
+      {deleting && deleting.length > 0 && (
+        <DeleteAgents agents={deleting} onClose={() => setDeleting(null)} onDeleted={deleted}
+                      onDeactivated={() => { setDeleting(null); reload(); }} />
+      )}
       {creating && <NewAgentModal onClose={() => setCreating(false)}
                                   onCreated={(id) => { setCreating(false); reload().then(() => setSelected(id)); }} />}
       {templates && <TemplatesModal onClose={() => setTemplates(false)} onInstalled={() => reload()} />}
@@ -108,8 +144,9 @@ function formOf(c: AgentConfiguration): Form {
   };
 }
 
-function AgentEditor({ id, agents, onClose, onSaved }: {
+function AgentEditor({ id, agents, onClose, onSaved, onDelete }: {
   id: number; agents: AgentConfiguration[]; onClose: () => void; onSaved: () => void;
+  onDelete?: (agent: AgentConfiguration) => void;
 }) {
   const api = useApi();
   const [current, setCurrent] = useState<Versioned<AgentConfiguration> | null>(null);
@@ -219,6 +256,7 @@ function AgentEditor({ id, agents, onClose, onSaved }: {
         <span className="chip origin-badge">{ORIGIN_LABEL[c.origin]}</span>
         {c.status !== "ACTIVE" && <span className="badge">inattivo</span>}
         <span className="spacer" />
+        {onDelete && <DeleteButton label={`Elimina ${c.name}`} onClick={() => onDelete(c)} />}
         <button className="btn btn-small" onClick={onClose} aria-label="Chiudi"><Icon name="close" size={14} /></button>
       </div>
       <div className="card-body stack">
@@ -426,39 +464,133 @@ function NewAgentModal({ onClose, onCreated }: { onClose: () => void; onCreated:
   );
 }
 
+// --- deleting (PHASE 30, ADR-035 §2) ---------------------------------------------------------
+
+/**
+ * Deleting one agent or a selection. What happens to sub-agents and to work in
+ * progress is chosen here, and the preview -- computed by the server with the
+ * rules it deletes with -- follows the choice. Deactivating stays offered, as
+ * the reversible gesture, when a single active agent is being deleted.
+ */
+function DeleteAgents({ agents, onClose, onDeleted, onDeactivated }: {
+  agents: AgentConfiguration[]; onClose: () => void; onDeleted: (names: string[]) => void; onDeactivated: () => void;
+}) {
+  const api = useApi();
+  const [subagents, setSubagents] = useState<SubAgentsPolicy>("DETACH");
+  const [inProgress, setInProgress] = useState<InProgressPolicy>("BLOCK");
+  const ids = agents.map((a) => a.id);
+  const loadPreview = useCallback(() => api.agentDeletionPreview(ids, subagents, inProgress),
+    [api, ids.join(","), subagents, inProgress]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hasChildren = agents.some((a) => a.children.some((child) => !ids.includes(child.id)));
+  const single = agents.length === 1 ? agents[0] : null;
+  const name = single ? single.name : `${agents.length} agenti`;
+
+  return (
+    <ConfirmDeletion title={single ? "Elimina agente" : "Elimina agenti"} subject={name} loadPreview={loadPreview}
+                     confirmLabel="Elimina definitivamente" onClose={onClose}
+                     intro={single
+                       ? <>Stai per eliminare definitivamente l'agente <strong>«{single.name}»</strong>. Non si annulla.</>
+                       : <>Stai per eliminare definitivamente <strong>{agents.length} agenti</strong>: {agents.map((a) => a.name).join(", ")}. Non si annulla.</>}
+                     alternative={single && single.status === "ACTIVE" ? {
+                       label: "Disattiva", hint: "Vuoi solo toglierlo dal lavoro? «Disattiva» è reversibile: lo riattivi quando vuoi.",
+                       onClick: async () => {
+                         const agent = await api.agent(single.id);
+                         await api.setAgentActive(single.id, agent.etag, false);
+                         onDeactivated();
+                       },
+                     } : undefined}
+                     onConfirm={async () => {
+                       await api.deleteAgents(agents.map((a) => ({ id: a.id, version: a.version })), subagents, inProgress);
+                       onDeleted(agents.map((a) => a.name));
+                     }}>
+      {hasChildren && (
+        <fieldset className="bp-fieldset">
+          <legend>Sottoagenti</legend>
+          <label className="row"><input type="radio" className="select-check" name="subagents" checked={subagents === "DETACH"}
+                                        onChange={() => setSubagents("DETACH")} /> Diventano agenti principali (consigliato)</label>
+          <label className="row"><input type="radio" className="select-check" name="subagents" checked={subagents === "DELETE"}
+                                        onChange={() => setSubagents("DELETE")} /> Elimina anche i sottoagenti</label>
+        </fieldset>
+      )}
+      <label className="row" style={{ fontSize: 13 }}>
+        <input type="checkbox" className="select-check" checked={inProgress === "STOP"}
+               onChange={(e) => setInProgress(e.target.checked ? "STOP" : "BLOCK")} />
+        Se ha task in corso, riportale a «Da fare» senza agente (altrimenti l'eliminazione si ferma)
+      </label>
+    </ConfirmDeletion>
+  );
+}
+
+/**
+ * Installing templates (directive §15, §22), with the plan first: for every
+ * agent of every template, whether it would be created or is already there.
+ * Deleted template agents never come back on their own -- only from here, and
+ * never twice (ADR-035 §4).
+ */
 function TemplatesModal({ onClose, onInstalled }: { onClose: () => void; onInstalled: () => void }) {
   const api = useApi();
   const [templates, setTemplates] = useState<AgentTemplate[]>([]);
+  const [plan, setPlan] = useState<PlannedAgent[]>([]);
   const [done, setDone] = useState<string | null>(null);
   const [problem, setProblem] = useState<unknown>(null);
-  useEffect(() => { api.agentTemplates().then(setTemplates).catch(setProblem); }, [api]);
+  const [busy, setBusy] = useState(false);
+  const loadPlan = useCallback(() => api.agentTemplatePlan().then(setPlan).catch(setProblem), [api]);
+  useEffect(() => { api.agentTemplates().then(setTemplates).catch(setProblem); loadPlan(); }, [api, loadPlan]);
   const sorted = useMemo(() => [...templates].sort((a, b) => a.name.localeCompare(b.name)), [templates]);
-  async function install(key: string) {
+  const missing = plan.filter((p) => p.outcome === "CREATED");
+
+  async function install(action: () => Promise<{ name: string; outcome: string }[]>) {
     setProblem(null);
+    setBusy(true);
     try {
-      const result = await api.installAgentTemplate(key);
-      setDone(result.map((r) => `${r.name}: ${r.outcome === "CREATED" ? "creato" : "già presente, non toccato"}`).join(" · "));
+      const result = await action();
+      const created = result.filter((r) => r.outcome === "CREATED").map((r) => r.name);
+      setDone(created.length ? `Creati: ${created.join(", ")}. Gli agenti già presenti non sono stati toccati.`
+        : "Niente da creare: erano già tutti presenti.");
       onInstalled();
+      await loadPlan();
     } catch (error) {
       setProblem(error);
+    } finally {
+      setBusy(false);
     }
   }
+
   return (
-    <Modal title="Installa un agente da template" onClose={onClose} wide>
+    <Modal title="Installa agenti da template" onClose={onClose} wide>
       <div className="stack">
+        <div className="notice row">
+          <span style={{ flex: 1 }}>
+            {missing.length === 0 ? "Il set di template è installato per intero."
+              : <>Mancano <strong>{missing.length}</strong> agenti del set di template: {missing.map((p) => p.name).join(", ")}.</>}
+            {" "}Un agente con lo stesso nome non viene mai duplicato né sovrascritto.
+          </span>
+          <button className="btn btn-primary" disabled={busy || missing.length === 0}
+                  onClick={() => install(() => api.installAllAgentTemplates())}>Installa tutti i mancanti</button>
+        </div>
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
         {done && <div className="notice"><Icon name="check" size={13} /> {done}</div>}
-        {sorted.map((t) => (
-          <div key={t.key} className="row" style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
-            <div style={{ flex: 1 }}>
-              <strong>{t.name}</strong> <span className="muted">{t.role}</span>
-              <div className="muted" style={{ fontSize: 12.5 }}>{t.specialization}</div>
-              <div style={{ fontSize: 12 }}><span className="chip mono">{t.model}</span>
-                {(t.children ?? []).map((ch) => <span key={ch.key} className="chip">+ {ch.name}</span>)}</div>
+        {sorted.map((t) => {
+          const agentsOf = plan.filter((p) => p.templateKey === t.key);
+          const toCreate = agentsOf.filter((p) => p.outcome === "CREATED").length;
+          return (
+            <div key={t.key} className="row" style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+              <div style={{ flex: 1 }}>
+                <strong>{t.name}</strong> <span className="muted">{t.role}</span>
+                <div className="muted" style={{ fontSize: 12.5 }}>{t.specialization}</div>
+                <div style={{ fontSize: 12 }}><span className="chip mono">{t.model}</span>
+                  {agentsOf.map((p) => (
+                    <span key={p.name} className={p.outcome === "CREATED" ? "chip" : "chip muted"}
+                          title={p.outcome === "CREATED" ? "verrà creato" : "già presente: non viene toccato"}>
+                      {p.parentName ? "+ " : ""}{p.name} · {p.outcome === "CREATED" ? "da creare" : "presente"}</span>
+                  ))}</div>
+              </div>
+              <button className="btn btn-small btn-primary" disabled={busy || toCreate === 0}
+                      onClick={() => install(() => api.installAgentTemplate(t.key))}>
+                {toCreate === 0 ? "Installato" : `Installa (${toCreate})`}</button>
             </div>
-            <button className="btn btn-small btn-primary" onClick={() => install(t.key)}>Installa</button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Modal>
   );

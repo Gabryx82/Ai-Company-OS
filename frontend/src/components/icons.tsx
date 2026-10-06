@@ -31,6 +31,8 @@ const PATHS: Record<string, string> = {
   warning: "M12 3l10 18H2zM12 10v5M12 18h.01",
   logout: "M15 4h4v16h-4M10 16l-4-4 4-4M6 12h10",
   graph: "M6 6a2 2 0 1 0 0 .1M18 6a2 2 0 1 0 0 .1M12 18a2 2 0 1 0 0 .1M6 8l5 8M18 8l-5 8M8 6h8",
+  // PHASE 30: the one icon of every delete.
+  trash: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
 };
 
 export type IconName = keyof typeof PATHS;

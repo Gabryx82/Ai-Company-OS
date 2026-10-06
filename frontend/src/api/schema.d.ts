@@ -14,7 +14,7 @@ export interface paths {
         get?: never;
         put: operations["budget"];
         post?: never;
-        delete?: never;
+        delete: operations["removeBudget"];
         options?: never;
         head?: never;
         patch?: never;
@@ -180,6 +180,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent-templates/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["installPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent-templates/{key}/install": {
         parameters: {
             query?: never;
@@ -212,6 +228,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agents/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deleteSelection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agents/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["previewSelection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agents/{agentId}/tasks": {
         parameters: {
             query?: never;
@@ -238,7 +286,7 @@ export interface paths {
         get: operations["getAgent"];
         put: operations["updateAgent"];
         post?: never;
-        delete?: never;
+        delete: operations["delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -302,6 +350,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["deactivateAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agents/{id}/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["preview"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -862,6 +926,22 @@ export interface paths {
         get: operations["blueprintGraph"];
         put?: never;
         post?: never;
+        delete: operations["deleteBlueprint"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/blueprint/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["previewBlueprint"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1214,6 +1294,22 @@ export interface paths {
         get: operations["read"];
         put: operations["write"];
         post?: never;
+        delete: operations["deleteDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/files/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["documentDeletion"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1326,6 +1422,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["reference"];
+        delete: operations["deleteReference"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/references/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deleteReferences"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1422,6 +1534,38 @@ export interface paths {
         get: operations["search"];
         put?: never;
         post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resources/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteResource"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/resources/{key}/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["resourceDeletion"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1947,6 +2091,12 @@ export interface components {
             role: string;
             specialization: string;
         };
+        AgentVersion: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            version: number;
+        };
         Autostart: {
             autostart: boolean;
             /** Format: int32 */
@@ -2320,6 +2470,13 @@ export interface components {
             alertPercent?: number;
             monthlyLimitUsd: number;
         };
+        BulkAgentDelete: {
+            agents: components["schemas"]["AgentVersion"][];
+            /** @enum {string} */
+            inProgress?: "BLOCK" | "STOP";
+            /** @enum {string} */
+            subagents?: "DETACH" | "DELETE";
+        };
         CodeGraph: {
             cycles?: string[][];
             edges?: components["schemas"]["Edge"][];
@@ -2489,6 +2646,16 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        DeletionPreview: {
+            allowed?: boolean;
+            blockers?: string[];
+            deletes?: string[];
+            detaches?: string[];
+            files?: string[];
+            keeps?: string[];
+            kind?: string;
+            subjects?: components["schemas"]["Subject"][];
+        };
         Document: {
             /** Format: date-time */
             modified?: string;
@@ -2508,6 +2675,7 @@ export interface components {
             masterPromptIsTemplate?: boolean;
             phases?: components["schemas"]["Document"][];
             planJson?: components["schemas"]["Document"];
+            referenceFiles?: components["schemas"]["Document"][];
             references?: components["schemas"]["Document"][];
             tasks?: components["schemas"]["Document"][];
             workspacePath?: string;
@@ -2862,6 +3030,14 @@ export interface components {
             /** Format: int32 */
             tasks?: number;
         };
+        Planned: {
+            name?: string;
+            /** @enum {string} */
+            outcome?: "CREATED" | "EXISTING";
+            parentName?: string;
+            role?: string;
+            templateKey?: string;
+        };
         PriceRequest: {
             inputPricePerMtok?: number;
             outputPricePerMtok?: number;
@@ -2969,6 +3145,9 @@ export interface components {
             name?: string;
             role?: string;
         };
+        ReferenceSelection: {
+            paths: string[];
+        };
         ResourceRef: {
             configuration?: string;
             description?: string;
@@ -3047,6 +3226,7 @@ export interface components {
             correlationId?: string;
             /** Format: date-time */
             createdAt?: string;
+            deletedAgentName?: string;
             failureDetail?: string;
             failureType?: string;
             finishReason?: string;
@@ -3183,6 +3363,10 @@ export interface components {
             url?: string;
             /** Format: int64 */
             version?: number;
+        };
+        Subject: {
+            id?: string;
+            name?: string;
         };
         Suggestion: {
             /** Format: int64 */
@@ -3409,6 +3593,28 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["Budget"];
                 };
+            };
+        };
+    };
+    removeBudget: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3674,6 +3880,28 @@ export interface operations {
             };
         };
     };
+    installPlan: {
+        parameters: {
+            query?: {
+                key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Planned"][];
+                };
+            };
+        };
+    };
     install: {
         parameters: {
             query?: never;
@@ -3738,6 +3966,52 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AgentResponse"];
+                };
+            };
+        };
+    };
+    deleteSelection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkAgentDelete"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    previewSelection: {
+        parameters: {
+            query: {
+                ids: number[];
+                subagents?: "DETACH" | "DELETE";
+                inProgress?: "BLOCK" | "STOP";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeletionPreview"];
                 };
             };
         };
@@ -3811,6 +4085,31 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["AgentResponse"];
                 };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query?: {
+                subagents?: "DETACH" | "DELETE";
+                inProgress?: "BLOCK" | "STOP";
+            };
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3932,6 +4231,31 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AgentResponse"];
+                };
+            };
+        };
+    };
+    preview: {
+        parameters: {
+            query?: {
+                subagents?: "DETACH" | "DELETE";
+                inProgress?: "BLOCK" | "STOP";
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeletionPreview"];
                 };
             };
         };
@@ -4930,6 +5254,52 @@ export interface operations {
             };
         };
     };
+    deleteBlueprint: {
+        parameters: {
+            query?: {
+                confirm?: string;
+            };
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    previewBlueprint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeletionPreview"];
+                };
+            };
+        };
+    };
     createBlueprintEdge: {
         parameters: {
             query?: never;
@@ -5626,6 +5996,52 @@ export interface operations {
             };
         };
     };
+    deleteDocument: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    documentDeletion: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeletionPreview"];
+                };
+            };
+        };
+    };
     plan: {
         parameters: {
             query?: never;
@@ -5794,6 +6210,52 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["Document"];
                 };
+            };
+        };
+    };
+    deleteReference: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteReferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferenceSelection"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5972,6 +6434,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceResponse"];
+                };
+            };
+        };
+    };
+    deleteResource: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resourceDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeletionPreview"];
                 };
             };
         };

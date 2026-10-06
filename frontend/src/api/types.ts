@@ -40,7 +40,8 @@ export type Project = Wire<S["ProjectResponse"]> & {
 export type Run = Wire<S["RunResponse"]> & {
   id: number;
   taskId: number;
-  agentId: number;
+  /** Null once the agent has been deleted (PHASE 30): deletedAgentName then says who it was. */
+  agentId: number | null;
   status: RunStatus;
   systemPrompt: string;
   userPrompt: string;
@@ -247,6 +248,23 @@ export interface DeletionImpact {
 }
 export type TasksPolicy = "DETACH" | "DELETE";
 
+// --- PHASE 30: everything created here can be removed here (ADR-035) -------------------
+
+/**
+ * What a delete would do, the same shape for every kind of thing: what goes,
+ * what is detached and stays, what is kept, which files leave the disk, and --
+ * when it cannot happen -- why (`blockers`, and `allowed` false).
+ */
+export interface DeletionPreview {
+  kind: string; subjects: { id: string; name: string }[]; deletes: string[]; detaches: string[]; keeps: string[];
+  files: string[]; blockers: string[]; allowed: boolean;
+}
+export type SubAgentsPolicy = "DETACH" | "DELETE";
+export type InProgressPolicy = "BLOCK" | "STOP";
+export interface PlannedAgent {
+  templateKey: string; name: string; role: string; parentName: string | null; outcome: "CREATED" | "EXISTING";
+}
+
 // --- PHASE 21: the ecosystem starts with AI Company OS (ADR-028) -----------------------
 
 export type EcosystemStatus = "NEVER" | "ALREADY_RUNNING" | "STARTING" | "RUNNING" | "FAILED";
@@ -279,7 +297,8 @@ export interface CostSummary {
     outputTokens: number; costUsd: number; runsWithoutPrice: number }[];
   models: { model: string; providerKey: string; runs: number; inputTokens: number; outputTokens: number; costUsd: number;
     inputPricePerMtok: number | null; outputPricePerMtok: number | null }[];
-  agents: { agentId: number; agentName: string; runs: number; tokens: number; costUsd: number }[];
+  /** PHASE 30: a deleted agent's spend stays under its name, with agentId null. */
+  agents: { agentId: number | null; agentName: string; runs: number; tokens: number; costUsd: number }[];
   budgets: { providerKey: string; providerName: string | null; monthlyLimitUsd: number; alertPercent: number;
     spentThisMonthUsd: number; percent: number; alert: boolean; exceeded: boolean; version: number }[];
 }

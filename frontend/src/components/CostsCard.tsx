@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useApi, useIsAdmin } from "../context";
 import type { CostSummary, Provider } from "../api/types";
 import { Field, Modal, ProblemNote } from "./ui";
+import { ConfirmDeletion, DeleteButton, simplePreview } from "./Deletion";
 
 const usd = (n: number | null | undefined) => n === null || n === undefined ? "—" : `$${Number(n).toFixed(n < 1 ? 4 : 2)}`;
 
@@ -17,6 +18,7 @@ export function CostsCard() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [problem, setProblem] = useState<unknown>(null);
   const [editing, setEditing] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<CostSummary["budgets"][number] | null>(null);
 
   const load = useCallback(() => api.costs().then(setSummary).catch(setProblem), [api]);
   useEffect(() => {
@@ -58,7 +60,10 @@ export function CostsCard() {
                       {budget.exceeded ? " · esaurito" : budget.alert ? " · soglia superata" : ""}</span>
                   </div>
                 ) : <span className="badge">nessun budget: bloccato</span>}</td>
-                <td>{isAdmin && <button className="btn btn-small" onClick={() => setEditing(p.key)}>Budget</button>}</td>
+                <td><div className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
+                  {isAdmin && <button className="btn btn-small" onClick={() => setEditing(p.key)}>Budget</button>}
+                  {isAdmin && budget && <DeleteButton label={`Rimuovi il budget di ${p.name}`} onClick={() => setRemoving(budget)} />}
+                </div></td>
               </tr>
             );
           })}
@@ -79,10 +84,18 @@ export function CostsCard() {
           <table>
             <thead><tr><th>Agente</th><th>Esecuzioni</th><th>Token</th><th>Costo</th></tr></thead>
             <tbody>{summary.agents.map((a) => (
-              <tr key={a.agentId}><td>{a.agentName}</td><td>{a.runs}</td><td className="muted">{a.tokens}</td><td>{usd(a.costUsd)}</td></tr>
+              <tr key={`${a.agentId ?? "deleted"}-${a.agentName}`}><td>{a.agentName}{a.agentId === null && <span className="chip">eliminato</span>}</td><td>{a.runs}</td><td className="muted">{a.tokens}</td><td>{usd(a.costUsd)}</td></tr>
             ))}</tbody>
           </table>
         </details>
+      )}
+      {removing && (
+        <ConfirmDeletion title="Rimuovi budget" subject={removing.providerName ?? removing.providerKey}
+                         intro={<>Rimuovo il budget mensile di <strong>«{removing.providerName ?? removing.providerKey}»</strong>?</>}
+                         preview={simplePreview("BUDGET", [`Il limite di ${usd(removing.monthlyLimitUsd)} al mese.`], [],
+                           ["Le esecuzioni a consumo di questo provider si fermano finché non imposti un nuovo budget: rimuoverlo blocca la spesa, non la libera."])}
+                         confirmLabel="Rimuovi" onClose={() => setRemoving(null)}
+                         onConfirm={async () => { await api.removeBudget(removing.providerKey, removing.version); setRemoving(null); load(); }} />
       )}
       {editing && <BudgetModal provider={editing} current={summary?.budgets.find((b) => b.providerKey === editing) ?? null}
                                onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}

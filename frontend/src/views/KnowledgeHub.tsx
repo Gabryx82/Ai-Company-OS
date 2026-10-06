@@ -4,6 +4,8 @@ import { ApiProblem, type Versioned } from "../api/client";
 import type { AgentProfile, AgentTemplate, LibraryInfo, Project, Resource, ResourceFile } from "../api/types";
 import { Field, Modal, ProblemNote, when } from "../components/ui";
 import { Icon } from "../components/icons";
+import { ConfirmDeletion, DeleteButton } from "../components/Deletion";
+import { useIsAdmin } from "../context";
 
 const KINDS = [
   { key: "", label: "Tutto" }, { key: "SKILL", label: "Skill" }, { key: "KNOWLEDGE", label: "Knowledge" },
@@ -126,7 +128,8 @@ export function KnowledgeHub() {
           {results.length === 0 && <div className="muted">Nessuna voce.</div>}
         </div>
         {selected && <ResourceDetail key={selected} resourceKey={selected} onClose={() => setSelected(null)}
-                                     onChanged={(message) => { setDone(message); search(); }} />}
+                                     onChanged={(message) => { setDone(message); search(); }}
+                                     onDeleted={(message) => { setSelected(null); setDone(message); search(); }} />}
       </div>
 
       <div className="section-title">Template di agenti</div>
@@ -150,10 +153,13 @@ export function KnowledgeHub() {
   );
 }
 
-function ResourceDetail({ resourceKey, onClose, onChanged }: {
-  resourceKey: string; onClose: () => void; onChanged: (message: string) => void;
+function ResourceDetail({ resourceKey, onClose, onChanged, onDeleted }: {
+  resourceKey: string; onClose: () => void; onChanged: (message: string) => void; onDeleted: (message: string) => void;
 }) {
   const api = useApi();
+  const isAdmin = useIsAdmin();
+  const [deleting, setDeleting] = useState(false);
+  const loadPreview = useCallback(() => api.resourceDeletionPreview(resourceKey), [api, resourceKey]);
   const [resource, setResource] = useState<Resource | null>(null);
   const [file, setFile] = useState<Versioned<ResourceFile> | null>(null);
   const [draft, setDraft] = useState("");
@@ -205,6 +211,7 @@ function ResourceDetail({ resourceKey, onClose, onChanged }: {
     <div className="card" style={{ position: "sticky", top: 80 }}>
       <div className="card-head">
         <span className="chip">{resource.kind}</span><h2>{resource.name}</h2><span className="spacer" />
+        {isAdmin && <DeleteButton label={`Elimina ${resource.name}`} onClick={() => setDeleting(true)} />}
         <button className="btn btn-small" onClick={onClose} aria-label="Chiudi"><Icon name="close" size={14} /></button>
       </div>
       <div className="card-body stack">
@@ -256,6 +263,14 @@ function ResourceDetail({ resourceKey, onClose, onChanged }: {
           <button className="btn btn-primary" disabled={!target} onClick={equip}>Associa</button>
         </div>
       </div>
+      {deleting && (
+        <ConfirmDeletion title="Elimina dal catalogo" subject={resource.name} loadPreview={loadPreview}
+                         onClose={() => setDeleting(false)}
+                         onConfirm={async () => {
+                           await api.deleteResource(resource.key, resource.version);
+                           onDeleted(`Eliminata «${resource.name}».`);
+                         }} />
+      )}
     </div>
   );
 }
