@@ -146,12 +146,13 @@ public class CostService {
                         + base + "GROUP BY 1,2 ORDER BY cost DESC, runs DESC",
                 (rs, n) -> new ModelSpend(rs.getString("model"), rs.getString("provider"), rs.getInt("runs"), rs.getLong("input"),
                         rs.getLong("output"), rs.getBigDecimal("cost"), rs.getBigDecimal("pin"), rs.getBigDecimal("pout")), start, end);
-        List<AgentSpend> byAgent = jdbc.query("SELECT a.id, a.name, count(*) AS runs, "
+        // PHASE 30 (ADR-035): a deleted agent's runs still cost what they cost -- under the name it had, without an id.
+        List<AgentSpend> byAgent = jdbc.query("SELECT a.id, COALESCE(a.name, r.agent_name) AS name, count(*) AS runs, "
                         + "COALESCE(sum(r.input_tokens),0) + COALESCE(sum(r.output_tokens),0) AS tokens, COALESCE(sum(r.cost_usd),0) AS cost "
-                        + base.replace("FROM task_runs r ", "FROM task_runs r JOIN agents a ON a.id = r.agent_id ")
-                        + "GROUP BY a.id, a.name ORDER BY cost DESC, tokens DESC",
-                (rs, n) -> new AgentSpend(rs.getLong("id"), rs.getString("name"), rs.getInt("runs"), rs.getLong("tokens"),
-                        rs.getBigDecimal("cost")), start, end);
+                        + base.replace("FROM task_runs r ", "FROM task_runs r LEFT JOIN agents a ON a.id = r.agent_id ")
+                        + "GROUP BY a.id, COALESCE(a.name, r.agent_name) ORDER BY cost DESC, tokens DESC",
+                (rs, n) -> new AgentSpend(rs.getObject("id", Long.class), rs.getString("name"), rs.getInt("runs"),
+                        rs.getLong("tokens"), rs.getBigDecimal("cost")), start, end);
         BigDecimal total = byProvider.stream().map(ProviderSpend::costUsd).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new Summary(from, to, byProvider, byModel, byAgent, budgets(), total);
     }
@@ -196,6 +197,21 @@ public class CostService {
                     + "updated_at = now() WHERE provider_key = ?", limit, alertPercent, providerKey);
         }
         return budgets().stream().filter(b -> b.providerKey().equals(providerKey)).findFirst().orElseThrow();
+    }
+
+    /**
+     * PHASE 30 (ADR-035): removes a provider's budget, under its tag. What it
+     * leaves is the rule of ADR-031 itself: a pay-per-token provider without a
+     * budget does not run, so removing one stops spending rather than freeing it.
+     */
+    public void removeBudget(String providerKey, Precondition precondition) {
+        List<Long> existing = jdbc.queryForList("SELECT version FROM cost_budgets WHERE provider_key = ? FOR UPDATE",
+                Long.class, providerKey);
+        if (existing.isEmpty()) {
+            throw CostProblemException.budgetNotFound(providerKey);
+        }
+        precondition.requireSatisfiedBy(existing.getFirst());
+        jdbc.update("DELETE FROM cost_budgets WHERE provider_key = ?", providerKey);
     }
 
     /** The price of a model, under its tag. */

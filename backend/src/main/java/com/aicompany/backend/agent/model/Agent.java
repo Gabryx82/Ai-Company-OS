@@ -281,7 +281,10 @@ public class Agent {
         return model;
     }
 
-    /** Takes the agent out of the working registry. This is what replaces a delete. */
+    /**
+     * Takes the agent out of the working registry, reversibly. Deleting it for
+     * real is a separate, admin-only act since PHASE 30 (ADR-035).
+     */
     public void deactivate() {
         requireStatus(AgentStatus.ACTIVE);
         this.status = AgentStatus.INACTIVE;

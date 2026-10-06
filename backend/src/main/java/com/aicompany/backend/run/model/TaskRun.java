@@ -36,8 +36,16 @@ public class TaskRun {
     @Column(name = "task_id", nullable = false, updatable = false)
     private Long taskId;
 
-    @Column(name = "agent_id", nullable = false, updatable = false)
+    /**
+     * The agent at the time of the run; {@code null} once that agent has been
+     * deleted (V28, ADR-035), when {@link #agentName} says who it was.
+     */
+    @Column(name = "agent_id", updatable = false)
     private Long agentId;
+
+    /** The name of a deleted agent, written when it was deleted; {@code null} while the agent exists. */
+    @Column(name = "agent_name", length = 255, insertable = false, updatable = false)
+    private String agentName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
@@ -163,6 +171,7 @@ public class TaskRun {
     public Long getId() { return id; }
     public Long getTaskId() { return taskId; }
     public Long getAgentId() { return agentId; }
+    public String getAgentName() { return agentName; }
     public RunStatus getStatus() { return status; }
     public String getRequestedModel() { return requestedModel; }
     public String getServedModel() { return servedModel; }

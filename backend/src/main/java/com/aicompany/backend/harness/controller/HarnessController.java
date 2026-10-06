@@ -97,6 +97,16 @@ public class HarnessController {
         return templates.all();
     }
 
+    /**
+     * PHASE 30 (ADR-035 §4): what installing would do -- one template ({@code ?key=})
+     * or all of them -- before anything is created. Deleted template agents are
+     * never reinstalled on their own: only this explicit install brings them back.
+     */
+    @GetMapping("/api/agent-templates/plan")
+    public List<AgentTemplates.Planned> installPlan(@RequestParam(required = false) String key) {
+        return templates.plan(key);
+    }
+
     /** Creates the template's agent and sub-agents; existing names are left untouched. */
     @PostMapping("/api/agent-templates/{key}/install")
     public List<AgentTemplates.Installed> install(@PathVariable String key) {
@@ -121,6 +131,20 @@ public class HarnessController {
         HarnessResource created = service.create(new HarnessResource(r.key(), r.kind(), r.name(), r.description(),
                 r.tags(), r.sourceUrl(), r.searchUrl(), r.configuration()));
         return ResponseEntity.created(URI.create("/api/resources/" + created.getKey())).body(ResourceResponse.from(created));
+    }
+
+    /** PHASE 30 (ADR-035 §7): what deleting an entry would do, or why it cannot be deleted. */
+    @GetMapping("/api/resources/{key}/deletion")
+    public com.aicompany.backend.deletion.DeletionPreview resourceDeletion(@PathVariable String key) {
+        return service.resourceDeletion(key);
+    }
+
+    /** Deletes an entry the operator created or imported, with its file. Admin-only; takes the entry's tag. */
+    @DeleteMapping("/api/resources/{key}")
+    public ResponseEntity<Void> deleteResource(@PathVariable String key,
+                                               @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+        service.deleteResource(key, Precondition.fromHeader(ifMatch));
+        return ResponseEntity.noContent().build();
     }
 
     // --- agents -----------------------------------------------------------------

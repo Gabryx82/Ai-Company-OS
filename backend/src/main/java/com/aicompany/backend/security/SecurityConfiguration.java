@@ -58,7 +58,12 @@ public class SecurityConfiguration {
     public static final String[] ADMIN_ONLY = {"/api/admin/**", "/api/terminal/**"};
 
     /** Deletes that destroy data for real (PHASE 20): distinct from archiving, and an admin's decision. */
-    public static final String[] ADMIN_ONLY_DELETES = {"/api/projects/*", "/api/tasks/*"};
+    public static final String[] ADMIN_ONLY_DELETES = {"/api/projects/*", "/api/tasks/*",
+            // PHASE 30 (ADR-035): agents, catalog entries of the library, a project's whole Blueprint.
+            "/api/agents/*", "/api/resources/*", "/api/projects/*/blueprint"};
+
+    /** The same decision for a selection: deleting several agents at once (PHASE 30). */
+    public static final String[] ADMIN_ONLY_BULK_DELETES = {"/api/agents/bulk-delete"};
 
     @Bean
     ApiTokenRegistry apiTokenRegistry(ApiTokenProperties properties) {
@@ -128,6 +133,7 @@ public class SecurityConfiguration {
                         // every destructive delete.
                         .requestMatchers(ADMIN_ONLY).hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, ADMIN_ONLY_DELETES).hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, ADMIN_ONLY_BULK_DELETES).hasRole("ADMIN")
                         // What the launcher may execute is an admin's decision (PHASE 21).
                         .requestMatchers(HttpMethod.POST, "/api/software").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/software/*").hasRole("ADMIN")

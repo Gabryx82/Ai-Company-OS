@@ -15,8 +15,9 @@ package com.aicompany.backend.agent.model;
  * the <em>form</em> of the representation -- a closed enum backed by a check
  * constraint -- not the vocabulary.
  *
- * <p>There is no {@code DELETED} member, for the reason ADR-004 §3 gave: this
- * system deactivates agents, it does not delete them.
+ * <p>There is no {@code DELETED} member: a deleted agent is not a state of the
+ * row, it is the absence of the row (PHASE 30, ADR-035). Deactivating is the
+ * reversible gesture; deleting is the irreversible one, and it is not a status.
  *
  * <p>These two names are not new to callers. {@code AgentResponse.status} has
  * been publishing exactly this vocabulary since TASK-007, derived from the

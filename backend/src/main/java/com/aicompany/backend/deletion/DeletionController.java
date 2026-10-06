@@ -37,6 +37,21 @@ public class DeletionController {
         return deletions.deleteTask(id, confirm, caller.getName(), Precondition.fromHeader(ifMatch));
     }
 
+    /** PHASE 30 (ADR-035 §8): what deleting the project's whole Blueprint would take. */
+    @GetMapping("/api/projects/{id}/blueprint/deletion")
+    public com.aicompany.backend.deletion.DeletionPreview previewBlueprint(@PathVariable Long id) {
+        return deletions.previewBlueprint(id);
+    }
+
+    /** The whole Blueprint, never the code: admin-only, under the layout's tag, with the project's name typed back. */
+    @DeleteMapping("/api/projects/{id}/blueprint")
+    public org.springframework.http.ResponseEntity<Void> deleteBlueprint(@PathVariable Long id,
+                                @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+                                @RequestParam(required = false) String confirm, Authentication caller) {
+        deletions.deleteBlueprint(id, confirm, caller.getName(), Precondition.fromHeader(ifMatch));
+        return org.springframework.http.ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/api/projects/{id}/deletion")
     public DeletionService.Impact previewProject(@PathVariable Long id,
                                                  @RequestParam DeletionService.TasksPolicy tasks) {

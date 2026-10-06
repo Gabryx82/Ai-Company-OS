@@ -205,6 +205,21 @@
         "required" : [ "name", "role", "specialization" ],
         "type" : "object"
       },
+      "AgentVersion" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "version" : {
+            "format" : "int64",
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "id", "version" ],
+        "type" : "object"
+      },
       "Autostart" : {
         "properties" : {
           "autostart" : {
@@ -1136,6 +1151,28 @@
         "required" : [ "monthlyLimitUsd" ],
         "type" : "object"
       },
+      "BulkAgentDelete" : {
+        "properties" : {
+          "agents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AgentVersion"
+            },
+            "maxItems" : 500,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "inProgress" : {
+            "enum" : [ "BLOCK", "STOP" ],
+            "type" : "string"
+          },
+          "subagents" : {
+            "enum" : [ "DETACH", "DELETE" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "agents" ],
+        "type" : "object"
+      },
       "CodeGraph" : {
         "properties" : {
           "cycles" : {
@@ -1717,6 +1754,53 @@
         },
         "type" : "object"
       },
+      "DeletionPreview" : {
+        "properties" : {
+          "allowed" : {
+            "type" : "boolean"
+          },
+          "blockers" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "deletes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "detaches" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "files" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "keeps" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "subjects" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Subject"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "Document" : {
         "properties" : {
           "modified" : {
@@ -1775,6 +1859,12 @@
           },
           "planJson" : {
             "$ref" : "#/components/schemas/Document"
+          },
+          "referenceFiles" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Document"
+            },
+            "type" : "array"
           },
           "references" : {
             "items" : {
@@ -2771,6 +2861,27 @@
         },
         "type" : "object"
       },
+      "Planned" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "outcome" : {
+            "enum" : [ "CREATED", "EXISTING" ],
+            "type" : "string"
+          },
+          "parentName" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "templateKey" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "PriceRequest" : {
         "properties" : {
           "inputPricePerMtok" : {
@@ -3072,6 +3183,22 @@
         },
         "type" : "object"
       },
+      "ReferenceSelection" : {
+        "properties" : {
+          "paths" : {
+            "items" : {
+              "maxLength" : 1000,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 500,
+            "minItems" : 0,
+            "type" : "array"
+          }
+        },
+        "required" : [ "paths" ],
+        "type" : "object"
+      },
       "ResourceRef" : {
         "properties" : {
           "configuration" : {
@@ -3297,6 +3424,9 @@
           },
           "createdAt" : {
             "format" : "date-time",
+            "type" : "string"
+          },
+          "deletedAgentName" : {
             "type" : "string"
           },
           "failureDetail" : {
@@ -3711,6 +3841,17 @@
           "version" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Subject" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -4283,6 +4424,30 @@
   "openapi" : "3.1.0",
   "paths" : {
     "/api/admin/costs/budgets/{provider}" : {
+      "delete" : {
+        "operationId" : "removeBudget",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "cost-controller" ]
+      },
       "put" : {
         "operationId" : "budget",
         "parameters" : [ {
@@ -4668,6 +4833,35 @@
         "tags" : [ "harness-controller" ]
       }
     },
+    "/api/agent-templates/plan" : {
+      "get" : {
+        "operationId" : "installPlan",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "key",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Planned"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
     "/api/agent-templates/{key}/install" : {
       "post" : {
         "operationId" : "install",
@@ -4752,6 +4946,75 @@
         "tags" : [ "agent-controller" ]
       }
     },
+    "/api/agents/bulk-delete" : {
+      "post" : {
+        "operationId" : "deleteSelection",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BulkAgentDelete"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-deletion-controller" ]
+      }
+    },
+    "/api/agents/deletion" : {
+      "get" : {
+        "operationId" : "previewSelection",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "ids",
+          "required" : true,
+          "schema" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          }
+        }, {
+          "in" : "query",
+          "name" : "subagents",
+          "required" : false,
+          "schema" : {
+            "default" : "DETACH",
+            "enum" : [ "DETACH", "DELETE" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "inProgress",
+          "required" : false,
+          "schema" : {
+            "default" : "BLOCK",
+            "enum" : [ "BLOCK", "STOP" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionPreview"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-deletion-controller" ]
+      }
+    },
     "/api/agents/{agentId}/tasks" : {
       "get" : {
         "operationId" : "tasksOfAgent",
@@ -4783,6 +5046,49 @@
       }
     },
     "/api/agents/{id}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "subagents",
+          "required" : false,
+          "schema" : {
+            "default" : "DETACH",
+            "enum" : [ "DETACH", "DELETE" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "inProgress",
+          "required" : false,
+          "schema" : {
+            "default" : "BLOCK",
+            "enum" : [ "BLOCK", "STOP" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-deletion-controller" ]
+      },
       "get" : {
         "operationId" : "getAgent",
         "parameters" : [ {
@@ -5020,6 +5326,51 @@
           }
         },
         "tags" : [ "agent-controller" ]
+      }
+    },
+    "/api/agents/{id}/deletion" : {
+      "get" : {
+        "operationId" : "preview",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "subagents",
+          "required" : false,
+          "schema" : {
+            "default" : "DETACH",
+            "enum" : [ "DETACH", "DELETE" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "inProgress",
+          "required" : false,
+          "schema" : {
+            "default" : "BLOCK",
+            "enum" : [ "BLOCK", "STOP" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionPreview"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "agent-deletion-controller" ]
       }
     },
     "/api/agents/{id}/profile" : {
@@ -6217,6 +6568,38 @@
       }
     },
     "/api/projects/{id}/blueprint" : {
+      "delete" : {
+        "operationId" : "deleteBlueprint",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "confirm",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "deletion-controller" ]
+      },
       "get" : {
         "operationId" : "blueprintGraph",
         "parameters" : [ {
@@ -6241,6 +6624,33 @@
           }
         },
         "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/deletion" : {
+      "get" : {
+        "operationId" : "previewBlueprint",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionPreview"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "deletion-controller" ]
       }
     },
     "/api/projects/{id}/blueprint/edges" : {
@@ -7226,6 +7636,31 @@
       }
     },
     "/api/projects/{id}/files" : {
+      "delete" : {
+        "operationId" : "deleteDocument",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      },
       "get" : {
         "operationId" : "read",
         "parameters" : [ {
@@ -7293,6 +7728,40 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Document"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      }
+    },
+    "/api/projects/{id}/files/deletion" : {
+      "get" : {
+        "operationId" : "documentDeletion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionPreview"
                 }
               }
             },
@@ -7506,6 +7975,31 @@
       }
     },
     "/api/projects/{id}/references" : {
+      "delete" : {
+        "operationId" : "deleteReference",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      },
       "post" : {
         "operationId" : "reference",
         "parameters" : [ {
@@ -7541,6 +8035,36 @@
                 }
               }
             },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-workspace-controller" ]
+      }
+    },
+    "/api/projects/{id}/references/bulk-delete" : {
+      "post" : {
+        "operationId" : "deleteReferences",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReferenceSelection"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
             "description" : "OK"
           }
         },
@@ -7777,6 +8301,58 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ResourceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
+    "/api/resources/{key}" : {
+      "delete" : {
+        "operationId" : "deleteResource",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "harness-controller" ]
+      }
+    },
+    "/api/resources/{key}/deletion" : {
+      "get" : {
+        "operationId" : "resourceDeletion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionPreview"
                 }
               }
             },

@@ -32,7 +32,9 @@ public record RunResponse(
         String requestedBy,
         Instant createdAt,
         Instant startedAt,
-        Instant finishedAt
+        Instant finishedAt,
+        /** PHASE 30 (ADR-035): who did the run when that agent has since been deleted ({@code agentId} is then null). */
+        String deletedAgentName
 ) {
 
     public static RunResponse from(TaskRun run) {
@@ -40,6 +42,7 @@ public record RunResponse(
                 run.getRequestedModel(), run.getServedModel(), run.getSystemPrompt(), run.getUserPrompt(),
                 run.getOutput(), run.getFinishReason(), run.getFailureType(), run.getFailureDetail(),
                 run.getInputTokens(), run.getOutputTokens(), run.getLatencyMs(), run.getCorrelationId(),
-                run.getRequestedBy(), run.getCreatedAt(), run.getStartedAt(), run.getFinishedAt());
+                run.getRequestedBy(), run.getCreatedAt(), run.getStartedAt(), run.getFinishedAt(),
+                run.getAgentName());
     }
 }

@@ -627,4 +627,52 @@ class BlueprintApiTest extends AbstractPostgresTest {
                     .as(table).isZero();
         }
     }
+    /**
+     * PHASE 30 (ADR-035 §8): the whole Blueprint is deleted from the console -- an
+     * admin's decision, with the project's name typed back, under the layout's tag
+     * the canvas holds. The code is never touched, and a new scan rebuilds what the
+     * code says.
+     */
+    @Test
+    void theWholeBlueprintIsDeletedByAnAdminAndTheCodeIsUntouched() throws Exception {
+        scan();
+        createNode("{\"kind\":\"SERVICE\",\"name\":\"Disegnato a mano\"}");
+        Path code = folder.resolve("server/src/main/java/com/acme/task/TaskService.java");
+        byte[] before = Files.readAllBytes(code);
+        String admin = com.aicompany.backend.support.AdminSession.bearer(mockMvc);
+        String layoutTag = "\"" + graph().path("layout").path("version").asLong() + "\"";
+
+        mockMvc.perform(get(base + "/deletion"))
+                .andExpect(jsonPath("$.kind").value("BLUEPRINT"))
+                .andExpect(jsonPath("$.allowed").value(true))
+                .andExpect(jsonPath("$.deletes[0]").value(org.hamcrest.Matchers.containsString("1 disegnati a mano")));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(base)
+                        .header(HttpHeaders.IF_MATCH, layoutTag).param("confirm", projectName))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(base)
+                        .header(HttpHeaders.AUTHORIZATION, admin).param("confirm", projectName))
+                .andExpect(status().isPreconditionRequired());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(base)
+                        .header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, layoutTag).param("confirm", "no"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:delete-confirmation-mismatch"));
+        assertThat(graph().path("nodes").size()).isPositive();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(base)
+                        .header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, layoutTag)
+                        .param("confirm", projectName))
+                .andExpect(status().isNoContent());
+
+        JsonNode empty = graph();
+        assertThat(empty.path("nodes").size()).isZero();
+        assertThat(empty.path("edges").size()).isZero();
+        assertThat(empty.path("lastScan").isNull() || empty.path("lastScan").isMissingNode()).isTrue();
+        assertThat(Files.readAllBytes(code)).as("the code is never touched").isEqualTo(before);
+
+        // A scan rebuilds what the code asserts; the hand-drawn block does not come back.
+        scan();
+        assertThat(graph().path("nodes").size()).isPositive();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM blueprint_nodes WHERE project_id = ? AND origin = 'MANUAL'",
+                Integer.class, projectId)).isZero();
+    }
 }

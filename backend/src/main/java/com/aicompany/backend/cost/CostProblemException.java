@@ -13,6 +13,11 @@ public class CostProblemException extends ProblemException {
         super(problem, detail, Map.of());
     }
 
+    /** PHASE 30: removing a budget that is not there. */
+    public static CostProblemException budgetNotFound(String provider) {
+        return new CostProblemException(ApiProblem.RESOURCE_NOT_FOUND, "Provider '" + provider + "' has no budget");
+    }
+
     public static CostProblemException budgetRequired(String provider) {
         return new CostProblemException(ApiProblem.BUDGET_REQUIRED,
                 provider + " bills per token: an admin must set its monthly budget before any run (Consumi → Budget)");

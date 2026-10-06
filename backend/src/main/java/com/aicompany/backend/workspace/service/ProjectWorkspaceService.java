@@ -2,6 +2,8 @@ package com.aicompany.backend.workspace.service;
 
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.api.RequestValidationException;
+import com.aicompany.backend.deletion.DeletionPreview;
+import com.aicompany.backend.deletion.ManagedFiles;
 import com.aicompany.backend.hitl.AutonomyPolicy;
 import com.aicompany.backend.project.exception.ArchivedProjectIsImmutableException;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
@@ -16,6 +18,7 @@ import com.aicompany.backend.workspace.exception.WorkspacePathRefusedException;
 import com.aicompany.backend.workspace.exception.WorkspaceUnavailableException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -26,6 +29,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.Normalizer;
@@ -58,10 +62,15 @@ public class ProjectWorkspaceService implements ProjectFolders {
     public record Document(String path, long size, Instant modified) {
     }
 
+    /**
+     * {@code references} are the images of {@code references/}; {@code referenceFiles}
+     * (PHASE 30) everything else there -- notes, PDFs, the README -- so that every
+     * file of the folder is visible, and deletable, from the console.
+     */
     public record Documents(String workspacePath, boolean exists, Document masterPrompt, boolean masterPromptIsTemplate,
                             Document agents, Document implementationPlan, Document planJson,
                             List<Document> phases, List<Document> tasks, List<Document> references,
-                            List<Document> handoffs) {
+                            List<Document> handoffs, List<Document> referenceFiles) {
     }
 
     public record FileContent(String path, String contentType, byte[] bytes) {
@@ -72,11 +81,14 @@ public class ProjectWorkspaceService implements ProjectFolders {
 
     private final ProjectRepository projects;
     private final Path root;
+    private final JdbcTemplate jdbc;
 
     public ProjectWorkspaceService(ProjectRepository projects,
-                                   @Value("${aicos.workspace.root:${user.home}/AI-Company-Projects}") String root) {
+                                   @Value("${aicos.workspace.root:${user.home}/AI-Company-Projects}") String root,
+                                   JdbcTemplate jdbc) {
         this.projects = projects;
         this.root = Path.of(root).toAbsolutePath().normalize();
+        this.jdbc = jdbc;
     }
 
     // --- the profile ------------------------------------------------------------
@@ -185,7 +197,7 @@ public class ProjectWorkspaceService implements ProjectFolders {
         Path workspace = workspaceOf(projectId);
         if (!Files.isDirectory(workspace)) {
             return new Documents(workspace.toString(), false, null, false, null, null, null,
-                    List.of(), List.of(), List.of(), List.of());
+                    List.of(), List.of(), List.of(), List.of(), List.of());
         }
         Document master = document(workspace, "MASTER_PROMPT.md");
         boolean template = master != null && readTextOrEmpty(workspace.resolve("MASTER_PROMPT.md")).contains(TEMPLATE_MARKER);
@@ -196,7 +208,9 @@ public class ProjectWorkspaceService implements ProjectFolders {
                 list(workspace, "docs/phases", WorkspacePaths.TEXT_EXTENSIONS, 1),
                 list(workspace, "tasks", WorkspacePaths.TEXT_EXTENSIONS, 1),
                 list(workspace, "references", WorkspacePaths.IMAGE_EXTENSIONS, 3),
-                list(workspace, ".aicos/handoffs", WorkspacePaths.TEXT_EXTENSIONS, 1));
+                list(workspace, ".aicos/handoffs", WorkspacePaths.TEXT_EXTENSIONS, 1),
+                list(workspace, "references", null, 3).stream()
+                        .filter(d -> !WorkspacePaths.hasExtension(d.path(), WorkspacePaths.IMAGE_EXTENSIONS)).toList());
     }
 
     @Transactional(readOnly = true)
@@ -286,6 +300,88 @@ public class ProjectWorkspaceService implements ProjectFolders {
         } catch (IOException e) {
             throw new WorkspaceUnavailableException("The image could not be stored: " + e.getMessage());
         }
+    }
+
+    // --- deleting files of the workspace (PHASE 30, ADR-035 §5-6) -----------------------
+
+    /**
+     * Deletes one file of {@code references/}: an image or any other reference.
+     * A file that is not there is a 404 -- there is no record behind a reference,
+     * so a missing file is a missing reference.
+     */
+    @Transactional(readOnly = true)
+    public void deleteReference(Long projectId, String relative) {
+        Path workspace = writableWorkspace(projectId);
+        Path path = WorkspacePaths.reference(workspace, relative);
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+            throw new WorkspaceFileNotFoundException("No file '" + WorkspacePaths.relativeText(workspace, path)
+                    + "' in the project's references");
+        }
+        ManagedFiles.delete(workspace.resolve("references"), path);
+    }
+
+    /**
+     * Deletes a selection of {@code references/}: every path is checked before
+     * any file moves, and the files go all together or none does. Files already
+     * gone are skipped -- the state asked for is already true. Returns what was deleted.
+     */
+    @Transactional(readOnly = true)
+    public List<String> deleteReferences(Long projectId, List<String> relatives) {
+        if (relatives == null || relatives.isEmpty()) {
+            throw new RequestValidationException("paths", "must name at least one file");
+        }
+        if (relatives.size() > 500) {
+            throw new RequestValidationException("paths", "must name at most 500 files");
+        }
+        Path workspace = writableWorkspace(projectId);
+        List<Path> targets = relatives.stream().map(r -> WorkspacePaths.reference(workspace, r)).toList();
+        return ManagedFiles.delete(workspace.resolve("references"), targets).stream()
+                .map(p -> WorkspacePaths.relativeText(workspace, p)).toList();
+    }
+
+    /**
+     * What deleting a document would do. A document a task, a phase of the plan
+     * or a handoff record points at is not deleted: the row would point at
+     * nothing. Once that row is gone -- a task deleted, say -- the document is
+     * the operator's leftover, and it can go.
+     */
+    @Transactional(readOnly = true)
+    public DeletionPreview documentDeletion(Long projectId, String relative) {
+        Path workspace = workspaceOf(projectId);
+        Path path = WorkspacePaths.deletableDocument(workspace, relative);
+        String rel = WorkspacePaths.relativeText(workspace, path);
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+            throw new WorkspaceFileNotFoundException("No document '" + rel + "' in the project folder");
+        }
+        DeletionPreview.Builder preview = DeletionPreview.of("DOCUMENT").subject(rel, path.getFileName().toString())
+                .file(rel).deletes("Il file " + rel + " viene eliminato dalla cartella del progetto.");
+        for (String title : jdbc.queryForList("SELECT title FROM tasks WHERE project_id = ? AND document_path = ?",
+                String.class, projectId, rel)) {
+            preview.blocker("È il documento della task «" + title + "»: elimina la task, se vuoi eliminarlo.");
+        }
+        for (Map<String, Object> phase : jdbc.queryForList("SELECT number, title FROM project_phases "
+                + "WHERE project_id = ? AND document_path = ?", projectId, rel)) {
+            preview.blocker("È il documento della fase " + phase.get("number") + " «" + phase.get("title")
+                    + "» del piano.");
+        }
+        for (String title : jdbc.queryForList("SELECT DISTINCT t.title FROM task_handoffs h JOIN tasks t ON t.id = h.task_id "
+                + "WHERE t.project_id = ? AND h.document_path = ?", String.class, projectId, rel)) {
+            preview.blocker("Un handoff della task «" + title + "» lo registra: resta finché la task esiste.");
+        }
+        return preview.build();
+    }
+
+    @Transactional(readOnly = true)
+    public void deleteDocument(Long projectId, String relative) {
+        Path workspace = writableWorkspace(projectId);
+        documentDeletion(projectId, relative).requireAllowed();
+        ManagedFiles.delete(workspace, WorkspacePaths.deletableDocument(workspace, relative));
+    }
+
+    private Path writableWorkspace(Long projectId) {
+        Project project = projects.findById(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
+        requireWritable(project);
+        return workspaceOf(projectId);
     }
 
     public static List<String> referenceFolders() {
@@ -443,8 +539,10 @@ public class ProjectWorkspaceService implements ProjectFolders {
         }
         try (Stream<Path> files = Files.walk(base, depth)) {
             return files.filter(Files::isRegularFile)
+                    // PHASE 30: hidden files, and files half-way through a delete, are not documents.
+                    .filter(path -> !ManagedFiles.hidden(path))
                     .map(path -> WorkspacePaths.relativeText(workspace, path))
-                    .filter(rel -> WorkspacePaths.hasExtension(rel, extensions))
+                    .filter(rel -> extensions == null || WorkspacePaths.hasExtension(rel, extensions))
                     .sorted(Comparator.naturalOrder())
                     .map(rel -> document(workspace, rel))
                     .filter(java.util.Objects::nonNull)

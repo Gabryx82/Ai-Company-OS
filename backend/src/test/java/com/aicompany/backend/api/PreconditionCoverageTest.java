@@ -16,6 +16,7 @@ import com.aicompany.backend.task.service.TaskService;
 import com.aicompany.backend.user.service.AuthService;
 import com.aicompany.backend.binding.AgentConfigurationService;
 import com.aicompany.backend.harness.library.SkillLibrary;
+import com.aicompany.backend.deletion.AgentDeletionService;
 import com.aicompany.backend.deletion.DeletionService;
 import com.aicompany.backend.ecosystem.EcosystemService;
 import com.aicompany.backend.cost.CostService;
@@ -61,7 +62,7 @@ class PreconditionCoverageTest {
                     HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class,
                     AgentConfigurationService.class, SkillLibrary.class, DeletionService.class,
                     EcosystemService.class, CostService.class, BlueprintService.class, BlueprintScanService.class,
-                    ChangeProposalService.class);
+                    ChangeProposalService.class, AgentDeletionService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -108,7 +109,11 @@ class PreconditionCoverageTest {
             // action's task are creation. A scan reconciles the derived layer with the code -- the
             // server's bookkeeping of what the code says; what the operator wrote is protected by
             // overrides and by origins (a scan never touches a MANUAL block or relation), not by a tag.
-            "createNode", "createEdge", "propose", "requestAiAction", "scan");
+            "createNode", "createEdge", "propose", "requestAiAction", "scan",
+            // PHASE 30 (ADR-035): deleting a selection of agents names each one with the version the caller
+            // read; each is checked under its lock with a Precondition built from it -- one tag per row, which a
+            // single parameter cannot carry. The single delete takes its Precondition like any other write.
+            "deleteAll");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {
@@ -213,14 +218,19 @@ class PreconditionCoverageTest {
 
         assertThat(writePaths(HarnessService.class))
                 .containsExactlyInAnyOrder("create", "configure:Precondition", "attach", "detach", "allowSoftware",
-                        "disallowSoftware", "adopt", "drop");
+                        "disallowSoftware", "adopt", "drop", "deleteResource:Precondition");
 
         assertThat(writePaths(AgentTemplates.class)).containsExactlyInAnyOrder("install", "installAll",
                 "recordTemplateOrigins");
 
         // PHASE 20 (ADR-027): a delete is a write to the row it removes, under its tag.
         assertThat(writePaths(DeletionService.class))
-                .containsExactlyInAnyOrder("deleteTask:Precondition", "deleteProject:Precondition");
+                .containsExactlyInAnyOrder("deleteTask:Precondition", "deleteProject:Precondition",
+                        "deleteBlueprint:Precondition");
+
+        // PHASE 30 (ADR-035): one agent under its tag; a selection under one tag per agent.
+        assertThat(writePaths(AgentDeletionService.class))
+                .containsExactlyInAnyOrder("delete:Precondition", "deleteAll");
 
         assertThat(writePaths(DailyService.class))
                 .containsExactlyInAnyOrder("create", "update:Precondition", "remove:Precondition", "carryOver");

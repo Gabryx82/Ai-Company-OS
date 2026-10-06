@@ -136,6 +136,21 @@ public class CatalogBootstrap implements ApplicationRunner {
         });
     }
 
+    /**
+     * PHASE 30 (ADR-035 §7): the keys a catalog file ships -- the entries a start
+     * inserts again whenever they are missing. Deleting one of them would not
+     * last, so the delete refuses them and says why.
+     */
+    public static java.util.Set<String> shippedKeys(String resource) {
+        try (InputStream in = new ClassPathResource(resource).getInputStream()) {
+            java.util.Set<String> keys = new java.util.HashSet<>();
+            JsonMapper.builder().build().readTree(in).forEach(entry -> keys.add(entry.path("key").asString()));
+            return java.util.Set.copyOf(keys);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Catalog " + resource + " is unreadable", e);
+        }
+    }
+
     private <T> List<T> read(String resource, Class<T[]> type) {
         try (InputStream in = new ClassPathResource(resource).getInputStream()) {
             return List.of(json.readValue(in, type));

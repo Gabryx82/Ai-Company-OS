@@ -26,11 +26,11 @@ import java.util.List;
 /**
  * The agent registry.
  *
- * <p>There is no {@code DELETE} mapping, for the reason ADR-004 §3 gave for
- * projects: an agent is destined to be the root of assignments, runs and memory,
- * and deleting a root asks every future subdomain "what happens to the children".
- * Agents are deactivated. Spring answers 405 on its own, which says "not by this
- * route" rather than "does not exist", and that is the correct message.
+ * <p>The {@code DELETE} is not here. ADR-004 §3 once excluded it -- an agent is
+ * the root of assignments, runs and memory, and deleting a root asks every
+ * subdomain "what happens to the children". PHASE 30 (ADR-035 §2) answered that
+ * question, child by child, in {@code AgentDeletionService}: the delete lives
+ * next to the other real deletes, and deactivating stays the reversible gesture.
  *
  * <p>Errors go through the single global contract of ADR-007. There is no advice
  * here, and adding one would reintroduce the precedence problem TASK-005 removed.

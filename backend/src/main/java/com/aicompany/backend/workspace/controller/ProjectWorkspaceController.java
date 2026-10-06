@@ -14,6 +14,7 @@ import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -103,6 +104,40 @@ public class ProjectWorkspaceController {
         byte[] bytes = request.getInputStream().readNBytes(ProjectWorkspaceService.MAX_REFERENCE_BYTES + 1);
         return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
                 .body(service.storeReference(id, folder, name, bytes));
+    }
+
+    // --- deleting from the console (PHASE 30, ADR-035 §5-6) ----------------------------
+
+    public record ReferenceSelection(@jakarta.validation.constraints.NotEmpty
+                                     @Size(max = 500) List<@NotNull @Size(max = 1000) String> paths) {
+    }
+
+    /** One file of references/. 404 when it is not there; refused outside references/. */
+    @DeleteMapping("/api/projects/{id}/references")
+    public ResponseEntity<Void> deleteReference(@PathVariable Long id, @RequestParam String path) {
+        service.deleteReference(id, path);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** A selection of references/, all together or none; files already gone are skipped. */
+    @PostMapping("/api/projects/{id}/references/bulk-delete")
+    public ResponseEntity<Void> deleteReferences(@PathVariable Long id, @Valid @RequestBody ReferenceSelection body) {
+        service.deleteReferences(id, body.paths());
+        return ResponseEntity.noContent().build();
+    }
+
+    /** What deleting a document would do, and whether something still points at it. */
+    @GetMapping("/api/projects/{id}/files/deletion")
+    public com.aicompany.backend.deletion.DeletionPreview documentDeletion(@PathVariable Long id,
+                                                                         @RequestParam String path) {
+        return service.documentDeletion(id, path);
+    }
+
+    /** A document nothing points at any more: under docs/, tasks/ or .aicos/handoffs/. */
+    @DeleteMapping("/api/projects/{id}/files")
+    public ResponseEntity<Void> deleteDocument(@PathVariable Long id, @RequestParam String path) {
+        service.deleteDocument(id, path);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/api/projects/{id}/files")

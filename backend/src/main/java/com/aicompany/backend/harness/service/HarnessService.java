@@ -4,6 +4,9 @@ import com.aicompany.backend.agent.exception.AgentNotFoundException;
 import com.aicompany.backend.agent.model.Agent;
 import com.aicompany.backend.agent.repository.AgentRepository;
 import com.aicompany.backend.api.Precondition;
+import com.aicompany.backend.catalog.CatalogBootstrap;
+import com.aicompany.backend.deletion.DeletionPreview;
+import com.aicompany.backend.harness.library.SkillLibrary;
 import com.aicompany.backend.harness.exception.AgentHierarchyCycleException;
 import com.aicompany.backend.harness.exception.HarnessResourceKeyConflictException;
 import com.aicompany.backend.harness.exception.HarnessResourceNotFoundException;
@@ -52,14 +55,69 @@ public class HarnessService {
     private final SoftwareRepository software;
     private final ProjectRepository projects;
     private final JdbcTemplate jdbc;
+    private final SkillLibrary library;
+    private final Set<String> shipped = CatalogBootstrap.shippedKeys("catalog/resources.json");
 
     public HarnessService(AgentRepository agents, HarnessResourceRepository resources, SoftwareRepository software,
-                          ProjectRepository projects, JdbcTemplate jdbc) {
+                          ProjectRepository projects, JdbcTemplate jdbc, SkillLibrary library) {
         this.agents = agents;
         this.resources = resources;
         this.software = software;
         this.projects = projects;
         this.jdbc = jdbc;
+        this.library = library;
+    }
+
+    // --- deleting an entry (PHASE 30, ADR-035 §7) ------------------------------------
+
+    /**
+     * What deleting an entry would do. The agents and projects that use it lose
+     * the link and stay; a skill or knowledge entry takes its file with it. An
+     * entry the shipped catalog contains is refused: the next start would insert
+     * it again, so the delete would not last -- unlink it instead.
+     */
+    @Transactional(readOnly = true)
+    public DeletionPreview resourceDeletion(String key) {
+        return impact(resource(key));
+    }
+
+    /** Deletes the entry, its links and its file, all in this transaction. Under the entry's tag (ADR-009). */
+    public void deleteResource(String key, Precondition precondition) {
+        HarnessResource resource = resources.findByKeyForUpdate(key)
+                .orElseThrow(() -> new HarnessResourceNotFoundException("No resource '" + key + "' in the catalog"));
+        precondition.requireSatisfiedBy(resource.getVersion());
+        impact(resource).requireAllowed();
+        jdbc.update("DELETE FROM agent_resources WHERE resource_id = ?", resource.getId());
+        jdbc.update("DELETE FROM project_resources WHERE resource_id = ?", resource.getId());
+        resources.delete(resource);
+        resources.flush();
+        // After the row: a refusal of the database leaves the file where it is.
+        library.deleteFile(resource);
+    }
+
+    private DeletionPreview impact(HarnessResource resource) {
+        DeletionPreview.Builder preview = DeletionPreview.of("RESOURCE").subject(resource.getKey(), resource.getName())
+                .deletes("La voce «" + resource.getName() + "» (" + resource.getKind() + ") esce dal catalogo.");
+        if (shipped.contains(resource.getKey())) {
+            preview.blocker("«" + resource.getName() + "» è una voce del catalogo di AI Company OS: tornerebbe al "
+                    + "prossimo avvio. Scollegala dagli agenti e dai progetti, invece.");
+        }
+        List<String> linkedAgents = jdbc.queryForList("SELECT a.name FROM agent_resources l JOIN agents a "
+                + "ON a.id = l.agent_id WHERE l.resource_id = ? ORDER BY a.name", String.class, resource.getId());
+        if (!linkedAgents.isEmpty()) {
+            preview.detaches("Gli agenti che la usano la perdono e restano: " + String.join(", ", linkedAgents) + ".");
+        }
+        List<String> linkedProjects = jdbc.queryForList("SELECT p.name FROM project_resources l JOIN projects p "
+                + "ON p.id = l.project_id WHERE l.resource_id = ? ORDER BY p.name", String.class, resource.getId());
+        if (!linkedProjects.isEmpty()) {
+            preview.detaches("I progetti che l'hanno adottata la perdono e restano: " + String.join(", ", linkedProjects) + ".");
+        }
+        library.existingFile(resource).ifPresent(file -> {
+            preview.file(file);
+            preview.deletes("Il file " + file + " viene eliminato dalla libreria" + (resource.getKind() == HarnessResource.Kind.SKILL
+                    ? "; gli altri file della sua cartella restano." : "."));
+        });
+        return preview.build();
     }
 
     // --- the catalog ------------------------------------------------------------

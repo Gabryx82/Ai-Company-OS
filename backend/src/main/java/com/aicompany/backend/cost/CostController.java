@@ -59,6 +59,17 @@ public class CostController {
                 Optional.ofNullable(ifMatch).map(Precondition::fromHeader));
     }
 
+    /**
+     * PHASE 30 (ADR-035): removes a provider's budget. Its paid runs are then
+     * refused until a new budget is set (budget-required) -- the safe direction.
+     */
+    @org.springframework.web.bind.annotation.DeleteMapping("/api/admin/costs/budgets/{provider}")
+    public ResponseEntity<Void> removeBudget(@PathVariable String provider,
+                                             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+        costs.removeBudget(provider, Precondition.fromHeader(ifMatch));
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/api/admin/costs/prices/{model}")
     public ResponseEntity<PriceResponse> price(@PathVariable String model,
                                                @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,

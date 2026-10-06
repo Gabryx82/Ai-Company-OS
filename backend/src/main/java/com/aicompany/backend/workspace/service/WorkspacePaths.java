@@ -74,6 +74,49 @@ public final class WorkspacePaths {
         return path;
     }
 
+    /**
+     * PHASE 30 (ADR-035 §5): a file under {@code references/}, for deleting it.
+     * Inside the workspace by {@link #inside}, under {@code references/} and not
+     * the folder itself, and -- checked without following links -- not a link and
+     * not a folder. Whether it exists is the caller's question.
+     */
+    public static Path reference(Path workspace, String relative) {
+        Path path = inside(workspace, relative);
+        String rel = relativeText(workspace, path);
+        if (!rel.startsWith("references/")) {
+            throw new WorkspacePathRefusedException("'" + relative + "' is not a file of references/");
+        }
+        requireDeletableFile(path, relative);
+        return path;
+    }
+
+    /**
+     * PHASE 30 (ADR-035 §6): a document the console may delete -- text under
+     * {@code docs/}, {@code tasks/} or {@code .aicos/handoffs/}. The files at the
+     * root of the workspace (MASTER_PROMPT.md, AGENTS.md, CLAUDE.md) and the
+     * manifest and plan in {@code .aicos/} are its structure: they are edited, or
+     * recreated by «Prepara workspace», never deleted from here.
+     */
+    public static Path deletableDocument(Path workspace, String relative) {
+        Path path = inside(workspace, relative);
+        String rel = relativeText(workspace, path);
+        boolean place = DELETABLE_DOCUMENT_ROOTS.stream().anyMatch(rel::startsWith);
+        if (!place || !hasExtension(rel, TEXT_EXTENSIONS)) {
+            throw new WorkspacePathRefusedException("'" + relative + "' is not a deletable document (text under "
+                    + String.join(", ", DELETABLE_DOCUMENT_ROOTS) + ")");
+        }
+        requireDeletableFile(path, relative);
+        return path;
+    }
+
+    static final List<String> DELETABLE_DOCUMENT_ROOTS = List.of("docs/", "tasks/", ".aicos/handoffs/");
+
+    private static void requireDeletableFile(Path path, String relative) {
+        if (Files.isSymbolicLink(path) || Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            throw new WorkspacePathRefusedException("'" + relative + "' is not a file");
+        }
+    }
+
     public static String relativeText(Path workspace, Path path) {
         return workspace.toAbsolutePath().normalize().relativize(path).toString().replace('\\', '/');
     }

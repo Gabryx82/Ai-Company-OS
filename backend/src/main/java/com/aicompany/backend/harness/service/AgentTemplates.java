@@ -55,6 +55,14 @@ public class AgentTemplates {
     public record Installed(String name, Long agentId, Long parentId, Outcome outcome) {
     }
 
+    /**
+     * PHASE 30 (ADR-035 §4): what an install would do, before it does it -- each
+     * agent of the template, with the parent it would get and whether it would be
+     * created or found already there (by name, the rule {@link #install} applies).
+     */
+    public record Planned(String templateKey, String name, String role, String parentName, Outcome outcome) {
+    }
+
     private final List<Template> templates;
     private final AgentService agentService;
     private final AgentRepository agents;
@@ -75,6 +83,30 @@ public class AgentTemplates {
     @Transactional(readOnly = true)
     public List<Template> all() {
         return templates;
+    }
+
+    /**
+     * The preview of an install: one template, or every template when
+     * {@code key} is null. Read-only; the same name rule as {@link #install}, so
+     * what it says is what the install does -- nothing is ever duplicated.
+     */
+    @Transactional(readOnly = true)
+    public List<Planned> plan(String key) {
+        List<Template> chosen = key == null ? templates : List.of(templates.stream()
+                .filter(t -> t.key().equals(key)).findFirst()
+                .orElseThrow(() -> new HarnessResourceNotFoundException("No agent template '" + key + "'")));
+        java.util.Set<String> existing = new java.util.HashSet<>();
+        agents.findAllByOrderByIdAsc().forEach(a -> existing.add(a.getName().toLowerCase(java.util.Locale.ROOT)));
+        List<Planned> out = new ArrayList<>();
+        chosen.forEach(t -> plan(t, t.key(), null, existing, out));
+        return out;
+    }
+
+    private static void plan(Template t, String rootKey, String parentName, java.util.Set<String> existing,
+                             List<Planned> out) {
+        boolean present = !existing.add(t.name().toLowerCase(java.util.Locale.ROOT));
+        out.add(new Planned(rootKey, t.name(), t.role(), parentName, present ? Outcome.EXISTING : Outcome.CREATED));
+        t.children().forEach(child -> plan(child, rootKey, t.name(), existing, out));
     }
 
     /** Installs one template and its sub-agents, in one transaction. */

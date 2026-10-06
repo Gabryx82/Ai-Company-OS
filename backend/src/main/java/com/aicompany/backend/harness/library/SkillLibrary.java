@@ -168,6 +168,37 @@ public class SkillLibrary {
     }
 
     /**
+     * PHASE 30 (ADR-035 §7): removes the file of an entry being deleted, tied to
+     * the transaction that deletes its row -- both go, or neither. The path comes
+     * from the entry's kind and key, never from a request. Siblings of a skill's
+     * SKILL.md stay: they are files of the operator. Returns the relative path
+     * when a file existed.
+     *
+     * <p>Read-only for the database, like every file write of the workspace: the
+     * row is the caller's, under the caller's tag, in the caller's transaction --
+     * which this joins, so the file follows that transaction's outcome.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Optional<String> deleteFile(HarnessResource resource) {
+        if (!fileBacked(resource.getKind())) {
+            return java.util.Optional.empty();
+        }
+        String relative = relativePath(resource.getKind(), resource.getKey());
+        return com.aicompany.backend.deletion.ManagedFiles.delete(root, pathOf(relative))
+                ? java.util.Optional.of(relative) : java.util.Optional.empty();
+    }
+
+    /** Where an entry's file is, relative to the library, when it exists. */
+    @Transactional(readOnly = true)
+    public java.util.Optional<String> existingFile(HarnessResource resource) {
+        if (!fileBacked(resource.getKind())) {
+            return java.util.Optional.empty();
+        }
+        String relative = relativePath(resource.getKind(), resource.getKey());
+        return Files.isRegularFile(pathOf(relative)) ? java.util.Optional.of(relative) : java.util.Optional.empty();
+    }
+
+    /**
      * Reads the library folder and brings the index in line with it: files
      * nobody indexed become entries (origin FILE), indexed files update their
      * entry. Nothing is deleted.

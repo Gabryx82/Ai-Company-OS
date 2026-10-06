@@ -121,6 +121,73 @@ public class DeletionService {
         return impact;
     }
 
+    // --- a project's Blueprint (PHASE 30, ADR-035 §8) -----------------------------------
+
+    /**
+     * What deleting a project's Blueprint would take: every block, relation,
+     * position, scan and proposed change. The code is never touched (ADR-033), and
+     * the tasks created from accepted proposals stay -- they are work, not the
+     * drawing of it. A new scan rebuilds what the code asserts; the manual blocks
+     * and the arrangement do not come back.
+     */
+    @Transactional(readOnly = true)
+    public com.aicompany.backend.deletion.DeletionPreview previewBlueprint(Long projectId) {
+        Project project = projects.findById(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
+        return blueprintImpact(project);
+    }
+
+    /**
+     * Deletes the whole Blueprint, under the layout's tag (the one the canvas
+     * holds) and with the project's name typed back. The project row is locked
+     * first: every Blueprint write -- a scan included -- takes it shared, so none
+     * runs alongside.
+     */
+    public void deleteBlueprint(Long projectId, String confirmation, String by, Precondition precondition) {
+        Project project = projects.findByIdForUpdate(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
+        if (project.isArchived()) {
+            throw new com.aicompany.backend.project.exception.ArchivedProjectIsImmutableException();
+        }
+        Long layoutVersion = jdbc.queryForList("SELECT version FROM blueprint_layouts WHERE project_id = ? FOR UPDATE",
+                Long.class, projectId).stream().findFirst().orElse(0L);
+        precondition.requireSatisfiedBy(layoutVersion);
+        requireConfirmation(project.getName(), confirmation);
+        com.aicompany.backend.deletion.DeletionPreview impact = blueprintImpact(project).requireAllowed();
+        jdbc.update("DELETE FROM blueprint_change_proposals WHERE project_id = ?", projectId);
+        jdbc.update("DELETE FROM blueprint_edges WHERE project_id = ?", projectId);
+        jdbc.update("UPDATE blueprint_nodes SET parent_id = NULL WHERE project_id = ?", projectId);
+        jdbc.update("DELETE FROM blueprint_nodes WHERE project_id = ?", projectId);
+        jdbc.update("DELETE FROM blueprint_scans WHERE project_id = ?", projectId);
+        jdbc.update("DELETE FROM blueprint_layouts WHERE project_id = ?", projectId);
+        log.record(SecurityLog.DATA_DELETED, by, null, "blueprint of project " + projectId + " «" + project.getName()
+                + "»: " + String.join(" ", impact.deletes()));
+    }
+
+    private com.aicompany.backend.deletion.DeletionPreview blueprintImpact(Project project) {
+        long id = project.getId();
+        int blocks = count("SELECT count(*) FROM blueprint_nodes WHERE project_id = ?", id);
+        int manual = count("SELECT count(*) FROM blueprint_nodes WHERE project_id = ? AND origin = 'MANUAL'", id);
+        int relations = count("SELECT count(*) FROM blueprint_edges WHERE project_id = ?", id);
+        int scans = count("SELECT count(*) FROM blueprint_scans WHERE project_id = ?", id);
+        int proposals = count("SELECT count(*) FROM blueprint_change_proposals WHERE project_id = ?", id);
+        int withTask = count("SELECT count(*) FROM blueprint_change_proposals WHERE project_id = ? AND task_id IS NOT NULL", id);
+        com.aicompany.backend.deletion.DeletionPreview.Builder preview =
+                com.aicompany.backend.deletion.DeletionPreview.of("BLUEPRINT").subject(id, project.getName());
+        preview.deletes(blocks + " blocchi (" + manual + " disegnati a mano), " + relations + " relazioni, la disposizione "
+                + "sul canvas e " + scans + " scansioni.");
+        if (proposals > 0) {
+            preview.deletes(proposals + " proposte di modifica al codice.");
+        }
+        if (withTask > 0) {
+            preview.keeps("Le " + withTask + " task create da proposte accettate restano.");
+        }
+        preview.keeps("Il codice del progetto non viene toccato: una nuova scansione ricostruisce ciò che il codice "
+                + "dice; i blocchi manuali e la disposizione non tornano.");
+        if (project.isArchived()) {
+            preview.blocker("Il progetto è archiviato: il suo Blueprint si consulta ma non si modifica. Ripristinalo prima.");
+        }
+        return preview.build();
+    }
+
     // --- helpers -------------------------------------------------------------------------
 
     private void removeTaskRows(List<Long> taskIds) {

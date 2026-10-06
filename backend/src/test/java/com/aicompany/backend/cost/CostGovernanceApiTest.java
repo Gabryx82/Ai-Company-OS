@@ -136,6 +136,58 @@ class CostGovernanceApiTest extends AbstractPostgresTest {
         assertThat(awaitCost(second)).isEqualByComparingTo("0");
     }
 
+    /** PHASE 30 (ADR-035): removing a budget stops paid runs again; it never frees them. */
+    @Test
+    void aBudgetIsRemovedUnderItsTagAndPaidRunsWaitForANewOne() throws Exception {
+        mockMvc.perform(put("/api/admin/costs/budgets/anthropic").header(HttpHeaders.AUTHORIZATION, admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"monthlyLimitUsd\":5}"))
+                .andExpect(status().isOk());
+        long version = jdbc.queryForObject("SELECT version FROM cost_budgets WHERE provider_key = 'anthropic'", Long.class);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/admin/costs/budgets/anthropic")
+                        .header(HttpHeaders.IF_MATCH, "\"" + version + "\""))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/admin/costs/budgets/anthropic")
+                        .header(HttpHeaders.AUTHORIZATION, admin))
+                .andExpect(status().isPreconditionRequired());
+        // A tag read before somebody changed the budget: the removal is refused, the budget stays.
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/admin/costs/budgets/anthropic")
+                        .header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, "\"" + (version + 5) + "\""))
+                .andExpect(status().isPreconditionFailed());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM cost_budgets", Integer.class)).isOne();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/admin/costs/budgets/anthropic")
+                        .header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, "\"" + version + "\""))
+                .andExpect(status().isNoContent());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM cost_budgets", Integer.class)).isZero();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/admin/costs/budgets/anthropic")
+                        .header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, "\"" + version + "\""))
+                .andExpect(status().isNotFound());
+
+        run(task(), PAID).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:budget-required"));
+    }
+
+    /** PHASE 30 (ADR-035): a deleted agent's runs still count, under the name it had. */
+    @Test
+    void theSpendOfADeletedAgentStaysUnderItsName() throws Exception {
+        long t = task();
+        run(t, "echo:default").andExpect(status().isAccepted());
+        awaitCost(t);
+        // The run started the task; finished work does not hold the agent back.
+        jdbc.update("UPDATE tasks SET status = 'DONE' WHERE id = ?", t);
+        String name = jdbc.queryForObject("SELECT name FROM agents WHERE id = ?", String.class, agentId);
+        String agentTag = mockMvc.perform(get("/api/agents/" + agentId)).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/agents/" + agentId)
+                        .header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, agentTag))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/costs"))
+                .andExpect(jsonPath("$.agents[?(@.agentName == '" + name + "')].runs").value(1))
+                .andExpect(jsonPath("$.agents[?(@.agentName == '" + name + "')].agentId").value(org.hamcrest.Matchers.contains(org.hamcrest.Matchers.nullValue())));
+        jdbc.update("DELETE FROM task_runs WHERE task_id = ?", t);
+        jdbc.update("DELETE FROM tasks WHERE id = ?", t);
+    }
+
     @Test
     void budgetsAndPricesAreAnAdminsDecision() throws Exception {
         mockMvc.perform(put("/api/admin/costs/budgets/anthropic").contentType(MediaType.APPLICATION_JSON)

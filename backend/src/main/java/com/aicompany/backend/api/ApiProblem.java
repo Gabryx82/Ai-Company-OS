@@ -298,6 +298,14 @@ public enum ApiProblem {
 
     DELETE_CONFIRMATION_MISMATCH("delete-confirmation-mismatch", HttpStatus.BAD_REQUEST,
             "Confirmation required", "A delete needs the name of what is deleted, typed back"),
+    /**
+     * PHASE 30 (ADR-035): something depends on what would be deleted and cannot
+     * be detached -- work in progress, a record that points at a document, an
+     * entry the shipped catalog would put back at the next start. The detail
+     * says what, so the caller knows what to do first.
+     */
+    DELETION_BLOCKED("deletion-blocked", HttpStatus.CONFLICT,
+            "Deletion blocked", "Something depends on it that cannot be detached"),
 
     // --- cost governance (PHASE 24, ADR-031) -----------------------------------------------
 
