@@ -131,7 +131,7 @@ function ConfigureService({ service, onClose, onSaved }: {
         <Field label="URL di salute" hint="Risponde quando il servizio è pronto: serve a non avviarlo due volte e a sapere quando è partito.">
           <input value={healthUrl} onChange={(e) => setHealthUrl(e.target.value)} placeholder="http://localhost:8800" /></Field>
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        <div className="row"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
+        <div className="row modal-actions"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" type="submit">Salva</button></div>
       </form>
     </Modal>

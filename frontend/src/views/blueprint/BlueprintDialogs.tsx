@@ -82,7 +82,7 @@ export function AddBlockDialog({ projectId, vocabulary, at, onClose, onCreated }
         <Field label="Note"><input value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
         <Field label="Tag" hint="Separati da virgola."><input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="rag, core" /></Field>
       </div>
-      <div className="row">
+      <div className="row modal-actions">
         <span className="spacer" />
         <button className="btn" onClick={onClose}>Annulla</button>
         <button className="btn btn-primary" disabled={busy || !name.trim()} onClick={create}>{busy ? "Creo…" : "Crea blocco"}</button>
@@ -165,7 +165,7 @@ export function RelationDialog({ projectId, vocabulary, blocks, source, target, 
                                                          onChange={() => setOrigin("PROPOSED")} /> Proposta (da confermare)</label>
       </div>
       <div className="muted" style={{ fontSize: 12 }}>La relazione vive nel Blueprint: per portarla nel codice, dall'Inspector «Proponi la modifica al codice».</div>
-      <div className="row"><span className="spacer" />
+      <div className="row modal-actions"><span className="spacer" />
         <button className="btn" onClick={onClose}>Annulla</button>
         <button className="btn btn-primary" disabled={to === null} onClick={create}>Crea relazione</button>
       </div>

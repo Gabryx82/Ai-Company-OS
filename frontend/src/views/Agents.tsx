@@ -457,7 +457,7 @@ function NewAgentModal({ onClose, onCreated }: { onClose: () => void; onCreated:
         <Field label="Specializzazione" error={errors.specialization}><input value={specialization} onChange={(e) => setSpecialization(e.target.value)} required /></Field>
         <div className="muted" style={{ fontSize: 12.5 }}>Modello, execution target, prompt e skill si configurano subito dopo, nell'editor dell'agente.</div>
         <ProblemNote problem={problem} />
-        <div className="row"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
+        <div className="row modal-actions"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" type="submit">Crea e configura</button></div>
       </form>
     </Modal>

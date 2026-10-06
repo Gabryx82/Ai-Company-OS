@@ -138,7 +138,10 @@ tr:last-child td { border-bottom: 0; }
 .overlay { position: fixed; inset: 0; background: rgba(2, 6, 16, 0.6); display: flex; justify-content: flex-end; z-index: 10; }
 .overlay.center { justify-content: center; align-items: center; }
 .drawer { width: min(720px, 100%); height: 100%; overflow-y: auto; background: var(--surface); border-left: 1px solid var(--border); padding: 20px 22px; display: grid; gap: 16px; align-content: start; }
-.modal { width: min(520px, calc(100% - 32px)); background: var(--surface); border-radius: var(--radius); padding: 20px; display: grid; gap: 14px; box-shadow: var(--shadow); }
+.modal { width: min(520px, calc(100% - 32px)); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); background: var(--surface);
+  border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow); }
+.modal-head { flex: none; }
+.modal-body { display: grid; gap: 14px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 .section { display: grid; gap: 10px; }
 .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 
@@ -491,3 +494,8 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .select-box { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: none;
   border: 1.5px solid var(--border-strong); border-radius: 4px; color: #fff; }
 .select-box.is-on { background: var(--accent); border-color: var(--accent); }
+/* PHASE 30: a dialog's actions stay in view while its content scrolls (assign a task, confirm, save). */
+.modal-actions { position: sticky; bottom: -1px; z-index: 1; background: var(--surface); padding: 10px 0 2px;
+  border-top: 1px solid var(--border); margin-top: 2px; }
+.assign-list { max-height: min(62vh, 560px); overflow-y: auto; align-content: start; }
+@media (max-width: 860px) { .assign-list { max-height: none; overflow: visible; } }

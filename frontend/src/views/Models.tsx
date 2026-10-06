@@ -130,7 +130,7 @@ function PriceModal({ model, onClose, onSaved }: { model: CatalogModel; onClose:
         <Field label="Token in ingresso"><input type="number" step="0.0001" min="0" value={input} onChange={(e) => setInput(e.target.value)} /></Field>
         <Field label="Token in uscita"><input type="number" step="0.0001" min="0" value={output} onChange={(e) => setOutput(e.target.value)} /></Field>
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        <div className="row"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
+        <div className="row modal-actions"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" type="submit">Salva</button></div>
       </form>
     </Modal>

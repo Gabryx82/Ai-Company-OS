@@ -245,7 +245,7 @@ function CreateProject({ types, onClose, onCreated }: {
             </select></Field>
           <div className="notice">Verranno creati <code>MASTER_PROMPT.md</code>, <code>AGENTS.md</code>, <code>CLAUDE.md</code>,
             <code> docs/</code>, <code>tasks/</code>, <code>references/</code> e <code>.aicos/</code>.</div>
-          <div className="row"><button className="btn" onClick={() => setStep(2)}>Indietro</button><span className="spacer" />
+          <div className="row modal-actions"><button className="btn" onClick={() => setStep(2)}>Indietro</button><span className="spacer" />
             <button className="btn btn-primary" disabled={busy} onClick={create}>Crea progetto</button></div>
         </div>
       )}

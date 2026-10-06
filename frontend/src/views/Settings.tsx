@@ -267,7 +267,7 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
         <Field label="Password iniziale" hint="Da comunicare alla persona: al primo accesso le verrà chiesto di cambiarla.">
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required /></Field>
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        <div className="row"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
+        <div className="row modal-actions"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" type="submit">Crea utente</button></div>
       </form>
     </Modal>
@@ -293,7 +293,7 @@ function ResetModal({ user, onClose, onDone }: { user: UserInfo; onClose: () => 
         <p className="muted">Le sessioni aperte di {user.username} verranno chiuse e al prossimo accesso dovrà scegliere una nuova password.</p>
         <Field label="Password temporanea"><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required /></Field>
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        <div className="row"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
+        <div className="row modal-actions"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" type="submit">Reimposta</button></div>
       </form>
     </Modal>

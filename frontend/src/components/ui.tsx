@@ -61,8 +61,9 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
   return (
     <div className="overlay center" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={title} style={wide ? { width: "min(860px, calc(100% - 32px))" } : undefined}>
-        <div className="row"><h2>{title}</h2><span className="spacer" /><button className="btn btn-small" onClick={onClose}>Chiudi</button></div>
-        {children}
+        <div className="row modal-head"><h2>{title}</h2><span className="spacer" /><button className="btn btn-small" onClick={onClose}>Chiudi</button></div>
+        {/* PHASE 30: the dialog never grows past the window; its content scrolls, the title and Chiudi stay. */}
+        <div className="modal-body">{children}</div>
       </div>
     </div>
   );

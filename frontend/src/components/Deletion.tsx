@@ -148,7 +148,7 @@ export function ConfirmDeletion({ title, subject, intro, loadPreview, preview: g
           </label>
         )}
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        <div className="row">
+        <div className="row modal-actions">
           <span className="spacer" />
           <button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-danger btn-danger-solid" type="submit" disabled={!ready}>

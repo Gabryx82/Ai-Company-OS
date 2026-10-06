@@ -127,7 +127,7 @@ function BudgetModal({ provider, current, onClose, onSaved }: {
         <Field label="Soglia di avviso (%)"><input type="number" min="1" max="100" value={alert} onChange={(e) => setAlert(e.target.value)} /></Field>
         <div className="muted" style={{ fontSize: 12.5 }}>Il prezzo per milione di token di ogni modello si imposta nella pagina Modelli.</div>
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        <div className="row"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
+        <div className="row modal-actions"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" type="submit">Salva</button></div>
       </form>
     </Modal>

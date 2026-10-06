@@ -127,7 +127,7 @@ function CreateTask({ agents, projects, onClose, onCreated }: {
           </Field>
         </div>
         <ProblemNote problem={problem} />
-        <div className="row"><span className="spacer" /><button className="btn btn-primary" type="submit">Crea</button></div>
+        <div className="row modal-actions"><span className="spacer" /><button className="btn btn-primary" type="submit">Crea</button></div>
       </form>
     </Modal>
   );

@@ -325,7 +325,7 @@ function AssignModal({ task, project, bindings, suggestions, current, onClose, o
             </div>
           )}
         </div>
-        <div className="stack" style={{ maxHeight: "62vh", overflow: "auto" }}>
+        <div className="stack assign-list">
           {ranked.map((b) => (
             <button key={b.id} className="agent-card" aria-pressed={selected === b.id} onClick={() => setSelected(b.id)}>
               <div className="row">
@@ -342,7 +342,7 @@ function AssignModal({ task, project, bindings, suggestions, current, onClose, o
           {ranked.length === 0 && <div className="muted">Nessun agente attivo.</div>}
         </div>
       </div>
-      <div className="row" style={{ marginTop: 12 }}>
+      <div className="row modal-actions">
         <span className="spacer" />
         <button className="btn" onClick={onClose}>Annulla</button>
         <button className="btn btn-primary" disabled={!chosen || chosen.id === current} onClick={() => chosen && onConfirm(chosen.id)}>

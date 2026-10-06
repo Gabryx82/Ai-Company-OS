@@ -293,7 +293,7 @@ function NewEntryModal({ onClose, onCreated }: { onClose: () => void; onCreated:
         <textarea aria-label="Contenuto" className="mono" value={content} onChange={(e) => setContent(e.target.value)}
                   style={{ minHeight: 340, fontSize: 12.5 }} spellCheck={false} />
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        <div className="row"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
+        <div className="row modal-actions"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" type="submit">Crea il file</button></div>
       </form>
     </Modal>
@@ -317,7 +317,7 @@ function ImportModal({ onClose, onImported }: { onClose: () => void; onImported:
           <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://github.com/…/SKILL.md" required />
         </Field>
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        <div className="row"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
+        <div className="row modal-actions"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? "Importo…" : "Importa"}</button></div>
       </form>
     </Modal>

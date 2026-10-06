@@ -226,7 +226,7 @@ export function OrchestratorPanel({ task, busy, act }: {
               <strong>Attraverso {confirming.name}</strong>: {DELIVERY_HINT[confirming.delivery] ?? ""}.
               <div className="muted" style={{ fontSize: 12.5 }}>{confirming.detail}</div>
             </div>
-            <div className="row"><span className="spacer" />
+            <div className="row modal-actions"><span className="spacer" />
               <button className="btn" onClick={() => setConfirming(null)}>Annulla</button>
               <button className="btn btn-primary" onClick={() => handoff(confirming)}>Prepara e apri</button></div>
           </div>

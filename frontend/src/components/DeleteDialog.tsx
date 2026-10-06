@@ -59,7 +59,7 @@ export function DeleteDialog({ what, name, loadImpact, onConfirm, onClose, archi
           <input aria-label="Conferma nome" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
         </label>
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-        <div className="row">
+        <div className="row modal-actions">
           <span className="spacer" />
           <button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-danger" type="submit" disabled={!matches || busy || !impact || impact.runInProgress}>
