@@ -215,8 +215,8 @@ di scritture non ha bisogno di rileggere ogni volta.
 | `POST /api/tasks/{id}/stop` | `IN_PROGRESS → OPEN`. **`If-Match`** |
 | `POST /api/tasks/{id}/reopen` | `DONE → OPEN`. **`If-Match`** |
 
-Non esiste `DELETE /api/tasks/{id}` (risponde `405`, «non per questa via»). Il `PUT` sulla task
-riguarda i soli dettagli: le due associazioni sono sotto-risorse, e lo stato si muove lungo archi.
+Il `PUT` sulla task riguarda i soli dettagli: le due associazioni sono sotto-risorse, e lo stato si
+muove lungo archi. Eliminare una task è un atto dell'admin: vedi «Eliminare» più sotto (ADR-027).
 
 ```bash
 curl -i -X POST http://localhost:8081/api/tasks -H 'Content-Type: application/json' \
@@ -248,9 +248,10 @@ task non viene creata affatto**.
 | `POST /api/projects/{id}/restore` | ripristina. **`If-Match`** |
 | `GET /api/projects/{projectId}/tasks` | le task del progetto. Un progetto inesistente è `404`, non una lista vuota |
 
-**Non si cancella, si archivia** (ADR-004): non esiste `DELETE`. Un progetto `ARCHIVED` non
-riceve task nuove e le task che contiene **non si spostano** — `409` in entrambi i casi. Le
-**letture** restano aperte: archiviare non rende illeggibile la storia.
+**Archiviare è il gesto reversibile** (ADR-004); eliminare per davvero è un atto dell'admin (ADR-027,
+«Eliminare» più sotto). Un progetto `ARCHIVED` non riceve task nuove e le task che contiene **non si
+spostano** — `409` in entrambi i casi. Le **letture** restano aperte: archiviare non rende illeggibile
+la storia.
 
 ### Agent
 
@@ -260,8 +261,9 @@ riceve task nuove e le task che contiene **non si spostano** — `409` in entram
 | `GET /api/agents/{id}` | un agent, con `ETag` |
 | `POST /api/agents` | creazione (`201` + `Location` + `ETag`) |
 | `PUT /api/agents/{id}` | aggiorna. **`If-Match`** |
-| `POST /api/agents/{id}/deactivate` | disattiva. **`If-Match`** |
+| `POST /api/agents/{id}/deactivate` | disattiva (reversibile). **`If-Match`** |
 | `POST /api/agents/{id}/activate` | riattiva. **`If-Match`** |
+| `DELETE /api/agents/{id}` | elimina per davvero (PHASE 30): admin, **`If-Match`**, `204`. Vedi «Eliminare» |
 
 Da TASK-020 un agente ha un campo facoltativo **`model`** (id dell'engine, per esempio
 `ollama:qwen3.5:4b`): è il modello delle sue run. Il `PUT` lo sostituisce come ogni dettaglio.
@@ -347,6 +349,33 @@ relazioni fra loro, **letti dal codice** (Java con AST, TypeScript/Python/SQL le
 curl -s -X POST http://localhost:8081/api/projects/1/blueprint/scan -H "Authorization: Bearer $TOKEN"
 curl -s http://localhost:8081/api/projects/1/blueprint -H "Authorization: Bearer $TOKEN" | jq '.metrics'
 ```
+
+### Eliminare (PHASE 20 e PHASE 30, ADR-027 e ADR-035)
+
+Tutto ciò che si crea dalla console si elimina dalla console (ADR-035 §1, con le eccezioni motivate in
+§9). Ogni eliminazione ha un'**anteprima** (`GET …/deletion`) con la stessa forma per ogni cosa —
+`deletes`, `detaches`, `keeps`, `files`, `blockers`, `allowed` — calcolata con le regole che
+l'eliminazione applica. Le eliminazioni nuove rispondono `204`; `409 deletion-blocked` quando qualcosa
+dipende da ciò che si elimina e non si può scollegare, con le stesse frasi dell'anteprima.
+
+| Endpoint | Chi | Note |
+|---|---|---|
+| `GET /api/agents/{id}/deletion` · `GET /api/agents/deletion?ids=1,2` | tutti | anteprima, `?subagents=DETACH\|DELETE&inProgress=BLOCK\|STOP` |
+| `DELETE /api/agents/{id}?subagents=…&inProgress=…` | admin | **`If-Match`**. Task scollegate, run con il nome dell'agente, sottoagenti principali (default) o eliminati; lavoro in corso: blocca (default) o torna `OPEN` |
+| `POST /api/agents/bulk-delete` `{agents:[{id,version}], subagents, inProgress}` | admin | tutti o nessuno: una versione vecchia è `412` per l'intera selezione |
+| `GET /api/agent-templates/plan[?key=]` | tutti | che cosa un'installazione creerebbe e che cosa è già presente: non duplica mai |
+| `DELETE /api/projects/{id}/references?path=references/…` | operatore | un file di `references/`; `404` se non c'è; `400` fuori da `references/` |
+| `POST /api/projects/{id}/references/bulk-delete` `{paths:[…]}` | operatore | una selezione, tutta o niente; i file già spariti si saltano |
+| `GET /api/projects/{id}/files/deletion?path=` · `DELETE /api/projects/{id}/files?path=` | operatore | un documento di `docs/`, `tasks/`, `.aicos/handoffs/` che nessun record usa |
+| `GET /api/resources/{key}/deletion` · `DELETE /api/resources/{key}` | admin | skill e knowledge creati o importati, con il file; **`If-Match`**; le voci del catalogo spedito no |
+| `GET /api/projects/{id}/blueprint/deletion` · `DELETE /api/projects/{id}/blueprint?confirm=<nome>` | admin | l'intero Blueprint, mai il codice; **`If-Match`** della disposizione |
+| `DELETE /api/admin/costs/budgets/{provider}` | admin | **`If-Match`**; senza budget le run a consumo si fermano |
+| `GET /api/tasks/{id}/deletion` · `DELETE /api/tasks/{id}?confirm=<titolo>` | admin | ADR-027: `200` con l'impatto, **`If-Match`** |
+| `GET /api/projects/{id}/deletion?tasks=` · `DELETE /api/projects/{id}?tasks=DETACH\|DELETE&confirm=<nome>` | admin | ADR-027: la cartella del progetto resta sul disco |
+
+I file si eliminano **solo** dentro cartelle che AI Company OS gestisce, e **a stadi**: rinominati e
+nascosti, poi rimossi al commit o rimessi al loro posto al rollback (ADR-035 §5). Un file aperto da un
+altro programma rifiuta l'eliminazione con `409` e il motivo.
 
 ### Errori
 

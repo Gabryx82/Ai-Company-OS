@@ -44,9 +44,48 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶▶▶▶▶ PHASE 29 — Upgrade dei modelli locali — COMPLETATA il 2026-10-01, in attesa di Human Final Review
+## ▶▶▶▶▶▶ PHASE 30 — Ciò che si crea qui si elimina qui — COMPLETATA il 2026-10-06, in attesa di Human Final Review
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttiva** del 2026-10-06: un sistema coerente, sicuro e riutilizzabile di eliminazione dalla
+  console, a partire da due incoerenze (agenti non eliminabili; reference eliminabili solo da Explorer),
+  esteso a tutto ciò che la console crea. Decisioni in **ADR-035** (modifica ADR-004 §3/ADR-008 per gli
+  agenti e ADR-027 §3 per i file; estende ADR-027).
+- **Branch**: `autonomous/phase-30-deletion`, dalla punta di PHASE 29 (`f4c69b3`), **non pushato**.
+  `master` intoccato. Commit: `d31f626` (backend), `2e42bdd` (console), `ae4b8fd` (due test che fissavano il
+  vecchio contratto), `c5223d3` (correzioni dallo smoke), più i documenti.
+- **Agenti**: `DELETE /api/agents/{id}` e `POST /api/agents/bulk-delete` (admin, `If-Match` / versione per
+  agente, tutto-o-niente). Task `OPEN`/`DONE` scollegate, run con il nome (`V28`), sottoagenti principali o
+  eliminati (`subagents`), lavoro in corso che blocca o torna in coda (`inProgress=STOP`), run in volo che
+  blocca sempre. Lock `tasks → agents` (ADR-010 §3). Il set di template si reinstalla
+  (`GET /api/agent-templates/plan`), non torna da solo: provato su ciò che esegue un riavvio.
+- **File**: `deletion/ManagedFiles` — solo radici calcolate dal server, guardie di percorso, eliminazione
+  **a stadi** legata alla transazione (rename nascosto → rimozione al commit, ripristino al rollback); file
+  aperto da un altro programma → `409`. Reference (ogni file di `references/`, singolo o selezione),
+  documenti senza record che li usi, skill/knowledge creati o importati con il loro file.
+- **Anche**: Blueprint intero (admin, nome digitato, mai il codice), budget di un provider, risorse adottate
+  da un progetto visibili e scollegabili nella console, spesa e run degli agenti eliminati sotto il loro nome.
+- **Pattern comune**: anteprima `DeletionPreview` uguale per ogni cosa (`deletes`, `detaches`, `keeps`,
+  `files`, `blockers`, `allowed`), `204`, `409 deletion-blocked` con le frasi dell'anteprima; console:
+  `DeleteButton`, `ConfirmDeletion`, `SelectionBar` in `components/Deletion.tsx`. Politica per entità:
+  ADR-035 §9.
+- **Suite**: Java **549 (548 verdi + 1 saltato su Windows, preesistente; erano 518)** · console **57** · engine **68**.
+  OpenAPI **solo additivo** (14 operazioni nuove). **Mutazioni**: 13/13 rosse sul backend (la tredicesima,
+  il `412` della rimozione del budget, dopo aver aggiunto il test che mancava); 8 sulla console, 7 rosse e 1
+  sopravvissuta (stato locale reso inutile dalla rilettura → codice rimosso).
+- **Smoke dal vivo**: backend su un database separato **`aicompany_p30`** (porta 8091, home e workspace
+  temporanei, nessun programma avviato) e console sulla porta 5180, guidata nel browser integrato.
+  Esito in `docs/handoff/FINAL_HANDOFF_PHASE_30.md`: tutto come atteso, più un comportamento corretto (un file
+  o un agente già eliminato altrove ora è detto, non mostrato come errore). Anche il riavvio: niente ricreato.
+  Il DB di sviluppo `aicompany` **non è stato toccato**: al primo avvio riceve V26–V28.
+- **Debiti**: aperti TD-68…TD-73; prossimo libero **TD-74**.
+- **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review
+  (`docs/handoff/FINAL_HANDOFF_PHASE_30.md`).
+
+## ▶▶▶▶▶ PHASE 29 — Upgrade dei modelli locali — COMPLETATA il 2026-10-01, in attesa di Human Final Review
+
+> Sostituita, dove diverge, da PHASE 30 qui sopra.
 
 - **Direttiva** del 2026-09-30: aggiornare in autonomia i modelli Ollama di AI Company OS e di
   3D Omniverse (`%USERPROFILE%\3D Omniverse`, fuori da git), massimizzando l'intelligenza del sistema

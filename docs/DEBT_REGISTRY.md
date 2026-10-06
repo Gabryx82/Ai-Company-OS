@@ -143,7 +143,14 @@ ferma a `TD-22`.
 | **TD-66** | Il ruolo `CODER` del catalogo non ha più un modello `ACTIVE`: il lavoro di codice arriva a `qwen3.5:9b` per il ripiego sul ruolo `PLANNER`, e la console lo dice come «ripiego». Un modello ha un solo ruolo | **aperto**, MINOR | PHASE 29 |
 | **TD-67** | L'iGPU Intel Arc 140V (Vulkan, `OLLAMA_IGPU_ENABLE=1`) accelera l'elaborazione del prompt di 2–3,7× su Qwen 3.5 e Gemma 4 ma dimezza la generazione di LFM2.5; Ollama la attiva per tutti i modelli insieme. Lasciata spenta: servirebbe una scelta per modello (`num_gpu`) nell'engine | **aperto**, opportunità misurata | PHASE 29 |
 
-**Prossimo identificatore libero: `TD-68`.**
+| **TD-68** | Un software aggiunto con `POST /api/software` (admin, solo API: la console non ne crea) non si elimina: si disabilita (`enabled`). Quando la console permetterà di aggiungerne, servirà l'eliminazione, scollegando `agent_software` ed `ecosystem_autostart` (ADR-035 §9) | **aperto**, MINOR | PHASE 30 |
+| **TD-69** | Un servizio dell'avvio coordinato aggiunto con `POST /api/admin/ecosystem/services` (solo API) non si rimuove: se ne spegne l'autostart (ADR-035 §9) | **aperto**, MINOR | PHASE 30 |
+| **TD-70** | Un crash tra il commit e la rimozione dei file preparati lascia nella cartella un file nascosto `.<nome>.aicos-deleting-<uuid>`: invisibile a ogni elenco, ma nessuno lo spazza (ADR-035 §5) | **aperto**, MINOR | PHASE 30 |
+| **TD-71** | Le voci del catalogo spedito (skill, framework, software, modelli) non si possono congedare: si scollegano ma restano negli elenchi, perché l'avvio le reinserisce. Servirebbe un elenco di chiavi congedate letto da `CatalogBootstrap` (ADR-035 §7) | **aperto** | PHASE 30 |
+| **TD-72** | Due forme di eliminazione convivono: progetti e task (ADR-027) rispondono `200` con `DeletionImpact` e usano il dialog con il nome digitato; le eliminazioni di PHASE 30 rispondono `204` con `DeletionPreview` e `ConfirmDeletion`. Unificarle cambierebbe un contratto pubblicato (non additivo) | **aperto**, MINOR | PHASE 30 |
+| **TD-73** | `POST /api/resources` registra `origin = CATALOG` anche per una voce creata da una persona: l'eliminazione decide sulla presenza della chiave nel catalogo spedito e non ne è toccata, ma la console etichetta quella voce «catalogo» | **aperto**, MINOR | PHASE 30 |
+
+**Prossimo identificatore libero: `TD-74`.**
 
 ## 6. Come si apre un debito nuovo
 
