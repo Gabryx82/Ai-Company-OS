@@ -267,3 +267,16 @@ Debiti: TD-65 (run con budget esaurito prima di rispondere), TD-66 (ruolo CODER 
 `ACTIVE`), TD-67 (iGPU per modello). TD-52 chiuso; TD-64 (verifiche bloccate da Docker) chiuso il
 2026-10-01 dopo il riavvio di Docker. Il database di sviluppo `aicompany` è alla V25: al primo avvio
 del backend su questo branch riceverà V26 (Blueprint, PHASE 28), V27 e il seed V3.
+
+## 10. Aggiornamento del 2026-10-07: orchestratore e coach su Gemma 4
+
+Su richiesta dell'operatore (PHASE 30), il **Master Orchestrator** e il **Learning Coach** passano da
+`qwen3.5:9b` a **`gemma4:e4b`**: nei template (`catalog/agent-templates.json`) e, con **V29**, negli
+agenti installati prima che sono ancora sul modello del loro template — con la baseline, come V27 per il
+Test Engineer; un agente che l'operatore ha rilegato resta com'è. Le misure di §3 reggono la scelta:
+`gemma4:e4b` fa come `qwen3.5:9b` su codice (6/6), ragionamento (4/4), output strutturato (5/5) e
+strumenti (4/4), è più veloce su codice e JSON e legge le immagini; è già l'orchestratore di 3D
+Omniverse. Costo da sapere: in RAM sta a circa 6,9 GB (§3.3), e con `OLLAMA_MAX_LOADED_MODELS=2`, quando
+orchestratore o coach lavorano insieme a un agente su Qwen, Ollama tiene due modelli diversi in memoria.
+La generazione del piano usa il modello scelto nella scheda *Piano* (default `qwen3.5:9b`), non quello
+dell'agente: questa scelta cambia le run delle task assegnate ai due agenti.

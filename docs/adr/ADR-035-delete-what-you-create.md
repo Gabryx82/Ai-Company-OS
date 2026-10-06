@@ -82,6 +82,11 @@ esegue:
 - `CatalogBootstrap` inserisce software, provider, modelli, quote e risorse — **mai agenti**;
 - `AgentTemplates.recordTemplateOrigins` marca l'origine di agenti che esistono — **non ne crea**.
 
+**I template sono dodici**, e fra loro c'è il set iniziale: Code Architect, Frontend Developer e Database
+Specialist — che prima esistevano solo come righe del seed e, una volta eliminati, non tornavano più — sono
+anche template, con esattamente la configurazione che il seed dà loro (aggiunto il 2026-10-07 su richiesta
+dell'operatore). Dove il seed li ha creati, l'installazione li vede «presenti».
+
 La reinstallazione è un gesto esplicito: `GET /api/agent-templates/plan[?key=]` dice, agente per agente,
 che cosa verrebbe **creato** e che cosa è **già presente**; l'installazione crea solo i nomi mancanti e non
 tocca né duplica gli altri (regola esistente, ora mostrata prima e provata).

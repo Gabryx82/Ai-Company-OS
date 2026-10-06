@@ -78,7 +78,15 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   temporanei, nessun programma avviato) e console sulla porta 5180, guidata nel browser integrato.
   Esito in `docs/handoff/FINAL_HANDOFF_PHASE_30.md`: tutto come atteso, più un comportamento corretto (un file
   o un agente già eliminato altrove ora è detto, non mostrato come errore). Anche il riavvio: niente ricreato.
-  Il DB di sviluppo `aicompany` **non è stato toccato**: al primo avvio riceve V26–V28.
+  Il DB di sviluppo `aicompany` **non è stato toccato**: al primo avvio riceve V26–V29.
+- **Aggiornamento del 2026-10-07** (richieste dell'operatore, commit `afd8f17`, `50c03d4`):
+  **12 template** — Code Architect, Frontend Developer e Database Specialist anche come template, con la
+  configurazione del seed; **Master Orchestrator e Learning Coach su `gemma4:e4b`** (template e **V29**, che
+  sposta solo gli agenti ancora sul modello del loro template; addendum ADR-034 §10); **ogni dialog sta nella
+  finestra**: contenuto che scorre e azioni sempre visibili — risolve «Da template» che usciva dallo schermo e
+  «Assegna la task» che, scelto un agente, non permetteva più di salvare (misurato nel browser a 1280×720,
+  800×640 e 375×812). Mutazioni sui test nuovi: 3/3 rosse. Suite dopo l'aggiornamento: Java **552** (0 falliti,
+  1 saltato preesistente) · console **57**.
 - **Debiti**: aperti TD-68…TD-73; prossimo libero **TD-74**.
 - **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review
   (`docs/handoff/FINAL_HANDOFF_PHASE_30.md`).

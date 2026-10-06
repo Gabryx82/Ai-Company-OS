@@ -36,7 +36,7 @@ anche l'operatore (il rovescio del caricamento).
 | Verifica | Esito |
 |---|---|
 | Suite Java (`./mvnw clean test`, Testcontainers) | **549 test, 0 falliti**, 1 saltato (preesistente, link simbolici su Windows); erano 518. Due test che fissavano il vecchio contratto («nessun DELETE sugli agenti» → `405`) aggiornati al nuovo (`403` per l'operatore) |
-| Console (`npm test`, `npm run build`) | 57/57, build ok |
+| Console (`npm test`, `npm run build`) | 57/57, build ok (anche dopo l'aggiornamento del 2026-10-07) |
 | AI Engine (`pytest`) | 68/68 (non toccato) |
 | Mutazioni backend | 13 guardie tolte una per volta → 13 rosse (una, il `412` del budget, è diventata rossa dopo aver aggiunto il test che mancava) |
 | Mutazioni console | 8: 7 rosse; 1 sopravvissuta (uno stato locale reso inutile dalla rilettura) → codice rimosso |
@@ -63,10 +63,27 @@ Il backend e la console già in esecuzione sulle porte 8081 e 5173 non sono stat
 | Knowledge Hub: skill creata ed eliminata | voce, collegamenti e `SKILL.md` rimossi; la cartella resta |
 | Knowledge Hub: voce del catalogo (*Expo*) | anteprima bloccata: «tornerebbe al prossimo avvio», *Elimina* disabilitato |
 
+## Aggiornamento del 2026-10-07 — dalle tue verifiche
+
+| Richiesta | Fatto | Verifica |
+|---|---|---|
+| «Da template» non si adatta alla schermata | ogni dialog della console sta nella finestra: il titolo e *Chiudi* restano, il contenuto scorre | nel browser, 1280×720 e 375×812: dialog dentro la finestra, *Installa tutti i mancanti* e *Chiudi* visibili |
+| Cambiando agente a una task il dialog non si ridimensiona e non si salva | stessa causa (nessuna altezza massima, overlay centrato); in più la barra delle azioni (*Annulla*, *Assegna*, *Salva*, *Elimina*) resta fissata in fondo a ogni dialog | riprodotto col comportamento vecchio a 800×640: dialog da y=−1011 a y=1651, *Assegna a …* a y=1594, irraggiungibile; ora sempre visibile, in cima e in fondo allo scorrimento; riassegnazione salvata anche a 375×812 |
+| Code Architect, Frontend Developer, Database Specialist anche fra i template; 12 in tutto | aggiunti al catalogo con la configurazione del seed | 12 template nella console; eliminati e reinstallati tornano identici al seed; dove esistono risultano «presenti», mai duplicati |
+| Learning Coach e Master Orchestrator su `gemma4:e4b` | template aggiornati; **V29** sposta gli agenti già installati ancora sul modello del template (con la baseline: non risultano «modificati») | dal vivo su `aicompany_p30`: i due agenti su `gemma4:e4b`, gli altri fermi; `gemma4:e4b` è installato in Ollama |
+
+Suite dopo l'aggiornamento: Java **552 test, 0 falliti** (1 saltato, preesistente) · console 57/57 · build ok.
+Mutazioni sui test nuovi (un template del seed mancante, il coach di nuovo su Qwen, V29 senza baseline): 3/3 rosse.
+
+Nota sui modelli: in RAM `gemma4:e4b` occupa circa 6,9 GB; con `OLLAMA_MAX_LOADED_MODELS=2`, quando questi due
+agenti lavorano insieme a uno su Qwen, Ollama tiene due modelli in memoria (ADR-034 §10). Il piano si genera
+ancora col modello scelto nella scheda *Piano*.
+
 ## Prima di accettare
 
 - Il database di sviluppo `aicompany` non è stato toccato: al primo avvio su questo branch riceve, oltre a
-  V26–V27 di PHASE 28–29, anche **V28** (additiva).
+  V26–V27 di PHASE 28–29, anche **V28** (additiva) e **V29** (Master Orchestrator e Learning Coach su
+  `gemma4:e4b`: nel tuo database sono entrambi ancora sul modello del template, quindi si spostano).
 - Lo smoke dal vivo di questa fase gira su un database separato, `aicompany_p30` (vedi `PROJECT_STATE.md`).
   Per toglierlo: `DROP DATABASE aicompany_p30;`.
 
