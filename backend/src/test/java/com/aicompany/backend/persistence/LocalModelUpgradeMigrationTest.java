@@ -29,6 +29,7 @@ class LocalModelUpgradeMigrationTest {
 
     private static final String DEEPSEEK = "ollama:deepseek-coder-v2:16b";
     private static final String QWEN = "ollama:qwen3.5:9b";
+    private static final String GEMMA = "ollama:gemma4:e4b";
 
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =
@@ -103,6 +104,39 @@ class LocalModelUpgradeMigrationTest {
 
         assertThat(column(rebound, "Test Engineer", "model", String.class)).isEqualTo("ollama:qwen3.5:9b");
         assertThat(column(rebound, "Test Engineer", "baseline", String.class)).contains("\"model\":\"ollama:qwen3.5:4b\"");
+    }
+
+    /**
+     * PHASE 30 (V29), on the operator's request: the Master Orchestrator and the Learning
+     * Coach follow their templates to gemma4:e4b -- with their baseline, so they do not
+     * read as modified. One the operator rebound stays; other template agents do not move.
+     */
+    @Test
+    void theOrchestratorAndTheCoachFollowTheirTemplatesToGemmaUnlessTheOperatorReboundThem() {
+        String schema = "p30_gemma";
+        schemaFlyway(schema, "28").migrate();
+        insertTemplateAgent(schema, "Master Orchestrator", QWEN, QWEN);
+        insertTemplateAgent(schema, "Learning Coach", "ollama:qwen3.5:4b", QWEN);
+        insertTemplateAgent(schema, "Graph Engineer", QWEN, QWEN);
+        long orchestratorVersion = column(schema, "Master Orchestrator", "version", Long.class);
+
+        schemaFlyway(schema, null).migrate();
+
+        assertThat(column(schema, "Master Orchestrator", "model", String.class)).isEqualTo(GEMMA);
+        assertThat(column(schema, "Master Orchestrator", "baseline", String.class))
+                .contains("\"model\":\"" + GEMMA + "\"").doesNotContain("qwen3.5:9b");
+        assertThat(column(schema, "Master Orchestrator", "version", Long.class)).isEqualTo(orchestratorVersion + 1);
+        assertThat(column(schema, "Learning Coach", "model", String.class)).isEqualTo("ollama:qwen3.5:4b");
+        assertThat(column(schema, "Learning Coach", "baseline", String.class)).contains("\"model\":\"" + QWEN + "\"");
+        assertThat(column(schema, "Graph Engineer", "model", String.class)).isEqualTo(QWEN);
+    }
+
+    /** An agent installed from its template, born on {@code born} and now bound to {@code model}. */
+    private void insertTemplateAgent(String schema, String name, String model, String born) {
+        jdbc().update("INSERT INTO \"" + schema + "\".agents "
+                + "(name, role, specialization, status, model, origin, baseline, created_at, updated_at) "
+                + "VALUES (?, ?, 'x', 'ACTIVE', ?, 'TEMPLATE', ?, now(), now())",
+                name, name, model, "{\"role\":\"" + name + "\",\"model\":\"" + born + "\"}");
     }
 
     /** A Test Engineer installed from its template (baseline on qwen3.5:4b), now bound to {@code model}. */

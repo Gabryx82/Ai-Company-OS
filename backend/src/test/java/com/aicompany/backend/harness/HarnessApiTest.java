@@ -89,6 +89,24 @@ class HarnessApiTest extends AbstractPostgresTest {
         }
     }
 
+    /**
+     * PHASE 30: the twelve templates of the catalog, the three agents of the initial
+     * set among them -- so that, once deleted, they come back from «Da template» like
+     * every other agent of the base set.
+     */
+    @Test
+    void theCatalogHasTwelveTemplatesTheInitialSetIncluded() throws Exception {
+        mockMvc.perform(get("/api/agent-templates"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(12))
+                .andExpect(jsonPath("$[*].key", hasItems("code-architect", "frontend-developer", "database-specialist",
+                        "master-orchestrator", "software-engineer", "graph-engineer", "tech-writer", "ui-ux-designer",
+                        "3d-artist", "learning-coach", "claude-code-engineer", "codex-engineer")))
+                // The operator's choice of 2026-10-07 (V29 moves the agents installed before it).
+                .andExpect(jsonPath("$[?(@.key == 'master-orchestrator')].model").value("ollama:gemma4:e4b"))
+                .andExpect(jsonPath("$[?(@.key == 'learning-coach')].model").value("ollama:gemma4:e4b"));
+    }
+
     @Test
     void theExplorerFindsResourcesByKindAndWords() throws Exception {
         mockMvc.perform(get("/api/resources").param("kind", "MCP"))

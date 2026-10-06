@@ -60,6 +60,9 @@ class SeedAgentDeletionTest {
         assertThat(agents.findAll()).extracting(Agent::getName)
                 .containsExactlyInAnyOrder("Code Architect", "Frontend Developer", "Database Specialist");
 
+        Map<String, String> promptsBefore = new java.util.HashMap<>();
+        agents.findAll().forEach(a -> promptsBefore.put(a.getName(), a.getSystemPrompt()));
+
         Map<Long, Precondition> everyone = new LinkedHashMap<>();
         agents.findAll().forEach(a -> everyone.put(a.getId(), Precondition.fromHeader(ETags.of(a.getVersion()))));
         deletions.deleteAll(everyone, AgentDeletionService.SubAgents.DETACH, AgentDeletionService.InProgress.BLOCK, "test");
@@ -77,5 +80,12 @@ class SeedAgentDeletionTest {
         assertThat(agents.count()).isEqualTo(created);
         assertThat(templates.installAll()).allMatch(i -> i.outcome() == AgentTemplates.Outcome.EXISTING);
         assertThat(agents.count()).as("a second install duplicates nothing").isEqualTo(created);
+
+        // The initial set is among the templates: the three seed agents are back, configured as the seed made them.
+        for (Map.Entry<String, String> seeded : promptsBefore.entrySet()) {
+            Agent back = agents.findAll().stream().filter(a -> a.getName().equals(seeded.getKey())).findFirst().orElseThrow();
+            assertThat(back.getSystemPrompt()).as(seeded.getKey()).isEqualTo(seeded.getValue());
+            assertThat(back.getModel()).as(seeded.getKey()).isEqualTo("ollama:qwen3.5:9b");
+        }
     }
 }
