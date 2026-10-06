@@ -8,7 +8,7 @@ import type {
 import { Field, Modal, ProblemNote, when } from "../components/ui";
 import { Icon } from "../components/icons";
 import { BindingChain, DELIVERY_LABEL } from "../components/BindingChain";
-import { ConfirmDeletion, DeleteButton, SelectionBar, useSelection } from "../components/Deletion";
+import { alreadyGone, ConfirmDeletion, DeleteButton, SelectionBar, useSelection } from "../components/Deletion";
 import { useIsAdmin } from "../context";
 
 const ORIGIN_LABEL = { SEED: "Seed iniziale", TEMPLATE: "Da template", USER: "Creato da te" } as const;
@@ -45,11 +45,11 @@ export function Agents() {
   useEffect(() => { reload(); }, [reload]);
 
   // PHASE 30 (ADR-035): after a delete the list is read again, and what was selected or open and is gone, is let go.
-  function deleted(names: string[]) {
+  function deleted(names: string[], message?: string) {
     setDeleting(null);
     selection.clear();
     setSelecting(false);
-    setDone(names.length === 1 ? `Eliminato «${names[0]}».` : `Eliminati ${names.length} agenti.`);
+    setDone(message ?? (names.length === 1 ? `Eliminato «${names[0]}».` : `Eliminati ${names.length} agenti.`));
     reload().then(() => setSelected(null));
   }
 
@@ -473,7 +473,8 @@ function NewAgentModal({ onClose, onCreated }: { onClose: () => void; onCreated:
  * the reversible gesture, when a single active agent is being deleted.
  */
 function DeleteAgents({ agents, onClose, onDeleted, onDeactivated }: {
-  agents: AgentConfiguration[]; onClose: () => void; onDeleted: (names: string[]) => void; onDeactivated: () => void;
+  agents: AgentConfiguration[]; onClose: () => void; onDeleted: (names: string[], message?: string) => void;
+  onDeactivated: () => void;
 }) {
   const api = useApi();
   const [subagents, setSubagents] = useState<SubAgentsPolicy>("DETACH");
@@ -500,7 +501,14 @@ function DeleteAgents({ agents, onClose, onDeleted, onDeactivated }: {
                        },
                      } : undefined}
                      onConfirm={async () => {
-                       await api.deleteAgents(agents.map((a) => ({ id: a.id, version: a.version })), subagents, inProgress);
+                       try {
+                         await api.deleteAgents(agents.map((a) => ({ id: a.id, version: a.version })), subagents, inProgress);
+                       } catch (error) {
+                         // Deleted meanwhile, elsewhere: the list is read again and says so.
+                         if (!alreadyGone(error) || !single) throw error;
+                         onDeleted([single.name], `«${single.name}» non c'era più (eliminato altrove): elenco aggiornato.`);
+                         return;
+                       }
                        onDeleted(agents.map((a) => a.name));
                      }}>
       {hasChildren && (
@@ -514,6 +522,7 @@ function DeleteAgents({ agents, onClose, onDeleted, onDeactivated }: {
       )}
       <label className="row" style={{ fontSize: 13 }}>
         <input type="checkbox" className="select-check" checked={inProgress === "STOP"}
+               aria-label="Riporta a «Da fare» le task in corso"
                onChange={(e) => setInProgress(e.target.checked ? "STOP" : "BLOCK")} />
         Se ha task in corso, riportale a «Da fare» senza agente (altrimenti l'eliminazione si ferma)
       </label>
@@ -562,6 +571,7 @@ function TemplatesModal({ onClose, onInstalled }: { onClose: () => void; onInsta
         <div className="notice row">
           <span style={{ flex: 1 }}>
             {missing.length === 0 ? "Il set di template è installato per intero."
+              : missing.length === 1 ? <>Manca <strong>1</strong> agente del set di template: {missing[0].name}.</>
               : <>Mancano <strong>{missing.length}</strong> agenti del set di template: {missing.map((p) => p.name).join(", ")}.</>}
             {" "}Un agente con lo stesso nome non viene mai duplicato né sovrascritto.
           </span>

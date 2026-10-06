@@ -148,11 +148,32 @@ describe("Agents — deleting (ADR-035 §2)", () => {
     });
     fireEvent.click(await screen.findByRole("button", { name: /Da template/ }));
     const dialog = await screen.findByRole("dialog");
-    expect(await within(dialog).findByText(/Mancano/)).toBeTruthy();
+    expect(await within(dialog).findByText(/agente del set di template: Software Engineer/)).toBeTruthy();
     expect(within(dialog).getByText(/Backend Engineer · presente/)).toBeTruthy();
     expect(within(dialog).getByRole("button", { name: "Installa (1)" })).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "Installa tutti i mancanti" }));
     expect(await within(dialog).findByText(/Creati: Software Engineer/)).toBeTruthy();
     expect(calls.filter((c) => c.method === "POST").map((c) => c.path)).toEqual(["/api/agent-templates/install-all"]);
+  });
+  it("an agent deleted meanwhile by someone else leaves the list with a word, not an error", async () => {
+    let list = [agent(1, "Backend Bot")];
+    renderAgents({
+      "GET /api/ecosystem/bindings": () => ({ body: list }),
+      "GET /api/agents/1/configuration": () => ({ body: agent(1, "Backend Bot"), etag: '"10"' }),
+      "GET /api/agents/1/deletion": () => ({ body: PREVIEW }),
+      "DELETE /api/agents/1": () => {
+        list = [];
+        return { status: 404, problem: true, body: { type: "urn:ai-company-os:problem:agent-not-found",
+          title: "Agent not found", detail: "No agent with id 1" } };
+      },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /Backend Bot/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Elimina Backend Bot" }));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText(/1 task da fare/);
+    fireEvent.click(within(dialog).getByRole("button", { name: /Elimina definitivamente/ }));
+
+    expect(await screen.findByText(/«Backend Bot» non c'era più/)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Backend Bot/ })).toBeNull());
   });
 });

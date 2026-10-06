@@ -10,7 +10,7 @@ import { Icon } from "../components/icons";
 import { TaskDrawer } from "./TaskDrawer";
 import { AUTONOMY } from "./projectLabels";
 import { useLauncher } from "./SoftwareHub";
-import { ConfirmDeletion, DeleteButton, SelectionBar, simplePreview, useSelection } from "../components/Deletion";
+import { alreadyGone, ConfirmDeletion, DeleteButton, SelectionBar, simplePreview, useSelection } from "../components/Deletion";
 
 // PHASE 28: the Blueprint brings React Flow; it loads when its tab is first opened.
 const BlueprintView = lazy(() => import("./blueprint/BlueprintView").then((m) => ({ default: m.BlueprintView })));
@@ -523,7 +523,15 @@ function References({ project, docs, onUploaded }: { project: Project; docs: Wor
   }
 
   async function remove(paths: string[]) {
-    await api.deleteReferences(project.id, paths);
+    try {
+      await api.deleteReferences(project.id, paths);
+    } catch (error) {
+      if (!alreadyGone(error) || paths.length !== 1) throw error;
+      setDeleting(null);
+      setDone(`${paths[0].replace("references/", "")} non c'era più (eliminato fuori dalla console): elenco aggiornato.`);
+      onUploaded();
+      return;
+    }
     paths.forEach((path) => { try { if (urls[path]) URL.revokeObjectURL(urls[path]); } catch { /* not in every runtime */ } });
     setDeleting(null);
     selection.clear();
@@ -616,8 +624,9 @@ function References({ project, docs, onUploaded }: { project: Project; docs: Wor
                          intro={deleting.length === 1
                            ? <>Elimino <strong>«{name(deleting[0])}»</strong> dalla cartella del progetto?</>
                            : <>Elimino <strong>{deleting.length} file</strong> dalla cartella del progetto?</>}
-                         preview={simplePreview("REFERENCE", ["Il file viene tolto dalle reference del progetto: gli agenti non lo leggono più."],
-                           deleting)}
+                         preview={simplePreview("REFERENCE", [deleting.length === 1
+                           ? "Il file viene tolto dalle reference del progetto: gli agenti non lo leggono più."
+                           : "I file vengono tolti dalle reference del progetto: gli agenti non li leggono più."], deleting)}
                          onClose={() => setDeleting(null)} onConfirm={() => remove(deleting)} />
       )}
     </div>

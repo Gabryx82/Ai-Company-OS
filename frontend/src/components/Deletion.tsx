@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { ApiProblem } from "../api/client";
 import type { DeletionPreview } from "../api/types";
 import { Modal, ProblemNote } from "./ui";
 import { Icon } from "./icons";
@@ -156,6 +157,15 @@ export function ConfirmDeletion({ title, subject, intro, loadPreview, preview: g
       </form>
     </Modal>
   );
+}
+
+/**
+ * A delete answered 404: what was to be removed is already gone -- deleted
+ * outside the console, or by someone else. That is the state the operator asked
+ * for, so the list is read again and it is said, instead of an error.
+ */
+export function alreadyGone(error: unknown): boolean {
+  return error instanceof ApiProblem && error.status === 404;
 }
 
 /** A preview for a delete whose effects the caller already knows (a few files, a link). */

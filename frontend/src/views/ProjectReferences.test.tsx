@@ -85,4 +85,22 @@ describe("Reference — deleting from the console (ADR-035 §5)", () => {
     expect(await within(dialog).findByText(/open in another program/)).toBeTruthy();
     expect(screen.getAllByText("images/locked.png").length).toBeGreaterThan(0);
   });
+  it("a file already deleted outside the console is said so, and the list is read again", async () => {
+    let images = ["references/mockups/green.png"];
+    renderProject({
+      "GET /api/projects/5/documents": () => ({ body: documents(images, []) }),
+      "DELETE /api/projects/5/references": () => {
+        images = [];
+        return { status: 404, problem: true, body: { type: "urn:ai-company-os:problem:workspace-file-not-found",
+          title: "File not found", detail: "No file 'references/mockups/green.png' in the project's references" } };
+      },
+    });
+    fireEvent.click(await screen.findByRole("tab", { name: "Reference" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Elimina mockups/green.png" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /Elimina$/ }));
+
+    expect(await screen.findByText(/non c'era più \(eliminato fuori dalla console\)/)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText("Nessuna immagine ancora.")).toBeTruthy();
+  });
 });
