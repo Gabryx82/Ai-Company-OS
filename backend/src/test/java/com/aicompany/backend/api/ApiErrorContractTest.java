@@ -195,8 +195,10 @@ class ApiErrorContractTest extends AbstractPostgresTest {
      * validation, a missing resource, and the method the registry refuses.
      *
      * <p>Until TASK-007 this asserted 405 on POST, because the agent API had no
-     * POST at all. The registry gave it one; what it still refuses is DELETE, for
-     * the reason ADR-004 §3 gave for projects.
+     * POST at all. The registry gave it one, and until PHASE 30 it refused DELETE
+     * with a 405, for the reason ADR-004 §3 gave for projects. ADR-035 made the
+     * delete real and an admin's: for the operator this suite runs as, it is a 403
+     * -- still inside the contract.
      */
     @Test
     void theAgentApiIsInsideTheContract() throws Exception {
@@ -208,7 +210,7 @@ class ApiErrorContractTest extends AbstractPostgresTest {
 
         problem(mockMvc.perform(get("/api/agents/424242")), 404, "agent-not-found");
 
-        problem(mockMvc.perform(delete("/api/agents/1")), 405, "method-not-allowed");
+        problem(mockMvc.perform(delete("/api/agents/1")), 403, "access-denied");
     }
 
     // --- preconditions ------------------------------------------------------

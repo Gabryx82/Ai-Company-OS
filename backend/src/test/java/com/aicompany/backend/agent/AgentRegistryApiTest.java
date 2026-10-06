@@ -169,15 +169,20 @@ class AgentRegistryApiTest extends AbstractPostgresTest {
                 .andExpect(status().isConflict());
     }
 
-    /** ADR-004 §3: agents are deactivated, not deleted. 405 says "not by this route". */
+    /**
+     * ADR-004 §3 once made this a 405: agents were deactivated, never deleted.
+     * PHASE 30 (ADR-035 §2) superseded it: deleting an agent exists, and it is an
+     * admin's act -- the registry's own client, an operator, is refused and the
+     * agent stays. The delete itself is AgentDeletionApiTest's.
+     */
     @Test
-    void thereIsNoWayToDeleteAnAgent() throws Exception {
+    void deletingAnAgentIsNotAnOperatorsAct() throws Exception {
 
         Long id = activeAgent("Code Architect");
 
-        mockMvc.perform(delete("/api/agents/" + id))
-                .andExpect(status().isMethodNotAllowed())
-                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:method-not-allowed"));
+        mockMvc.perform(delete("/api/agents/" + id).header(HttpHeaders.IF_MATCH, agentEtag(id)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:access-denied"));
 
         assertThat(repository.findById(id)).isPresent();
     }
