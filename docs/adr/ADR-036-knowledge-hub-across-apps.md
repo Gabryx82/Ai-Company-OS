@@ -1,0 +1,209 @@
+# ADR-036 — Il Knowledge Hub come punto unico: le skill di ogni app, i marketplace, la sincronizzazione
+
+- **Stato**: Accettata e implementata (PHASE 31)
+- **Data**: 2026-10-07
+- **Decisa da**: agente, su direttiva umana del 2026-10-07 («trasformare il Knowledge Hub in un punto
+  unico» per le skill e le knowledge di tutti gli agenti, «senza rimuovere o modificare negativamente ciò
+  che già esiste»; poi: «dividere le skill di Code, Codex (ChatGPT) e ecc. per tipologia»)
+- **Estende**: ADR-026 (skill e knowledge come file), ADR-023 (harness). Non modifica ADR-035.
+
+## 1. La direttiva, e che cosa ne è diventato
+
+| Obiettivo | Come |
+|---|---|
+| vedere tutte le skill e knowledge installate | scheda **Installate**: la libreria di AI Company OS e ogni app di questo PC, una sola vista (§2) |
+| vedere anche quelle di Claude Desktop, Codex, ecc. | uno scanner per ogni forma di cartella: personali, plugin, di sistema, manifest per account (§2) |
+| divise per app e per tipologia | app → tipologia (libreria, personali, plugin uno per uno, di sistema, knowledge, istruzioni globali) → categoria funzionale (§4) |
+| tenerle sincronizzate fra le fonti | la libreria è il centro: si importa dalle app, si copia nelle app, ogni copia porta un marcatore e resta allineata nei due sensi (§5); una sincronizzazione ogni 5 minuti registra installazioni, rimozioni e modifiche (§9) |
+| verificare e installare gli aggiornamenti | scheda **Aggiornamenti**: pacchetti dei marketplace, skill importate dalle app, copie da allineare, plugin delle app (§8) |
+| esplorare marketplace e cataloghi, anche della community | scheda **Marketplace**, organizzata come il Mockup Hub: una ricerca, uno scaffale di provider (§6) |
+| cercare e installare dall'interfaccia | skills.sh, ClawHub e i repository ufficiali (Anthropic, OpenAI, Vercel) si cercano e si installano dal Hub, con anteprima dei file (§6) |
+| mantenere ciò che esiste | la vista di PHASE 19 è la scheda **Libreria e catalogo**, invariata; il dettaglio di una skill della libreria guadagna la sezione «Nelle app» |
+
+## 2. Dove le app tengono le skill — e chi le possiede
+
+Ogni percorso è calcolato dal server a partire dalla home dell'utente e da `%APPDATA%`
+(`aicos.hub.home`, `aicos.hub.app-data`), mai preso da una richiesta (`SkillLocations`).
+
+| App | Cartella | Tipologia | Il Hub scrive? |
+|---|---|---|---|
+| Claude Code | `~/.claude/skills/<nome>/SKILL.md` | personali | **sì** |
+| | `~/.claude/plugins/installed_plugins.json` → percorso del plugin | plugin | no |
+| | `~/.claude/CLAUDE.md` | istruzioni globali | no |
+| Claude Desktop | `%APPDATA%\Claude\local-agent-mode-sessions\skills-plugin\<org>\<account>\manifest.json` | di sistema (Anthropic) o personali (`creatorType`) | no |
+| | `…\<account>\<org>\rpm\manifest.json` → `plugin_<id>` | plugin (marketplace, versione da `plugin.json`) | no |
+| Codex · ChatGPT | `~/.codex/skills/.system` | di sistema | no |
+| | `~/.codex/skills` | personali (cartella storica) | no |
+| | `~/.codex/plugins/cache/<marketplace>/<plugin>/<versione>` + `config.toml` | plugin (attivo/disattivo) | no |
+| | `~/.codex/AGENTS.md` | istruzioni globali | no |
+| Agent Skills condivise | `~/.agents/skills` — la cartella utente che **Codex**, Gemini CLI, OpenCode e Copilot leggono | personali | **sì** (è dove il Hub installa per Codex) |
+| Antigravity | `~/.gemini/antigravity/skills` | personali | **sì** |
+| | `~/.gemini/antigravity{,-ide}/builtin/skills`, `~/.gemini/antigravity-ide/plugins` | di sistema, plugin | no |
+| | `~/.gemini/antigravity/knowledge` | knowledge items | no |
+| Gemini CLI | `~/.gemini/skills`, `~/.gemini/extensions`, `~/.gemini/GEMINI.md` | personali, plugin, istruzioni | sì / no / no |
+| OpenCode | `~/.config/opencode/skills` (e `skill/`), `AGENTS.md` | personali, istruzioni | sì / no |
+| Verdent, Copilot CLI, Cursor | `~/.verdent/skills`, `~/.copilot/skills`, `~/.cursor/skills` | personali | **sì** |
+
+**Perché solo le cartelle personali sono scrivibili.** I plugin, le skill di sistema e la cache di Claude
+Desktop sono dell'app: li scrive il suo installatore, li riscrive il suo aggiornamento, e Claude
+Desktop li riceve dall'account. Scriverci da fuori produrrebbe stati che l'app non conosce e che la
+prossima sincronizzazione dell'app cancellerebbe. Per Claude Desktop il Hub prepara invece lo `.zip`
+che si carica da *Impostazioni → Capacità → Skill*.
+
+Di Claude Desktop si elenca solo l'account **in uso** (il manifest aggiornato per ultimo); gli altri si
+contano in una nota. Una cartella-plugin di Codex chiamata con un id (`app-6a32…`) prende il nome dal
+suo manifest (`interface.displayName`).
+
+Misurato su questo PC il 2026-10-07: **323** voci in 7 sedi (228 Claude Desktop, 66 Codex, 20
+Antigravity, 9 Verdent), **1,2 s** la prima lettura, **0,4 s** le successive (un `SKILL.md` con
+dimensione e data invariate non si rilegge).
+
+## 3. Leggere un `SKILL.md`
+
+Il frontmatter delle app non è quello della libreria (ADR-026 §1): ha `name` (un identificatore) e
+`description`, spesso su più righe (`description: >-`), niente `key` né `kind`. `Frontmatter` legge il
+sottoinsieme di YAML che le skill usano — valori semplici, tra virgolette, a blocchi, un livello di
+annidamento (`metadata.version`), liste — e lascia assente ciò che non capisce.
+
+`SkillDocument` usa ora lo stesso lettore: i file della libreria si leggono come prima (un ` #` resta
+nel valore, come prima), e in più una descrizione a blocchi si legge intera. **Difetto corretto**:
+l'import da URL di un `SKILL.md` standard (frontmatter senza `key`) era rifiutato; ora la chiave viene
+dal nome, e al frontmatter si aggiunge solo la riga `source:` invece di riscriverlo (licenza e
+metadati dell'autore restano).
+
+## 4. Tipologie e categorie
+
+Due assi, perché la direttiva chiede di dividere «per tipologia» e una sola parola non basta:
+
+- **tipologia** — che cosa la skill è per l'app: libreria, personali, plugin (un gruppo per plugin, con
+  versione e marketplace), di sistema, knowledge, istruzioni globali;
+- **categoria funzionale** — a che cosa serve: documenti e Office, giochi e 3D, design, sicurezza, DevOps
+  e cloud, business e marketing, dati, produttività, browser e automazione, AI e agenti, sviluppo,
+  altro. Euristica a parole chiave (`SkillCategories`): il nome e il plugin pesano più della
+  descrizione, che cita di tutto; la prima regola che corrisponde vince. Su questo PC: 1 voce su 323 in
+  «Altro».
+
+## 5. La libreria al centro: provenienza, copie, impronte
+
+Sincronizzare «fra le fonti» qui significa: **la libreria di AI Company OS è il centro**, le app sono
+fonti e destinazioni.
+
+- **Dentro**: una skill si installa da un marketplace o si **importa** da un'app. La voce della libreria
+  ricorda da dove viene (`skill_installations`, V30: provider, riferimento canonico, versione,
+  impronta a monte, impronta di ciò che il Hub ha scritto).
+- **Fuori**: una skill della libreria si **copia** nella cartella personale di un'app. Nella copia il Hub
+  lascia `.aicos-hub.json` (chiave, impronta della libreria e della copia al momento della scrittura);
+  le app ignorano i file nascosti. Una skill della libreria in formato AI Company OS (`key`, `kind`,
+  `name` descrittivo) arriva alle app con `name` = chiave e il titolo sotto `metadata`, con valori tra
+  virgolette che anche un lettore YAML rigoroso accetta; una in formato standard arriva com'è.
+- **Stato di una copia**, dal confronto delle impronte: *sincronizzata*, *da aggiornare* (è cambiata la
+  libreria), *modificata nell'app* (si può riportare nella libreria, e le altre copie intatte seguono),
+  *conflitto* (sono cambiate entrambe), *non più in libreria*.
+
+**Impronte**: `content` (ogni byte di ogni file, per percorso) dove il Hub decide se può sovrascrivere;
+`quick` (il `SKILL.md` e nome e dimensione degli altri file) per la sincronizzazione periodica.
+
+**Mai sovrascrivere senza saperlo.** Una cartella senza marcatore, una copia modificata nell'app, una
+libreria modificata dopo l'installazione: il Hub rifiuta (`409 skill-hub-conflict`) e dice che cosa;
+con la conferma esplicita sovrascrive e **tiene un backup**. Questa è la precondizione delle scritture
+del Hub — sul contenuto, più forte di un tag di versione — ed è dichiarata in
+`PreconditionCoverageTest`.
+
+## 6. Marketplace
+
+Organizzati come il Mockup Hub (ADR-032): una ricerca, uno scaffale. Catalogo in
+`catalog/skill-marketplaces.json`.
+
+| Provider | Come | Installabile dal Hub |
+|---|---|---|
+| **skills.sh** | `GET https://skills.sh/api/search?q=` → `owner/repo/skill`, risolto nella cartella del repository GitHub con l'albero del repository | sì |
+| **ClawHub** | `GET https://clawhub.ai/api/v1/search`, dettaglio, versioni con elenco file, sicurezza; file per file | sì (le skill sospette sono segnalate) |
+| **Anthropic, OpenAI, Vercel** (repository ufficiali) | albero via `api.github.com`, file da `raw.githubusercontent.com` | sì |
+| directory Claude, SkillsMP, claude-plugins.dev, LobeHub, Smithery, aitmpl, MCP Market, Tessl, Awesome Claude Skills, agentskills.io | si aprono nel browser, con la ricerca quando il sito la accetta | no (si importa poi l'URL del `SKILL.md`) |
+
+Difese: solo HTTPS verso quattro host (`HubWeb.HOSTS`), nessun redirect seguito, URI costruiti dal
+server con parti validate; nel pacchetto solo percorsi relativi e semplici (niente `..`, unità, nomi di
+dispositivo), al massimo 150 file, 1 MB l'uno, 8 MB in tutto; link simbolici e file nascosti esclusi;
+l'anteprima mostra file, `SKILL.md` e un avviso quando ci sono script. Nessuna credenziale, nessun
+costo: le API usate sono pubbliche e in sola lettura. GitHub anonimo concede 60 richieste all'ora
+sull'API: gli alberi restano in cache 10 minuti e i frontmatter per sempre (per sha); il limite
+raggiunto si dice con l'ora di ripristino.
+
+## 7. Scrivere una cartella
+
+`HubFiles`: i file si preparano in `<aicos.home>/hub-staging`, la cartella che c'era si sposta intera
+in `<aicos.home>/backups/skills/`, poi la preparata va al suo posto. **Niente si elimina**: anche
+«Togli dall'app» è uno spostamento nei backup. Dentro una transazione, un rollback rimette le cose
+com'erano. Una scrittura alla volta.
+
+## 8. Aggiornamenti
+
+| Tipo | Si accorge | Si applica |
+|---|---|---|
+| Pacchetto di un marketplace | impronta a monte cambiata (albero GitHub: sha dei file; ClawHub: versione) | dal Hub; se la libreria è stata modificata, solo con conferma (backup) |
+| Skill importata da un'app | impronta della sorgente cambiata | dal Hub, come sopra |
+| Copia nell'app | §5 | dal Hub: *aggiorna la copia* o *riporta nella libreria* |
+| Plugin di Claude Desktop | versione pubblicata nel marketplace `anthropics/knowledge-work-plugins` (e nei repository che indica) **strettamente** più recente di quella installata | **dall'app**: Claude Desktop aggiorna i suoi plugin; il Hub lo dice e la apre |
+| Plugin di Claude Code | versione del marketplace clonato localmente strettamente più recente | dall'app: il Hub mostra `claude plugin update <plugin>@<marketplace>` |
+
+**Codex: nessuna verifica dei plugin.** Il catalogo che Codex tiene in `~/.codex/.tmp/plugins` è di un
+altro canale e più vecchio delle versioni installate (misurato: `github` 0.1.0 nel catalogo, 0.1.12
+installato): confrontarlo produrrebbe solo falsi segnali. Codex li aggiorna da sé.
+
+Le verifiche online partono solo a richiesta («Verifica aggiornamenti»); le copie si confrontano a ogni
+lettura.
+
+## 9. Sincronizzazione
+
+Ogni `aicos.hub.sync-interval` (5 minuti; `PT0S` la spegne, come nei test) e a richiesta, il Hub rilegge
+le app e confronta con l'istantanea precedente (`skill_snapshot`): ciò che è comparso, sparito o
+cambiato diventa un evento (`skill_sync_events`, gli ultimi 1000), mostrato nella scheda **Attività** —
+anche quando a cambiare è un'app che aggiorna i suoi plugin. La prima lettura fotografa soltanto; una
+riga «baseline» lo ricorda, così anche un PC senza skill vede riportata la prima installazione.
+
+La console rilegge le app all'apertura della pagina e ogni minuto mentre la pagina è in vista.
+
+**La sincronizzazione automatica non rilegge la cartella della libreria.** «Rileggi cartella»
+(ADR-026 §2) aggiorna la versione di ogni voce: farlo ogni 5 minuti renderebbe obsoleti (`412`) gli
+editor aperti nella console. Lo fa «Sincronizza ora», che è un gesto dell'operatore.
+
+## 10. Permessi
+
+Leggere, cercare, installare, importare, copiare, aggiornare: operatore. **Togliere una copia** da
+un'app: admin (`DELETE /api/skill-hub/library/*/copies/*`), come ogni rimozione (ADR-035), anche se
+la cartella resta come backup. Il Hub mostra il contenuto dei file di istruzioni globali (`CLAUDE.md`,
+`AGENTS.md`) a chi usa la console, come già mostra i log d'uso di Claude Code e Codex.
+
+## 11. API (tutta additiva)
+
+`GET /api/skill-hub/installed[?rescan=true]`, `GET …/installed/{id}`, `POST …/installed/{id}/open`,
+`POST …/installed/{id}/import`, `POST /api/skill-hub/sync`, `GET /api/skill-hub/events`,
+`GET /api/skill-hub/marketplaces`, `GET …/marketplaces/search?q=&provider=`,
+`GET …/marketplaces/{provider}/browse`, `GET …/marketplaces/{provider}/package?ref=`,
+`POST /api/skill-hub/install`, `GET|POST|DELETE /api/skill-hub/library/{key}/copies[/{app}]`,
+`GET /api/skill-hub/library/{key}/package.zip`, `GET /api/skill-hub/updates`,
+`POST …/updates/check`, `POST …/updates/apply`. Problemi nuovi: `skill-hub-item-not-found`,
+`skill-package-refused` (422), `skill-hub-conflict`, `skill-location-read-only`,
+`marketplace-unavailable` (502).
+
+## 12. Verifica
+
+- `SkillFilesTest` (8): frontmatter delle app, `SkillDocument` con descrizione a blocchi, percorsi dei
+  pacchetti, categorie, resa per le app, versioni.
+- `SkillHubApiTest` (11): ogni forma di cartella (personali, di sistema, plugin Codex con
+  attivo/disattivo e nome dal manifest, Claude Desktop con account in uso e plugin, istruzioni), la
+  sincronizzazione (anche su un PC vuoto), import e aggiornamento dalla sorgente, installazione da un
+  marketplace in libreria e in due app, pacchetto che esce dalla cartella rifiutato senza scrivere
+  niente, copie spinte e riportate con conflitto e backup, nessuna sovrascrittura senza conferma, zip,
+  ricerca con un provider giù, aggiornamento a monte con modifica locale.
+- `LibraryApiTest`: import di un `SKILL.md` standard senza chiave (visto rosso prima della correzione).
+- **Mutazioni: 10 su 10 rosse** — ognuna delle guardie (cartella altrui, percorsi, conflitti di pull e
+  di update, evento di rimozione, rimozione solo delle copie del Hub, solo admin, chiave dal nome,
+  account in uso, copia modificata) tolta da sola fa fallire il suo test.
+- Console: `hubModel.test` (raggruppamento, filtri, presenza nelle app), `SkillHub.test` (installate,
+  import, marketplace con anteprima e installazione, aggiornamenti con conferma della sovrascrittura).
+- Smoke dal vivo su un database separato con le cartelle reali di questo PC in sola lettura.
+
+## 13. Che cosa resta fuori
+
+Registrato come debito: TD-74 … TD-82 (`docs/DEBT_REGISTRY.md`).

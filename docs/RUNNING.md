@@ -39,7 +39,9 @@ per provare senza toccare i dati, clonare prima (vedi l'intestazione dello scrip
    apri»: cartella, documento della task, regole dello strumento e pacchetto di handoff vengono
    scritti, lo strumento si apre, il prompt è negli appunti.
 7. **Review**: «Accetta e completa» o «Richiedi modifiche», con nota.
-8. Altro: **Knowledge Hub** (skill come file, modificabili qui o in VS Code), **Terminale** (admin),
+8. Altro: **Knowledge Hub** (tutte le skill e knowledge della libreria, di Claude Code, Claude Desktop,
+   Codex e delle altre app, divise per app e tipologia; marketplace; copie sincronizzate; aggiornamenti —
+   ADR-036), **Terminale** (admin),
    **Codice** nel progetto (grafo), **Consumi** (quote, costi e budget), **Impostazioni** (utenti,
    registro di sicurezza, ecosistema all'avvio), eliminazione di progetti e task (admin, digitando
    il nome).
@@ -376,6 +378,27 @@ dipende da ciò che si elimina e non si può scollegare, con le stesse frasi del
 I file si eliminano **solo** dentro cartelle che AI Company OS gestisce, e **a stadi**: rinominati e
 nascosti, poi rimossi al commit o rimessi al loro posto al rollback (ADR-035 §5). Un file aperto da un
 altro programma rifiuta l'eliminazione con `409` e il motivo.
+
+### Knowledge Hub: app, marketplace, copie, aggiornamenti (PHASE 31, ADR-036)
+
+Il Hub legge le skill delle app **solo** sotto le cartelle note (home dell'utente e `%APPDATA%`;
+`aicos.hub.home`, `aicos.hub.app-data`) e scrive solo nelle cartelle personali (`~/.claude/skills`,
+`~/.agents/skills`, `~/.gemini/antigravity/skills`, …). Ciò che sostituisce o toglie finisce in
+`<aicos.home>/backups/skills/`, mai cancellato. Una sincronizzazione parte ogni
+`aicos.hub.sync-interval` (default `PT5M`, `PT0S` la spegne).
+
+| Endpoint | Chi | Note |
+|---|---|---|
+| `GET /api/skill-hub/installed[?rescan=true]` | tutti | libreria + ogni app: app, cartelle, agenti che lavorano lì, skill con tipologia, categoria, plugin, stato delle copie, provenienza |
+| `GET /api/skill-hub/installed/{id}` · `POST …/{id}/open` · `POST …/{id}/import {key?}` | operatore | contenuto (sola lettura), apri la cartella in VS Code, importa nella libreria (`201`) |
+| `POST /api/skill-hub/sync` · `GET /api/skill-hub/events?limit=` | operatore | rilegge libreria e app; installate / rimosse / modificate dall'ultima volta |
+| `GET /api/skill-hub/marketplaces` · `GET …/search?q=&provider=` · `GET …/{provider}/browse` | tutti | provider; ricerca su skills.sh, ClawHub e repository ufficiali (un provider giù non nasconde gli altri) |
+| `GET /api/skill-hub/marketplaces/{provider}/package?ref=` | tutti | anteprima: file, `SKILL.md`, avvisi; niente viene scritto |
+| `POST /api/skill-hub/install {provider, ref, key?, targets[]}` | operatore | nella libreria (`201`) e nelle app indicate; `409` se è già installata |
+| `GET /api/skill-hub/library/{key}/copies` · `POST …/copies/{app} {replace}` | operatore | stato della copia per app; installa o aggiorna; `409 skill-hub-conflict` su una cartella non del Hub o modificata, `replace=true` sovrascrive con backup |
+| `DELETE /api/skill-hub/library/{key}/copies/{app}` | admin | toglie una copia del Hub (resta come backup); una cartella non del Hub: `409` |
+| `GET /api/skill-hub/library/{key}/package.zip` | tutti | la skill per Claude Desktop (*Impostazioni → Capacità → Skill*) |
+| `GET /api/skill-hub/updates` · `POST …/updates/check` · `POST …/updates/apply {ids[], overwrite}` | operatore | aggiornamenti noti; verifica online; applica uno per uno (`UPDATED`, `CONFLICT`, `FAILED`) |
 
 ### Errori
 

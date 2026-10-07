@@ -23,7 +23,9 @@ handoffs and reviews, agents and sub-agents with their Agent → Model → Provi
 binding, prompt engineering and harness, Daily Work, the Second Brain graph, the Software Hub
 (detection and launch of the programs installed on this machine), an integrated terminal
 (PowerShell, Claude Code, OpenCode), integrations (Open WebUI and 3D Omniverse embedded, started
-with the system), a Knowledge Hub of skills kept as editable Markdown files, a Mockup Hub, models,
+with the system), a Knowledge Hub of skills kept as editable Markdown files -- which also shows the
+skills of Claude Code, Claude Desktop, Codex and the other agent apps on the machine, installs new ones
+from online marketplaces, keeps copies in sync and checks for updates --, a Mockup Hub, models,
 usage and costs with budgets, and people with roles and a security log.
 
 Claude Code, Codex, Antigravity, OpenCode and the agentic IDEs are used through their own apps and

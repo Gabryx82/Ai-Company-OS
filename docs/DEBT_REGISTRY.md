@@ -132,7 +132,7 @@ ferma a `TD-22`.
 
 | **TD-57** | Blueprint: TypeScript, JavaScript e Python sono letti in modo **lessicale** (un blocco per file, import e rotte), non con un AST; il punto di estensione `BlueprintLanguagePlugin` esiste, i plugin AST no (ADR-033 §5) | **aperto** | PHASE 28 |
 | **TD-58** | Blueprint Java senza symbol solver: le chiamate su risultati di catene (`a.b().c()`), su campi ereditati o su tipi qualificati per package non generano relazioni; nessun call graph interprocedurale | **aperto**, MINOR | PHASE 28 |
-| **TD-59** | springdoc nomina gli schemi con il nome **semplice** della classe: due record omonimi in package diversi si sovrascrivono in silenzio nel contratto. Trovato e evitato in PHASE 28 (prefisso `Blueprint`), ma nessun test impedisce che si ripeta | **aperto** | PHASE 28 |
+| **TD-59** | springdoc nomina gli schemi con il nome **semplice** della classe: due record omonimi in package diversi si sovrascrivono in silenzio nel contratto. Trovato e evitato in PHASE 28 (prefisso `Blueprint`), ma nessun test impedisce che si ripeta. **Ripetuto in PHASE 31** (`Summary`, `Opened`, `Installed`, e `operationId` duplicati): trovato confrontando il contratto con il precedente, evitato con nomi univoci | **aperto** | PHASE 28 |
 | **TD-60** | La riconciliazione di una scansione salva nodi e archi uno a uno (≈12 s per 614 blocchi e 2289 relazioni su questo repository): senza batching JDBC | **aperto**, MINOR | PHASE 28 |
 | **TD-61** | `GET …/blueprint` restituisce l'intero grafo (≈1,1 MB per 614 blocchi): nessun caricamento progressivo per livello o per area del canvas | **aperto**, MINOR | PHASE 28 |
 | **TD-62** | L'autorizzazione di un endpoint nel Blueprint viene solo dalle annotazioni (`@PreAuthorize`, `@Secured`): le regole per percorso di `SecurityConfiguration` non sono lette, e il campo dice «autenticato (regola globale)» | **aperto**, MINOR | PHASE 28 |
@@ -150,7 +150,17 @@ ferma a `TD-22`.
 | **TD-72** | Due forme di eliminazione convivono: progetti e task (ADR-027) rispondono `200` con `DeletionImpact` e usano il dialog con il nome digitato; le eliminazioni di PHASE 30 rispondono `204` con `DeletionPreview` e `ConfirmDeletion`. Unificarle cambierebbe un contratto pubblicato (non additivo) | **aperto**, MINOR | PHASE 30 |
 | **TD-73** | `POST /api/resources` registra `origin = CATALOG` anche per una voce creata da una persona: l'eliminazione decide sulla presenza della chiave nel catalogo spedito e non ne è toccata, ma la console etichetta quella voce «catalogo» | **aperto**, MINOR | PHASE 30 |
 
-**Prossimo identificatore libero: `TD-74`.**
+| **TD-74** | Plugin di Codex: nessuna verifica di aggiornamenti. Il catalogo locale `~/.codex/.tmp/plugins` è di un altro canale e più vecchio delle versioni installate (misurato: `github` 0.1.0 contro 0.1.12): confrontarlo darebbe solo falsi segnali. Codex li aggiorna da sé (ADR-036 §8) | **aperto**, vincolo esterno | PHASE 31 |
+| **TD-75** | I plugin di Claude Desktop, Claude Code e Codex non si aggiornano dal Knowledge Hub: il Hub segnala la versione più recente e apre l'app, o mostra il comando (`claude plugin update …`). Sono gli store delle app (ADR-036 §2) | **aperto**, per scelta | PHASE 31 |
+| **TD-76** | La categoria funzionale di una skill è un'euristica a parole chiave (`SkillCategories`): qualche voce finisce nella categoria vicina (es. `algorithmic-art` in «Sviluppo»); nessuna correzione manuale per voce | **aperto**, MINOR | PHASE 31 |
+| **TD-77** | Eliminare una skill della libreria (ADR-035) lascia le sue copie nelle app (stato «non più in libreria», si tolgono dal dettaglio della copia) e, per un pacchetto installato, i file accanto a `SKILL.md`; l'anteprima di eliminazione non lo dice | **aperto**, MINOR | PHASE 31 |
+| **TD-78** | Le skill a livello di progetto (`.claude/skills`, `.agents/skills`, `.agent/skills` dentro i repository) non sono lette: solo quelle dell'utente e delle app | **aperto** | PHASE 31 |
+| **TD-79** | GitHub anonimo concede 60 richieste all'ora sull'API: con molti repository o verifiche ravvicinate il limite si raggiunge (il Hub lo dice con l'ora di ripristino). Nessun token configurabile | **aperto**, MINOR | PHASE 31 |
+| **TD-80** | Una skill personale scritta fuori dal Hub (es. `~/.verdent/skills/pdf`, copia di `anthropics/skills`) non è collegata alla sua fonte online: nessun aggiornamento proposto finché non la si importa, e anche allora la fonte è l'app, non il marketplace | **aperto** | PHASE 31 |
+| **TD-81** | Le knowledge (`CLAUDE.md`, `AGENTS.md`, knowledge items di Antigravity) si importano nella libreria ma non si copiano nelle app, e una knowledge importata si aggiorna reimportandola | **aperto**, MINOR | PHASE 31 |
+| **TD-82** | La sincronizzazione automatica non rilegge la cartella della libreria (lo fanno «Sincronizza ora» e «Rileggi cartella»): `SkillLibrary.sync` aggiorna la versione di ogni voce anche quando il file non è cambiato, e farlo in background renderebbe obsoleti gli editor aperti | **aperto**, MINOR | PHASE 31 |
+
+**Prossimo identificatore libero: `TD-83`.**
 
 ## 6. Come si apre un debito nuovo
 

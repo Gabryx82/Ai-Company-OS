@@ -44,6 +44,41 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
+## ▶▶▶▶▶▶▶ PHASE 31 — Il Knowledge Hub come punto unico — COMPLETATA il 2026-10-07, in attesa di Human Final Review
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttiva** del 2026-10-07: trasformare il Knowledge Hub in un punto unico per le skill e le knowledge di
+  tutti gli agenti — quelle della libreria e quelle installate con Claude Desktop, Codex e le altre app,
+  sincronizzate, con verifica e installazione degli aggiornamenti, e un catalogo di marketplace online (anche
+  community) organizzato come il Mockup Hub, da cui cercare e installare — senza togliere né peggiorare nulla;
+  poi: «dividere le skill di Code, Codex (ChatGPT) e ecc. per tipologia». Decisioni in **ADR-036** (estende
+  ADR-026 e ADR-023).
+- **Branch**: `autonomous/phase-31-knowledge-hub`, dalla punta di PHASE 30 (`4127377`), **non pushato**.
+  `master` intoccato.
+- **Backend** (`harness/hub`): `SkillLocations` (dove ogni app tiene le skill, chi può scriverci),
+  `SkillScanner` (personali, plugin, Codex con `config.toml`, Claude Code con `installed_plugins.json`, Claude
+  Desktop per account in uso, istruzioni globali, knowledge items; cache per dimensione e data),
+  `Frontmatter` (YAML delle app), `SkillCategories`, `SkillMarketplaces` (skills.sh, ClawHub, repository
+  GitHub ufficiali; `HubWeb` con 4 host consentiti), `SkillHubService` (vista unica, import, installazione,
+  copie con marcatore `.aicos-hub.json`, pull/push, zip), `SkillUpdates`, `SkillSync` (istantanea ed eventi,
+  ogni 5 min), `HubFiles` (staging, backup, nessuna eliminazione). **V30** additiva: `skill_installations`,
+  `skill_snapshot`, `skill_sync_events`. Corretto anche l'import da URL di un `SKILL.md` standard senza `key`.
+- **Console**: `KnowledgeHub` con riepilogo e cinque schede — Installate (app → tipologia → plugin, filtri di
+  categoria e stato), Marketplace, Aggiornamenti, Attività, **Libreria e catalogo** (la vista di PHASE 19,
+  invariata); `views/knowledge/*`. Il dettaglio di una skill della libreria ha «Nelle app».
+- **Suite**: Java **572** (571 verdi + 1 saltato su Windows, preesistente; erano 552) · console **64** (erano 57) ·
+  engine invariato. OpenAPI **solo additivo** (17 percorsi; confrontato con quello di PHASE 30 dopo aver tolto
+  collisioni di nomi di schemi e di `operationId`, TD-59). **Mutazioni: 10/10 rosse.**
+- **Smoke dal vivo** su `aicompany_p31` (porta 8091, console 5180) con le cartelle reali delle app **in sola
+  lettura**: 323 voci delle app + 12 della libreria; ricerca nei marketplace ~1,6 s dopo la correzione (era ~15 s);
+  installazione di `algorithmic-art` nella libreria temporanea; sincronizzazione e verifica aggiornamenti senza
+  errori. Nessuna scrittura nelle cartelle delle app. Il DB `aicompany` e `%USERPROFILE%\.aicos` non toccati.
+  Esito: `docs/handoff/FINAL_HANDOFF_PHASE_31.md`.
+- **Debiti**: aperti TD-74…TD-82; TD-59 ripetuto ed evitato; prossimo libero **TD-83**.
+- **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review
+  (`docs/handoff/FINAL_HANDOFF_PHASE_31.md`).
+
 ## ▶▶▶▶▶▶ PHASE 30 — Ciò che si crea qui si elimina qui — COMPLETATA il 2026-10-06, in attesa di Human Final Review
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
