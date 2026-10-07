@@ -75,7 +75,16 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   installazione di `algorithmic-art` nella libreria temporanea; sincronizzazione e verifica aggiornamenti senza
   errori. Nessuna scrittura nelle cartelle delle app. Il DB `aicompany` e `%USERPROFILE%\.aicos` non toccati.
   Esito: `docs/handoff/FINAL_HANDOFF_PHASE_31.md`.
-- **Debiti**: aperti TD-74…TD-82; TD-59 ripetuto ed evitato; prossimo libero **TD-83**.
+- **Correzione dopo la verifica dell'operatore** (stesso giorno, «per Claude non vedo i plugin già installati»):
+  Claude Desktop è l'app del **Microsoft Store**, il suo `%APPDATA%\Claude` è virtualizzato e il backend avviato da
+  PowerShell lo trovava vuoto (zero voci nella sua istantanea, mentre lo smoke — lanciato da dentro l'app — ne vedeva
+  228): ora il Hub legge anche `%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude`. E non elencava che skill:
+  ora **plugin** (anche senza skill, con i componenti), **connettori MCP** (uniti per nome, mai argomenti/env/token/
+  file di configurazione) e **memoria** di Claude Code; filtro per tipo nella console; una sede letta per la prima volta
+  viene fotografata, non riportata come «installata oggi» (`baseline:<sede>`). Test: `SkillHubApiTest` 12,
+  console 65; **7/7 mutazioni rosse** in più. L'operatore deve **riavviare** il suo backend (avviato alle 15:04, senza
+  riavvio automatico).
+- **Debiti**: aperti TD-74…TD-85; TD-59 ripetuto ed evitato; prossimo libero **TD-86**.
 - **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review
   (`docs/handoff/FINAL_HANDOFF_PHASE_31.md`).
 

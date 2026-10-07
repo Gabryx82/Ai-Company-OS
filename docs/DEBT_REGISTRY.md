@@ -160,7 +160,11 @@ ferma a `TD-22`.
 | **TD-81** | Le knowledge (`CLAUDE.md`, `AGENTS.md`, knowledge items di Antigravity) si importano nella libreria ma non si copiano nelle app, e una knowledge importata si aggiorna reimportandola | **aperto**, MINOR | PHASE 31 |
 | **TD-82** | La sincronizzazione automatica non rilegge la cartella della libreria (lo fanno «Sincronizza ora» e «Rileggi cartella»): `SkillLibrary.sync` aggiorna la versione di ogni voce anche quando il file non è cambiato, e farlo in background renderebbe obsoleti gli editor aperti | **aperto**, MINOR | PHASE 31 |
 
-**Prossimo identificatore libero: `TD-83`.**
+| **TD-83** | I connettori dell'account claude.ai (quelli aggiunti su claude.ai e non da un plugin) non sono salvati in chiaro sul PC: il Hub conosce solo quelli che Claude Code ha già usato (`claudeAiMcpEverConnected`), per nome | **aperto**, vincolo esterno | PHASE 31 |
+| **TD-84** | I plugin interni di Claude Code (`@builtin`: agents-md, plugin-authoring, telemetry) non hanno una cartella né un manifest: non sono elencati | **aperto**, MINOR | PHASE 31 |
+| **TD-85** | La scheda Code dell'app Claude riceve anche i plugin di Claude Desktop (`@inline`): il Hub li mostra una volta, sotto Claude Desktop, e lo dice nella descrizione di Claude Code invece di duplicarli | **aperto**, per scelta | PHASE 31 |
+
+**Prossimo identificatore libero: `TD-86`.**
 
 ## 6. Come si apre un debito nuovo
 

@@ -3,6 +3,26 @@
 Branch `autonomous/phase-31-knowledge-hub` (dalla punta di PHASE 30, `4127377`), **non pushato**. `master`
 intoccato. Decisioni e ragioni: [ADR-036](../adr/ADR-036-knowledge-hub-across-apps.md).
 
+## Correzione dopo la tua verifica (2026-10-07, pomeriggio)
+
+> «Per quanto riguarda Claude non vedo i plugin che erano già installati.»
+
+| Causa | Correzione | Verifica |
+|---|---|---|
+| **Claude Desktop è l'app del Microsoft Store**: Windows sposta la sua cartella dati in `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude`. La vedono nel percorso normale solo i processi lanciati dall'app Claude — come la sessione che ha fatto lo smoke (228 voci). Il tuo backend, avviato da PowerShell, guardava `%APPDATA%\Claude` e trovava **zero** voci (l'ho letto dalla sua sincronizzazione nel tuo DB, in sola lettura) | il Hub cerca anche nella cartella del pacchetto e usa quella aggiornata per ultima | scanner con `%APPDATA%` volutamente vuoto: trova tutto nella cartella del pacchetto; test con i dati solo lì |
+| Il Hub elencava **solo le skill** | **plugin** come elementi a sé con i componenti (skill, comandi, agenti, hook, connettori) — compare anche **security-guidance**, che ha solo hook; **connettori** (MCP) uniti per nome, con chi li fornisce; **knowledge**: la memoria di Claude Code per progetto. Filtro **Tipo**: Skill · Plugin · Connettori · Knowledge | sul tuo PC: Claude Desktop 13 plugin, 228 skill, 70 connettori + estensione Blender; Claude Code il plugin frontend-design (da `installed_plugins.json` o da `enabledPlugins`), i tuoi 4 server MCP (sketchup, blender, omniverse-toolbox, unreal) + «Claude Docs» dell'account, la memoria di 2 progetti |
+| — | dei connettori **mai** argomenti, variabili d'ambiente, header, query string o il file di configurazione (in `~/.claude.json` c'è anche il tuo account) | test con segreti finti in tutti quei punti: non compaiono in nessuna risposta |
+| — | ciò che il Hub impara a leggere ora (es. i 228 elementi di Claude Desktop) viene **fotografato**, non registrato in Attività come «installato oggi» | test che parte da un'istantanea della versione precedente |
+
+**Verifica dal vivo** (backend di prova su `aicompany_p31`, con `%APPDATA%` volutamente vuoto come lo vede il tuo
+backend): Claude Desktop letto da `Packages\Claude_pzs8sxrjxfjjc\…`, **13 plugin · 228 skill · 70 connettori**;
+Claude Code 1 plugin · 5 connettori · 2 memorie; in tutto **467** elementi (334 skill, 40 plugin, 86 connettori,
+7 knowledge). La sincronizzazione su un'istantanea della versione precedente: **0 installate, 0 rimosse, 0
+modificate** — niente falsi «installato oggi». Suite: Java **573** (0 falliti, 1 saltato preesistente) · console **65**.
+
+**Da fare tu**: il backend che hai avviato alle 15:04 gira con il codice di prima (senza riavvio automatico):
+**riavvialo** dal branch, poi *Knowledge Hub → Installate → Claude Desktop* (e *Tipo: Plugin / Connettori*).
+
 ## Che cosa vedi
 
 **Knowledge Hub** ha ora un'intestazione con il riepilogo (quante skill e knowledge, in quante app,
@@ -39,9 +59,9 @@ ogni 5 minuti.
 |---|---|
 | Sul tuo PC (letto il 2026-10-07) | **323** skill e knowledge in 7 sedi: 228 Claude Desktop (20 skill dell'account + 13 plugin), 66 Codex (plugin, di sistema, AGENTS.md), 20 Antigravity, 9 Verdent; 1,2 s la prima lettura, 0,4 s le successive |
 | Ricerca nei marketplace (dal vivo) | ~1,6 s su skills.sh + ClawHub + tre repository ufficiali; «seo» → 60 risultati |
-| Suite | Java **572** (571 verdi + 1 saltato su Windows, preesistente; erano 552) · console **64** (erano 57) · engine invariato |
-| Test nuovi | `SkillFilesTest` 8 · `SkillHubApiTest` 11 · `LibraryApiTest` +1 · console `hubModel.test` 4, `SkillHub.test` 3 |
-| Mutazioni | **10/10 rosse** (ogni guardia tolta fa fallire il suo test) |
+| Suite | Java **573** (572 verdi + 1 saltato su Windows, preesistente; erano 552) · console **65** (erano 57) · engine invariato |
+| Test nuovi | `SkillFilesTest` 8 · `SkillHubApiTest` 12 · `LibraryApiTest` +1 · console `hubModel.test` 4, `SkillHub.test` 4 |
+| Mutazioni | **10/10 rosse**, più **7/7** sulle guardie della correzione (ogni guardia tolta fa fallire il suo test) |
 | Database | **V30**: `skill_installations`, `skill_snapshot`, `skill_sync_events`. Additiva |
 | API | 17 percorsi nuovi, contratto OpenAPI **solo additivo** (verificato confrontandolo con quello di PHASE 30) |
 

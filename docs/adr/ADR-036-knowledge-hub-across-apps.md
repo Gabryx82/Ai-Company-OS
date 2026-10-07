@@ -20,7 +20,18 @@
 | cercare e installare dall'interfaccia | skills.sh, ClawHub e i repository ufficiali (Anthropic, OpenAI, Vercel) si cercano e si installano dal Hub, con anteprima dei file (§6) |
 | mantenere ciò che esiste | la vista di PHASE 19 è la scheda **Libreria e catalogo**, invariata; il dettaglio di una skill della libreria guadagna la sezione «Nelle app» |
 
-## 2. Dove le app tengono le skill — e chi le possiede
+## 2. Dove le app tengono skill, plugin, connettori e knowledge — e chi li possiede
+
+> **Rivisto il 2026-10-07, dopo la verifica dell'operatore** («per Claude non vedo i plugin che erano già
+> installati»). Due cause. (1) **Claude Desktop è un'app del Microsoft Store (MSIX)**: Windows virtualizza
+> il suo `%APPDATA%\Claude`. L'app e i processi che lancia lo vedono lì; ogni altro processo — il control
+> plane, avviato da PowerShell — trova i dati in
+> `%LOCALAPPDATA%\Packages\Claude_<editore>\LocalCache\Roaming\Claude`. Lo smoke era partito da dentro
+> l'app (questa sessione) e vedeva 228 voci; il backend dell'operatore ne vedeva **zero**. Ora entrambe le
+> sedi sono candidate e vale quella che Claude Desktop ha scritto per ultima. (2) Il Hub elencava **solo
+> le skill**: un plugin fatto di hook (security-guidance), i **connettori** (server MCP) e la **memoria**
+> di Claude Code non comparivano. Ora plugin, connettori e knowledge sono elementi a sé (`kind`).
+
 
 Ogni percorso è calcolato dal server a partire dalla home dell'utente e da `%APPDATA%`
 (`aicos.hub.home`, `aicos.hub.app-data`), mai preso da una richiesta (`SkillLocations`).
@@ -30,16 +41,22 @@ Ogni percorso è calcolato dal server a partire dalla home dell'utente e da `%AP
 | Claude Code | `~/.claude/skills/<nome>/SKILL.md` | personali | **sì** |
 | | `~/.claude/plugins/installed_plugins.json` → percorso del plugin | plugin | no |
 | | `~/.claude/CLAUDE.md` | istruzioni globali | no |
-| Claude Desktop | `%APPDATA%\Claude\local-agent-mode-sessions\skills-plugin\<org>\<account>\manifest.json` | di sistema (Anthropic) o personali (`creatorType`) | no |
-| | `…\<account>\<org>\rpm\manifest.json` → `plugin_<id>` | plugin (marketplace, versione da `plugin.json`) | no |
+| | `~/.claude/settings.json` (`enabledPlugins`) → anche i plugin abilitati dalla copia del marketplace | plugin (attivo/disattivo) | no |
+| | `~/.claude.json` → `mcpServers` (utente e per progetto), `claudeAiMcpEverConnected` | connettori: tuoi, dell'account claude.ai | no |
+| | `~/.claude/projects/<progetto>/memory` | knowledge: la memoria di Claude Code per progetto | no |
+| Claude Desktop | `<home Claude>\local-agent-mode-sessions\skills-plugin\<org>\<account>\manifest.json`, dove `<home Claude>` è `%APPDATA%\Claude` o, per l'app dello Store, `%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude` | di sistema (Anthropic) o personali (`creatorType`) | no |
+| | `…\<account>\<org>\rpm\manifest.json` → `plugin_<id>` | plugin con i loro componenti (skill, comandi, agenti, hook, `.mcp.json`) | no |
+| | `<home Claude>\extensions-installations.json`, `claude_desktop_config.json` | connettori: estensioni desktop (attive/disattive), server MCP configurati | no |
 | Codex · ChatGPT | `~/.codex/skills/.system` | di sistema | no |
 | | `~/.codex/skills` | personali (cartella storica) | no |
 | | `~/.codex/plugins/cache/<marketplace>/<plugin>/<versione>` + `config.toml` | plugin (attivo/disattivo) | no |
 | | `~/.codex/AGENTS.md` | istruzioni globali | no |
+| | `~/.codex/config.toml` → `[mcp_servers.*]` | connettori | no |
 | Agent Skills condivise | `~/.agents/skills` — la cartella utente che **Codex**, Gemini CLI, OpenCode e Copilot leggono | personali | **sì** (è dove il Hub installa per Codex) |
 | Antigravity | `~/.gemini/antigravity/skills` | personali | **sì** |
 | | `~/.gemini/antigravity{,-ide}/builtin/skills`, `~/.gemini/antigravity-ide/plugins` | di sistema, plugin | no |
 | | `~/.gemini/antigravity/knowledge` | knowledge items | no |
+| | `~/.gemini/config/mcp_config.json` | connettori | no |
 | Gemini CLI | `~/.gemini/skills`, `~/.gemini/extensions`, `~/.gemini/GEMINI.md` | personali, plugin, istruzioni | sì / no / no |
 | OpenCode | `~/.config/opencode/skills` (e `skill/`), `AGENTS.md` | personali, istruzioni | sì / no |
 | Verdent, Copilot CLI, Cursor | `~/.verdent/skills`, `~/.copilot/skills`, `~/.cursor/skills` | personali | **sì** |
@@ -54,9 +71,19 @@ Di Claude Desktop si elenca solo l'account **in uso** (il manifest aggiornato pe
 contano in una nota. Una cartella-plugin di Codex chiamata con un id (`app-6a32…`) prende il nome dal
 suo manifest (`interface.displayName`).
 
-Misurato su questo PC il 2026-10-07: **323** voci in 7 sedi (228 Claude Desktop, 66 Codex, 20
-Antigravity, 9 Verdent), **1,2 s** la prima lettura, **0,4 s** le successive (un `SKILL.md` con
-dimensione e data invariate non si rilegge).
+**Plugin** = un elemento per plugin, anche senza skill, con i suoi componenti contati (skill, comandi,
+agenti, hook, connettori). **Connettori** = un elemento per nome e per app: Slack dichiarato da otto plugin
+di Claude Desktop è un connettore «fornito da» otto plugin. Di un server MCP il Hub tiene nome, tipo,
+il nome dell'eseguibile o host e percorso dell'URL — **mai argomenti, variabili d'ambiente, header o
+query string**, dove stanno i token; il dettaglio di un connettore non legge mai il file di
+configurazione (in `~/.claude.json` c'è anche l'account). I connettori dell'account claude.ai sono noti
+localmente solo per nome, da ciò che Claude Code ha usato (`claudeAiMcpEverConnected`).
+
+Misurato su questo PC il 2026-10-07, con la vista «da fuori» del pacchetto: Claude Desktop **13 plugin**
+(security-guidance compreso), **228 skill**, **70 connettori** e l'estensione Blender; Claude Code il
+plugin frontend-design, 4 server MCP tuoi più «Claude Docs» dell'account, la memoria di 2 progetti; Codex
+25 plugin, 65 skill, 7 connettori; Antigravity 20 skill, 4 connettori. La lettura completa resta sotto
+1,5 s (0,4 s con la cache dei `SKILL.md`).
 
 ## 3. Leggere un `SKILL.md`
 
@@ -159,7 +186,10 @@ Ogni `aicos.hub.sync-interval` (5 minuti; `PT0S` la spegne, come nei test) e a r
 le app e confronta con l'istantanea precedente (`skill_snapshot`): ciò che è comparso, sparito o
 cambiato diventa un evento (`skill_sync_events`, gli ultimi 1000), mostrato nella scheda **Attività** —
 anche quando a cambiare è un'app che aggiorna i suoi plugin. La prima lettura fotografa soltanto; una
-riga «baseline» lo ricorda, così anche un PC senza skill vede riportata la prima installazione.
+riga di riferimento **per sede** (`baseline:<sede>`) lo ricorda: anche un PC senza skill vede
+riportata la prima installazione, e una sede letta per la prima volta — una nuova app, o ciò che il Hub
+ha imparato a leggere (Claude Desktop dallo Store, plugin, connettori) — viene fotografata invece di
+comparire come centinaia di «installate oggi».
 
 La console rilegge le app all'apertura della pagina e ogni minuto mentre la pagina è in vista.
 
@@ -190,7 +220,12 @@ la cartella resta come backup. Il Hub mostra il contenuto dei file di istruzioni
 
 - `SkillFilesTest` (8): frontmatter delle app, `SkillDocument` con descrizione a blocchi, percorsi dei
   pacchetti, categorie, resa per le app, versioni.
-- `SkillHubApiTest` (11): ogni forma di cartella (personali, di sistema, plugin Codex con
+- `SkillHubApiTest` (12, dopo la revisione): Claude Desktop installato **dallo Store** (dati solo nella
+  cartella del pacchetto), plugin senza skill, plugin di Claude Code con comandi, agenti e stato,
+  connettori uniti per nome, estensione desktop disattivata, server MCP dell'utente e dell'account,
+  memoria di progetto, **nessun segreto** (argomenti, env, credenziali e query di un URL, email
+  dell'account) nell'elenco né nel dettaglio, connettore non importabile né apribile, versione di un
+  plugin che cambia, sede nuova fotografata e non riportata; e inoltre ogni forma di cartella (personali, di sistema, plugin Codex con
   attivo/disattivo e nome dal manifest, Claude Desktop con account in uso e plugin, istruzioni), la
   sincronizzazione (anche su un PC vuoto), import e aggiornamento dalla sorgente, installazione da un
   marketplace in libreria e in due app, pacchetto che esce dalla cartella rifiutato senza scrivere
@@ -199,7 +234,9 @@ la cartella resta come backup. Il Hub mostra il contenuto dei file di istruzioni
 - `LibraryApiTest`: import di un `SKILL.md` standard senza chiave (visto rosso prima della correzione).
 - **Mutazioni: 10 su 10 rosse** — ognuna delle guardie (cartella altrui, percorsi, conflitti di pull e
   di update, evento di rimozione, rimozione solo delle copie del Hub, solo admin, chiave dal nome,
-  account in uso, copia modificata) tolta da sola fa fallire il suo test.
+  account in uso, copia modificata) tolta da sola fa fallire il suo test. Dopo la revisione, altre
+  **7 su 7**: cartella dello Store, URL ripuliti, dettaglio del connettore senza file, plugin senza
+  skill, sede nuova fotografata, connettori uniti per nome, connettore non importabile.
 - Console: `hubModel.test` (raggruppamento, filtri, presenza nelle app), `SkillHub.test` (installate,
   import, marketplace con anteprima e installazione, aggiornamenti con conferma della sovrascrittura).
 - Smoke dal vivo su un database separato con le cartelle reali di questo PC in sola lettura.
