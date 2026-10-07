@@ -365,3 +365,71 @@ export interface BlueprintVocabulary {
 export type BlueprintBlockWrite = S["BlueprintBlockRequest"];
 export type BlueprintRelationWrite = S["BlueprintRelationRequest"];
 export type BlueprintProposalWrite = S["BlueprintProposalRequest"];
+
+// --- PHASE 31: the Knowledge Hub across applications and marketplaces (ADR-036) ---------------
+
+export type HubScope = "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "INSTRUCTIONS" | "KNOWLEDGE";
+export type CopyStatus = "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN";
+export interface HubCategory { key: string; label: string }
+export interface HubAgentRef { id: number; name: string; target: string }
+export interface HubLocation {
+  id: string; label: string; scope: HubScope; path: string; exists: boolean; writable: boolean; readers: string[]; count: number;
+}
+export interface HubApp {
+  id: string; name: string; description: string; detected: boolean; software: string | null; targets: string[];
+  agents: HubAgentRef[]; locations: HubLocation[]; count: number; installable: boolean;
+}
+export interface HubProvenance {
+  provider: string; providerName: string; reference: string; sourceUrl: string | null; installedVersion: string | null;
+  latestVersion: string | null; installedAt: string | null; checkedAt: string | null; updateAvailable: boolean;
+  localChanges: boolean; checkError: string | null;
+}
+export interface HubCopy { app: string; location: string; skillId: string; path: string; status: CopyStatus; deployedAt: string | null }
+export interface HubSkill {
+  id: string; app: string; location: string; scope: HubScope; kind: string; name: string;
+  description: string | null; category: string; categoryLabel: string; plugin: string | null; pluginVersion: string | null;
+  marketplace: string | null; enabled: boolean | null; version: string | null; path: string | null; writable: boolean;
+  modified: string | null; libraryKey: string | null; copyStatus: CopyStatus | null; provenance: HubProvenance | null;
+  copies: HubCopy[] | null; updateAvailable: boolean;
+}
+export interface HubSummary { total: number; apps: number; libraryEntries: number; updates: number; copies: number }
+export interface HubInstalled {
+  scannedAt: string; lastSync: string | null; syncIntervalSeconds: number; apps: HubApp[]; skills: HubSkill[];
+  categories: HubCategory[]; notes: string[]; summary: HubSummary;
+}
+export interface HubPackageFile { path: string; size: number }
+export interface HubFoundDetail { skill: HubSkill; content: string; truncated: boolean; files: HubPackageFile[] | null; folder: string }
+export interface HubSyncEvent {
+  id: number; at: string; change: "ADDED" | "REMOVED" | "MODIFIED"; app: string; location: string; name: string; path: string;
+  detail: string | null;
+}
+export interface HubSyncReport {
+  at: string; firstRun: boolean; total: number; added: number; removed: number; modified: number; events: HubSyncEvent[];
+  libraryCreated: string[]; libraryUpdated: string[]; libraryInvalid: string[];
+}
+export interface HubMarketplace {
+  key: string; name: string; description: string; homepage: string; searchUrl: string | null;
+  api: "SKILLS_SH" | "CLAWHUB" | "GITHUB" | null; repo: string | null; official: boolean; community: boolean;
+}
+export interface HubResult {
+  provider: string; ref: string; name: string; description: string | null; author: string | null; source: string | null;
+  installs: number | null; version: string | null; url: string | null; suspicious: boolean;
+}
+export interface HubSearchResults { results: HubResult[]; errors: { provider: string; message: string }[] }
+export interface HubPreview {
+  provider: string; ref: string; name: string; description: string | null; version: string | null; sourceUrl: string | null;
+  files: HubPackageFile[] | null; skillMd: string | null; security: string | null; warnings: string[] | null;
+}
+export interface HubDeployResult { app: string; outcome: string; path: string | null; backup: string | null; message: string | null }
+export interface HubInstallResult { key: string; name: string; filePath: string | null; copies: HubDeployResult[] }
+export interface HubCopyTarget {
+  app: string; appName: string; available: boolean; path: string;
+  status: "NONE" | "FOREIGN" | CopyStatus; deployedAt: string | null; skillId: string | null;
+}
+export type HubUpdateType = "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN";
+export interface HubUpdateItem {
+  id: string; type: HubUpdateType; app: string; name: string; key: string | null; from: string | null; to: string | null;
+  detail: string | null; applicable: boolean; needsOverwrite: boolean; software: string | null; command: string | null;
+}
+export interface HubUpdates { checkedAt: string | null; items: HubUpdateItem[]; errors: string[] }
+export interface HubApplied { id: string; outcome: "UPDATED" | "CONFLICT" | "FAILED" | "SKIPPED"; message: string | null }

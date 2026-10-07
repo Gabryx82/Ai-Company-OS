@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ControlPlane } from "../api/client";
 import { ApiContext } from "../context";
@@ -11,6 +11,9 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
  * arrived with `children: null` and blanked the whole console.
  */
 describe("KnowledgeHub", () => {
+  // PHASE 31: the library and its catalog are the Knowledge Hub's last tab; the tab is remembered per viewer.
+  beforeEach(() => localStorage.clear());
+
   it("renders resources and templates even when the server sends null lists", async () => {
     const { fetcher } = fakeFetch({
       "GET /api/resources": () => ({ body: [
@@ -31,6 +34,7 @@ describe("KnowledgeHub", () => {
       </ApiContext.Provider>,
     );
 
+    fireEvent.click(await screen.findByRole("tab", { name: "Libreria e catalogo" }));
     expect(await screen.findByText("Code Reviewer")).toBeTruthy();
     expect(await screen.findByText("Clean code Java")).toBeTruthy();
     expect(screen.queryByText(/si è interrotta/)).toBeNull();
@@ -70,6 +74,7 @@ describe("KnowledgeHub", () => {
     const api = new ControlPlane({ baseUrl: "http://localhost:8081", token: "t0123456789abcdef" }, fetcher);
     render(<ApiContext.Provider value={api}><KnowledgeHub /></ApiContext.Provider>);
 
+    fireEvent.click(await screen.findByRole("tab", { name: "Libreria e catalogo" }));
     fireEvent.click(await screen.findByRole("button", { name: /Revisione API/ }));
     const editor = await screen.findByLabelText("Contenuto del file") as HTMLTextAreaElement;
     expect(editor.value).toContain("# Regole");

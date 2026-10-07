@@ -17,7 +17,8 @@ import type {
   InProgressPolicy, PlannedAgent, EcosystemServiceInfo, TerminalShell, TerminalTicket, CodeGraph, CostSummary,
   AiAction, BlueprintActionOutcome, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintCanvasLayout, BlueprintGraph, BlueprintPoint,
   BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
-  BlueprintVocabulary,
+  BlueprintVocabulary, HubInstalled, HubFoundDetail, HubSyncReport, HubSyncEvent, HubMarketplace, HubSearchResults,
+  HubResult, HubPreview, HubInstallResult, HubCopyTarget, HubDeployResult, HubUpdates, HubApplied,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -796,6 +797,90 @@ export class ControlPlane {
 
   openResource(key: string): Promise<{ folder: string; command: string[] }> {
     return this.plain("POST", `/api/resources/${encodeURIComponent(key)}/open`);
+  }
+
+  // --- the Knowledge Hub across applications and marketplaces (PHASE 31, ADR-036) ---
+
+  hubInstalled(rescan = false): Promise<HubInstalled> {
+    return this.plain("GET", `/api/skill-hub/installed${rescan ? "?rescan=true" : ""}`);
+  }
+
+  hubSkill(id: string): Promise<HubFoundDetail> {
+    return this.plain("GET", `/api/skill-hub/installed/${encodeURIComponent(id)}`);
+  }
+
+  hubOpenSkill(id: string): Promise<{ folder: string }> {
+    return this.plain("POST", `/api/skill-hub/installed/${encodeURIComponent(id)}/open`);
+  }
+
+  hubImportSkill(id: string, key?: string): Promise<Resource> {
+    return this.plain("POST", `/api/skill-hub/installed/${encodeURIComponent(id)}/import`, { body: key ? { key } : {} });
+  }
+
+  hubSync(): Promise<HubSyncReport> {
+    return this.plain("POST", "/api/skill-hub/sync");
+  }
+
+  hubEvents(limit = 200): Promise<HubSyncEvent[]> {
+    return this.plain("GET", `/api/skill-hub/events?limit=${limit}`);
+  }
+
+  hubMarketplaces(): Promise<HubMarketplace[]> {
+    return this.plain("GET", "/api/skill-hub/marketplaces");
+  }
+
+  hubSearch(q: string, providers: string[] = []): Promise<HubSearchResults> {
+    const only = providers.map((p) => `&provider=${encodeURIComponent(p)}`).join("");
+    return this.plain("GET", `/api/skill-hub/marketplaces/search?q=${encodeURIComponent(q)}${only}`);
+  }
+
+  hubBrowse(provider: string): Promise<HubResult[]> {
+    return this.plain("GET", `/api/skill-hub/marketplaces/${encodeURIComponent(provider)}/browse`);
+  }
+
+  hubPreview(provider: string, ref: string): Promise<HubPreview> {
+    return this.plain("GET", `/api/skill-hub/marketplaces/${encodeURIComponent(provider)}/package?ref=${encodeURIComponent(ref)}`);
+  }
+
+  hubInstall(provider: string, ref: string, key: string | undefined, targets: string[]): Promise<HubInstallResult> {
+    return this.plain("POST", "/api/skill-hub/install", { body: { provider, ref, key: key || undefined, targets } });
+  }
+
+  hubCopies(key: string): Promise<HubCopyTarget[]> {
+    return this.plain("GET", `/api/skill-hub/library/${encodeURIComponent(key)}/copies`);
+  }
+
+  hubDeploy(key: string, app: string, replace = false): Promise<HubDeployResult> {
+    return this.plain("POST", `/api/skill-hub/library/${encodeURIComponent(key)}/copies/${encodeURIComponent(app)}`,
+      { body: { replace } });
+  }
+
+  hubRemoveCopy(key: string, app: string): Promise<HubDeployResult> {
+    return this.plain("DELETE", `/api/skill-hub/library/${encodeURIComponent(key)}/copies/${encodeURIComponent(app)}`);
+  }
+
+  /** The skill as a .zip for Claude Desktop, fetched with the token: an object URL to hand to a link. */
+  async hubPackageUrl(key: string): Promise<string> {
+    const response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "")
+      + `/api/skill-hub/library/${encodeURIComponent(key)}/package.zip`,
+      { headers: { Authorization: `Bearer ${this.session.token}` } });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new ApiProblem(response.status, (text ? safeJson(text) : {}) as object);
+    }
+    return URL.createObjectURL(await response.blob());
+  }
+
+  hubUpdates(): Promise<HubUpdates> {
+    return this.plain("GET", "/api/skill-hub/updates");
+  }
+
+  hubCheckUpdates(): Promise<HubUpdates> {
+    return this.plain("POST", "/api/skill-hub/updates/check");
+  }
+
+  hubApplyUpdates(ids: string[], overwrite = false): Promise<{ results: HubApplied[] }> {
+    return this.plain("POST", "/api/skill-hub/updates/apply", { body: { ids, overwrite } });
   }
 
   // --- agent configuration and binding (ADR-025) --------------------------------

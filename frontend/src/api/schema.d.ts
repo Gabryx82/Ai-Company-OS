@@ -1636,6 +1636,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/skill-hub/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["skillSyncEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["installSkillPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/installed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["installedSkills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/installed/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["installedSkill"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/installed/{id}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importInstalledSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/installed/{id}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["openInstalledSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/library/{key}/copies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["skillCopies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/library/{key}/copies/{app}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["copySkillToApp"];
+        delete: operations["removeSkillCopy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/library/{key}/package.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["skillPackageZip"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/marketplaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["skillMarketplaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/marketplaces/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["searchSkillMarketplaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/marketplaces/{provider}/browse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["browseSkillMarketplace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/marketplaces/{provider}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["previewSkillPackage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["syncSkills"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["skillUpdates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/updates/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["applySkillUpdates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/updates/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["checkSkillUpdates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/software": {
         parameters: {
             query?: never;
@@ -2061,6 +2333,12 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        AgentRef: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+            target?: string;
+        };
         AgentResponse: {
             active?: boolean;
             /** Format: date-time */
@@ -2096,6 +2374,31 @@ export interface components {
             id: number;
             /** Format: int64 */
             version: number;
+        };
+        AppView: {
+            agents?: components["schemas"]["AgentRef"][];
+            /** Format: int32 */
+            count?: number;
+            description?: string;
+            detected?: boolean;
+            id?: string;
+            installable?: boolean;
+            locations?: components["schemas"]["LocationView"][];
+            name?: string;
+            software?: string;
+            targets?: string[];
+        };
+        Applied: {
+            id?: string;
+            message?: string;
+            outcome?: string;
+        };
+        ApplyRequest: {
+            ids: string[];
+            overwrite?: boolean;
+        };
+        ApplyResponse: {
+            results?: components["schemas"]["Applied"][];
         };
         Autostart: {
             autostart: boolean;
@@ -2477,6 +2780,10 @@ export interface components {
             /** @enum {string} */
             subagents?: "DETACH" | "DELETE";
         };
+        Category: {
+            key?: string;
+            label?: string;
+        };
         CodeGraph: {
             cycles?: string[][];
             edges?: components["schemas"]["Edge"][];
@@ -2611,6 +2918,26 @@ export interface components {
             path?: string;
             why?: string;
         };
+        CopyTarget: {
+            app?: string;
+            appName?: string;
+            available?: boolean;
+            /** Format: date-time */
+            deployedAt?: string;
+            path?: string;
+            skillId?: string;
+            status?: string;
+        };
+        CopyView: {
+            app?: string;
+            /** Format: date-time */
+            deployedAt?: string;
+            location?: string;
+            path?: string;
+            skillId?: string;
+            /** @enum {string} */
+            status?: "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN";
+        };
         DailyRequest: {
             /** Format: date */
             day?: string;
@@ -2656,6 +2983,16 @@ export interface components {
             kind?: string;
             subjects?: components["schemas"]["Subject"][];
         };
+        DeployRequest: {
+            replace?: boolean;
+        };
+        DeployResult: {
+            app?: string;
+            backup?: string;
+            message?: string;
+            outcome?: string;
+            path?: string;
+        };
         Document: {
             /** Format: date-time */
             modified?: string;
@@ -2684,6 +3021,19 @@ export interface components {
             kind?: string;
             source?: string;
             target?: string;
+        };
+        Event: {
+            app?: string;
+            /** Format: date-time */
+            at?: string;
+            /** @enum {string} */
+            change?: "ADDED" | "REMOVED" | "MODIFIED";
+            detail?: string;
+            /** Format: int64 */
+            id?: number;
+            location?: string;
+            name?: string;
+            path?: string;
         };
         EventResponse: {
             detail?: string;
@@ -2716,6 +3066,13 @@ export interface components {
             relativePath?: string;
             /** Format: int64 */
             version?: number;
+        };
+        FoundDetail: {
+            content?: string;
+            files?: components["schemas"]["PackageFile"][];
+            folder?: string;
+            skill?: components["schemas"]["SkillView"];
+            truncated?: boolean;
         };
         GenerateRequest: {
             model?: string;
@@ -2784,6 +3141,21 @@ export interface components {
         Import: {
             url: string;
         };
+        ImportRequest: {
+            key?: string;
+        };
+        InstallRequest: {
+            key?: string;
+            provider: string;
+            ref: string;
+            targets?: string[];
+        };
+        InstallResult: {
+            copies?: components["schemas"]["DeployResult"][];
+            filePath?: string;
+            key?: string;
+            name?: string;
+        };
         Installed: {
             /** Format: int64 */
             agentId?: number;
@@ -2800,6 +3172,21 @@ export interface components {
             expiresAt?: string;
             shell?: string;
             ticket?: string;
+        };
+        Item: {
+            app?: string;
+            applicable?: boolean;
+            command?: string;
+            detail?: string;
+            from?: string;
+            id?: string;
+            key?: string;
+            name?: string;
+            needsOverwrite?: boolean;
+            software?: string;
+            to?: string;
+            /** @enum {string} */
+            type?: "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN";
         };
         LaunchRequest: {
             /** Format: int64 */
@@ -2819,6 +3206,18 @@ export interface components {
             root?: string;
             /** Format: int64 */
             skills?: number;
+        };
+        LocationView: {
+            /** Format: int32 */
+            count?: number;
+            exists?: boolean;
+            id?: string;
+            label?: string;
+            path?: string;
+            readers?: string[];
+            /** @enum {string} */
+            scope?: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "INSTRUCTIONS" | "KNOWLEDGE";
+            writable?: boolean;
         };
         LoginRequest: {
             password: string;
@@ -2969,6 +3368,11 @@ export interface components {
             taskId?: number;
             title?: string;
         };
+        PackageFile: {
+            path?: string;
+            /** Format: int64 */
+            size?: number;
+        };
         PasswordChange: {
             currentPassword: string;
             newPassword: string;
@@ -3038,6 +3442,18 @@ export interface components {
             role?: string;
             templateKey?: string;
         };
+        Preview: {
+            description?: string;
+            files?: components["schemas"]["PackageFile"][];
+            name?: string;
+            provider?: string;
+            ref?: string;
+            security?: string;
+            skillMd?: string;
+            sourceUrl?: string;
+            version?: string;
+            warnings?: string[];
+        };
         PriceRequest: {
             inputPricePerMtok?: number;
             outputPricePerMtok?: number;
@@ -3097,6 +3513,37 @@ export interface components {
             description?: string;
             name: string;
         };
+        ProvenanceView: {
+            checkError?: string;
+            /** Format: date-time */
+            checkedAt?: string;
+            /** Format: date-time */
+            installedAt?: string;
+            installedVersion?: string;
+            latestVersion?: string;
+            localChanges?: boolean;
+            provider?: string;
+            providerName?: string;
+            reference?: string;
+            sourceUrl?: string;
+            updateAvailable?: boolean;
+        };
+        Provider: {
+            /** @enum {string} */
+            api?: "SKILLS_SH" | "CLAWHUB" | "GITHUB";
+            community?: boolean;
+            description?: string;
+            homepage?: string;
+            key?: string;
+            name?: string;
+            official?: boolean;
+            repo?: string;
+            searchUrl?: string;
+        };
+        ProviderError: {
+            message?: string;
+            provider?: string;
+        };
         ProviderRef: {
             billing?: string;
             key?: string;
@@ -3148,6 +3595,23 @@ export interface components {
         ReferenceSelection: {
             paths: string[];
         };
+        Report: {
+            /** Format: int32 */
+            added?: number;
+            /** Format: date-time */
+            at?: string;
+            events?: components["schemas"]["Event"][];
+            firstRun?: boolean;
+            libraryCreated?: string[];
+            libraryInvalid?: string[];
+            libraryUpdated?: string[];
+            /** Format: int32 */
+            modified?: number;
+            /** Format: int32 */
+            removed?: number;
+            /** Format: int32 */
+            total?: number;
+        };
         ResourceRef: {
             configuration?: string;
             description?: string;
@@ -3184,6 +3648,19 @@ export interface components {
             tags?: string[];
             /** Format: int64 */
             version?: number;
+        };
+        Result: {
+            author?: string;
+            description?: string;
+            /** Format: int64 */
+            installs?: number;
+            name?: string;
+            provider?: string;
+            ref?: string;
+            source?: string;
+            suspicious?: boolean;
+            url?: string;
+            version?: string;
         };
         ReviewRequest: {
             /** Format: int64 */
@@ -3258,6 +3735,10 @@ export interface components {
             outcome?: "CREATED" | "EXISTING";
             path?: string;
         };
+        SearchResults: {
+            errors?: components["schemas"]["ProviderError"][];
+            results?: components["schemas"]["Result"][];
+        };
         ServiceView: {
             autostart?: boolean;
             availability?: string;
@@ -3283,6 +3764,61 @@ export interface components {
             detail?: string;
             key?: string;
             name?: string;
+        };
+        SkillFolderOpened: {
+            folder?: string;
+        };
+        SkillHubInstalled: {
+            apps?: components["schemas"]["AppView"][];
+            categories?: components["schemas"]["Category"][];
+            /** Format: date-time */
+            lastSync?: string;
+            notes?: string[];
+            /** Format: date-time */
+            scannedAt?: string;
+            skills?: components["schemas"]["SkillView"][];
+            summary?: components["schemas"]["SkillHubSummary"];
+            /** Format: int64 */
+            syncIntervalSeconds?: number;
+        };
+        SkillHubSummary: {
+            /** Format: int32 */
+            apps?: number;
+            /** Format: int32 */
+            copies?: number;
+            /** Format: int32 */
+            libraryEntries?: number;
+            /** Format: int32 */
+            total?: number;
+            /** Format: int32 */
+            updates?: number;
+        };
+        SkillView: {
+            app?: string;
+            category?: string;
+            categoryLabel?: string;
+            copies?: components["schemas"]["CopyView"][];
+            /** @enum {string} */
+            copyStatus?: "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN";
+            description?: string;
+            enabled?: boolean;
+            id?: string;
+            kind?: string;
+            libraryKey?: string;
+            location?: string;
+            marketplace?: string;
+            /** Format: date-time */
+            modified?: string;
+            name?: string;
+            path?: string;
+            plugin?: string;
+            pluginVersion?: string;
+            provenance?: components["schemas"]["ProvenanceView"];
+            /** @enum {string} */
+            scope?: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "INSTRUCTIONS" | "KNOWLEDGE";
+            updateAvailable?: boolean;
+            version?: string;
+            writable?: boolean;
         };
         SoftwareChoice: {
             /** @enum {string} */
@@ -3503,6 +4039,12 @@ export interface components {
             billed?: boolean;
             key?: string;
             provider?: string;
+        };
+        UpdatesView: {
+            /** Format: date-time */
+            checkedAt?: string;
+            errors?: string[];
+            items?: components["schemas"]["Item"][];
         };
         UsageWindowResponse: {
             byModel?: components["schemas"]["ModelTokens"][];
@@ -6618,6 +7160,411 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RunResponse"];
+                };
+            };
+        };
+    };
+    skillSyncEvents: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Event"][];
+                };
+            };
+        };
+    };
+    installSkillPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstallResult"];
+                };
+            };
+        };
+    };
+    installedSkills: {
+        parameters: {
+            query?: {
+                rescan?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SkillHubInstalled"];
+                };
+            };
+        };
+    };
+    installedSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FoundDetail"];
+                };
+            };
+        };
+    };
+    importInstalledSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ImportRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceResponse"];
+                };
+            };
+        };
+    };
+    openInstalledSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SkillFolderOpened"];
+                };
+            };
+        };
+    };
+    skillCopies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CopyTarget"][];
+                };
+            };
+        };
+    };
+    copySkillToApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+                app: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DeployRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeployResult"];
+                };
+            };
+        };
+    };
+    removeSkillCopy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+                app: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeployResult"];
+                };
+            };
+        };
+    };
+    skillPackageZip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+        };
+    };
+    skillMarketplaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Provider"][];
+                };
+            };
+        };
+    };
+    searchSkillMarketplaces: {
+        parameters: {
+            query: {
+                q: string;
+                provider?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SearchResults"];
+                };
+            };
+        };
+    };
+    browseSkillMarketplace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Result"][];
+                };
+            };
+        };
+    };
+    previewSkillPackage: {
+        parameters: {
+            query: {
+                ref: string;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Preview"];
+                };
+            };
+        };
+    };
+    syncSkills: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Report"];
+                };
+            };
+        };
+    };
+    skillUpdates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UpdatesView"];
+                };
+            };
+        };
+    };
+    applySkillUpdates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApplyResponse"];
+                };
+            };
+        };
+    };
+    checkSkillUpdates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UpdatesView"];
                 };
             };
         };

@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useApi } from "../context";
 import { ApiProblem, type Versioned } from "../api/client";
-import type { AgentProfile, AgentTemplate, LibraryInfo, Project, Resource, ResourceFile } from "../api/types";
+import type { AgentProfile, AgentTemplate, HubInstalled, LibraryInfo, Project, Resource, ResourceFile } from "../api/types";
 import { Field, Modal, ProblemNote, when } from "../components/ui";
 import { Icon } from "../components/icons";
 import { ConfirmDeletion, DeleteButton } from "../components/Deletion";
 import { useIsAdmin } from "../context";
+import { InstalledPanel } from "./knowledge/InstalledPanel";
+import { MarketplacePanel } from "./knowledge/MarketplacePanel";
+import { UpdatesPanel } from "./knowledge/UpdatesPanel";
+import { ActivityPanel } from "./knowledge/ActivityPanel";
+import { CopiesSection } from "./knowledge/CopiesSection";
 
 const KINDS = [
   { key: "", label: "Tutto" }, { key: "SKILL", label: "Skill" }, { key: "KNOWLEDGE", label: "Knowledge" },
@@ -33,13 +38,160 @@ tags: [esempio]
 ## Da evitare
 `;
 
+type HubTab = "installed" | "marketplace" | "updates" | "activity" | "library";
+const TABS: { key: HubTab; label: string }[] = [
+  { key: "installed", label: "Installate" }, { key: "marketplace", label: "Marketplace" },
+  { key: "updates", label: "Aggiornamenti" }, { key: "activity", label: "Attività" },
+  { key: "library", label: "Libreria e catalogo" },
+];
+const TAB_KEY = "aicos.knowledgeHub.tab";
+
+function rememberedTab(): HubTab {
+  try {
+    const value = localStorage.getItem(TAB_KEY);
+    return TABS.some((t) => t.key === value) ? value as HubTab : "installed";
+  } catch {
+    return "installed";
+  }
+}
+
+/**
+ * The Knowledge Hub (PHASE 31, ADR-036): one place for every skill and
+ * knowledge item of the operator's agents -- the library of AI Company OS,
+ * Claude Code, Claude Desktop, Codex and the other applications on this
+ * machine -- kept in sync, checked for updates, and fed from online
+ * marketplaces. The library and its catalog (PHASE 19) are the last tab, as
+ * they were.
+ */
+export function KnowledgeHub() {
+  const api = useApi();
+  const [tab, setTabState] = useState<HubTab>(rememberedTab);
+  const [installed, setInstalled] = useState<HubInstalled | null>(null);
+  const [problem, setProblem] = useState<unknown>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const load = useCallback((rescan = false) => api.hubInstalled(rescan).then(setInstalled).catch(setProblem), [api]);
+  // Opening the page reads the applications' folders again, and so does every minute the page stays in view:
+  // what is installed, removed or changed in Claude Code, Codex & co. shows up here without a click.
+  useEffect(() => {
+    load(true);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") load(true);
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [load]);
+
+  function setTab(next: HubTab) {
+    setTabState(next);
+    try {
+      localStorage.setItem(TAB_KEY, next);
+    } catch {
+      // not remembered; the default stays
+    }
+  }
+
+  function changed(message: string) {
+    setDone(message);
+    load(true);
+    setRefreshKey((k) => k + 1);
+  }
+
+  async function sync() {
+    setBusy("sync");
+    setProblem(null);
+    try {
+      const report = await api.hubSync();
+      setDone(report.firstRun
+        ? `Prima sincronizzazione: ${report.total} skill e knowledge fotografate nelle app`
+        : `Sincronizzato: ${report.added} installate, ${report.removed} rimosse, ${report.modified} modificate nelle app`
+          + ((report.libraryCreated ?? []).length ? ` · ${report.libraryCreated.length} nuove nella cartella della libreria` : "")
+          + ((report.libraryInvalid ?? []).length ? ` · ${report.libraryInvalid.length} file della libreria non validi` : ""));
+      await load();
+      setRefreshKey((k) => k + 1);
+    } catch (error) {
+      setProblem(error);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function checkUpdates() {
+    setBusy("check");
+    setProblem(null);
+    try {
+      const updates = await api.hubCheckUpdates();
+      setDone(`Verifica completata: ${updates.items.length} aggiornament${updates.items.length === 1 ? "o" : "i"} disponibil${updates.items.length === 1 ? "e" : "i"}`);
+      setTab("updates");
+      await load();
+      setRefreshKey((k) => k + 1);
+    } catch (error) {
+      setProblem(error);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const summary = installed?.summary;
+  const minutes = installed && installed.syncIntervalSeconds > 0 ? Math.round(installed.syncIntervalSeconds / 60) : null;
+
+  return (
+    <div className="stack">
+      <div className="page-head">
+        <div><h1>Knowledge Hub</h1>
+          <p>Tutte le skill e le knowledge dei tuoi agenti in un posto: la libreria di AI Company OS, Claude Code, Claude Desktop,
+            Codex e le altre app di questo PC, sincronizzate, con gli aggiornamenti e i marketplace online.</p></div>
+        <div className="row">
+          <button className="btn" onClick={sync} disabled={busy !== null} title="Rilegge la libreria e le cartelle di tutte le app">
+            <Icon name="refresh" size={14} /> {busy === "sync" ? "Sincronizzo…" : "Sincronizza ora"}</button>
+          <button className="btn btn-primary" onClick={checkUpdates} disabled={busy !== null}>
+            <Icon name="sparkle" size={14} /> {busy === "check" ? "Verifico…" : "Verifica aggiornamenti"}</button>
+        </div>
+      </div>
+      <div className="hub-kpis">
+        <div className="card kpi"><div className="kpi-icon" style={{ background: "var(--accent)" }}><Icon name="knowledge" /></div>
+          <div><strong>{summary?.total ?? "…"}</strong><small>skill e knowledge in {summary?.apps ?? "…"} app</small></div></div>
+        <div className="card kpi"><div className="kpi-icon" style={{ background: "var(--accent-2)" }}><Icon name="folder" /></div>
+          <div><strong>{summary?.libraryEntries ?? "…"}</strong><small>nella libreria · {summary?.copies ?? 0} copie nelle app</small></div></div>
+        <button className="card kpi hub-kpi-button" onClick={() => setTab("updates")}>
+          <div className="kpi-icon" style={{ background: summary && summary.updates > 0 ? "#d97706" : "#059669" }}><Icon name="refresh" /></div>
+          <div><strong>{summary?.updates ?? "…"}</strong><small>aggiornamenti da fare</small></div></button>
+        <div className="card kpi"><div className="kpi-icon" style={{ background: "#0e7490" }}><Icon name="clock" /></div>
+          <div><strong style={{ fontSize: 16 }}>{installed ? new Date(installed.lastSync ?? installed.scannedAt).toLocaleTimeString() : "…"}</strong>
+            <small>ultima lettura{minutes ? ` · automatica ogni ${minutes} min` : ""}</small></div></div>
+      </div>
+      <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
+      {done && <div className="notice"><Icon name="check" size={13} /> {done}</div>}
+      <div className="tabs" role="tablist" aria-label="Sezioni del Knowledge Hub">
+        {TABS.map((t) => (
+          <button key={t.key} role="tab" className="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}>
+            {t.label}{t.key === "updates" && summary && summary.updates > 0 ? ` (${summary.updates})` : ""}</button>
+        ))}
+      </div>
+      {tab === "installed" && (installed
+        ? <InstalledPanel installed={installed} onChanged={changed}
+                          renderLibraryDetail={(key, close) => (
+                            <ResourceDetail key={key} resourceKey={key} onClose={close} onChanged={changed}
+                                            onDeleted={(message) => { close(); changed(message); }} />
+                          )} />
+        : !problem && <div className="muted">Leggo le skill delle app…</div>)}
+      {tab === "marketplace" && <MarketplacePanel installed={installed} onInstalled={changed} />}
+      {tab === "updates" && <UpdatesPanel apps={installed?.apps ?? []} refreshKey={refreshKey} onApplied={changed} />}
+      {tab === "activity" && <ActivityPanel apps={installed?.apps ?? []} refreshKey={refreshKey} />}
+      {tab === "library" && <LibraryPanel onChanged={() => load(true)} />}
+    </div>
+  );
+}
+
 /**
  * The Framework / Skill / Knowledge Explorer (directive §22), file-based since
  * PHASE 19 (ADR-026): every skill and knowledge entry is a Markdown file you can
  * read, edit here or in your editor, version with git, and still import from the
- * web -- then equip an agent with it or adopt it in a project.
+ * web -- then equip an agent with it or adopt it in a project. Since PHASE 31 the
+ * Knowledge Hub's "Libreria e catalogo" tab.
  */
-export function KnowledgeHub() {
+function LibraryPanel({ onChanged }: { onChanged?: () => void }) {
   const api = useApi();
   const [kind, setKind] = useState("");
   const [query, setQuery] = useState("");
@@ -54,6 +206,7 @@ export function KnowledgeHub() {
 
   const search = useCallback(() => api.resources(kind || undefined, query || undefined)
     .then((r) => setResults(r.filter((x) => x.kind !== "TEMPLATE_PROVIDER"))).catch(setProblem), [api, kind, query]);
+  const refreshed = useCallback(() => { search(); onChanged?.(); }, [search, onChanged]);
 
   useEffect(() => {
     const timer = window.setTimeout(search, 200);
@@ -71,7 +224,7 @@ export function KnowledgeHub() {
       const report = await api.syncLibrary();
       setDone(`Cartella riletta: ${report.created.length} nuove, ${report.updated.length} aggiornate`
         + (report.invalid.length ? `, ${report.invalid.length} non valide (${report.invalid.join("; ")})` : ""));
-      search();
+      refreshed();
     } catch (error) {
       setProblem(error);
     }
@@ -90,7 +243,7 @@ export function KnowledgeHub() {
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1>Knowledge Hub</h1>
+        <div><h2>Libreria e catalogo</h2>
           <p>Skill e knowledge sono file Markdown che puoi leggere e modificare qui o nel tuo editor, versionare con git e importare dal web.
             Framework, MCP e tool sono voci di catalogo con la loro configurazione.</p></div>
         <div className="row">
@@ -128,8 +281,8 @@ export function KnowledgeHub() {
           {results.length === 0 && <div className="muted">Nessuna voce.</div>}
         </div>
         {selected && <ResourceDetail key={selected} resourceKey={selected} onClose={() => setSelected(null)}
-                                     onChanged={(message) => { setDone(message); search(); }}
-                                     onDeleted={(message) => { setSelected(null); setDone(message); search(); }} />}
+                                     onChanged={(message) => { setDone(message); refreshed(); }}
+                                     onDeleted={(message) => { setSelected(null); setDone(message); refreshed(); }} />}
       </div>
 
       <div className="section-title">Template di agenti</div>
@@ -146,14 +299,14 @@ export function KnowledgeHub() {
       </div>
 
       {creating && <NewEntryModal onClose={() => setCreating(false)}
-                                  onCreated={(r) => { setCreating(false); setDone(`Creata ${r.name}`); search(); setSelected(r.key); }} />}
+                                  onCreated={(r) => { setCreating(false); setDone(`Creata ${r.name}`); refreshed(); setSelected(r.key); }} />}
       {importing && <ImportModal onClose={() => setImporting(false)}
-                                 onImported={(r) => { setImporting(false); setDone(`Importata ${r.name}`); search(); setSelected(r.key); }} />}
+                                 onImported={(r) => { setImporting(false); setDone(`Importata ${r.name}`); refreshed(); setSelected(r.key); }} />}
     </div>
   );
 }
 
-function ResourceDetail({ resourceKey, onClose, onChanged, onDeleted }: {
+export function ResourceDetail({ resourceKey, onClose, onChanged, onDeleted }: {
   resourceKey: string; onClose: () => void; onChanged: (message: string) => void; onDeleted: (message: string) => void;
 }) {
   const api = useApi();
@@ -249,6 +402,7 @@ function ResourceDetail({ resourceKey, onClose, onChanged, onDeleted }: {
             )}
           </>
         )}
+        {resource.kind === "SKILL" && file?.body.exists && <CopiesSection skillKey={resource.key} onChanged={onChanged} />}
         {!resource.fileBacked && resource.configuration && (
           <div><div className="section-title">Configurazione</div><pre className="doc">{resource.configuration}</pre></div>
         )}
