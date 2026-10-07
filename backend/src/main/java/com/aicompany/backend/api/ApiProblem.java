@@ -356,6 +356,11 @@ public enum ApiProblem {
     BLUEPRINT_PROPOSAL_DECIDED("blueprint-proposal-decided", HttpStatus.CONFLICT,
             "Proposal already decided", "The proposal was already accepted or rejected"),
 
+    // --- the integrated terminal (PHASE 22, ADR-029 §5) --------------------------------------
+
+    TERMINAL_NOT_FOUND("terminal-not-found", HttpStatus.NOT_FOUND,
+            "Terminal not found", "No running terminal of yours with that identifier"),
+
     // --- everything nobody anticipated ------------------------------------
 
     /**

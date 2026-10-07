@@ -14,7 +14,7 @@ import type {
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
   ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, DeletionPreview, SubAgentsPolicy,
-  InProgressPolicy, PlannedAgent, EcosystemServiceInfo, TerminalShell, TerminalTicket, CodeGraph, CostSummary,
+  InProgressPolicy, PlannedAgent, EcosystemServiceInfo, TerminalShell, TerminalTicket, TerminalSession, CodeGraph, CostSummary,
   AiAction, BlueprintActionOutcome, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintCanvasLayout, BlueprintGraph, BlueprintPoint,
   BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
   BlueprintVocabulary, HubInstalled, HubFoundDetail, HubSyncReport, HubSyncEvent, HubMarketplace, HubSearchResults,
@@ -653,6 +653,20 @@ export class ControlPlane {
 
   terminalTicket(shell: string, projectId?: number): Promise<TerminalTicket> {
     return this.plain("POST", "/api/terminal/tickets", { body: { shell, projectId: projectId ?? null } });
+  }
+
+  /** A ticket to show again one of my running shells (ADR-029 §5): it may be detached, or shown elsewhere. */
+  terminalAttachTicket(session: string): Promise<TerminalTicket> {
+    return this.plain("POST", "/api/terminal/tickets", { body: { attach: session } });
+  }
+
+  /** My running shells, shown on a socket or detached. */
+  terminalSessions(): Promise<TerminalSession[]> {
+    return this.plain("GET", "/api/terminal/sessions");
+  }
+
+  closeTerminalSession(session: string): Promise<void> {
+    return this.plain("DELETE", `/api/terminal/sessions/${encodeURIComponent(session)}`);
   }
 
   /** Where the terminal's socket is, for the base URL this session talks to. */

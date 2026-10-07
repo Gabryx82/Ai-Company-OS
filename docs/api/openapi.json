@@ -5278,18 +5278,44 @@
         },
         "type" : "object"
       },
+      "TerminalSession" : {
+        "properties" : {
+          "attached" : {
+            "type" : "boolean"
+          },
+          "detachedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "directory" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "shell" : {
+            "type" : "string"
+          },
+          "startedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "TicketRequest" : {
         "properties" : {
+          "attach" : {
+            "type" : "string"
+          },
           "projectId" : {
             "format" : "int64",
             "type" : "integer"
           },
           "shell" : {
-            "minLength" : 1,
             "type" : "string"
           }
         },
-        "required" : [ "shell" ],
         "type" : "object"
       },
       "UncataloguedModel" : {
@@ -11064,6 +11090,46 @@
           }
         },
         "tags" : [ "run-controller" ]
+      }
+    },
+    "/api/terminal/sessions" : {
+      "get" : {
+        "operationId" : "terminalSessions",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TerminalSession"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "terminal-controller" ]
+      }
+    },
+    "/api/terminal/sessions/{id}" : {
+      "delete" : {
+        "operationId" : "closeTerminalSession",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "terminal-controller" ]
       }
     },
     "/api/terminal/shells" : {

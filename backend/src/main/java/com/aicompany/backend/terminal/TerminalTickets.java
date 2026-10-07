@@ -43,8 +43,9 @@ public class TerminalTickets {
 
     static final Duration TTL = Duration.ofSeconds(30);
 
+    /** {@code attach} is the shell to show again (ADR-029 §5); null for a new shell, which has a command. */
     public record Ticket(String digest, String shell, List<String> command, Path directory, String issuedTo,
-                         Instant expiresAt) {
+                         Instant expiresAt, String attach) {
     }
 
     public record Issued(String ticket, String shell, String directory, List<String> command, Instant expiresAt) {
@@ -91,13 +92,30 @@ public class TerminalTickets {
         List<String> command = command(shell);
         Path directory = projectId == null ? host.home() : folders.folderOf(projectId)
                 .orElseThrow(() -> new SoftwareNotLaunchableException("Project " + projectId + " has no workspace folder yet"));
+        String token = newToken();
+        Instant expires = Instant.now().plus(TTL);
+        tickets.put(digest(token), new Ticket(digest(token), shell, command, directory, issuedTo, expires, null));
+        return new Issued(token, shell, directory.toString(), command, expires);
+    }
+
+    /**
+     * A ticket to show again a running shell of the same person (ADR-029 §5). The
+     * socket checks again, when the ticket is presented, that the shell still runs
+     * and is the bearer's.
+     */
+    public Issued issueAttach(TerminalSocketHandler.TerminalSession shell, String issuedTo) {
+        String token = newToken();
+        Instant expires = Instant.now().plus(TTL);
+        tickets.put(digest(token), new Ticket(digest(token), shell.shell(), List.of(), Path.of(shell.directory()),
+                issuedTo, expires, shell.id()));
+        return new Issued(token, shell.shell(), shell.directory(), List.of(), expires);
+    }
+
+    private String newToken() {
         purgeExpired();
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
-        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        Instant expires = Instant.now().plus(TTL);
-        tickets.put(digest(token), new Ticket(digest(token), shell, command, directory, issuedTo, expires));
-        return new Issued(token, shell, directory.toString(), command, expires);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     /** The ticket, removed: a second presentation of the same token finds nothing. */

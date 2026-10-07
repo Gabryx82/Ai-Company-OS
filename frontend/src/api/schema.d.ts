@@ -2260,6 +2260,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminal/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["terminalSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/terminal/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["closeTerminalSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/terminal/shells": {
         parameters: {
             query?: never;
@@ -4157,10 +4189,21 @@ export interface components {
             specialization?: string;
             systemPrompt?: string;
         };
+        TerminalSession: {
+            attached?: boolean;
+            /** Format: date-time */
+            detachedAt?: string;
+            directory?: string;
+            id?: string;
+            shell?: string;
+            /** Format: date-time */
+            startedAt?: string;
+        };
         TicketRequest: {
+            attach?: string;
             /** Format: int64 */
             projectId?: number;
-            shell: string;
+            shell?: string;
         };
         UncataloguedModel: {
             available?: boolean;
@@ -8417,6 +8460,46 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["RunResponse"];
                 };
+            };
+        };
+    };
+    terminalSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TerminalSession"][];
+                };
+            };
+        };
+    };
+    closeTerminalSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

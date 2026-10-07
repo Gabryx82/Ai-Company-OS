@@ -61,6 +61,14 @@
 			<version>0.13.10</version>
 		</dependency>
 		<dependency>
+			<!-- ADR-029 §5: the shells' environment is the user's, built by Windows
+			     (CreateEnvironmentBlock). JNA comes with pty4j at runtime; the same
+			     version, here at compile time. -->
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna-platform</artifactId>
+			<version>5.14.0</version>
+		</dependency>
+		<dependency>
 			<!-- PHASE 28 (ADR-033): the Blueprint reads Java through an AST, not with
 			     patterns. Parsing only: no symbol solver, nothing is compiled or run. -->
 			<groupId>com.github.javaparser</groupId>

@@ -51,7 +51,9 @@ class ApiProblemCoverageTest {
             // PHASE 20 (ADR-027): deleting for real.
             "com.aicompany.backend.deletion",
             // PHASE 24 (ADR-031): cost governance.
-            "com.aicompany.backend.cost");
+            "com.aicompany.backend.cost",
+            // ADR-029 §5: a running terminal that is not, or not the caller's.
+            "com.aicompany.backend.terminal");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in
@@ -186,6 +188,7 @@ class ApiProblemCoverageTest {
                         "delete-confirmation-mismatch", "deletion-blocked", "budget-required", "price-required", "budget-exceeded",
                         "blueprint-node-not-found", "blueprint-edge-not-found", "blueprint-proposal-not-found",
                         "blueprint-derived-element", "blueprint-relation-exists", "blueprint-proposal-decided",
+                        "terminal-not-found",
                         "internal-error");
     }
 

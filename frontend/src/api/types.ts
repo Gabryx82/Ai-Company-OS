@@ -278,6 +278,8 @@ export interface EcosystemServiceInfo {
 
 export interface TerminalShell { key: string; name: string; available: boolean; detail: string | null }
 export interface TerminalTicket { ticket: string; shell: string; directory: string; command: string[]; expiresAt: string }
+/** A running shell of mine (ADR-029 §5): shown on a socket, or detached since `detachedAt`. */
+export interface TerminalSession { id: string; shell: string; directory: string; startedAt: string; attached: boolean; detachedAt: string | null }
 
 // --- PHASE 23: the code graph of a project (ADR-030) ------------------------------------
 

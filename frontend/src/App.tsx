@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiProblem, ControlPlane, type Session } from "./api/client";
 import { ApiContext, SessionContext } from "./context";
 import { clearSession, loadSession, saveSession } from "./session";
+import { clearStoredTerminals, storedTerminals } from "./terminalStore";
 import { Login } from "./views/Login";
 import { Dashboard } from "./views/Dashboard";
 import { TaskBoard } from "./views/TaskBoard";
@@ -61,6 +62,12 @@ export function App() {
   const [session, setSession] = useState<Session | null>(() => loadSession());
   const [route, setRoute] = useState(routeFromHash);
   const [backendUp, setBackendUp] = useState<boolean | null>(null);
+  // The terminal view stays mounted once visited, so its shells stay shown while
+  // the operator works elsewhere; after a reload it mounts at once when this tab
+  // had shells, which attach again (ADR-029 §5).
+  const [terminalKept, setTerminalKept] = useState(() => storedTerminals().length > 0);
+  const [terminalsRunning, setTerminalsRunning] = useState(0);
+  useEffect(() => { if (route.page === "terminal") setTerminalKept(true); }, [route.page]);
 
   const api = useMemo(() => (session ? new ControlPlane(session) : null), [session]);
 
@@ -80,9 +87,13 @@ export function App() {
   }, [api]);
 
   const signIn = useCallback((next: Session) => { saveSession(next); setSession(next); }, []);
-  const signOut = useCallback(() => { clearSession(); setSession(null); }, []);
+  const signOut = useCallback(() => { clearSession(); clearStoredTerminals(); setSession(null); }, []);
   // Signing out also ends the session on the server (ADR-024): a copied token stops working.
-  const logout = useCallback(() => { api?.logout().catch(() => undefined).finally(signOut); }, [api, signOut]);
+  // The shells this tab shows end with it; others stay listed for the next sign-in.
+  const logout = useCallback(() => {
+    const closing = storedTerminals().map((t) => api?.closeTerminalSession(t.session).catch(() => undefined));
+    Promise.all(closing).then(() => api?.logout()).catch(() => undefined).finally(signOut);
+  }, [api, signOut]);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Who is signed in, fresh from the server: role and "must change password" can change.
@@ -134,6 +145,9 @@ export function App() {
                 <button key={item.key} className="nav-item" aria-current={page === item.key ? "page" : undefined}
                         onClick={() => navigate(item.key)}>
                   <Icon name={item.icon} size={17} />{item.label}
+                  {item.key === "terminal" && terminalsRunning > 0 && (
+                    <span className="nav-count" title="Terminali aperti in background">{terminalsRunning}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -185,7 +199,6 @@ export function App() {
             {page === "daily" && <DailyWork />}
             {page === "brain" && <SecondBrain navigate={navigate} />}
             {page === "software" && <SoftwareHub selected={detail} navigate={navigate} />}
-            {page === "terminal" && <Terminal />}
             {page === "integrations" && <Integrations selected={detail} navigate={navigate} />}
             {/* Open WebUI inside the console, as the ChatLLM tab of 3D Omniverse does. */}
             {page === "chat" && <Integrations selected="open-webui" navigate={navigate} />}
@@ -195,6 +208,13 @@ export function App() {
             {page === "usage" && <Usage />}
             {page === "settings" && <Settings session={session} onSessionChanged={(next) => { saveSession(next); setSession(next); }} />}
             </ErrorBoundary>
+            {terminalKept && (
+              <div hidden={page !== "terminal"}>
+                <ErrorBoundary label="Terminale">
+                  <Terminal visible={page === "terminal"} onRunning={setTerminalsRunning} />
+                </ErrorBoundary>
+              </div>
+            )}
           </div>
         </main>
       </div>
