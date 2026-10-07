@@ -3,6 +3,45 @@
 Branch `autonomous/phase-31-knowledge-hub` (dalla punta di PHASE 30, `4127377`), **non pushato**. `master`
 intoccato. Decisioni e ragioni: [ADR-036](../adr/ADR-036-knowledge-hub-across-apps.md).
 
+## Seconda correzione (2026-10-07, sera)
+
+> «Le nuove skill e plugin che aggiungo a Claude Desktop e a ChatGPT non si vedono nell'hub; da marketplace non
+> posso installare una skill su ChatGPT; nel marketplace ci sono solo skill, voglio anche plugin, connettori.»
+
+| Che cosa | Causa | Ora |
+|---|---|---|
+| Skill caricate in Claude Desktop | il manifest le chiama `skill_01…`, la cartella ha il loro nome: il Hub cercava per id e le saltava | trovate per nome: **emil-design-eng** e **frontend-design** compaiono (230 skill) |
+| Plugin nuovi di Claude Desktop | nessun plugin nuovo nel manifest dell'app: sono gli stessi 13 | invariato (un plugin aggiunto a Claude Desktop compare alla lettura successiva, ogni minuto) |
+| ChatGPT | ChatGPT desktop non tiene skill né app sul PC: sono dell'account | le **app del tuo account ChatGPT** (Gmail, Google Drive, GitHub, Supabase…: 16) dalla cache di **Codex**, come connettori dell'account |
+| Installare «su ChatGPT» | le skill di ChatGPT sul PC sono quelle di **Codex**, incluso nell'abbonamento; il Hub ci installava solo tramite `~/.agents/skills` | l'app si chiama **ChatGPT · Codex** ed è una destinazione delle installazioni (`~/.codex/skills`, dove installa anche Codex); le skill già in `~/.agents/skills` compaiono nella sua vista come «Lette anche da qui» |
+| Marketplace solo di skill | — | tre schede: **Skill · Plugin · Connettori**. Plugin: marketplace ufficiale di Claude Code (300+), plugin di lavoro di Anthropic, plugin OpenAI per Codex (65). Connettori: **registro ufficiale MCP**. Più le directory da aprire nel browser (Smithery, mcp.so, Glama, PulseMCP, directory di Claude e app di ChatGPT…) |
+
+**Come installa plugin e connettori**: con le CLI delle app, come faresti tu — `claude plugin install`, `codex
+plugin add`, `claude mcp add`, `codex mcp add` — e per un connettore locale di Claude Desktop scrivendo in
+`claude_desktop_config.json` (tutto il resto del file resta; backup in `%USERPROFILE%\.aicos\backups\app-config`).
+Prima di installare vedi, app per app, il comando esatto. Plugin e connettori remoti di Claude Desktop vengono dal
+tuo account: il Hub ti dice dove aggiungerli e apre l'app.
+
+**Sicurezza.** Nessuna shell: ogni comando è una lista di argomenti validati. Se il marketplace di un plugin
+dichiara un comando da eseguire, il Hub te lo mostra e lo esegue solo dopo che premi «Ho letto il comando:
+installa». Le chiavi che dai a un connettore vanno solo all'app: non si salvano, non si registrano, e nelle
+risposte compaiono come `••••`. Se `claude` è installato con npm (`claude.cmd`), un valore con `& | < > ^ %` è
+rifiutato (il prompt dei comandi lo interpreterebbe).
+
+**Verifica.** Test: `SkillHubApiTest` (skill per nome, app di ChatGPT, installazione in Codex),
+`MarketplaceExtensionsApiTest` (3), `HubCommandSafetyTest` (3), console 2 test nuovi del Marketplace e uno della
+vista per app; mutazioni 7/7 e 4/4. Suite: Java **579** · console **68**. Smoke dal vivo (`aicompany_p31c`,
+porte 8091/5180) con **CLI sostitute** che stampano soltanto ciò che ricevono: ricerca plugin («design» 36
+risultati), plugin OpenAI con i loro nomi, connettori dal registro («notion» 12, «github» 40), installazione di un
+plugin e di due connettori (remoto con header, locale con 8 variabili) — chiavi mai restituite. **Nessuna
+installazione reale** nelle tue app, nessuna scrittura in `claude_desktop_config.json`. Durante una prova di
+mutazione il test di sicurezza ha aperto la Calcolatrice (era il carico di prova, `&calc`): chiusa, e il test ora
+usa un carico inerte.
+
+**Da fare tu**: riavvia il tuo backend dal branch; poi *Knowledge Hub → Marketplace → Plugin* o *Connettori*.
+Il registro MCP a volte risponde in 30 s: il Hub lo aspetta fino a 45 s e tiene i risultati 10 minuti. Lo smoke
+ha lasciato il DB `aicompany_p31c` (`DROP DATABASE aicompany_p31c;` per toglierlo).
+
 ## Correzione dopo la tua verifica (2026-10-07, pomeriggio)
 
 > «Per quanto riguarda Claude non vedo i plugin che erano già installati.»
@@ -102,6 +141,10 @@ Lo smoke usa il database `aicompany_p31`: per toglierlo, `DROP DATABASE aicompan
 4. **Attività** dopo aver installato o tolto una skill da un'app (anche fuori da AI Company OS).
 
 ## Debiti nuovi
+
+Dalla seconda correzione: TD-86 … TD-90 — plugin e connettori remoti di Claude Desktop dall'account; ChatGPT
+visto solo attraverso Codex; opzioni dei plugin non chieste; connettori del registro da configurare a mano;
+disinstallazione dalle app.
 
 TD-74 … TD-82 (`docs/DEBT_REGISTRY.md`): plugin di Codex senza verifica (catalogo locale inaffidabile);
 plugin aggiornati dalle loro app, non dal Hub; categoria euristica; copie e file accanto a `SKILL.md` che

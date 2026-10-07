@@ -84,7 +84,18 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   viene fotografata, non riportata come «installata oggi» (`baseline:<sede>`). Test: `SkillHubApiTest` 12,
   console 65; **7/7 mutazioni rosse** in più. L'operatore deve **riavviare** il suo backend (avviato alle 15:04, senza
   riavvio automatico).
-- **Debiti**: aperti TD-74…TD-85; TD-59 ripetuto ed evitato; prossimo libero **TD-86**.
+- **Seconda correzione** (stesso giorno: «le skill e i plugin che aggiungo a Claude Desktop e a ChatGPT non si vedono»,
+  «da marketplace non posso installare su ChatGPT», «solo skill nel marketplace: voglio plugin, connettori»):
+  le skill **caricate** in Claude Desktop (id `skill_01…`, cartella col nome) ora compaiono; le **app dell'account
+  ChatGPT** si leggono dalla cache di Codex (16 sul PC); l'app è **ChatGPT · Codex** ed è installabile
+  (`~/.codex/skills`); `~/.agents/skills` compare anche nella sua vista («Lette anche da qui»). Il Marketplace ha
+  le schede **Skill · Plugin · Connettori**: plugin dei marketplace di Claude Code e di OpenAI, connettori dal
+  **registro MCP**, installati con le CLI delle app (`HubInstaller`, `HubCommands`: argomenti validati, nessuna
+  shell, guardia per `claude.cmd`; comando dichiarato da un marketplace solo dopo conferma; chiavi mai salvate né
+  restituite) o in `claude_desktop_config.json` (con backup). ADR-036 §2b e §6b. Suite: Java **579**, console
+  **68**; mutazioni **7/7** backend e **4/4** console. Smoke su `aicompany_p31c` con CLI sostitute che
+  stampano soltanto: nessuna installazione reale nelle app.
+- **Debiti**: aperti TD-74…TD-90; TD-59 ripetuto ed evitato; prossimo libero **TD-91**.
 - **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review
   (`docs/handoff/FINAL_HANDOFF_PHASE_31.md`).
 

@@ -387,6 +387,12 @@ Il Hub legge le skill delle app **solo** sotto le cartelle note (home dell'utent
 `<aicos.home>/backups/skills/`, mai cancellato. Una sincronizzazione parte ogni
 `aicos.hub.sync-interval` (default `PT5M`, `PT0S` la spegne).
 
+Plugin e connettori del Marketplace si installano con le CLI delle app: `claude` (`~/.local/bin/claude.exe`, poi il
+`PATH`) e `codex` (la più recente in `%LOCALAPPDATA%\OpenAI\Codex\bin`, poi il `PATH`); `aicos.hub.claude-cli` e
+`aicos.hub.codex-cli` indicano un eseguibile preciso. `aicos.hub.windows` (vuoto: dal sistema) decide se un connettore
+`npx` parte con `cmd /c`. Il file di Claude Desktop che il Hub modifica si salva prima in
+`<aicos.home>/backups/app-config/`.
+
 | Endpoint | Chi | Note |
 |---|---|---|
 | `GET /api/skill-hub/installed[?rescan=true]` | tutti | libreria + ogni app: app, cartelle, agenti che lavorano lì, skill con tipologia, categoria, plugin, stato delle copie, provenienza |
@@ -398,6 +404,9 @@ Il Hub legge le skill delle app **solo** sotto le cartelle note (home dell'utent
 | `GET /api/skill-hub/library/{key}/copies` · `POST …/copies/{app} {replace}` | operatore | stato della copia per app; installa o aggiorna; `409 skill-hub-conflict` su una cartella non del Hub o modificata, `replace=true` sovrascrive con backup |
 | `DELETE /api/skill-hub/library/{key}/copies/{app}` | admin | toglie una copia del Hub (resta come backup); una cartella non del Hub: `409` |
 | `GET /api/skill-hub/library/{key}/package.zip` | tutti | la skill per Claude Desktop (*Impostazioni → Capacità → Skill*) |
+| `GET …/marketplaces/search?q=&kind=SKILL\|PLUGIN\|CONNECTOR` · `GET …/marketplaces/{provider}/item?ref=` | tutti | plugin e connettori: scheda, valori richiesti, per ogni app il comando esatto (ADR-036 §6b) |
+| `POST /api/skill-hub/plugins/install {provider, ref, target, confirmation?}` | operatore | con la CLI dell'app; `NEEDS_CONFIRMATION` + sha256 se il marketplace dichiara un comando |
+| `POST /api/skill-hub/connectors/install {provider, ref, targets[], name?, values, replace?}` | operatore | un esito per app; i `values` (chiavi) vanno all'app e non si salvano né si restituiscono |
 | `GET /api/skill-hub/updates` · `POST …/updates/check` · `POST …/updates/apply {ids[], overwrite}` | operatore | aggiornamenti noti; verifica online; applica uno per uno (`UPDATED`, `CONFLICT`, `FAILED`) |
 
 ### Errori

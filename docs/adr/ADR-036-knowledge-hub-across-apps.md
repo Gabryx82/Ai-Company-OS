@@ -4,7 +4,9 @@
 - **Data**: 2026-10-07
 - **Decisa da**: agente, su direttiva umana del 2026-10-07 («trasformare il Knowledge Hub in un punto
   unico» per le skill e le knowledge di tutti gli agenti, «senza rimuovere o modificare negativamente ciò
-  che già esiste»; poi: «dividere le skill di Code, Codex (ChatGPT) e ecc. per tipologia»)
+  che già esiste»; poi: «dividere le skill di Code, Codex (ChatGPT) e ecc. per tipologia»; poi: «le nuove
+  skill e plugin che aggiungo a Claude Desktop e a ChatGPT non si vedono», «da marketplace non posso
+  installare una skill su ChatGPT», «nel marketplace ci sono solo skill: voglio anche plugin, connettori»)
 - **Estende**: ADR-026 (skill e knowledge come file), ADR-023 (harness). Non modifica ADR-035.
 
 ## 1. La direttiva, e che cosa ne è diventato
@@ -47,12 +49,13 @@ Ogni percorso è calcolato dal server a partire dalla home dell'utente e da `%AP
 | Claude Desktop | `<home Claude>\local-agent-mode-sessions\skills-plugin\<org>\<account>\manifest.json`, dove `<home Claude>` è `%APPDATA%\Claude` o, per l'app dello Store, `%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude` | di sistema (Anthropic) o personali (`creatorType`) | no |
 | | `…\<account>\<org>\rpm\manifest.json` → `plugin_<id>` | plugin con i loro componenti (skill, comandi, agenti, hook, `.mcp.json`) | no |
 | | `<home Claude>\extensions-installations.json`, `claude_desktop_config.json` | connettori: estensioni desktop (attive/disattive), server MCP configurati | no |
-| Codex · ChatGPT | `~/.codex/skills/.system` | di sistema | no |
-| | `~/.codex/skills` | personali (cartella storica) | no |
+| ChatGPT · Codex | `~/.codex/skills/.system` | di sistema | no |
+| | `~/.codex/skills` | personali — dove installa anche lo skill-installer di Codex (`$CODEX_HOME/skills`) | **sì** (§2b) |
 | | `~/.codex/plugins/cache/<marketplace>/<plugin>/<versione>` + `config.toml` | plugin (attivo/disattivo) | no |
 | | `~/.codex/AGENTS.md` | istruzioni globali | no |
 | | `~/.codex/config.toml` → `[mcp_servers.*]` | connettori | no |
-| Agent Skills condivise | `~/.agents/skills` — la cartella utente che **Codex**, Gemini CLI, OpenCode e Copilot leggono | personali | **sì** (è dove il Hub installa per Codex) |
+| | `~/.codex/cache/codex_apps_tools/*.json` → `connector_name` | connettori dell'account: le **app di ChatGPT** collegate (Gmail, Figma…) | no |
+| Agent Skills condivise | `~/.agents/skills` — la cartella utente che **Codex**, Gemini CLI, OpenCode e Copilot leggono | personali; nella vista di ChatGPT · Codex compaiono anche lì, come «lette anche da qui» | **sì** |
 | Antigravity | `~/.gemini/antigravity/skills` | personali | **sì** |
 | | `~/.gemini/antigravity{,-ide}/builtin/skills`, `~/.gemini/antigravity-ide/plugins` | di sistema, plugin | no |
 | | `~/.gemini/antigravity/knowledge` | knowledge items | no |
@@ -84,6 +87,24 @@ Misurato su questo PC il 2026-10-07, con la vista «da fuori» del pacchetto: Cl
 plugin frontend-design, 4 server MCP tuoi più «Claude Docs» dell'account, la memoria di 2 progetti; Codex
 25 plugin, 65 skill, 7 connettori; Antigravity 20 skill, 4 connettori. La lettura completa resta sotto
 1,5 s (0,4 s con la cache dei `SKILL.md`).
+
+## 2b. ChatGPT · Codex, e le skill caricate in Claude Desktop
+
+> **Aggiunto il 2026-10-07, dopo la seconda verifica dell'operatore** («le nuove skill e plugin che
+> aggiungo a Claude Desktop e a ChatGPT non si vedono nell'hub»; «da marketplace non posso installare una
+> skill su ChatGPT»).
+
+- **Le skill caricate in Claude Desktop** hanno nel manifest un id `skill_01…` e la cartella col loro
+  **nome**: il Hub cercava la cartella per id e le saltava. Ora, se la cartella dell'id non c'è, usa
+  quella del nome. Misurato: emil-design-eng e frontend-design ora compaiono (230 skill).
+- **ChatGPT desktop non tiene skill né plugin sul PC**: le sue app e i suoi connettori sono dell'account.
+  Sul PC li conosce **Codex**, l'app di OpenAI inclusa nell'abbonamento ChatGPT, che li mette in cache
+  (`codex_apps_tools`): il Hub li elenca come connettori dell'account, uno per app, con il numero di
+  strumenti. Misurato: 16 app di ChatGPT, più i 7 server MCP di Codex.
+- **Installare «su ChatGPT»** significa installare in Codex: l'app si chiama ora **ChatGPT · Codex** e
+  `~/.codex/skills` è la sua cartella scrivibile (è anche dove lo skill-installer di Codex installa).
+  Le skill installate prima in `~/.agents/skills` restano dove sono e compaiono nella vista di ChatGPT ·
+  Codex, che le legge, sotto «Lette anche da qui».
 
 ## 3. Leggere un `SKILL.md`
 
@@ -156,6 +177,51 @@ costo: le API usate sono pubbliche e in sola lettura. GitHub anonimo concede 60 
 sull'API: gli alberi restano in cache 10 minuti e i frontmatter per sempre (per sha); il limite
 raggiunto si dice con l'ora di ripristino.
 
+## 6b. Plugin e connettori nel Marketplace
+
+> **Aggiunto il 2026-10-07** («nel marketplace ci sono solo skill: voglio anche plugin, connettori»).
+
+La scheda Marketplace ha tre schede — **Skill**, **Plugin**, **Connettori** — ognuna con la sua ricerca,
+i suoi cataloghi installabili e le sue directory da aprire nel browser (`kind` nel catalogo).
+
+| Catalogo | Fonte | Si installa in |
+|---|---|---|
+| **Claude Code · plugin ufficiali** | `anthropics/claude-plugins-official`, `.claude-plugin/marketplace.json` (oltre 300 plugin) | Claude Code |
+| **Anthropic · plugin di lavoro** | `anthropics/knowledge-work-plugins` | Claude Code; Claude Desktop dall'app |
+| **OpenAI · plugin per ChatGPT · Codex** | `openai/plugins`, `.agents/plugins/marketplace.json` (`openai-curated`); nome e descrizione dal `plugin.json` di ognuno | ChatGPT · Codex |
+| **Registro ufficiale MCP** | `registry.modelcontextprotocol.io/v0/servers` | Claude Code, ChatGPT · Codex, Claude Desktop |
+| Claude Code Marketplaces, claude-plugins.dev; directory dei connettori di Claude, app di ChatGPT, Smithery, mcp.so, Glama, PulseMCP, server di riferimento MCP | si aprono nel browser | — |
+
+**Come si installa: con la CLI dell'app, come farebbe l'operatore** (`HubInstaller`, `HubCommands`):
+
+- plugin per Claude Code: `claude plugin marketplace add <owner/repo>` se il marketplace non è fra quelli
+  noti (`known_marketplaces.json`), poi `claude plugin install <plugin>@<marketplace> --scope user --json`;
+- plugin per Codex: `codex plugin marketplace list --json`, `add` se manca, poi `codex plugin add <plugin>@<marketplace> --json`;
+- connettori: `claude mcp add --scope user` (remoti con `--transport http|sse` e `--header`; locali con
+  `-e` e `-- cmd /c npx …` su Windows), `codex mcp add` (`--url`; locali con `--env`);
+- Claude Desktop: un connettore **locale** si aggiunge a `claude_desktop_config.json` (quello del pacchetto
+  dello Store), conservando tutto il resto del file e con un backup in `<aicos.home>/backups/app-config`;
+  i plugin e i connettori **remoti** di Claude Desktop vengono dall'account: il Hub dice dove aggiungerli
+  e apre l'app.
+
+Un connettore del registro è installabile quando ha un indirizzo HTTPS senza parti da completare
+(preferito lo streamable HTTP, poi SSE) o un pacchetto npm, PyPI o container avviabile senza argomenti
+obbligatori; altrimenti la scheda dice «da configurare a mano» e perché.
+
+**Difese.**
+- Nessuna shell: ogni comando è una lista di argomenti costruita da parti validate (nomi di plugin e
+  marketplace, nomi di server, pacchetti, versioni, variabili, URL). Se la CLI è un `.cmd` (Claude Code
+  installato con npm), che `cmd.exe` legge come una riga di comando, un argomento con `& | < > ^ %` è
+  rifiutato; virgolette e caratteri di controllo sempre.
+- **Un comando dichiarato dal marketplace non parte senza l'operatore**: Claude Code lo riporta
+  (`shownCommand`), il Hub lo mostra e lo esegue solo con la conferma (`--accept-command <sha256>`), che
+  vale per quel comando e nient'altro.
+- **Le chiavi non restano**: i valori dati a un connettore (API key in un header o in una variabile)
+  vanno all'app e basta — non si salvano, non si registrano, e da comandi, output e messaggi restituiti
+  sono oscurati (`••••`). La console li tiene in campi password e li dimentica dopo l'installazione.
+- L'anteprima mostra, app per app, il comando che verrà eseguito; le app non trovate sul PC non si
+  possono scegliere.
+
 ## 7. Scrivere una cartella
 
 `HubFiles`: i file si preparano in `<aicos.home>/hub-staging`, la cartella che c'era si sposta intera
@@ -212,7 +278,9 @@ la cartella resta come backup. Il Hub mostra il contenuto dei file di istruzioni
 `GET …/marketplaces/{provider}/browse`, `GET …/marketplaces/{provider}/package?ref=`,
 `POST /api/skill-hub/install`, `GET|POST|DELETE /api/skill-hub/library/{key}/copies[/{app}]`,
 `GET /api/skill-hub/library/{key}/package.zip`, `GET /api/skill-hub/updates`,
-`POST …/updates/check`, `POST …/updates/apply`. Problemi nuovi: `skill-hub-item-not-found`,
+`POST …/updates/check`, `POST …/updates/apply`; e (§6b) `GET …/marketplaces/search?…&kind=`,
+`GET …/marketplaces/{provider}/item?ref=`, `POST /api/skill-hub/plugins/install`,
+`POST /api/skill-hub/connectors/install`. Problemi nuovi: `skill-hub-item-not-found`,
 `skill-package-refused` (422), `skill-hub-conflict`, `skill-location-read-only`,
 `marketplace-unavailable` (502).
 
@@ -240,7 +308,16 @@ la cartella resta come backup. Il Hub mostra il contenuto dei file di istruzioni
 - Console: `hubModel.test` (raggruppamento, filtri, presenza nelle app), `SkillHub.test` (installate,
   import, marketplace con anteprima e installazione, aggiornamenti con conferma della sovrascrittura).
 - Smoke dal vivo su un database separato con le cartelle reali di questo PC in sola lettura.
+- §2b e §6b: `SkillHubApiTest` (skill caricata in Claude Desktop col nome, app di ChatGPT dalla cache di
+  Codex, ChatGPT · Codex installabile e installazione in `~/.codex/skills`); `MarketplaceExtensionsApiTest`
+  (3: cataloghi per tipo e anteprima app per app; plugin con la CLI e comando dichiarato confermato;
+  connettore in tre app con la chiave mai restituita, file di Claude Desktop conservato con backup,
+  rifiuti prima di eseguire); `HubCommandSafetyTest` (2: argomenti verso `cmd.exe`, URL remoti). Le CLI
+  nei test sono un `FakeHubCommands`: nessun comando parte. **Mutazioni: 7 su 7 rosse** (oscuramento,
+  conferma validata, file di Claude Desktop conservato, skill per nome, app di ChatGPT, Codex
+  installabile, guardia di `cmd.exe`); console **4 su 4** (cartelle condivise, ricerca per tipo,
+  conferma inviata, app assente non selezionabile).
 
 ## 13. Che cosa resta fuori
 
-Registrato come debito: TD-74 … TD-82 (`docs/DEBT_REGISTRY.md`).
+Registrato come debito: TD-74 … TD-82, TD-83 … TD-85, TD-86 … TD-90 (`docs/DEBT_REGISTRY.md`).

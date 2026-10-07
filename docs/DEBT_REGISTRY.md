@@ -164,7 +164,13 @@ ferma a `TD-22`.
 | **TD-84** | I plugin interni di Claude Code (`@builtin`: agents-md, plugin-authoring, telemetry) non hanno una cartella né un manifest: non sono elencati | **aperto**, MINOR | PHASE 31 |
 | **TD-85** | La scheda Code dell'app Claude riceve anche i plugin di Claude Desktop (`@inline`): il Hub li mostra una volta, sotto Claude Desktop, e lo dice nella descrizione di Claude Code invece di duplicarli | **aperto**, per scelta | PHASE 31 |
 
-**Prossimo identificatore libero: `TD-86`.**
+| **TD-86** | Claude Desktop riceve plugin e connettori remoti dall'account: il Hub non li installa, dice dove aggiungerli nell'app e la apre. Installa solo i connettori locali, in `claude_desktop_config.json` (ADR-036 §6b) | **aperto**, vincolo esterno | PHASE 31 |
+| **TD-87** | ChatGPT (chat) non tiene sul PC né skill né app: il Hub vede le app dell'account solo dalla cache che ne tiene Codex (`~/.codex/cache/codex_apps_tools`), e solo se Codex è stato usato; le skill caricate su chatgpt.com non sono visibili (ADR-036 §2b) | **aperto**, vincolo esterno | PHASE 31 |
+| **TD-88** | Un plugin che chiede opzioni all'installazione (`userConfig`, `claude plugin install --config k=v`) non le riceve dal Hub: la CLI lo segnala e l'opzione si completa in Claude Code (`/plugin`) | **aperto**, MINOR | PHASE 31 |
+| **TD-89** | Connettori del registro MCP non installabili dal Hub, per prudenza: indirizzi remoti con query string, `%`, variabili da completare; pacchetti con argomenti obbligatori; per Codex, connettori remoti con un header d'autenticazione (la CLI non lo accetta). La scheda dice «da configurare a mano» e perché | **aperto**, MINOR | PHASE 31 |
+| **TD-90** | Plugin e connettori installati dal Marketplace si disinstallano dalle loro app (`claude plugin uninstall`, `claude mcp remove`, `codex mcp remove`…), non dal Hub; nessuna verifica di aggiornamenti per i connettori | **aperto**, MINOR | PHASE 31 |
+
+**Prossimo identificatore libero: `TD-91`.**
 
 ## 6. Come si apre un debito nuovo
 
