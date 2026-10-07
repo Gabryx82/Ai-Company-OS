@@ -32,7 +32,7 @@ import java.util.List;
 public class LibraryController {
 
     /** The editor the library opens in: VS Code, whose folder view shows SKILL.md and its siblings. */
-    static final String EDITOR = "vscode-continue";
+    public static final String EDITOR = "vscode-continue";
 
     private final SkillLibrary library;
     private final HarnessResourceRepository resources;

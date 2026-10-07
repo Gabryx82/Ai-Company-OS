@@ -1,0 +1,167 @@
+[
+  {
+    "key": "skills-sh",
+    "name": "skills.sh",
+    "description": "La directory aperta delle Agent Skills, con la classifica per installazioni: skill di Anthropic, OpenAI, Vercel e della community.",
+    "homepage": "https://skills.sh",
+    "searchUrl": "https://skills.sh/?q={q}",
+    "api": "SKILLS_SH",
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "clawhub",
+    "name": "ClawHub",
+    "description": "Il registro di skill della community OpenClaw: versioni, download e un controllo di sicurezza per ogni versione.",
+    "homepage": "https://clawhub.ai",
+    "searchUrl": "https://clawhub.ai/skills?q={q}",
+    "api": "CLAWHUB",
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "anthropic-skills",
+    "name": "Anthropic · skill ufficiali",
+    "description": "Il repository anthropics/skills: Word, Excel, PowerPoint, PDF, design del frontend, skill-creator e altre.",
+    "homepage": "https://github.com/anthropics/skills",
+    "searchUrl": null,
+    "api": "GITHUB",
+    "repo": "anthropics/skills",
+    "official": true,
+    "community": false
+  },
+  {
+    "key": "openai-skills",
+    "name": "OpenAI · skill curate per Codex",
+    "description": "Il repository openai/skills: le skill curate e sperimentali che Codex installa con skill-installer.",
+    "homepage": "https://github.com/openai/skills",
+    "searchUrl": null,
+    "api": "GITHUB",
+    "repo": "openai/skills",
+    "official": true,
+    "community": false
+  },
+  {
+    "key": "vercel-agent-skills",
+    "name": "Vercel · agent skills",
+    "description": "Il repository vercel-labs/agent-skills: React, Next.js, deploy su Vercel e buone pratiche del web.",
+    "homepage": "https://github.com/vercel-labs/agent-skills",
+    "searchUrl": null,
+    "api": "GITHUB",
+    "repo": "vercel-labs/agent-skills",
+    "official": true,
+    "community": false
+  },
+  {
+    "key": "claude-plugins",
+    "name": "Claude · directory dei plugin",
+    "description": "La directory ufficiale dei plugin per Claude e Claude Code: si installano dall'app Claude o con /plugin.",
+    "homepage": "https://claude.com/plugins",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": true,
+    "community": false
+  },
+  {
+    "key": "skillsmp",
+    "name": "SkillsMP",
+    "description": "Aggregatore che indicizza le skill pubblicate su GitHub, con categorie e ricerca.",
+    "homepage": "https://skillsmp.com",
+    "searchUrl": "https://skillsmp.com/search?q={q}",
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "claude-plugins-dev",
+    "name": "claude-plugins.dev",
+    "description": "Registro della community di plugin e skill per Claude Code.",
+    "homepage": "https://claude-plugins.dev/skills",
+    "searchUrl": "https://claude-plugins.dev/skills?q={q}",
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "lobehub",
+    "name": "LobeHub Skills",
+    "description": "Il marketplace di skill di LobeHub, con valutazioni e categorie.",
+    "homepage": "https://lobehub.com/skills",
+    "searchUrl": "https://lobehub.com/skills?q={q}",
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "smithery",
+    "name": "Smithery",
+    "description": "Skill e server MCP in un unico registro.",
+    "homepage": "https://smithery.ai/skills",
+    "searchUrl": "https://smithery.ai/skills?q={q}",
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "aitmpl",
+    "name": "Claude Code Templates",
+    "description": "aitmpl.com: skill, agenti, comandi e hook pronti per Claude Code.",
+    "homepage": "https://www.aitmpl.com/skills",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "mcpmarket",
+    "name": "MCP Market · Skills",
+    "description": "La sezione skill di MCP Market, con classifiche giornaliere.",
+    "homepage": "https://mcpmarket.com/tools/skills",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "tessl",
+    "name": "Tessl Registry",
+    "description": "Registro di skill e documentazione per agenti, con valutazioni.",
+    "homepage": "https://tessl.io/registry",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "awesome-claude-skills",
+    "name": "Awesome Claude Skills",
+    "description": "La lista curata dalla community (ComposioHQ) delle skill più utili.",
+    "homepage": "https://github.com/ComposioHQ/awesome-claude-skills",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true
+  },
+  {
+    "key": "agentskills",
+    "name": "Agent Skills · lo standard",
+    "description": "La specifica aperta del formato SKILL.md e l'elenco delle app che lo leggono.",
+    "homepage": "https://agentskills.io",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": true,
+    "community": false
+  }
+]

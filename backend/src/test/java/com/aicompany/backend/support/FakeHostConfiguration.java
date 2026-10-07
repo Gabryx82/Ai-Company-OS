@@ -79,4 +79,13 @@ public class FakeHostConfiguration {
     FakeRemoteText fakeRemoteText() {
         return WEB;
     }
+
+    private static final FakeHubWeb MARKETPLACES = new FakeHubWeb();
+
+    /** PHASE 31: neither do the Knowledge Hub's marketplaces. */
+    @Bean
+    @Primary
+    FakeHubWeb fakeHubWeb() {
+        return MARKETPLACES;
+    }
 }

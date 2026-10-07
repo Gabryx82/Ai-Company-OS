@@ -120,6 +120,21 @@
         },
         "type" : "object"
       },
+      "AgentRef" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "target" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "AgentResponse" : {
         "properties" : {
           "active" : {
@@ -218,6 +233,95 @@
           }
         },
         "required" : [ "id", "version" ],
+        "type" : "object"
+      },
+      "AppView" : {
+        "properties" : {
+          "agents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AgentRef"
+            },
+            "type" : "array"
+          },
+          "count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "detected" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "installable" : {
+            "type" : "boolean"
+          },
+          "locations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/LocationView"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "software" : {
+            "type" : "string"
+          },
+          "targets" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "Applied" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "outcome" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ApplyRequest" : {
+        "properties" : {
+          "ids" : {
+            "items" : {
+              "maxLength" : 120,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 200,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "overwrite" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "ids" ],
+        "type" : "object"
+      },
+      "ApplyResponse" : {
+        "properties" : {
+          "results" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Applied"
+            },
+            "type" : "array"
+          }
+        },
         "type" : "object"
       },
       "Autostart" : {
@@ -1173,6 +1277,17 @@
         "required" : [ "agents" ],
         "type" : "object"
       },
+      "Category" : {
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "CodeGraph" : {
         "properties" : {
           "cycles" : {
@@ -1673,6 +1788,58 @@
         },
         "type" : "object"
       },
+      "CopyTarget" : {
+        "properties" : {
+          "app" : {
+            "type" : "string"
+          },
+          "appName" : {
+            "type" : "string"
+          },
+          "available" : {
+            "type" : "boolean"
+          },
+          "deployedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "skillId" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CopyView" : {
+        "properties" : {
+          "app" : {
+            "type" : "string"
+          },
+          "deployedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "location" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "skillId" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "IN_SYNC", "OUTDATED", "MODIFIED", "CONFLICT", "ORPHAN" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "DailyRequest" : {
         "properties" : {
           "day" : {
@@ -1801,6 +1968,34 @@
         },
         "type" : "object"
       },
+      "DeployRequest" : {
+        "properties" : {
+          "replace" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "DeployResult" : {
+        "properties" : {
+          "app" : {
+            "type" : "string"
+          },
+          "backup" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "outcome" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "Document" : {
         "properties" : {
           "modified" : {
@@ -1898,6 +2093,38 @@
         },
         "type" : "object"
       },
+      "Event" : {
+        "properties" : {
+          "app" : {
+            "type" : "string"
+          },
+          "at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "change" : {
+            "enum" : [ "ADDED", "REMOVED", "MODIFIED" ],
+            "type" : "string"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "location" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "EventResponse" : {
         "properties" : {
           "detail" : {
@@ -1980,6 +2207,29 @@
           "version" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "FoundDetail" : {
+        "properties" : {
+          "content" : {
+            "type" : "string"
+          },
+          "files" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PackageFile"
+            },
+            "type" : "array"
+          },
+          "folder" : {
+            "type" : "string"
+          },
+          "skill" : {
+            "$ref" : "#/components/schemas/SkillView"
+          },
+          "truncated" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -2171,6 +2421,67 @@
         "required" : [ "url" ],
         "type" : "object"
       },
+      "ImportRequest" : {
+        "properties" : {
+          "key" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "InstallRequest" : {
+        "properties" : {
+          "key" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "provider" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "ref" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "targets" : {
+            "items" : {
+              "maxLength" : 40,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 12,
+            "minItems" : 0,
+            "type" : "array"
+          }
+        },
+        "required" : [ "provider", "ref" ],
+        "type" : "object"
+      },
+      "InstallResult" : {
+        "properties" : {
+          "copies" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DeployResult"
+            },
+            "type" : "array"
+          },
+          "filePath" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "Installed" : {
         "properties" : {
           "agentId" : {
@@ -2210,6 +2521,48 @@
             "type" : "string"
           },
           "ticket" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Item" : {
+        "properties" : {
+          "app" : {
+            "type" : "string"
+          },
+          "applicable" : {
+            "type" : "boolean"
+          },
+          "command" : {
+            "type" : "string"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "from" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "needsOverwrite" : {
+            "type" : "boolean"
+          },
+          "software" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "MARKETPLACE", "SOURCE", "COPY", "PULL", "PLUGIN" ],
             "type" : "string"
           }
         },
@@ -2262,6 +2615,40 @@
           "skills" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "LocationView" : {
+        "properties" : {
+          "count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "exists" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "readers" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "scope" : {
+            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "INSTRUCTIONS", "KNOWLEDGE" ],
+            "type" : "string"
+          },
+          "writable" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -2700,6 +3087,18 @@
         },
         "type" : "object"
       },
+      "PackageFile" : {
+        "properties" : {
+          "path" : {
+            "type" : "string"
+          },
+          "size" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "PasswordChange" : {
         "properties" : {
           "currentPassword" : {
@@ -2882,6 +3281,47 @@
         },
         "type" : "object"
       },
+      "Preview" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "files" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PackageFile"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "ref" : {
+            "type" : "string"
+          },
+          "security" : {
+            "type" : "string"
+          },
+          "skillMd" : {
+            "type" : "string"
+          },
+          "sourceUrl" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          },
+          "warnings" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "PriceRequest" : {
         "properties" : {
           "inputPricePerMtok" : {
@@ -3054,6 +3494,90 @@
         "required" : [ "name" ],
         "type" : "object"
       },
+      "ProvenanceView" : {
+        "properties" : {
+          "checkError" : {
+            "type" : "string"
+          },
+          "checkedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "installedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "installedVersion" : {
+            "type" : "string"
+          },
+          "latestVersion" : {
+            "type" : "string"
+          },
+          "localChanges" : {
+            "type" : "boolean"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "providerName" : {
+            "type" : "string"
+          },
+          "reference" : {
+            "type" : "string"
+          },
+          "sourceUrl" : {
+            "type" : "string"
+          },
+          "updateAvailable" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "Provider" : {
+        "properties" : {
+          "api" : {
+            "enum" : [ "SKILLS_SH", "CLAWHUB", "GITHUB" ],
+            "type" : "string"
+          },
+          "community" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "homepage" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "official" : {
+            "type" : "boolean"
+          },
+          "repo" : {
+            "type" : "string"
+          },
+          "searchUrl" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ProviderError" : {
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ProviderRef" : {
         "properties" : {
           "billing" : {
@@ -3199,6 +3723,58 @@
         "required" : [ "paths" ],
         "type" : "object"
       },
+      "Report" : {
+        "properties" : {
+          "added" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "events" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Event"
+            },
+            "type" : "array"
+          },
+          "firstRun" : {
+            "type" : "boolean"
+          },
+          "libraryCreated" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "libraryInvalid" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "libraryUpdated" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "modified" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "removed" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ResourceRef" : {
         "properties" : {
           "configuration" : {
@@ -3318,6 +3894,42 @@
           "version" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Result" : {
+        "properties" : {
+          "author" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "installs" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "ref" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          },
+          "suspicious" : {
+            "type" : "boolean"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -3503,6 +4115,23 @@
         },
         "type" : "object"
       },
+      "SearchResults" : {
+        "properties" : {
+          "errors" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ProviderError"
+            },
+            "type" : "array"
+          },
+          "results" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Result"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ServiceView" : {
         "properties" : {
           "autostart" : {
@@ -3565,6 +4194,160 @@
           },
           "name" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SkillFolderOpened" : {
+        "properties" : {
+          "folder" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SkillHubInstalled" : {
+        "properties" : {
+          "apps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AppView"
+            },
+            "type" : "array"
+          },
+          "categories" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Category"
+            },
+            "type" : "array"
+          },
+          "lastSync" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "notes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "scannedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "skills" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SkillView"
+            },
+            "type" : "array"
+          },
+          "summary" : {
+            "$ref" : "#/components/schemas/SkillHubSummary"
+          },
+          "syncIntervalSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SkillHubSummary" : {
+        "properties" : {
+          "apps" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "copies" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "libraryEntries" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updates" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SkillView" : {
+        "properties" : {
+          "app" : {
+            "type" : "string"
+          },
+          "category" : {
+            "type" : "string"
+          },
+          "categoryLabel" : {
+            "type" : "string"
+          },
+          "copies" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CopyView"
+            },
+            "type" : "array"
+          },
+          "copyStatus" : {
+            "enum" : [ "IN_SYNC", "OUTDATED", "MODIFIED", "CONFLICT", "ORPHAN" ],
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "libraryKey" : {
+            "type" : "string"
+          },
+          "location" : {
+            "type" : "string"
+          },
+          "marketplace" : {
+            "type" : "string"
+          },
+          "modified" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "plugin" : {
+            "type" : "string"
+          },
+          "pluginVersion" : {
+            "type" : "string"
+          },
+          "provenance" : {
+            "$ref" : "#/components/schemas/ProvenanceView"
+          },
+          "scope" : {
+            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "INSTRUCTIONS", "KNOWLEDGE" ],
+            "type" : "string"
+          },
+          "updateAvailable" : {
+            "type" : "boolean"
+          },
+          "version" : {
+            "type" : "string"
+          },
+          "writable" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -4270,6 +5053,27 @@
           },
           "provider" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UpdatesView" : {
+        "properties" : {
+          "checkedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "errors" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Item"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -8535,6 +9339,509 @@
           }
         },
         "tags" : [ "run-controller" ]
+      }
+    },
+    "/api/skill-hub/events" : {
+      "get" : {
+        "operationId" : "skillSyncEvents",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "default" : 100,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Event"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/install" : {
+      "post" : {
+        "operationId" : "installSkillPackage",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InstallRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InstallResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/installed" : {
+      "get" : {
+        "operationId" : "installedSkills",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "rescan",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SkillHubInstalled"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/installed/{id}" : {
+      "get" : {
+        "operationId" : "installedSkill",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FoundDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/installed/{id}/import" : {
+      "post" : {
+        "operationId" : "importInstalledSkill",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ImportRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResourceResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/installed/{id}/open" : {
+      "post" : {
+        "operationId" : "openInstalledSkill",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SkillFolderOpened"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/library/{key}/copies" : {
+      "get" : {
+        "operationId" : "skillCopies",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CopyTarget"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/library/{key}/copies/{app}" : {
+      "delete" : {
+        "operationId" : "removeSkillCopy",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "app",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeployResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      },
+      "post" : {
+        "operationId" : "copySkillToApp",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "app",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DeployRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeployResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/library/{key}/package.zip" : {
+      "get" : {
+        "operationId" : "skillPackageZip",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/zip" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/marketplaces" : {
+      "get" : {
+        "operationId" : "skillMarketplaces",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Provider"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/marketplaces/search" : {
+      "get" : {
+        "operationId" : "searchSkillMarketplaces",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "q",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "provider",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SearchResults"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/marketplaces/{provider}/browse" : {
+      "get" : {
+        "operationId" : "browseSkillMarketplace",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Result"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/marketplaces/{provider}/package" : {
+      "get" : {
+        "operationId" : "previewSkillPackage",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "ref",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Preview"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/sync" : {
+      "post" : {
+        "operationId" : "syncSkills",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Report"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/updates" : {
+      "get" : {
+        "operationId" : "skillUpdates",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpdatesView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/updates/apply" : {
+      "post" : {
+        "operationId" : "applySkillUpdates",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ApplyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApplyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/updates/check" : {
+      "post" : {
+        "operationId" : "checkSkillUpdates",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpdatesView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
       }
     },
     "/api/software" : {

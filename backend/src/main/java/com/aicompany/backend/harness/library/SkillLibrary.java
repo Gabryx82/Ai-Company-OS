@@ -154,8 +154,18 @@ public class SkillLibrary {
 
     /** A new skill or knowledge entry, written as a file and indexed. */
     public HarnessResource create(String content, HarnessResource.Origin origin) {
+        return create(content, origin, null);
+    }
+
+    /**
+     * As {@link #create(String, HarnessResource.Origin)}; {@code fallbackKey} is the
+     * key of a document whose frontmatter has none -- the {@code SKILL.md} of Claude
+     * Code, Codex and the marketplaces names a skill, it does not key it.
+     */
+    public HarnessResource create(String content, HarnessResource.Origin origin, String fallbackKey) {
         requireSize(content);
-        SkillDocument document = SkillDocument.parse(content, null);
+        SkillDocument document = SkillDocument.parse(content,
+                fallbackKey != null && !SkillDocument.declaresKey(content) ? fallbackKey : null);
         if (resources.existsByKey(document.key())) {
             throw new HarnessResourceKeyConflictException("The catalog already has a resource '" + document.key() + "'");
         }
@@ -275,12 +285,103 @@ public class SkillLibrary {
                     title.length() > 120 ? title.substring(0, 120) : title, HarnessResource.Kind.SKILL, null,
                     List.of("importata"), uri.toString(), content).render();
         }
-        SkillDocument document = SkillDocument.parse(content, null);
+        // PHASE 31: a SKILL.md with a frontmatter but no key -- the standard shape --
+        // takes its key from its name, or from its folder.
+        String fallbackKey = SkillDocument.declaresKey(content) ? null : keyFrom(content, uri);
+        SkillDocument document = SkillDocument.parse(content, fallbackKey);
         if (document.source() == null) {
-            content = new SkillDocument(document.key(), document.name(), document.kind(), document.description(),
-                    document.tags(), uri.toString(), document.body()).render();
+            // Only the source line is added: the rest of the frontmatter (license,
+            // metadata, what the author wrote) stays as it came.
+            content = "---\nsource: " + uri + "\n" + content.substring(4);
         }
-        return create(content, HarnessResource.Origin.WEB);
+        return create(content, HarnessResource.Origin.WEB, fallbackKey);
+    }
+
+    private static String keyFrom(String content, URI uri) {
+        String name = com.aicompany.backend.harness.hub.Frontmatter.read(content).get("name");
+        String candidate = name == null ? null : slug(name);
+        if (candidate == null || !SkillDocument.KEY.matcher(candidate).matches()) {
+            String[] parts = uri.getPath().split("/");
+            String file = parts.length == 0 ? "skill" : parts[parts.length - 1].replaceAll("(?i)\\.md$", "");
+            candidate = slug(file.equalsIgnoreCase("SKILL") && parts.length >= 2 ? parts[parts.length - 2] : file);
+        }
+        return candidate == null || !SkillDocument.KEY.matcher(candidate).matches() ? "imported-skill" : candidate;
+    }
+
+    /** A key from any name: lower case, dashes, at most 64 characters; null when nothing is left. */
+    public static String slug(String name) {
+        if (name == null) {
+            return null;
+        }
+        String key = java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-+|-+$)", "");
+        if (key.length() > 64) {
+            key = key.substring(0, 64).replaceAll("-+$", "");
+        }
+        return key.length() < 2 ? null : key;
+    }
+
+    // --- PHASE 31 (ADR-036): skill folders the Knowledge Hub writes ------------------------
+
+    /** The folder of a library skill, from its validated key. */
+    @Transactional(readOnly = true)
+    public Path skillFolder(String key) {
+        if (key == null || !SkillDocument.KEY.matcher(key).matches()) {
+            throw LibraryProblemException.invalidDocument("'key' must be lower-case letters, digits and dashes (2-64)");
+        }
+        return pathOf("skills/" + key);
+    }
+
+    /**
+     * Indexes a skill folder the Hub has just written ({@code skills/<key>/SKILL.md}):
+     * a new entry, under {@code origin}. Refused when the key is taken.
+     */
+    public HarnessResource indexFolder(String key, HarnessResource.Origin origin, String sourceUrl) {
+        if (resources.existsByKey(key)) {
+            throw new HarnessResourceKeyConflictException("The catalog already has a resource '" + key + "'");
+        }
+        String relative = relativePath(HarnessResource.Kind.SKILL, key);
+        SkillDocument document = readDocument(relative, key);
+        HarnessResource resource = new HarnessResource(key, HarnessResource.Kind.SKILL, document.name(),
+                document.description(), document.tags(), document.source() != null ? document.source() : sourceUrl, null, null);
+        resource.linkFile(relative, origin);
+        return resources.saveAndFlush(resource);
+    }
+
+    /** The folder of an existing skill was rewritten by the Hub: the index follows the file again. */
+    public HarnessResource reindexFolder(String key) {
+        HarnessResource resource = resources.findByKeyForUpdate(key).orElseThrow(() -> notFound(key));
+        if (resource.getKind() != HarnessResource.Kind.SKILL) {
+            throw LibraryProblemException.invalidDocument("'" + key + "' is not a skill");
+        }
+        String relative = relativePath(HarnessResource.Kind.SKILL, key);
+        SkillDocument document = readDocument(relative, key);
+        resource.describe(document.name(), document.description(), document.tags(), document.source());
+        resource.linkFile(relative, null);
+        resources.flush();
+        return resource;
+    }
+
+    /** Whether a document would be accepted as the SKILL.md of {@code key}; the refusal says why. */
+    public static void validate(String content, String key) {
+        requireSize(content);
+        SkillDocument document = SkillDocument.parse(content, SkillDocument.declaresKey(content) ? null : key);
+        if (!document.key().equals(key)) {
+            throw LibraryProblemException.invalidDocument("The key of the file ('" + document.key() + "') must stay '" + key + "'");
+        }
+        if (document.kind() != HarnessResource.Kind.SKILL) {
+            throw LibraryProblemException.invalidDocument("A skill folder holds a SKILL document, not " + document.kind());
+        }
+    }
+
+    private SkillDocument readDocument(String relative, String key) {
+        try {
+            String text = Files.readString(pathOf(relative), StandardCharsets.UTF_8);
+            validate(text, key);
+            return SkillDocument.parse(text, SkillDocument.declaresKey(text) ? null : key);
+        } catch (IOException e) {
+            throw LibraryProblemException.unavailable("'" + relative + "' could not be read: " + e.getMessage());
+        }
     }
 
     static URI validated(String url) {

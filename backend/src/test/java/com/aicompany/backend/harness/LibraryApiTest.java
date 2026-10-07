@@ -166,6 +166,25 @@ class LibraryApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$[0].origin").value("FILE"));
     }
 
+    /**
+     * PHASE 31: the SKILL.md of Claude Code, Codex and the marketplaces has a
+     * frontmatter with a name and no key. It used to be refused ("'key' must be
+     * lower-case letters…"); its key now comes from its name.
+     */
+    @Test
+    void anImportedStandardSkillMdWithoutAKeyTakesItsKeyFromItsName() throws Exception {
+        web.answer("text/markdown", "---\nname: frontend-design\ndescription: >-\n  Distinctive interfaces,\n  not generic ones.\n"
+                + "license: Apache-2.0\n---\n\n# Frontend design\n");
+        mockMvc.perform(post("/api/library/import").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"url\":\"https://github.com/anthropics/skills/blob/main/skills/frontend-design/SKILL.md\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.key").value("frontend-design"))
+                .andExpect(jsonPath("$.name").value("frontend-design"))
+                .andExpect(jsonPath("$.description").value("Distinctive interfaces, not generic ones."))
+                .andExpect(jsonPath("$.filePath").value("skills/frontend-design/SKILL.md"));
+        assertThat(file("frontend-design").path("content").asString()).contains("license: Apache-2.0");
+    }
+
     @Test
     void anImportTakesARawMarkdownFromAPublicHttpsUrlAndNothingElse() throws Exception {
         web.answer("text/plain; charset=utf-8", "# Accessibilità dei form\n\nOgni input ha un'etichetta.\n");

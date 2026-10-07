@@ -47,13 +47,10 @@ public record SkillDocument(String key, String name, HarnessResource.Kind kind, 
         if (end < 0) {
             throw LibraryProblemException.invalidDocument("The frontmatter is not closed by a '---' line");
         }
-        Map<String, String> values = new LinkedHashMap<>();
-        for (String line : normalized.substring(FENCE.length() + 1, end).split("\n")) {
-            int colon = line.indexOf(':');
-            if (colon > 0 && !line.startsWith(" ") && !line.startsWith("#")) {
-                values.put(line.substring(0, colon).strip().toLowerCase(Locale.ROOT), unquote(line.substring(colon + 1).strip()));
-            }
-        }
+        // PHASE 31 (ADR-036 §3): block scalars and quoted values of the skills the
+        // applications write -- `description: >-` and its indented lines -- read whole.
+        Map<String, String> values = new LinkedHashMap<>(
+                com.aicompany.backend.harness.hub.Frontmatter.parse(normalized.substring(FENCE.length() + 1, end)));
         String body = normalized.substring(Math.min(normalized.length(), end + FENCE.length() + 1)).strip();
 
         String key = values.getOrDefault("key", expectedKey);
@@ -82,6 +79,12 @@ public record SkillDocument(String key, String name, HarnessResource.Kind kind, 
         }
         return new SkillDocument(key, name.strip(), kind, blankToNull(description), tags(values.get("tags")),
                 blankToNull(values.get("source")), body);
+    }
+
+    /** Whether a document's frontmatter names its own key (the library's files do; the applications' do not). */
+    public static boolean declaresKey(String text) {
+        String value = com.aicompany.backend.harness.hub.Frontmatter.read(text).get("key");
+        return value != null && !value.isBlank();
     }
 
     public String render() {

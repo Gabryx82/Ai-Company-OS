@@ -60,7 +60,9 @@ public class SecurityConfiguration {
     /** Deletes that destroy data for real (PHASE 20): distinct from archiving, and an admin's decision. */
     public static final String[] ADMIN_ONLY_DELETES = {"/api/projects/*", "/api/tasks/*",
             // PHASE 30 (ADR-035): agents, catalog entries of the library, a project's whole Blueprint.
-            "/api/agents/*", "/api/resources/*", "/api/projects/*/blueprint"};
+            "/api/agents/*", "/api/resources/*", "/api/projects/*/blueprint",
+            // PHASE 31 (ADR-036): a Knowledge Hub copy taken out of an application (kept as a backup).
+            "/api/skill-hub/library/*/copies/*"};
 
     /** The same decision for a selection: deleting several agents at once (PHASE 30). */
     public static final String[] ADMIN_ONLY_BULK_DELETES = {"/api/agents/bulk-delete"};

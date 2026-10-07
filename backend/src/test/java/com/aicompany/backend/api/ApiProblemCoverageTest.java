@@ -180,6 +180,9 @@ class ApiProblemCoverageTest {
                         "not-a-user-session",
                         "binding-invalid", "agent-works-elsewhere", "target-not-found", "no-baseline",
                         "resource-not-file-backed", "skill-document-invalid", "skill-import-refused", "library-unavailable",
+                        // PHASE 31 (ADR-036): the Knowledge Hub across applications and marketplaces.
+                        "skill-hub-item-not-found", "skill-package-refused", "skill-hub-conflict",
+                        "skill-location-read-only", "marketplace-unavailable",
                         "delete-confirmation-mismatch", "deletion-blocked", "budget-required", "price-required", "budget-exceeded",
                         "blueprint-node-not-found", "blueprint-edge-not-found", "blueprint-proposal-not-found",
                         "blueprint-derived-element", "blueprint-relation-exists", "blueprint-proposal-decided",

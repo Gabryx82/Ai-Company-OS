@@ -62,7 +62,8 @@ class PreconditionCoverageTest {
                     HarnessService.class, AgentTemplates.class, DailyService.class, AuthService.class,
                     AgentConfigurationService.class, SkillLibrary.class, DeletionService.class,
                     EcosystemService.class, CostService.class, BlueprintService.class, BlueprintScanService.class,
-                    ChangeProposalService.class, AgentDeletionService.class);
+                    ChangeProposalService.class, AgentDeletionService.class,
+                    com.aicompany.backend.harness.hub.SkillHubService.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -113,7 +114,17 @@ class PreconditionCoverageTest {
             // PHASE 30 (ADR-035): deleting a selection of agents names each one with the version the caller
             // read; each is checked under its lock with a Precondition built from it -- one tag per row, which a
             // single parameter cannot carry. The single delete takes its Precondition like any other write.
-            "deleteAll");
+            "deleteAll",
+            // PHASE 31 (ADR-036): the Knowledge Hub. Installing a package and importing an application's skill
+            // create a library entry (indexFolder is their indexing). The writes over existing state -- a package
+            // re-installed (update), a copy's change brought into the library (pull), a copy written or taken out
+            // of an application (deploy, undeploy) -- are guarded by content, a stronger precondition than a tag:
+            // the Hub compares the fingerprint of what is on disk with the one it recorded when it last wrote, and
+            // refuses (409 skill-hub-conflict) unless the operator confirms -- and then keeps a backup. The index
+            // follows the rewritten file as it does after sync (reindexFolder), so an open editor still sees 412.
+            // checkProvenance records what upstream answered: the server's bookkeeping.
+            "indexFolder", "reindexFolder", "importFound", "update", "pull", "deploy", "undeploy",
+            "checkProvenance");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {

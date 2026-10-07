@@ -294,6 +294,26 @@ public enum ApiProblem {
     LIBRARY_UNAVAILABLE("library-unavailable", HttpStatus.SERVICE_UNAVAILABLE,
             "Library unavailable", "The library folder could not be read or written"),
 
+    // --- the Knowledge Hub across applications and marketplaces (PHASE 31, ADR-036) -----
+
+    SKILL_HUB_ITEM_NOT_FOUND("skill-hub-item-not-found", HttpStatus.NOT_FOUND,
+            "Skill not found", "No skill with that identifier on this machine or in that marketplace"),
+    /** A package the Hub will not write: too large, a path outside its folder, no SKILL.md. */
+    SKILL_PACKAGE_REFUSED("skill-package-refused", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Package refused", "The skill package cannot be installed as it is"),
+    /**
+     * Writing would overwrite something the Hub did not write, or that was
+     * changed after the Hub wrote it. The detail says what; the caller decides,
+     * and a confirmed overwrite keeps a backup.
+     */
+    SKILL_HUB_CONFLICT("skill-hub-conflict", HttpStatus.CONFLICT,
+            "Would overwrite changes", "The destination holds a skill the Hub did not write, or one changed since"),
+    /** The application keeps that folder itself (a plugin, a built-in skill, an account-managed cache). */
+    SKILL_LOCATION_READ_ONLY("skill-location-read-only", HttpStatus.CONFLICT,
+            "Managed by the application", "This skill belongs to the application: change it from there"),
+    MARKETPLACE_UNAVAILABLE("marketplace-unavailable", HttpStatus.BAD_GATEWAY,
+            "Marketplace unavailable", "The online catalog did not answer as expected"),
+
     // --- deleting for real (PHASE 20, ADR-027) --------------------------------------------
 
     DELETE_CONFIRMATION_MISMATCH("delete-confirmation-mismatch", HttpStatus.BAD_REQUEST,

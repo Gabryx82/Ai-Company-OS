@@ -32,7 +32,7 @@ class SchemaMigrationTest extends AbstractPostgresTest {
         // Schema versions only, in order. The development seed is a separate
         // Flyway stream and must never appear here, otherwise the next schema
         // migration becomes out of order (R1).
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30");
     }
 
     /**
@@ -94,7 +94,7 @@ class SchemaMigrationTest extends AbstractPostgresTest {
                 .containsExactly("agent_resources", "agent_software", "agents", "app_users", "auth_sessions", "blueprint_change_proposals",
                     "blueprint_edges", "blueprint_layouts", "blueprint_nodes", "blueprint_scans", "cost_budgets", "daily_items", "ecosystem_autostart",
                     "flyway_schema_history", "harness_resources", "llm_models", "model_providers", "plan_runs", "project_phases", "project_resources", "projects",
-                    "quota_plans", "security_events", "software", "task_handoffs", "task_reviews", "task_runs", "tasks")
+                    "quota_plans", "security_events", "skill_installations", "skill_snapshot", "skill_sync_events", "software", "task_handoffs", "task_reviews", "task_runs", "tasks")
                 .doesNotContain("flyway_dev_seed_history");
     }
 
