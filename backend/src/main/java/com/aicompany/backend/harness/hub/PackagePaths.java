@@ -12,12 +12,18 @@ import java.util.regex.Pattern;
  * stay inside the folder it is written to. A package has at most
  * {@value #MAX_FILES} files, each at most {@value #MAX_FILE} bytes, in all
  * {@value #MAX_TOTAL} bytes.
+ *
+ * <p>The limits bound what a hostile package can make the Hub hold and write,
+ * with room for real skills. Measured on the operator's PC on 2026-10-07 (341
+ * skills of every application): at most 139 files, a 7 MB folder, a 7 MB file
+ * (Codex's {@code openai-templates}); {@code impeccable} has a 1.05 MB font index.
+ * The first limits (150 files, 1 MB, 8 MB) refused 10 of those 341.
  */
 public final class PackagePaths {
 
-    public static final int MAX_FILES = 150;
-    public static final int MAX_FILE = 1024 * 1024;
-    public static final long MAX_TOTAL = 8L * 1024 * 1024;
+    public static final int MAX_FILES = 1000;
+    public static final int MAX_FILE = 16 * 1024 * 1024;
+    public static final long MAX_TOTAL = 64L * 1024 * 1024;
 
     private static final Pattern SEGMENT = Pattern.compile("^[\\p{L}\\p{N} _.,()+@&'=\\[\\]~-]{1,120}$");
     private static final Set<String> DEVICES = Set.of("con", "prn", "aux", "nul", "com1", "com2", "com3", "com4",
@@ -59,11 +65,22 @@ public final class PackagePaths {
 
     public static void requireBudget(int files, long totalBytes) {
         if (files > MAX_FILES) {
-            throw HubProblemException.packageRefused("The package has more than " + MAX_FILES + " files");
+            throw HubProblemException.packageRefused("Il pacchetto ha più di " + MAX_FILES + " file");
         }
         if (totalBytes > MAX_TOTAL) {
-            throw HubProblemException.packageRefused("The package is larger than " + (MAX_TOTAL / 1024 / 1024) + " MB");
+            throw HubProblemException.packageRefused("Il pacchetto supera " + megabytes(MAX_TOTAL) + " MB in tutto");
         }
+    }
+
+    /** A single file of a package, at most {@link #MAX_FILE} bytes. */
+    public static void requireFileSize(String name, long bytes) {
+        if (bytes > MAX_FILE) {
+            throw HubProblemException.packageRefused("Il file " + name + " supera " + megabytes(MAX_FILE) + " MB");
+        }
+    }
+
+    static long megabytes(long bytes) {
+        return bytes / 1024 / 1024;
     }
 
     /** {@code folder/path}, checked to stay inside {@code folder}. */

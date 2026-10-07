@@ -817,9 +817,7 @@ public class SkillHubService {
 
     private static byte[] bytes(Path file) {
         try {
-            if (Files.size(file) > PackagePaths.MAX_FILE) {
-                throw HubProblemException.packageRefused("Il file " + file.getFileName() + " supera 1 MB");
-            }
+            PackagePaths.requireFileSize(String.valueOf(file.getFileName()), Files.size(file));
             return Files.readAllBytes(file);
         } catch (IOException e) {
             throw HubProblemException.notFound("The file " + file + " could not be read: " + e.getMessage());

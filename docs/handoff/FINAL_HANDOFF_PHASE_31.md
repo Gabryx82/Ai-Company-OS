@@ -3,6 +3,16 @@
 Branch `autonomous/phase-31-knowledge-hub` (dalla punta di PHASE 30, `4127377`), **non pushato**. `master`
 intoccato. Decisioni e ragioni: [ADR-036](../adr/ADR-036-knowledge-hub-across-apps.md).
 
+## Terza correzione (2026-10-07): «Package refused — il file font-index.json supera 1 MB»
+
+Importare **impeccable** nella libreria falliva: la skill ha `scripts/data/font-index.json` di 1.100.013 byte e il Hub
+accettava file fino a 1 MB (e 150 file, 8 MB in tutto). Misurate tutte le 341 skill di questo PC, in sola lettura:
+**10 superavano** quei limiti (la più grande, un modello di Codex, ha un file di 7 MB; una cartella ha 139 file).
+Limiti nuovi: **1000 file, 16 MB per file, 64 MB in tutto** — restano un argine contro un pacchetto ostile. Messaggi in
+italiano, calcolati dai limiti. Test nuovo in `SkillHubApiTest`: una skill con un file di 2 MB e 160 file si importa
+intera e si copia in un'altra app (visto **rosso** con i limiti vecchi: proprio il tuo `422`). I 62 file della tua
+`impeccable` passano tutti le regole dei percorsi. **Riavvia il backend** e riprova *Importa nella libreria*.
+
 ## Seconda correzione (2026-10-07, sera)
 
 > «Le nuove skill e plugin che aggiungo a Claude Desktop e a ChatGPT non si vedono nell'hub; da marketplace non

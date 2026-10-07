@@ -171,7 +171,8 @@ Organizzati come il Mockup Hub (ADR-032): una ricerca, uno scaffale. Catalogo in
 
 Difese: solo HTTPS verso quattro host (`HubWeb.HOSTS`), nessun redirect seguito, URI costruiti dal
 server con parti validate; nel pacchetto solo percorsi relativi e semplici (niente `..`, unità, nomi di
-dispositivo), al massimo 150 file, 1 MB l'uno, 8 MB in tutto; link simbolici e file nascosti esclusi;
+dispositivo), al massimo 1000 file, 16 MB l'uno, 64 MB in tutto (erano 150 file, 1 MB, 8 MB: rifiutavano 10 delle
+341 skill di questo PC, fra cui `impeccable` con un indice di font di 1,05 MB; la più grande misurata è di 7 MB); link simbolici e file nascosti esclusi;
 l'anteprima mostra file, `SKILL.md` e un avviso quando ci sono script. Nessuna credenziale, nessun
 costo: le API usate sono pubbliche e in sola lettura. GitHub anonimo concede 60 richieste all'ora
 sull'API: gli alberi restano in cache 10 minuti e i frontmatter per sempre (per sha); il limite

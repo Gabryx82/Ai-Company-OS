@@ -360,6 +360,35 @@ class SkillHubApiTest extends AbstractPostgresTest {
     // --- into the library -----------------------------------------------------------------
 
     @Test
+    void aSkillWithLargeDataFilesAndManyFilesIsImportedWholeAndCopiedOn() throws Exception {
+        // As impeccable: a 1.05 MB font index, and more files than the first limits allowed (1 MB, 150 files).
+        Path source = home.resolve(".claude/skills/impeccable");
+        write(source.resolve("SKILL.md"), "---\nname: impeccable\ndescription: Polish a frontend interface\nversion: 4.5.0\n---\n# Impeccable\n");
+        byte[] index = new byte[2 * 1024 * 1024 + 17];
+        java.util.Arrays.fill(index, (byte) 'a');
+        Files.createDirectories(source.resolve("scripts/data"));
+        Files.write(source.resolve("scripts/data/font-index.json"), index);
+        for (int i = 0; i < 160; i++) {
+            write(source.resolve("reference/note-" + i + ".md"), "# Note " + i + "\n");
+        }
+        String id = FoundSkill.idOf("claude-code.personal", "impeccable/SKILL.md");
+        scanner.scan();
+
+        mockMvc.perform(post("/api/skill-hub/installed/" + id + "/import").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.key").value("impeccable"));
+        Path imported = library.root().resolve("skills/impeccable");
+        assertThat(Files.size(imported.resolve("scripts/data/font-index.json"))).isEqualTo(index.length);
+        try (Stream<Path> notes = Files.list(imported.resolve("reference"))) {
+            assertThat(notes.count()).isEqualTo(160);
+        }
+        // And from the library into another application, whole.
+        Files.createDirectories(home.resolve(".codex"));
+        deploy("impeccable", "codex", false).andExpect(status().isOk());
+        assertThat(Files.size(home.resolve(".codex/skills/impeccable/scripts/data/font-index.json"))).isEqualTo(index.length);
+    }
+
+    @Test
     void aSkillFoundInAnApplicationIsImportedIntoTheLibraryAndItsSourceChangingIsAnUpdate() throws Exception {
         Path source = home.resolve(".claude/skills/commit-helper");
         write(source.resolve("SKILL.md"), "---\nname: commit-helper\ndescription: Commit messages\n---\n# Version one\n");
