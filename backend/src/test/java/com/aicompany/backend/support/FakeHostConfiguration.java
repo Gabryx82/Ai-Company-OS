@@ -88,4 +88,13 @@ public class FakeHostConfiguration {
     FakeHubWeb fakeHubWeb() {
         return MARKETPLACES;
     }
+
+    private static final FakeHubCommands CLIS = new FakeHubCommands();
+
+    /** PHASE 31: nor do they ever run Claude Code's or Codex's CLI. */
+    @Bean
+    @Primary
+    FakeHubCommands fakeHubCommands() {
+        return CLIS;
+    }
 }

@@ -79,9 +79,13 @@ public class SkillScanner {
 
     /** An MCP server as one source declares it, before the application's connectors are merged by name. */
     private record RawConnector(String name, String transport, String target, String source, Scope scope, Boolean enabled,
-                                String version) {
+                                String version, String tools, String description) {
         RawConnector(String name, String transport, String target, String source, Scope scope, Boolean enabled) {
-            this(name, transport, target, source, scope, enabled, null);
+            this(name, transport, target, source, scope, enabled, null, null, null);
+        }
+
+        RawConnector(String name, String transport, String target, String source, Scope scope, Boolean enabled, String version) {
+            this(name, transport, target, source, scope, enabled, version, null, null);
         }
     }
 
@@ -289,11 +293,18 @@ public class SkillScanner {
                 if (id == null || !id.matches("[A-Za-z0-9._-]+")) {
                     continue;
                 }
+                // Anthropic's skills live in a folder named by their id; the ones the user uploads have an
+                // id like "skill_01X4…" and a folder named by their name.
                 Path folder = skillsRoot.resolve(id);
+                String name = text(entry, "name");
+                if (!Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS) && name != null && name.matches("[A-Za-z0-9._-]+")) {
+                    folder = skillsRoot.resolve(name);
+                }
+                Path skillFolder = folder;
                 Scope scope = "anthropic".equalsIgnoreCase(text(entry, "creatorType")) ? Scope.SYSTEM : Scope.PERSONAL;
                 Boolean on = entry.has("enabled") ? entry.path("enabled").asBoolean(true) : null;
                 Plugin owner = new Plugin(null, null, scope == Scope.SYSTEM ? "anthropic" : null, on);
-                skillMd(folder).flatMap(md -> skill(location, root, folder, md, scope, owner, state)).ifPresent(out::add);
+                skillMd(skillFolder).flatMap(md -> skill(location, root, skillFolder, md, scope, owner, state)).ifPresent(out::add);
             }
         });
         Optional<Path> plugins = newest(pluginManifests);
@@ -439,7 +450,10 @@ public class SkillScanner {
                 json(desktop.resolve("claude_desktop_config.json")).ifPresent(desktopConfig ->
                         mcpServers(desktopConfig.path("mcpServers"), "configurato da te").forEach(c -> state.connector(app, c)));
             }
-            case "codex.connectors" -> codexMcpServers(config).forEach(c -> state.connector(app, c));
+            case "codex.connectors" -> {
+                codexMcpServers(config).forEach(c -> state.connector(app, c));
+                chatGptApps(config.getParent().resolve("cache").resolve("codex_apps_tools")).forEach(c -> state.connector(app, c));
+            }
             case "antigravity.connectors", "gemini-cli.connectors" -> json(config).ifPresent(json -> {
                 JsonNode servers = json.has("mcpServers") ? json.path("mcpServers") : json;
                 mcpServers(servers, "configurato da te").forEach(c -> state.connector(app, c));
@@ -474,14 +488,17 @@ public class SkillScanner {
                 details.put(remote ? "Indirizzo" : "Avvio", abbreviate(targets, 3));
             }
             details.put("Fornito da", abbreviate(sources, 8));
-            if (sources.stream().anyMatch(s -> !s.startsWith("plugin "))) {
+            if (sources.stream().anyMatch(s -> s.startsWith("configurato") || s.startsWith("progetto") || s.startsWith("estensione"))) {
                 details.put("Configurazione", config.toString());
             }
             ordered.stream().map(RawConnector::version).filter(v -> v != null).findFirst()
                     .ifPresent(v -> details.put("Versione", v));
+            ordered.stream().map(RawConnector::tools).filter(v -> v != null).findFirst()
+                    .ifPresent(v -> details.put("Strumenti", v));
             Boolean enabled = ordered.stream().map(RawConnector::enabled).filter(e -> e != null).findFirst().orElse(null);
-            String description = first.transport() + (targets.isEmpty() ? "" : " · " + targets.iterator().next())
-                    + (sources.size() > 1 ? " · da " + sources.size() + " fonti" : "");
+            String description = ordered.stream().map(RawConnector::description).filter(d -> d != null && !d.isBlank())
+                    .findFirst().orElse(first.transport() + (targets.isEmpty() ? "" : " · " + targets.iterator().next())
+                            + (sources.size() > 1 ? " · da " + sources.size() + " fonti" : ""));
             String fingerprint = Fingerprints.sha256(String.join("\n", ordered.stream()
                     .map(c -> c.source() + "|" + c.transport() + "|" + c.target() + "|" + c.enabled()).sorted().toList()));
             String relative = "mcp/" + family;
@@ -676,6 +693,40 @@ public class SkillScanner {
         } catch (IOException | RuntimeException e) {
             return out;
         }
+        return out;
+    }
+
+    /**
+     * The apps (connectors) of the user's ChatGPT account, as Codex caches their
+     * tools ({@code ~/.codex/cache/codex_apps_tools/*.json}): one per connector, with
+     * how many tools it has. Only names, descriptions and counts are read.
+     */
+    private static List<RawConnector> chatGptApps(Path folder) {
+        List<RawConnector> out = new ArrayList<>();
+        Map<String, Integer> tools = new LinkedHashMap<>();
+        Map<String, String> descriptions = new HashMap<>();
+        Optional<Path> newest;
+        try (Stream<Path> list = Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS) ? Files.list(folder) : Stream.empty()) {
+            newest = list.filter(f -> f.getFileName().toString().endsWith(".json")).max(Comparator.comparingLong(SkillScanner::modifiedMillis));
+        } catch (IOException e) {
+            return out;
+        }
+        newest.flatMap(SkillScanner::json).ifPresent(cache -> {
+            for (JsonNode tool : cache.path("tools")) {
+                String name = text(tool, "connector_name");
+                if (name == null || name.isBlank() || name.length() > 120) {
+                    continue;
+                }
+                tools.merge(name, 1, Integer::sum);
+                String description = text(tool, "namespace_description");
+                if (description != null && !descriptions.containsKey(name)) {
+                    String line = description.lines().findFirst().orElse("").strip();
+                    descriptions.put(name, line.length() > 200 ? line.substring(0, 200) + "…" : line);
+                }
+            }
+        });
+        tools.forEach((name, count) -> out.add(new RawConnector(name, "app ChatGPT", null, "account ChatGPT", Scope.ACCOUNT,
+                null, null, count + (count == 1 ? " strumento" : " strumenti"), descriptions.get(name))));
         return out;
     }
 

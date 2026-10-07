@@ -1763,6 +1763,80 @@
         },
         "type" : "object"
       },
+      "ConnectorInput" : {
+        "properties" : {
+          "defaultValue" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "required" : {
+            "type" : "boolean"
+          },
+          "secret" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ConnectorInstallRequest" : {
+        "properties" : {
+          "name" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "provider" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "ref" : {
+            "maxLength" : 300,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "replace" : {
+            "type" : "boolean"
+          },
+          "targets" : {
+            "items" : {
+              "maxLength" : 40,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 6,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "values" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          }
+        },
+        "required" : [ "provider", "ref", "targets" ],
+        "type" : "object"
+      },
+      "ConnectorInstallResponse" : {
+        "properties" : {
+          "results" : {
+            "items" : {
+              "$ref" : "#/components/schemas/InstallOutcome"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "Content" : {
         "properties" : {
           "content" : {
@@ -2183,6 +2257,59 @@
         },
         "type" : "object"
       },
+      "ExtensionPreview" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "details" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "inputs" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConnectorInput"
+            },
+            "type" : "array"
+          },
+          "installName" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "ref" : {
+            "type" : "string"
+          },
+          "sourceUrl" : {
+            "type" : "string"
+          },
+          "targets" : {
+            "items" : {
+              "$ref" : "#/components/schemas/InstallPlan"
+            },
+            "type" : "array"
+          },
+          "version" : {
+            "type" : "string"
+          },
+          "warnings" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "FileResponse" : {
         "properties" : {
           "absolutePath" : {
@@ -2426,6 +2553,56 @@
           "key" : {
             "maxLength" : 64,
             "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "InstallOutcome" : {
+        "properties" : {
+          "command" : {
+            "type" : "string"
+          },
+          "confirmation" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "output" : {
+            "type" : "string"
+          },
+          "software" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "INSTALLED", "NEEDS_CONFIRMATION", "MANUAL", "FAILED" ],
+            "type" : "string"
+          },
+          "target" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "InstallPlan" : {
+        "properties" : {
+          "app" : {
+            "type" : "string"
+          },
+          "appName" : {
+            "type" : "string"
+          },
+          "available" : {
+            "type" : "boolean"
+          },
+          "command" : {
+            "type" : "string"
+          },
+          "method" : {
+            "type" : "string"
+          },
+          "note" : {
             "type" : "string"
           }
         },
@@ -3281,6 +3458,32 @@
         },
         "type" : "object"
       },
+      "PluginInstallRequest" : {
+        "properties" : {
+          "confirmation" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "provider" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "ref" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "target" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "provider", "ref", "target" ],
+        "type" : "object"
+      },
       "Preview" : {
         "properties" : {
           "description" : {
@@ -3537,7 +3740,7 @@
       "Provider" : {
         "properties" : {
           "api" : {
-            "enum" : [ "SKILLS_SH", "CLAWHUB", "GITHUB" ],
+            "enum" : [ "SKILLS_SH", "CLAWHUB", "GITHUB", "CLAUDE_MARKETPLACE", "CODEX_MARKETPLACE", "MCP_REGISTRY" ],
             "type" : "string"
           },
           "community" : {
@@ -3552,6 +3755,12 @@
           "key" : {
             "type" : "string"
           },
+          "kind" : {
+            "type" : "string"
+          },
+          "marketplace" : {
+            "type" : "string"
+          },
           "name" : {
             "type" : "string"
           },
@@ -3563,6 +3772,12 @@
           },
           "searchUrl" : {
             "type" : "string"
+          },
+          "targets" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -3906,9 +4121,18 @@
           "description" : {
             "type" : "string"
           },
+          "details" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
           "installs" : {
             "format" : "int64",
             "type" : "integer"
+          },
+          "kind" : {
+            "type" : "string"
           },
           "name" : {
             "type" : "string"
@@ -3924,6 +4148,12 @@
           },
           "suspicious" : {
             "type" : "boolean"
+          },
+          "targets" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           },
           "url" : {
             "type" : "string"
@@ -9363,6 +9593,34 @@
         "tags" : [ "run-controller" ]
       }
     },
+    "/api/skill-hub/connectors/install" : {
+      "post" : {
+        "operationId" : "installMarketplaceConnector",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectorInstallRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConnectorInstallResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
     "/api/skill-hub/events" : {
       "get" : {
         "operationId" : "skillSyncEvents",
@@ -9706,6 +9964,13 @@
             },
             "type" : "array"
           }
+        }, {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -9751,6 +10016,39 @@
         "tags" : [ "skill-hub-controller" ]
       }
     },
+    "/api/skill-hub/marketplaces/{provider}/item" : {
+      "get" : {
+        "operationId" : "previewMarketplaceItem",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "ref",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExtensionPreview"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
     "/api/skill-hub/marketplaces/{provider}/package" : {
       "get" : {
         "operationId" : "previewSkillPackage",
@@ -9775,6 +10073,34 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Preview"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/plugins/install" : {
+      "post" : {
+        "operationId" : "installMarketplacePlugin",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PluginInstallRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InstallOutcome"
                 }
               }
             },

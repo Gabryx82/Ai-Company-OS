@@ -22,6 +22,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The Knowledge Hub across applications and marketplaces (PHASE 31, ADR-036):
@@ -55,16 +56,34 @@ public class SkillHubController {
     public record SkillFolderOpened(String folder) {
     }
 
+    public record PluginInstallRequest(@NotBlank @Size(max = 40) String provider, @NotBlank @Size(max = 200) String ref,
+                                       @NotBlank @Size(max = 40) String target, @Size(max = 64) String confirmation) {
+    }
+
+    /** {@code values}: what the connector needs (API keys...), passed to the applications and never kept. */
+    public record ConnectorInstallRequest(@NotBlank @Size(max = 40) String provider, @NotBlank @Size(max = 300) String ref,
+                                          @NotEmpty @Size(max = 6) List<@NotBlank @Size(max = 40) String> targets,
+                                          @Size(max = 64) String name, @Size(max = 40) Map<@Size(max = 64) String, @Size(max = 4000) String> values,
+                                          Boolean replace) {
+    }
+
+    public record ConnectorInstallResponse(List<HubInstaller.InstallOutcome> results) {
+    }
+
     private final SkillHubService hub;
     private final SkillMarketplaces markets;
     private final SkillUpdates updates;
     private final SkillSync sync;
 
-    public SkillHubController(SkillHubService hub, SkillMarketplaces markets, SkillUpdates updates, SkillSync sync) {
+    private final HubInstaller installer;
+
+    public SkillHubController(SkillHubService hub, SkillMarketplaces markets, SkillUpdates updates, SkillSync sync,
+                              HubInstaller installer) {
         this.hub = hub;
         this.markets = markets;
         this.updates = updates;
         this.sync = sync;
+        this.installer = installer;
     }
 
     // --- installed ---------------------------------------------------------------------
@@ -118,8 +137,9 @@ public class SkillHubController {
 
     @GetMapping("/api/skill-hub/marketplaces/search")
     public SkillMarketplaces.SearchResults searchSkillMarketplaces(@RequestParam String q,
-                                                  @RequestParam(required = false) List<String> provider) {
-        return markets.search(q, provider);
+                                                  @RequestParam(required = false) List<String> provider,
+                                                  @RequestParam(required = false) String kind) {
+        return markets.search(q, provider, kind);
     }
 
     @GetMapping("/api/skill-hub/marketplaces/{provider}/browse")
@@ -137,6 +157,27 @@ public class SkillHubController {
     public ResponseEntity<SkillHubService.InstallResult> installSkillPackage(@Valid @RequestBody InstallRequest body) {
         SkillHubService.InstallResult result = hub.install(body.provider(), body.ref(), body.key(), body.targets());
         return ResponseEntity.created(URI.create("/api/resources/" + result.key() + "/file")).body(result);
+    }
+
+    // --- plugins and connectors ---------------------------------------------------------------
+
+    /** A plugin or connector of the Marketplace: what it is, what it asks, how each application would get it. Nothing runs. */
+    @GetMapping("/api/skill-hub/marketplaces/{provider}/item")
+    public HubInstaller.ExtensionPreview previewMarketplaceItem(@PathVariable String provider, @RequestParam String ref) {
+        return installer.preview(provider, ref);
+    }
+
+    /** Installs a plugin with the application's own CLI; a declared command needs the operator's confirmation first. */
+    @PostMapping("/api/skill-hub/plugins/install")
+    public HubInstaller.InstallOutcome installMarketplacePlugin(@Valid @RequestBody PluginInstallRequest body) {
+        return installer.installPlugin(body.provider(), body.ref(), body.target(), body.confirmation());
+    }
+
+    /** Adds a connector to the chosen applications, one outcome each. */
+    @PostMapping("/api/skill-hub/connectors/install")
+    public ConnectorInstallResponse installMarketplaceConnector(@Valid @RequestBody ConnectorInstallRequest body) {
+        return new ConnectorInstallResponse(installer.installConnector(body.provider(), body.ref(), body.targets(), body.name(),
+                body.values() == null ? Map.of() : body.values(), Boolean.TRUE.equals(body.replace())));
     }
 
     // --- copies of a library skill ------------------------------------------------------------

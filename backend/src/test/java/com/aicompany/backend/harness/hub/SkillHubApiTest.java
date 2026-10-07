@@ -116,11 +116,18 @@ class SkillHubApiTest extends AbstractPostgresTest {
                 "{\"name\": \"app-6a3293e1\", \"version\": \"2.1.0\", \"interface\": {\"displayName\": \"Higgsfield\"}}");
         write(appPlugin.resolve("skills/make-video/SKILL.md"), "---\nname: make-video\ndescription: Videos\n---\n");
         write(home.resolve(".codex/AGENTS.md"), "# Regole\n\nRispondi in italiano.\n");
+        // The apps of the ChatGPT account, as Codex keeps them.
+        write(home.resolve(".codex/cache/codex_apps_tools/0a1b.json"), "{\"tools\": ["
+                + "{\"connector_name\": \"Gmail\", \"namespace_description\": \"Read and send mail\\nMore\"},"
+                + "{\"connector_name\": \"Gmail\"}, {\"connector_name\": \"Figma\"}]}");
         Path account = desktop.resolve("skills-plugin/org1/acct1");
         write(account.resolve("manifest.json"), "{\"lastUpdated\": 2, \"skills\": ["
                 + "{\"skillId\": \"pdf\", \"creatorType\": \"anthropic\", \"enabled\": true},"
-                + "{\"skillId\": \"mine\", \"creatorType\": \"user\", \"enabled\": false}]}");
+                + "{\"skillId\": \"mine\", \"creatorType\": \"user\", \"enabled\": false},"
+                + "{\"skillId\": \"skill_01Xyz\", \"name\": \"emil-design-eng\", \"creatorType\": \"user\", \"enabled\": true}]}");
         write(account.resolve("skills/pdf/SKILL.md"), "---\nname: pdf\ndescription: Fill PDF forms\n---\n");
+        // A skill the user uploaded: its folder is named after it, not after its id.
+        write(account.resolve("skills/emil-design-eng/SKILL.md"), "---\nname: emil-design-eng\ndescription: Design engineering\n---\n");
         write(account.resolve("skills/mine/SKILL.md"), "---\nname: mine\ndescription: My own skill\n---\n");
         Path old = desktop.resolve("skills-plugin/org2/acct2");
         write(old.resolve("manifest.json"), "{\"lastUpdated\": 1, \"skills\": [{\"skillId\": \"old\", \"creatorType\": \"user\"}]}");
@@ -171,6 +178,9 @@ class SkillHubApiTest extends AbstractPostgresTest {
         assertThat(app(view, "cursor").path("detected").asBoolean()).isFalse();
         assertThat(app(view, "claude-code").path("installable").asBoolean()).isTrue();
         assertThat(app(view, "claude-desktop").path("installable").asBoolean()).isFalse();
+        // ChatGPT's skills live in Codex, the app the ChatGPT subscription brings: the Hub installs there.
+        assertThat(app(view, "codex").path("name").asString()).isEqualTo("ChatGPT · Codex");
+        assertThat(app(view, "codex").path("installable").asBoolean()).isTrue();
 
         JsonNode commit = skill(view, "commit-helper");
         assertThat(commit.path("app").asString()).isEqualTo("claude-code");
@@ -193,6 +203,10 @@ class SkillHubApiTest extends AbstractPostgresTest {
         assertThat(skill(view, "mine").path("scope").asString()).isEqualTo("PERSONAL");
         assertThat(skill(view, "mine").path("enabled").asBoolean()).isFalse();
         assertThat(names(view)).doesNotContain("old");
+        JsonNode uploaded = skill(view, "emil-design-eng");
+        assertThat(uploaded.path("app").asString()).isEqualTo("claude-desktop");
+        assertThat(uploaded.path("scope").asString()).isEqualTo("PERSONAL");
+        assertThat(uploaded.path("description").asString()).isEqualTo("Design engineering");
         JsonNode render = skill(view, "render-deploy");
         assertThat(render.path("pluginVersion").asString()).isEqualTo("0.2.2");
         assertThat(render.path("marketplace").asString()).isEqualTo("knowledge-work-plugins");
@@ -226,6 +240,11 @@ class SkillHubApiTest extends AbstractPostgresTest {
         assertThat(connector(view, "claude-code", "remote").path("details").path("Indirizzo").asString())
                 .isEqualTo("https://mcp.example.org/mcp");
         assertThat(connector(view, "claude-code", "Claude Docs").path("scope").asString()).isEqualTo("ACCOUNT");
+        JsonNode gmail = connector(view, "codex", "Gmail");
+        assertThat(gmail.path("scope").asString()).isEqualTo("ACCOUNT");
+        assertThat(gmail.path("description").asString()).isEqualTo("Read and send mail");
+        assertThat(gmail.path("details").path("Strumenti").asString()).isEqualTo("2 strumenti");
+        assertThat(connector(view, "codex", "Figma").path("details").path("Fornito da").asString()).isEqualTo("account ChatGPT");
         // Knowledge: what Claude Code remembers about a project.
         JsonNode memory = item(view, "KNOWLEDGE", "Memoria · Shop");
         assertThat(memory.path("details").path("Progetto").asString()).isEqualTo("C:/Work/Shop");
@@ -379,12 +398,13 @@ class SkillHubApiTest extends AbstractPostgresTest {
 
         mockMvc.perform(post("/api/skill-hub/install").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"provider\":\"anthropic-skills\",\"ref\":\"anthropics/skills:skills/pdf\","
-                                + "\"targets\":[\"claude-code\",\"agents\",\"cursor\"]}"))
+                                + "\"targets\":[\"claude-code\",\"agents\",\"cursor\",\"codex\"]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.key").value("pdf"))
                 .andExpect(jsonPath("$.copies[0].outcome").value("CREATED"))
                 .andExpect(jsonPath("$.copies[1].outcome").value("CREATED"))
-                .andExpect(jsonPath("$.copies[2].outcome").value("FAILED"));
+                .andExpect(jsonPath("$.copies[2].outcome").value("FAILED"))
+                .andExpect(jsonPath("$.copies[3].outcome").value("CREATED"));
 
         assertThat(Files.readString(library.root().resolve("skills/pdf/SKILL.md"))).isEqualTo(PDF_V1);
         assertThat(library.root().resolve("skills/pdf/scripts/fill.py")).exists();
@@ -392,12 +412,15 @@ class SkillHubApiTest extends AbstractPostgresTest {
         assertThat(Files.readString(home.resolve(".claude/skills/pdf/SKILL.md"))).isEqualTo(PDF_V1);
         assertThat(home.resolve(".claude/skills/pdf/" + Fingerprints.MARKER)).exists();
         assertThat(home.resolve(".agents/skills/pdf/scripts/fill.py")).exists();
+        // ChatGPT · Codex: into Codex's own skills folder, where its skill installer puts them.
+        assertThat(Files.readString(home.resolve(".codex/skills/pdf/SKILL.md"))).isEqualTo(PDF_V1);
+        assertThat(copyStatus("pdf", "codex")).isEqualTo("IN_SYNC");
         assertThat(copyStatus("pdf", "claude-code")).isEqualTo("IN_SYNC");
         assertThat(copyStatus("pdf", "agents")).isEqualTo("IN_SYNC");
 
         JsonNode entry = libraryEntry(getJson("/api/skill-hub/installed?rescan=true"), "pdf");
         assertThat(entry.path("provenance").path("provider").asString()).isEqualTo("anthropic-skills");
-        assertThat(entry.path("copies").size()).isEqualTo(2);
+        assertThat(entry.path("copies").size()).isEqualTo(3);
 
         mockMvc.perform(post("/api/skill-hub/install").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"provider\":\"anthropic-skills\",\"ref\":\"anthropics/skills:skills/pdf\"}"))

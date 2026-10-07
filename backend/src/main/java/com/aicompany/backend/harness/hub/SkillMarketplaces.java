@@ -63,15 +63,30 @@ public class SkillMarketplaces {
     private static final int MAX_TREE = 12 * 1024 * 1024;
     private static final int MAX_JSON = 2 * 1024 * 1024;
 
-    public enum Api { SKILLS_SH, CLAWHUB, GITHUB }
+    public enum Api { SKILLS_SH, CLAWHUB, GITHUB, CLAUDE_MARKETPLACE, CODEX_MARKETPLACE, MCP_REGISTRY }
 
+    /**
+     * A catalog. {@code kind} is what it offers -- skills (the default), plugins or
+     * connectors; {@code marketplace} the name an application's CLI knows a plugin
+     * marketplace by; {@code targets} the applications its items install into.
+     */
     public record Provider(String key, String name, String description, String homepage, String searchUrl,
-                           Api api, String repo, boolean official, boolean community) {
+                           Api api, String repo, boolean official, boolean community, String kind, String marketplace,
+                           List<String> targets) {
+        public String kindOrSkill() {
+            return kind == null ? "SKILL" : kind;
+        }
     }
 
-    /** One skill a catalog offers. {@code ref} is what preview and install take back. */
+    /** One item a catalog offers. {@code ref} is what preview and install take back. */
     public record Result(String provider, String ref, String name, String description, String author, String source,
-                         Long installs, String version, String url, boolean suspicious) {
+                         Long installs, String version, String url, boolean suspicious, String kind,
+                         List<String> targets, Map<String, String> details) {
+        /** A skill: the first kind the Marketplace knew. */
+        public Result(String provider, String ref, String name, String description, String author, String source,
+                      Long installs, String version, String url, boolean suspicious) {
+            this(provider, ref, name, description, author, source, installs, version, url, suspicious, "SKILL", null, Map.of());
+        }
     }
 
     public record SearchResults(List<Result> results, List<ProviderError> errors) {
@@ -114,6 +129,7 @@ public class SkillMarketplaces {
     }
 
     private final HubWeb web;
+    private final ExtensionMarketplaces extensions;
     private final List<Provider> providers;
     private final Map<String, Tree> trees = new ConcurrentHashMap<>();
     private final Map<String, Map<String, String>> frontmatters = new ConcurrentHashMap<>();
@@ -130,8 +146,9 @@ public class SkillMarketplaces {
         return t;
     });
 
-    public SkillMarketplaces(HubWeb web) {
+    public SkillMarketplaces(HubWeb web, ExtensionMarketplaces extensions) {
         this.web = web;
+        this.extensions = extensions;
         try (InputStream in = new ClassPathResource("catalog/skill-marketplaces.json").getInputStream()) {
             this.providers = List.of(JSON.readValue(in, Provider[].class));
         } catch (IOException e) {
@@ -148,15 +165,30 @@ public class SkillMarketplaces {
                 .orElseThrow(() -> HubProblemException.notFound("No marketplace '" + key + "'"));
     }
 
+    /** A catalog of plugins or connectors is installed through {@link HubInstaller}, never as a skill package. */
+    private static Provider skills(Provider provider) {
+        if (!"SKILL".equals(provider.kindOrSkill())) {
+            throw HubProblemException.packageRefused(provider.name() + " offre " + ("PLUGIN".equals(provider.kindOrSkill())
+                    ? "plugin" : "connettori") + ", non skill: si installano dalla loro scheda");
+        }
+        return provider;
+    }
+
     // --- search and browse ------------------------------------------------------------
 
     /** Searches every searchable provider (or the ones named), each on its own: one failing does not hide the others. */
     public SearchResults search(String query, List<String> only) {
+        return search(query, only, null);
+    }
+
+    /** As {@link #search(String, List)}, among the catalogs of one kind (skills, plugins, connectors) when named. */
+    public SearchResults search(String query, List<String> only, String kind) {
         String q = query == null ? "" : query.strip();
         if (q.length() < 2) {
             throw HubProblemException.packageRefused("Scrivi almeno due caratteri da cercare");
         }
         List<Provider> chosen = providers.stream().filter(p -> p.api() != null)
+                .filter(p -> kind == null || kind.isBlank() || kind.equals(p.kindOrSkill()))
                 .filter(p -> only == null || only.isEmpty() || only.contains(p.key())).toList();
         Map<Provider, Future<List<Result>>> running = new LinkedHashMap<>();
         for (Provider provider : chosen) {
@@ -166,7 +198,7 @@ public class SkillMarketplaces {
         List<ProviderError> errors = new ArrayList<>();
         running.forEach((provider, future) -> {
             try {
-                results.addAll(future.get(25, TimeUnit.SECONDS));
+                results.addAll(future.get(provider.api() == Api.MCP_REGISTRY ? 50 : 25, TimeUnit.SECONDS));
             } catch (java.util.concurrent.ExecutionException e) {
                 errors.add(new ProviderError(provider.key(), message(e.getCause())));
             } catch (java.util.concurrent.TimeoutException e) {
@@ -190,6 +222,7 @@ public class SkillMarketplaces {
             case GITHUB -> githubBrowse(provider, null);
             case CLAWHUB -> clawhubList(provider);
             case SKILLS_SH -> searchOne(provider, "skill");
+            case CLAUDE_MARKETPLACE, CODEX_MARKETPLACE, MCP_REGISTRY -> extensions.search(provider, null);
         };
     }
 
@@ -198,6 +231,7 @@ public class SkillMarketplaces {
             case SKILLS_SH -> skillsShSearch(provider, q);
             case CLAWHUB -> clawhubSearch(provider, q);
             case GITHUB -> githubBrowse(provider, q);
+            case CLAUDE_MARKETPLACE, CODEX_MARKETPLACE, MCP_REGISTRY -> extensions.search(provider, q);
         };
     }
 
@@ -296,7 +330,7 @@ public class SkillMarketplaces {
     // --- preview, download, latest ------------------------------------------------------
 
     public Preview preview(String providerKey, String ref) {
-        Provider provider = provider(providerKey);
+        Provider provider = skills(provider(providerKey));
         if (provider.api() == Api.CLAWHUB) {
             String[] parts = clawhubRef(ref);
             JsonNode detail = json(uri("https://clawhub.ai/api/v1/skills/" + parts[1] + "?ownerHandle=" + encode(parts[0])));
@@ -342,7 +376,7 @@ public class SkillMarketplaces {
 
     /** Downloads a package whole, within the {@link PackagePaths} limits. */
     public Package fetch(String providerKey, String ref) {
-        Provider provider = provider(providerKey);
+        Provider provider = skills(provider(providerKey));
         if (provider.api() == Api.CLAWHUB) {
             String[] parts = clawhubRef(ref);
             JsonNode detail = json(uri("https://clawhub.ai/api/v1/skills/" + parts[1] + "?ownerHandle=" + encode(parts[0])));
@@ -648,5 +682,6 @@ public class SkillMarketplaces {
     void clearCaches() {
         trees.clear();
         frontmatters.clear();
+        extensions.clearCaches();
     }
 }

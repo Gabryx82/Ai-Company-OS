@@ -35,7 +35,9 @@ class HttpHubWeb implements HubWeb {
                 || !HOSTS.contains(uri.getHost().toLowerCase(Locale.ROOT)) || uri.getUserInfo() != null) {
             throw new IllegalArgumentException("Not an allowed marketplace URI: " + uri);
         }
-        HttpRequest.Builder request = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(20))
+        // The MCP Registry answers a search in 2 s or in 30 (measured 2026-10-07): it gets more time.
+        Duration timeout = uri.getHost().equals("registry.modelcontextprotocol.io") ? Duration.ofSeconds(45) : Duration.ofSeconds(20);
+        HttpRequest.Builder request = HttpRequest.newBuilder(uri).timeout(timeout)
                 .header("User-Agent", "AI-Company-OS Knowledge Hub")
                 .GET();
         if (uri.getHost().equals("api.github.com")) {

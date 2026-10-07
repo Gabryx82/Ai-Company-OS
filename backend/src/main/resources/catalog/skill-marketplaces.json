@@ -8,7 +8,10 @@
     "api": "SKILLS_SH",
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "clawhub",
@@ -19,7 +22,10 @@
     "api": "CLAWHUB",
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "anthropic-skills",
@@ -30,7 +36,10 @@
     "api": "GITHUB",
     "repo": "anthropics/skills",
     "official": true,
-    "community": false
+    "community": false,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "openai-skills",
@@ -41,7 +50,10 @@
     "api": "GITHUB",
     "repo": "openai/skills",
     "official": true,
-    "community": false
+    "community": false,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "vercel-agent-skills",
@@ -52,7 +64,10 @@
     "api": "GITHUB",
     "repo": "vercel-labs/agent-skills",
     "official": true,
-    "community": false
+    "community": false,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "claude-plugins",
@@ -63,7 +78,10 @@
     "api": null,
     "repo": null,
     "official": true,
-    "community": false
+    "community": false,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "skillsmp",
@@ -74,7 +92,10 @@
     "api": null,
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "claude-plugins-dev",
@@ -85,7 +106,10 @@
     "api": null,
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "lobehub",
@@ -96,7 +120,10 @@
     "api": null,
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "smithery",
@@ -107,7 +134,10 @@
     "api": null,
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "aitmpl",
@@ -118,7 +148,10 @@
     "api": null,
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "mcpmarket",
@@ -129,7 +162,10 @@
     "api": null,
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "tessl",
@@ -140,7 +176,10 @@
     "api": null,
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "awesome-claude-skills",
@@ -151,7 +190,10 @@
     "api": null,
     "repo": null,
     "official": false,
-    "community": true
+    "community": true,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
   },
   {
     "key": "agentskills",
@@ -162,6 +204,202 @@
     "api": null,
     "repo": null,
     "official": true,
-    "community": false
+    "community": false,
+    "kind": "SKILL",
+    "marketplace": null,
+    "targets": null
+  },
+  {
+    "key": "claude-plugins-official",
+    "name": "Claude Code · plugin ufficiali",
+    "description": "Il marketplace ufficiale di Anthropic per Claude Code: oltre 300 plugin di Anthropic e dei partner (GitHub, AWS, Figma, Stripe…), con skill, comandi, agenti, hook e server MCP.",
+    "homepage": "https://claude.com/plugins",
+    "searchUrl": null,
+    "api": "CLAUDE_MARKETPLACE",
+    "repo": "anthropics/claude-plugins-official",
+    "official": true,
+    "community": false,
+    "kind": "PLUGIN",
+    "marketplace": "claude-plugins-official",
+    "targets": [
+      "claude-code"
+    ]
+  },
+  {
+    "key": "knowledge-work-plugins",
+    "name": "Anthropic · plugin di lavoro",
+    "description": "I plugin di Claude per il lavoro (vendite, marketing, finanza, design, ingegneria…) e dei partner: gli stessi di Claude Desktop, installabili anche in Claude Code.",
+    "homepage": "https://github.com/anthropics/knowledge-work-plugins",
+    "searchUrl": null,
+    "api": "CLAUDE_MARKETPLACE",
+    "repo": "anthropics/knowledge-work-plugins",
+    "official": true,
+    "community": false,
+    "kind": "PLUGIN",
+    "marketplace": "knowledge-work-plugins",
+    "targets": [
+      "claude-code",
+      "claude-desktop"
+    ]
+  },
+  {
+    "key": "openai-plugins",
+    "name": "OpenAI · plugin per ChatGPT · Codex",
+    "description": "I plugin curati da OpenAI per Codex: app collegate (Linear, Notion, Figma, Slack…), skill e strumenti.",
+    "homepage": "https://developers.openai.com/codex/plugins",
+    "searchUrl": null,
+    "api": "CODEX_MARKETPLACE",
+    "repo": "openai/plugins",
+    "official": true,
+    "community": false,
+    "kind": "PLUGIN",
+    "marketplace": "openai-curated",
+    "targets": [
+      "codex"
+    ]
+  },
+  {
+    "key": "claude-marketplaces",
+    "name": "Claude Code Marketplaces",
+    "description": "Directory della community dei marketplace di plugin per Claude Code.",
+    "homepage": "https://claudemarketplaces.com",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true,
+    "kind": "PLUGIN",
+    "marketplace": null,
+    "targets": null
+  },
+  {
+    "key": "claude-plugins-dev-plugins",
+    "name": "claude-plugins.dev · plugin",
+    "description": "Registro della community di plugin per Claude Code.",
+    "homepage": "https://claude-plugins.dev",
+    "searchUrl": "https://claude-plugins.dev/?q={q}",
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true,
+    "kind": "PLUGIN",
+    "marketplace": null,
+    "targets": null
+  },
+  {
+    "key": "mcp-registry",
+    "name": "Registro ufficiale MCP",
+    "description": "Il registro ufficiale dei server MCP (Model Context Protocol): connettori remoti e locali, con i dati che servono per avviarli.",
+    "homepage": "https://registry.modelcontextprotocol.io",
+    "searchUrl": null,
+    "api": "MCP_REGISTRY",
+    "repo": null,
+    "official": true,
+    "community": false,
+    "kind": "CONNECTOR",
+    "marketplace": null,
+    "targets": [
+      "claude-code",
+      "codex",
+      "claude-desktop"
+    ]
+  },
+  {
+    "key": "claude-connectors",
+    "name": "Claude · directory dei connettori",
+    "description": "I connettori ufficiali di Claude (Gmail, Drive, Notion, Slack…): si collegano dall'account in Claude Desktop o su claude.ai.",
+    "homepage": "https://claude.com/connectors",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": true,
+    "community": false,
+    "kind": "CONNECTOR",
+    "marketplace": null,
+    "targets": null
+  },
+  {
+    "key": "chatgpt-apps",
+    "name": "ChatGPT · app e connettori",
+    "description": "Le app di ChatGPT: si collegano dall'account in ChatGPT e compaiono anche in Codex.",
+    "homepage": "https://chatgpt.com/apps",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": true,
+    "community": false,
+    "kind": "CONNECTOR",
+    "marketplace": null,
+    "targets": null
+  },
+  {
+    "key": "smithery-servers",
+    "name": "Smithery · server MCP",
+    "description": "Migliaia di server MCP con hosting e chiavi gestite.",
+    "homepage": "https://smithery.ai",
+    "searchUrl": "https://smithery.ai/search?q={q}",
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true,
+    "kind": "CONNECTOR",
+    "marketplace": null,
+    "targets": null
+  },
+  {
+    "key": "mcp-so",
+    "name": "mcp.so",
+    "description": "La directory della community dei server MCP.",
+    "homepage": "https://mcp.so",
+    "searchUrl": "https://mcp.so/search?q={q}",
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true,
+    "kind": "CONNECTOR",
+    "marketplace": null,
+    "targets": null
+  },
+  {
+    "key": "glama-mcp",
+    "name": "Glama · server MCP",
+    "description": "Catalogo di server MCP con punteggi di qualità e sicurezza.",
+    "homepage": "https://glama.ai/mcp/servers",
+    "searchUrl": "https://glama.ai/mcp/servers?query={q}",
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true,
+    "kind": "CONNECTOR",
+    "marketplace": null,
+    "targets": null
+  },
+  {
+    "key": "pulsemcp",
+    "name": "PulseMCP",
+    "description": "Directory aggiornata dei server MCP e dei client che li usano.",
+    "homepage": "https://www.pulsemcp.com/servers",
+    "searchUrl": "https://www.pulsemcp.com/servers?q={q}",
+    "api": null,
+    "repo": null,
+    "official": false,
+    "community": true,
+    "kind": "CONNECTOR",
+    "marketplace": null,
+    "targets": null
+  },
+  {
+    "key": "mcp-reference-servers",
+    "name": "MCP · server di riferimento",
+    "description": "I server MCP di riferimento del progetto Model Context Protocol (filesystem, git, fetch, memory…).",
+    "homepage": "https://github.com/modelcontextprotocol/servers",
+    "searchUrl": null,
+    "api": null,
+    "repo": null,
+    "official": true,
+    "community": false,
+    "kind": "CONNECTOR",
+    "marketplace": null,
+    "targets": null
   }
 ]

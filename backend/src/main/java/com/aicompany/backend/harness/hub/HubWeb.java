@@ -12,7 +12,8 @@ import java.util.Set;
  */
 public interface HubWeb {
 
-    Set<String> HOSTS = Set.of("skills.sh", "clawhub.ai", "api.github.com", "raw.githubusercontent.com");
+    Set<String> HOSTS = Set.of("skills.sh", "clawhub.ai", "api.github.com", "raw.githubusercontent.com",
+            "registry.modelcontextprotocol.io");
 
     /** What came back: the status, a few headers (lower-case names) and at most the requested bytes. */
     record Response(int status, String contentType, byte[] body, Map<String, String> headers) {
