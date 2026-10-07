@@ -1,28 +1,40 @@
 // The Knowledge Hub's view of what is installed (PHASE 31, ADR-036): pure
 // functions over the server's answer -- labels, filters, and the grouping the
-// operator asked for: by application, then by type (library, personal, plugin,
-// built-in, instructions), plugins one by one.
-import type { CopyStatus, HubApp, HubScope, HubSkill } from "../../api/types";
+// operator asked for: by application, then by kind and type -- the library,
+// plugins, connectors, personal and built-in skills, each plugin's skills,
+// knowledge and memory.
+import type { CopyStatus, HubApp, HubKind, HubScope, HubSkill } from "../../api/types";
 
 export const SCOPE_LABEL: Record<HubScope, string> = {
   LIBRARY: "Libreria",
   PERSONAL: "Personali",
-  PLUGIN: "Plugin",
+  PLUGIN: "Dai plugin",
   SYSTEM: "Di sistema",
+  ACCOUNT: "Dell'account",
   KNOWLEDGE: "Knowledge",
   INSTRUCTIONS: "Istruzioni globali",
 };
 
 export const SCOPE_HINT: Record<HubScope, string> = {
   LIBRARY: "Le skill e le knowledge di AI Company OS: modificabili qui, associabili ad agenti e progetti.",
-  PERSONAL: "Scritte da te (o dal Knowledge Hub) nella cartella personale dell'app.",
+  PERSONAL: "Scritte o configurate da te (o dal Knowledge Hub) per l'app.",
   PLUGIN: "Arrivano con un plugin installato nell'app: si aggiornano con il plugin.",
   SYSTEM: "Fornite dall'app stessa.",
-  KNOWLEDGE: "Elementi di conoscenza che l'app conserva.",
+  ACCOUNT: "Arrivano con il tuo account (per esempio i connettori di claude.ai).",
+  KNOWLEDGE: "Elementi di conoscenza e memoria che l'app conserva.",
   INSTRUCTIONS: "Le istruzioni globali che l'app legge a ogni sessione.",
 };
 
-export const SCOPE_ORDER: HubScope[] = ["LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "KNOWLEDGE", "INSTRUCTIONS"];
+export const SCOPE_ORDER: HubScope[] = ["LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "ACCOUNT", "KNOWLEDGE", "INSTRUCTIONS"];
+
+export const KIND_LABEL: Record<HubKind, string> = {
+  SKILL: "Skill",
+  PLUGIN: "Plugin",
+  CONNECTOR: "Connettori",
+  KNOWLEDGE: "Knowledge",
+};
+
+export const KIND_ORDER: HubKind[] = ["SKILL", "PLUGIN", "CONNECTOR", "KNOWLEDGE"];
 
 export type CopyState = CopyStatus | "NONE" | "FOREIGN";
 
@@ -40,21 +52,27 @@ export type StatusFilter = "" | "updates" | "copies" | "disabled";
 
 export interface Filters {
   app: string | null;
+  kind: HubKind | "";
   scope: HubScope | "";
   category: string;
   query: string;
   status: StatusFilter;
 }
 
-export const NO_FILTERS: Filters = { app: null, scope: "", category: "", query: "", status: "" };
+export const NO_FILTERS: Filters = { app: null, kind: "", scope: "", category: "", query: "", status: "" };
 
 /** A skill's name as a family key: the same skill in two applications is "the same" if this matches. */
 export function family(name: string): string {
   return name.trim().toLowerCase().replace(/[\s_]+/g, "-");
 }
 
+export function kindOf(skill: HubSkill): HubKind {
+  return KIND_ORDER.includes(skill.kind as HubKind) ? skill.kind as HubKind : "SKILL";
+}
+
 export function matches(skill: HubSkill, filters: Filters): boolean {
   if (filters.app && skill.app !== filters.app) return false;
+  if (filters.kind && kindOf(skill) !== filters.kind) return false;
   if (filters.scope && skill.scope !== filters.scope) return false;
   if (filters.category && skill.category !== filters.category) return false;
   if (filters.status === "updates" && !skill.updateAvailable) return false;
@@ -62,8 +80,8 @@ export function matches(skill: HubSkill, filters: Filters): boolean {
   if (filters.status === "disabled" && skill.enabled !== false) return false;
   const q = filters.query.trim().toLowerCase();
   if (q) {
-    const text = [skill.name, skill.description, skill.plugin, skill.categoryLabel, skill.libraryKey]
-      .filter(Boolean).join(" ").toLowerCase();
+    const text = [skill.name, skill.description, skill.plugin, skill.categoryLabel, skill.libraryKey,
+      ...Object.values(skill.details ?? {})].filter(Boolean).join(" ").toLowerCase();
     if (!q.split(/\s+/).every((word) => text.includes(word))) return false;
   }
   return true;
@@ -72,6 +90,7 @@ export function matches(skill: HubSkill, filters: Filters): boolean {
 export interface Group {
   key: string;
   scope: HubScope;
+  kind: HubKind | "LIBRARY";
   title: string;
   subtitle: string | null;
   skills: HubSkill[];
@@ -84,9 +103,10 @@ export interface AppSection {
 }
 
 /**
- * Applications in the server's order, each with its skills grouped by type --
- * plugins one group per plugin -- and sorted by name. Applications with nothing
- * left after filtering are left out.
+ * Applications in the server's order, each with its items grouped: the
+ * library; the plugins; the connectors; personal skills; built-in and account
+ * skills; each plugin's skills (with the plugin's version); knowledge and
+ * memory. Sorted by name; applications with nothing left are left out.
  */
 export function sections(apps: HubApp[], skills: HubSkill[]): AppSection[] {
   const out: AppSection[] = [];
@@ -94,43 +114,50 @@ export function sections(apps: HubApp[], skills: HubSkill[]): AppSection[] {
     const mine = skills.filter((s) => s.app === app.id);
     if (mine.length === 0) continue;
     const groups: Group[] = [];
-    for (const scope of SCOPE_ORDER) {
-      const ofScope = mine.filter((s) => s.scope === scope);
-      if (ofScope.length === 0) continue;
-      if (scope === "PLUGIN") {
-        const byPlugin = new Map<string, HubSkill[]>();
-        for (const skill of ofScope) {
-          const name = skill.plugin ?? "plugin";
-          byPlugin.set(name, [...(byPlugin.get(name) ?? []), skill]);
-        }
-        for (const [plugin, list] of [...byPlugin.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-          const version = list.find((s) => s.pluginVersion)?.pluginVersion;
-          const market = list.find((s) => s.marketplace)?.marketplace;
-          groups.push({
-            key: `${app.id}:plugin:${plugin}`, scope, title: `Plugin ${plugin}`,
-            subtitle: [version ? `v${version}` : null, market].filter(Boolean).join(" · ") || null,
-            skills: byName(list),
-          });
-        }
-      } else {
-        groups.push({ key: `${app.id}:${scope}`, scope, title: SCOPE_LABEL[scope], subtitle: null, skills: byName(ofScope) });
-      }
+    const add = (key: string, scope: HubScope, kind: Group["kind"], title: string, list: HubSkill[], subtitle: string | null = null) => {
+      if (list.length > 0) groups.push({ key: `${app.id}:${key}`, scope, kind, title, subtitle, skills: byName(list) });
+    };
+    const library = mine.filter((s) => s.scope === "LIBRARY");
+    const rest = mine.filter((s) => s.scope !== "LIBRARY");
+    add("library", "LIBRARY", "LIBRARY", SCOPE_LABEL.LIBRARY, library);
+    add("plugins", "PLUGIN", "PLUGIN", "Plugin installati", rest.filter((s) => kindOf(s) === "PLUGIN"));
+    add("connectors", "PERSONAL", "CONNECTOR", "Connettori (MCP)", rest.filter((s) => kindOf(s) === "CONNECTOR"));
+    const skillsOnly = rest.filter((s) => kindOf(s) === "SKILL");
+    add("personal", "PERSONAL", "SKILL", "Skill personali", skillsOnly.filter((s) => s.scope === "PERSONAL"));
+    add("system", "SYSTEM", "SKILL", "Skill di sistema", skillsOnly.filter((s) => s.scope === "SYSTEM"));
+    add("account", "ACCOUNT", "SKILL", "Skill dell'account", skillsOnly.filter((s) => s.scope === "ACCOUNT"));
+    const byPlugin = new Map<string, HubSkill[]>();
+    for (const skill of skillsOnly.filter((s) => s.scope === "PLUGIN")) {
+      const name = skill.plugin ?? "plugin";
+      byPlugin.set(name, [...(byPlugin.get(name) ?? []), skill]);
     }
+    for (const [plugin, list] of [...byPlugin.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+      const version = list.find((s) => s.pluginVersion)?.pluginVersion;
+      const market = list.find((s) => s.marketplace)?.marketplace;
+      add(`plugin:${plugin}`, "PLUGIN", "SKILL", `Skill del plugin ${plugin}`, list,
+        [version ? `v${version}` : null, market].filter(Boolean).join(" · ") || null);
+    }
+    add("knowledge", "KNOWLEDGE", "KNOWLEDGE", "Knowledge, istruzioni e memoria", rest.filter((s) => kindOf(s) === "KNOWLEDGE"));
     out.push({ app, groups, total: mine.length });
   }
   return out;
 }
 
-/** For every skill family, the applications that have it -- "also in Codex, Verdent". */
+/** For every skill family, the applications that have it -- "also in Codex, Verdent". Plugins and connectors by their own kind. */
 export function presence(skills: HubSkill[]): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const skill of skills) {
-    const key = family(skill.name);
+    const key = presenceKey(skill);
     const apps = out.get(key) ?? [];
     if (!apps.includes(skill.app)) apps.push(skill.app);
     out.set(key, apps);
   }
   return out;
+}
+
+export function presenceKey(skill: HubSkill): string {
+  const kind = kindOf(skill);
+  return `${kind === "KNOWLEDGE" ? "SKILL" : kind}:${family(skill.name)}`;
 }
 
 export function countBy<T>(items: T[], key: (item: T) => string): Map<string, number> {

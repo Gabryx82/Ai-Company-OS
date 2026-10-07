@@ -3216,7 +3216,7 @@ export interface components {
             path?: string;
             readers?: string[];
             /** @enum {string} */
-            scope?: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "INSTRUCTIONS" | "KNOWLEDGE";
+            scope?: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
             writable?: boolean;
         };
         LoginRequest: {
@@ -3785,9 +3785,17 @@ export interface components {
             /** Format: int32 */
             apps?: number;
             /** Format: int32 */
+            connectors?: number;
+            /** Format: int32 */
             copies?: number;
             /** Format: int32 */
+            knowledge?: number;
+            /** Format: int32 */
             libraryEntries?: number;
+            /** Format: int32 */
+            plugins?: number;
+            /** Format: int32 */
+            skills?: number;
             /** Format: int32 */
             total?: number;
             /** Format: int32 */
@@ -3801,6 +3809,9 @@ export interface components {
             /** @enum {string} */
             copyStatus?: "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN";
             description?: string;
+            details?: {
+                [key: string]: string;
+            };
             enabled?: boolean;
             id?: string;
             kind?: string;
@@ -3815,7 +3826,7 @@ export interface components {
             pluginVersion?: string;
             provenance?: components["schemas"]["ProvenanceView"];
             /** @enum {string} */
-            scope?: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "INSTRUCTIONS" | "KNOWLEDGE";
+            scope?: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
             updateAvailable?: boolean;
             version?: string;
             writable?: boolean;

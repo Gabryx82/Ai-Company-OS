@@ -19,7 +19,8 @@ const skill = (over: Record<string, unknown>) => ({
 
 const INSTALLED = {
   scannedAt: "2026-10-07T10:00:00Z", lastSync: null, syncIntervalSeconds: 300,
-  apps: [app("aicos", "AI Company OS", true), app("claude-code", "Claude Code", true), app("codex", "Codex · ChatGPT"),
+  apps: [app("aicos", "AI Company OS", true), app("claude-code", "Claude Code", true), app("claude-desktop", "Claude Desktop"),
+    app("codex", "Codex · ChatGPT"),
     app("agents", "Agent Skills condivise", true)],
   skills: [
     skill({ id: "aicos:pdf", app: "aicos", location: "aicos.library", scope: "LIBRARY", name: "pdf", libraryKey: "pdf",
@@ -30,6 +31,12 @@ const INSTALLED = {
     skill({ id: "x1", app: "codex", location: "codex.plugins", scope: "PLUGIN", plugin: "browser", pluginVersion: "1.2.0",
       name: "browser-use", writable: false, enabled: false, category: "browser", categoryLabel: "Browser e automazione" }),
     skill({ id: "x2", app: "codex", location: "codex.system", scope: "SYSTEM", name: "imagegen", writable: false }),
+    skill({ id: "d1", app: "claude-desktop", location: "claude-desktop.account", scope: "PLUGIN", kind: "PLUGIN",
+      name: "security-guidance", plugin: "security-guidance", pluginVersion: "2.0.8", writable: false, path: "C:/x/plugin.json",
+      details: { Skill: "0", Comandi: "0", Agenti: "0", Hook: "sì", Connettori: "0", Stato: "attivo" } }),
+    skill({ id: "d2", app: "claude-desktop", location: "claude-desktop.connectors", scope: "PLUGIN", kind: "CONNECTOR",
+      name: "slack", description: "http · https://mcp.slack.com/mcp · da 8 fonti", writable: false, path: null,
+      details: { Tipo: "http", Indirizzo: "https://mcp.slack.com/mcp", "Fornito da": "plugin design, plugin sales" } }),
   ],
   categories: [{ key: "sviluppo", label: "Sviluppo software" }, { key: "browser", label: "Browser e automazione" }],
   notes: [], summary: { total: 4, apps: 2, libraryEntries: 1, updates: 0, copies: 0 },
@@ -66,9 +73,15 @@ describe("Knowledge Hub across applications", () => {
     expect(within(nav).getByText("Claude Code")).toBeTruthy();
     // Every application is a section; Codex's skills are grouped by plugin and by type.
     const codex = await screen.findByRole("region", { name: "Codex · ChatGPT" });
-    expect(within(codex).getByText("Plugin browser")).toBeTruthy();
+    expect(within(codex).getByText("Skill del plugin browser")).toBeTruthy();
     expect(within(codex).getByText("v1.2.0")).toBeTruthy();
-    expect(within(codex).getByText("Di sistema")).toBeTruthy();
+    expect(within(codex).getByText("Skill di sistema")).toBeTruthy();
+    // Claude Desktop: a plugin made only of hooks is there, and its connectors.
+    const desktop = screen.getByRole("region", { name: "Claude Desktop" });
+    expect(within(desktop).getByText("Plugin installati")).toBeTruthy();
+    expect(within(desktop).getByText("security-guidance")).toBeTruthy();
+    expect(within(desktop).getByText("hook")).toBeTruthy();
+    expect(within(desktop).getByText("da 2 plugin")).toBeTruthy();
     expect(within(codex).getByText("disattivata")).toBeTruthy();
 
     // One application at a time, one type at a time.
@@ -87,6 +100,22 @@ describe("Knowledge Hub across applications", () => {
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path.endsWith("/import"))).toBe(true));
     expect(calls.find((c) => c.path.endsWith("/import"))!.body).toEqual({ key: "commit-rules" });
     expect(await screen.findByText(/Importata nella libreria: commit-helper/)).toBeTruthy();
+  });
+
+  it("filters by kind, and shows a connector without anything to import or open", async () => {
+    const calls = mount({
+      "GET /api/skill-hub/installed/d2": () => ({ body: { skill: INSTALLED.skills[5], content: "slack\n\nTipo: http",
+        truncated: false, files: [], folder: "C:/x" } }),
+    });
+    const kinds = await screen.findByRole("group", { name: "Tipo" });
+    fireEvent.click(within(kinds).getByRole("button", { name: /Connettori \(1\)/ }));
+    expect(screen.queryByText("security-guidance")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /slack/ }));
+    expect((await screen.findByLabelText("Contenuto della skill")).textContent).toContain("Tipo: http");
+    expect(screen.getByText("plugin design, plugin sales")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Importa nella libreria/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Apri cartella/ })).toBeNull();
+    expect(calls.some((c) => c.path.endsWith("/open") || c.path.endsWith("/import"))).toBe(false);
   });
 
   it("searches the marketplaces, knows what is installed, previews a package and installs it where asked", async () => {

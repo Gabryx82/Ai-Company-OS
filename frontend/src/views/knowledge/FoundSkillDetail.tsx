@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useApi, useIsAdmin } from "../../context";
 import type { HubApp, HubFoundDetail, HubSkill } from "../../api/types";
 import { Field, ProblemNote, when } from "../../components/ui";
 import { Icon } from "../../components/icons";
-import { COPY_LABEL, SCOPE_HINT, SCOPE_LABEL, slug } from "./hubModel";
+import { COPY_LABEL, KIND_LABEL, kindOf, SCOPE_HINT, SCOPE_LABEL, slug } from "./hubModel";
 
 /**
  * A skill found in an application (PHASE 31): what it is, where it lives, its
@@ -43,11 +43,17 @@ export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
 
   const current = detail?.skill ?? skill;
   const copy = current.copyStatus ? COPY_LABEL[current.copyStatus] : null;
+  const kind = kindOf(current);
+  // Plugins and connectors stay their application's: they are shown, never imported or edited from here.
+  const importable = kind === "SKILL" || kind === "KNOWLEDGE";
+  const details = Object.entries(current.details ?? {}).filter(([label]) => label !== "Cartella" || kind !== "PLUGIN");
 
   return (
     <div className="card" style={{ position: "sticky", top: 80 }}>
       <div className="card-head">
-        <span className="chip">{app?.name ?? skill.app}</span><h2>{skill.name}</h2><span className="spacer" />
+        <span className="chip">{app?.name ?? skill.app}</span>
+        {kind !== "SKILL" && <span className="chip">{KIND_LABEL[kind]}</span>}
+        <h2>{skill.name}</h2><span className="spacer" />
         <button className="btn btn-small" onClick={onClose} aria-label="Chiudi"><Icon name="close" size={14} /></button>
       </div>
       <div className="card-body stack">
@@ -56,11 +62,13 @@ export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
         <dl className="hub-facts">
           <dt>Tipologia</dt><dd title={SCOPE_HINT[current.scope]}>{SCOPE_LABEL[current.scope]}{location ? ` · ${location.label}` : ""}</dd>
           <dt>Categoria</dt><dd>{current.categoryLabel}</dd>
-          {current.plugin && <><dt>Plugin</dt><dd>{current.plugin}{current.pluginVersion ? ` v${current.pluginVersion}` : ""}{current.marketplace ? ` · ${current.marketplace}` : ""}</dd></>}
-          {current.version && <><dt>Versione</dt><dd>{current.version}</dd></>}
-          {current.enabled !== null && <><dt>Stato nell'app</dt><dd>{current.enabled ? "attiva" : "disattivata"}</dd></>}
-          <dt>Modificata</dt><dd>{when(current.modified)}</dd>
-          <dt>File</dt><dd><code style={{ wordBreak: "break-all" }}>{current.path}</code></dd>
+          {kind === "SKILL" && current.plugin && <><dt>Plugin</dt><dd>{current.plugin}{current.pluginVersion ? ` v${current.pluginVersion}` : ""}{current.marketplace ? ` · ${current.marketplace}` : ""}</dd></>}
+          {kind === "SKILL" && current.version && <><dt>Versione</dt><dd>{current.version}</dd></>}
+          {details.map(([label, value]) => <Fragment key={label}><dt>{label}</dt><dd>{value}</dd></Fragment>)}
+          {current.enabled !== null && !current.details?.Stato && <><dt>Stato nell'app</dt><dd>{
+            kind === "CONNECTOR" ? (current.enabled ? "attivo" : "disattivato") : (current.enabled ? "attiva" : "disattivata")}</dd></>}
+          {current.modified && <><dt>Modificato</dt><dd>{when(current.modified)}</dd></>}
+          {current.path && <><dt>File</dt><dd><code style={{ wordBreak: "break-all" }}>{current.path}</code></dd></>}
           {location && location.readers.length > 0 && <><dt>La leggono</dt><dd>{location.readers.map((r) => apps.find((a) => a.id === r)?.name ?? r).join(", ")}</dd></>}
           {app && app.agents.length > 0 && <><dt>Agenti</dt><dd>{app.agents.map((a) => a.name).join(", ")}</dd></>}
         </dl>
@@ -90,13 +98,27 @@ export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
           </div>
         )}
 
-        <div className="row">
-          <button className="btn" disabled={busy}
-                  onClick={() => run(async () => `Aperta in VS Code: ${(await api.hubOpenSkill(skill.id)).folder}`)}>
-            <Icon name="external" size={13} /> Apri cartella</button>
-        </div>
+        {kind !== "CONNECTOR" && (
+          <div className="row">
+            <button className="btn" disabled={busy}
+                    onClick={() => run(async () => `Aperta in VS Code: ${(await api.hubOpenSkill(skill.id)).folder}`)}>
+              <Icon name="external" size={13} /> Apri cartella</button>
+          </div>
+        )}
+        {kind === "CONNECTOR" && (
+          <div className="muted" style={{ fontSize: 12.5 }}>
+            Un connettore si configura e si autorizza nella sua app. Qui ne vedi nome, tipo e indirizzo: argomenti,
+            variabili d'ambiente e token non vengono mai letti.
+          </div>
+        )}
+        {kind === "PLUGIN" && (
+          <div className="muted" style={{ fontSize: 12.5 }}>
+            Il plugin resta dell'app: si installa, si attiva e si aggiorna lì. Le sue skill sono nel gruppo «Skill del
+            plugin {current.name}» dell'elenco, e ognuna si può importare nella libreria.
+          </div>
+        )}
 
-        {!current.copyStatus && !current.libraryKey && (
+        {importable && !current.copyStatus && !current.libraryKey && (
           <div className="stack" style={{ gap: 6 }}>
             <div className="section-title">Nella libreria di AI Company OS</div>
             <div className="muted" style={{ fontSize: 12.5 }}>
@@ -125,7 +147,7 @@ export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
                 </ul>}
               </div>
             )}
-            <div className="section-title">{current.kind === "KNOWLEDGE" ? "Contenuto" : "SKILL.md"} (sola lettura)</div>
+            <div className="section-title">{kind === "SKILL" ? "SKILL.md" : kind === "KNOWLEDGE" ? "Contenuto" : "Riepilogo"} (sola lettura)</div>
             <pre className="doc" aria-label="Contenuto della skill">{detail.content}{detail.truncated ? "\n…" : ""}</pre>
           </>
         )}

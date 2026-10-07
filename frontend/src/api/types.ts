@@ -368,7 +368,8 @@ export type BlueprintProposalWrite = S["BlueprintProposalRequest"];
 
 // --- PHASE 31: the Knowledge Hub across applications and marketplaces (ADR-036) ---------------
 
-export type HubScope = "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "INSTRUCTIONS" | "KNOWLEDGE";
+export type HubScope = "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
+export type HubKind = "SKILL" | "PLUGIN" | "CONNECTOR" | "KNOWLEDGE";
 export type CopyStatus = "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN";
 export interface HubCategory { key: string; label: string }
 export interface HubAgentRef { id: number; name: string; target: string }
@@ -391,8 +392,13 @@ export interface HubSkill {
   marketplace: string | null; enabled: boolean | null; version: string | null; path: string | null; writable: boolean;
   modified: string | null; libraryKey: string | null; copyStatus: CopyStatus | null; provenance: HubProvenance | null;
   copies: HubCopy[] | null; updateAvailable: boolean;
+  /** PHASE 31 review: a plugin's components, a connector's transport and providers -- label by label, never a secret. */
+  details: Record<string, string> | null;
 }
-export interface HubSummary { total: number; apps: number; libraryEntries: number; updates: number; copies: number }
+export interface HubSummary {
+  total: number; apps: number; libraryEntries: number; updates: number; copies: number;
+  skills: number; plugins: number; connectors: number; knowledge: number;
+}
 export interface HubInstalled {
   scannedAt: string; lastSync: string | null; syncIntervalSeconds: number; apps: HubApp[]; skills: HubSkill[];
   categories: HubCategory[]; notes: string[]; summary: HubSummary;

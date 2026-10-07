@@ -151,7 +151,9 @@ export function KnowledgeHub() {
       </div>
       <div className="hub-kpis">
         <div className="card kpi"><div className="kpi-icon" style={{ background: "var(--accent)" }}><Icon name="knowledge" /></div>
-          <div><strong>{summary?.total ?? "…"}</strong><small>skill e knowledge in {summary?.apps ?? "…"} app</small></div></div>
+          <div><strong>{summary?.total ?? "…"}</strong><small>
+            {summary ? `${summary.skills} skill · ${summary.plugins} plugin · ${summary.connectors} connettori · ${summary.knowledge} knowledge, in ${summary.apps} app`
+              : "elementi installati"}</small></div></div>
         <div className="card kpi"><div className="kpi-icon" style={{ background: "var(--accent-2)" }}><Icon name="folder" /></div>
           <div><strong>{summary?.libraryEntries ?? "…"}</strong><small>nella libreria · {summary?.copies ?? 0} copie nelle app</small></div></div>
         <button className="card kpi hub-kpi-button" onClick={() => setTab("updates")}>
