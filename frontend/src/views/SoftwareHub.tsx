@@ -116,7 +116,7 @@ export function SoftwareHub({ selected, navigate }: { selected: string | null; n
         </div>
 
         {current && (
-          <div className="card" style={{ position: "sticky", top: 80 }}>
+          <div className="card side-panel">
             <div className="card-head">
               <AppIcon software={current} size={40} />
               <div><h2>{current.name}</h2><span className="muted" style={{ fontSize: 12 }}>{current.role}</span></div>

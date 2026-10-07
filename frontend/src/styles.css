@@ -63,6 +63,10 @@ code, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
   cursor: pointer; color: var(--muted); font-weight: 500; display: flex; align-items: center; gap: 10px;
 }
 .nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-count {
+  margin-left: auto; min-width: 18px; padding: 0 6px; border-radius: 999px; text-align: center;
+  font-size: 11px; font-weight: 700; line-height: 18px; background: var(--accent-soft); color: var(--accent);
+}
 .nav-item[aria-current="page"] { background: linear-gradient(90deg, rgba(59,130,246,.28), rgba(59,130,246,.08)); color: #fff; box-shadow: inset 2px 0 0 var(--accent); }
 .sidebar-foot { margin-top: auto; padding: 10px; color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
 .main { padding: 0; min-width: 0; }
@@ -250,6 +254,16 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; word-break: break-word; }
 .split { display: grid; grid-template-columns: 1fr 400px; gap: 16px; align-items: start; }
+/* The detail beside a list (an agent, a skill, an app): it stays in view, no
+   taller than the window, and scrolls on its own under a heading that keeps
+   the close button, instead of making the whole page as long as itself. At its
+   end the wheel passes to the page, which brings its foot into view. */
+.side-panel {
+  position: sticky; top: 80px; display: flex; flex-direction: column;
+  max-height: calc(100vh - 96px); max-height: calc(100dvh - 96px);
+}
+.side-panel > .card-head { flex: none; }
+.side-panel > .card-body { min-height: 0; overflow-y: auto; }
 .list-item { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); }
 .list-item:last-child { border-bottom: 0; }
 .card-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
@@ -269,7 +283,12 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .type-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .type-card small { color: var(--muted); font-size: 11px; }
 
-@media (max-width: 1100px) { .split { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) {
+  .split { grid-template-columns: 1fr; }
+  /* One column: the panel is part of the page again. */
+  .side-panel { position: static; max-height: none; }
+  .side-panel > .card-body { overflow-y: visible; }
+}
 @media (max-width: 900px) {
   .sidebar { position: static; height: auto; }
   .nav-group { display: none; }
@@ -506,7 +525,10 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .hub-kpi-button { text-align: left; cursor: pointer; color: inherit; font: inherit; }
 .hub-kpi-button:hover { border-color: var(--accent); }
 .hub-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 16px; align-items: start; }
-.hub-apps { position: sticky; top: 80px; display: grid; gap: 2px; }
+.hub-apps {
+  position: sticky; top: 80px; display: grid; gap: 2px; align-content: start;
+  max-height: calc(100vh - 96px); max-height: calc(100dvh - 96px); overflow-y: auto;
+}
 .hub-app {
   display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; border-radius: 8px; cursor: pointer;
   background: transparent; border: 1px solid transparent; color: var(--text); font: inherit; font-size: 13px; text-align: left;
@@ -559,9 +581,10 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 @media (max-width: 1200px) {
   .hub-split { grid-template-columns: 1fr; }
   /* One column: the detail comes first, where the click was, not after the whole list. */
-  .hub-split > .card { order: -1; position: static !important; }
+  .hub-split > .card { order: -1; position: static !important; max-height: none; }
+  .hub-split > .side-panel > .card-body { overflow-y: visible; }
 }
 @media (max-width: 960px) {
   .hub-layout { grid-template-columns: 1fr; }
-  .hub-apps { position: static; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .hub-apps { position: static; max-height: none; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 }

@@ -250,7 +250,7 @@ function AgentEditor({ id, agents, onClose, onSaved, onDelete }: {
   const allowed = new Set(c.software.map((s) => s.key));
 
   return (
-    <div className="card" style={{ position: "sticky", top: 80 }}>
+    <div className="card side-panel">
       <div className="card-head">
         <h2>{c.name}</h2>
         <span className="chip origin-badge">{ORIGIN_LABEL[c.origin]}</span>

@@ -49,7 +49,7 @@ export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
   const details = Object.entries(current.details ?? {}).filter(([label]) => label !== "Cartella" || kind !== "PLUGIN");
 
   return (
-    <div className="card" style={{ position: "sticky", top: 80 }}>
+    <div className="card side-panel">
       <div className="card-head">
         <span className="chip">{app?.name ?? skill.app}</span>
         {kind !== "SKILL" && <span className="chip">{KIND_LABEL[kind]}</span>}

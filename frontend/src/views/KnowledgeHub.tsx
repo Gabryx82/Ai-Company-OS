@@ -363,7 +363,7 @@ export function ResourceDetail({ resourceKey, onClose, onChanged, onDeleted }: {
   const dirty = file?.body.exists && draft !== (file.body.content ?? "");
 
   return (
-    <div className="card" style={{ position: "sticky", top: 80 }}>
+    <div className="card side-panel">
       <div className="card-head">
         <span className="chip">{resource.kind}</span><h2>{resource.name}</h2><span className="spacer" />
         {isAdmin && <DeleteButton label={`Elimina ${resource.name}`} onClick={() => setDeleting(true)} />}
