@@ -413,18 +413,43 @@ export interface HubSyncReport {
   at: string; firstRun: boolean; total: number; added: number; removed: number; modified: number; events: HubSyncEvent[];
   libraryCreated: string[]; libraryUpdated: string[]; libraryInvalid: string[];
 }
+/** What a catalog offers: skills, plugins or connectors (MCP servers). */
+export type HubOfferKind = "SKILL" | "PLUGIN" | "CONNECTOR";
 export interface HubMarketplace {
   key: string; name: string; description: string; homepage: string; searchUrl: string | null;
-  api: "SKILLS_SH" | "CLAWHUB" | "GITHUB" | null; repo: string | null; official: boolean; community: boolean;
+  api: "SKILLS_SH" | "CLAWHUB" | "GITHUB" | "CLAUDE_MARKETPLACE" | "CODEX_MARKETPLACE" | "MCP_REGISTRY" | null;
+  repo: string | null; official: boolean; community: boolean;
+  /** null: skills, the first kind the Marketplace knew. */
+  kind?: HubOfferKind | null; marketplace?: string | null; targets?: string[] | null;
 }
 export interface HubResult {
   provider: string; ref: string; name: string; description: string | null; author: string | null; source: string | null;
   installs: number | null; version: string | null; url: string | null; suspicious: boolean;
+  kind?: HubOfferKind | null; targets?: string[] | null; details?: Record<string, string> | null;
 }
 export interface HubSearchResults { results: HubResult[]; errors: { provider: string; message: string }[] }
 export interface HubPreview {
   provider: string; ref: string; name: string; description: string | null; version: string | null; sourceUrl: string | null;
   files: HubPackageFile[] | null; skillMd: string | null; security: string | null; warnings: string[] | null;
+}
+/** Something a connector needs from the operator: a header or an environment variable (an API key...). */
+export interface HubConnectorInput {
+  name: string; kind: "ENV" | "HEADER"; required: boolean; secret: boolean; description: string | null; defaultValue: string | null;
+}
+/** How a plugin or connector would reach one application: its CLI, Claude Desktop's file, or a step in the app. */
+export interface HubInstallPlan {
+  app: string; appName: string; available: boolean; method: "CLI" | "CONFIG" | "MANUAL"; command: string | null; note: string | null;
+}
+export interface HubExtensionPreview {
+  provider: string; ref: string; kind: HubOfferKind; name: string; installName: string; description: string | null;
+  version: string | null; sourceUrl: string | null; details: Record<string, string>; inputs: HubConnectorInput[];
+  targets: HubInstallPlan[]; warnings: string[];
+}
+export type HubInstallStatus = "INSTALLED" | "NEEDS_CONFIRMATION" | "MANUAL" | "FAILED";
+export interface HubInstallOutcome {
+  target: string; status: HubInstallStatus; message: string | null; command: string | null; output: string | null;
+  /** The sha256 of a plugin's declared command, sent back once the operator approved it. */
+  confirmation: string | null; software: string | null;
 }
 export interface HubDeployResult { app: string; outcome: string; path: string | null; backup: string | null; message: string | null }
 export interface HubInstallResult { key: string; name: string; filePath: string | null; copies: HubDeployResult[] }

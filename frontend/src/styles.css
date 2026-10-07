@@ -534,6 +534,18 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .hub-facts dt { color: var(--muted); }
 .hub-facts dd { margin: 0; overflow-wrap: anywhere; }
 .hub-check { cursor: pointer; padding: 4px 8px; font-size: 12.5px; }
+.hub-plan {
+  display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+}
+.hub-plan pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.hub-plan input[type="checkbox"] { width: auto; margin: 0; flex: none; }
+.hub-kinds { display: flex; gap: 8px; flex-wrap: wrap; }
+.hub-kind-tab {
+  display: grid; gap: 2px; padding: 10px 14px; min-width: 180px; flex: 1; text-align: left; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit;
+}
+.hub-kind-tab small { color: var(--muted); font-size: 12px; }
+.hub-kind-tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .hub-update-row {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center;
   padding: 10px 0; border-bottom: 1px solid var(--border);

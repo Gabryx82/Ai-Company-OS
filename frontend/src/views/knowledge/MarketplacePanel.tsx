@@ -1,20 +1,44 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useApi } from "../../context";
-import type { HubInstalled, HubInstallResult, HubMarketplace, HubPreview, HubResult } from "../../api/types";
+import type { HubInstalled, HubInstallResult, HubMarketplace, HubOfferKind, HubPreview, HubResult } from "../../api/types";
 import { Field, Modal, ProblemNote } from "../../components/ui";
 import { Icon } from "../../components/icons";
 import { family, formatCount, slug } from "./hubModel";
+import { ExtensionInstallDialog } from "./ExtensionInstallDialog";
+
+const KINDS: { kind: HubOfferKind; label: string; hint: string; placeholder: string; note: string }[] = [
+  {
+    kind: "SKILL", label: "Skill", hint: "Istruzioni e script che un agente usa quando servono",
+    placeholder: "pdf, react, deploy, seo, unity, sicurezza…",
+    note: "Le skill possono contenere istruzioni e script che gli agenti eseguono: prima di installare il Knowledge Hub ti mostra i file e il SKILL.md. Installa da fonti di cui ti fidi.",
+  },
+  {
+    kind: "PLUGIN", label: "Plugin", hint: "Pacchetti di skill, comandi, agenti, hook e connettori",
+    placeholder: "design, github, sales, figma, linear…",
+    note: "Un plugin si installa con la CLI dell'app (Claude Code, Codex), come faresti tu; se il marketplace dichiara un comando da eseguire, te lo mostro e aspetto la tua conferma.",
+  },
+  {
+    kind: "CONNECTOR", label: "Connettori", hint: "Server MCP: servizi e strumenti per gli agenti",
+    placeholder: "github, notion, postgres, browser, slack…",
+    note: "Un connettore locale è un programma che l'app avvia sul tuo PC; uno remoto riceve i dati che gli passi. Le chiavi che inserisci vanno solo alle app: AI Company OS non le conserva.",
+  },
+];
+
+const kindOf = (provider: HubMarketplace): HubOfferKind => provider.kind ?? "SKILL";
+const lastPart = (ref: string) => ref.split(/[/:]/).pop() ?? ref;
 
 /**
  * The online catalogs (PHASE 31), organised like the Mockup Hub: one search,
- * a shelf of providers. The ones with an API are searched and installed from
- * here; the others open in the browser, with the search when they take one.
+ * a shelf of providers -- for skills, plugins and connectors. The ones with an
+ * API are searched and installed from here; the others open in the browser,
+ * with the search when they take one.
  */
 export function MarketplacePanel({ installed, onInstalled }: {
   installed: HubInstalled | null; onInstalled: (message: string) => void;
 }) {
   const api = useApi();
   const [providers, setProviders] = useState<HubMarketplace[]>([]);
+  const [kind, setKind] = useState<HubOfferKind>("SKILL");
   const [query, setQuery] = useState("");
   const [only, setOnly] = useState<string[]>([]);
   const [results, setResults] = useState<HubResult[] | null>(null);
@@ -28,11 +52,21 @@ export function MarketplacePanel({ installed, onInstalled }: {
     api.hubMarketplaces().then(setProviders).catch(setProblem);
   }, [api]);
 
-  const searchable = providers.filter((p) => p.api);
-  const others = providers.filter((p) => !p.api);
+  const current = KINDS.find((k) => k.kind === kind) ?? KINDS[0];
+  const ofKind = providers.filter((p) => kindOf(p) === kind);
+  const searchable = ofKind.filter((p) => p.api);
+  const others = ofKind.filter((p) => !p.api);
   const providerName = (key: string) => providers.find((p) => p.key === key)?.name ?? key;
+  const appName = (id: string) => installed?.apps.find((a) => a.id === id)?.name ?? id;
 
-  // What is already here: by package (the library's provenance) and by name (any application).
+  function switchKind(next: HubOfferKind) {
+    setKind(next);
+    setOnly([]);
+    setResults(null);
+    setErrors([]);
+  }
+
+  // What is already here: by package (the library's provenance) and by name and kind (any application).
   const installedRefs = useMemo(() => {
     const out = new Map<string, string>();
     for (const s of installed?.skills ?? []) {
@@ -43,10 +77,12 @@ export function MarketplacePanel({ installed, onInstalled }: {
   const byName = useMemo(() => {
     const out = new Map<string, string[]>();
     for (const s of installed?.skills ?? []) {
+      const itemKind = s.kind === "PLUGIN" || s.kind === "CONNECTOR" ? s.kind : "SKILL";
+      const key = `${itemKind}:${family(s.name)}`;
       const app = installed?.apps.find((a) => a.id === s.app)?.name ?? s.app;
-      const list = out.get(family(s.name)) ?? [];
+      const list = out.get(key) ?? [];
       if (!list.includes(app)) list.push(app);
-      out.set(family(s.name), list);
+      out.set(key, list);
     }
     return out;
   }, [installed]);
@@ -64,16 +100,22 @@ export function MarketplacePanel({ installed, onInstalled }: {
     return null;
   }
 
+  function presentIn(result: HubResult): string[] {
+    const k = result.kind ?? "SKILL";
+    const names = new Set([family(result.name), family(lastPart(result.ref))]);
+    return [...new Set([...names].flatMap((n) => byName.get(`${k}:${n}`) ?? []))];
+  }
+
   async function search(event?: FormEvent) {
     event?.preventDefault();
     if (query.trim().length < 2) return;
     setBusy(true);
     setProblem(null);
     try {
-      const found = await api.hubSearch(query.trim(), only);
+      const found = await api.hubSearch(query.trim(), only, kind);
       setResults(found.results ?? []);
       setErrors(found.errors ?? []);
-      setTitle(`Risultati per «${query.trim()}»`);
+      setTitle(`${current.label} · risultati per «${query.trim()}»`);
     } catch (error) {
       setProblem(error);
     } finally {
@@ -117,12 +159,19 @@ export function MarketplacePanel({ installed, onInstalled }: {
 
   return (
     <div className="stack">
+      <div className="hub-kinds" role="tablist" aria-label="Cosa cercare">
+        {KINDS.map((k) => (
+          <button key={k.kind} role="tab" className="hub-kind-tab" aria-selected={kind === k.kind} onClick={() => switchKind(k.kind)}>
+            <strong>{k.label}</strong><small>{k.hint}</small>
+          </button>
+        ))}
+      </div>
       <form className="card card-body stack" onSubmit={search}>
         <div className="row">
           <div className="search" style={{ flex: 1, minWidth: 260 }}><Icon name="search" size={15} />
-            <input aria-label="Cerca nei marketplace" placeholder="pdf, react, deploy, seo, unity, sicurezza…" value={query}
+            <input aria-label="Cerca nei marketplace" placeholder={current.placeholder} value={query}
                    onChange={(e) => setQuery(e.target.value)} /></div>
-          <button className="btn btn-primary" type="submit" disabled={busy || query.trim().length < 2}>
+          <button className="btn btn-primary" type="submit" disabled={busy || query.trim().length < 2 || searchable.length === 0}>
             {busy ? "Cerco…" : "Cerca nei marketplace"}</button>
         </div>
         <div className="row" style={{ fontSize: 12.5 }}>
@@ -135,10 +184,7 @@ export function MarketplacePanel({ installed, onInstalled }: {
             ))}
           </div>
         </div>
-        <div className="muted" style={{ fontSize: 12 }}>
-          Le skill possono contenere istruzioni e script che gli agenti eseguono: prima di installare il Knowledge Hub ti
-          mostra i file e il SKILL.md. Installa da fonti di cui ti fidi.
-        </div>
+        <div className="muted" style={{ fontSize: 12 }}>{current.note}</div>
       </form>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
 
@@ -156,39 +202,19 @@ export function MarketplacePanel({ installed, onInstalled }: {
             <div key={provider} className="stack" style={{ gap: 8 }}>
               <div className="section-title">{providerName(provider)} · {list.length}</div>
               <div className="hub-cards">
-                {list.map((r) => {
-                  const key = installedKey(r);
-                  const elsewhere = byName.get(family(r.name)) ?? [];
-                  return (
-                    <div key={`${r.provider}:${r.ref}`} className="agent-card hub-card" style={{ cursor: "default" }}>
-                      <div className="row" style={{ gap: 6 }}>
-                        <strong>{r.name}</strong><span className="spacer" />
-                        {r.installs ? <span className="chip" title="Installazioni o download">↓ {formatCount(r.installs)}</span> : null}
-                      </div>
-                      {r.description && <small className="muted desc">{r.description}</small>}
-                      <div>
-                        {r.source && <span className="chip">{r.source}</span>}
-                        {r.version && <span className="chip">v{r.version}</span>}
-                        {r.suspicious && <span className="badge badge-danger">segnalata come sospetta</span>}
-                        {key && <span className="badge badge-ok">installata come {key}</span>}
-                        {!key && elsewhere.length > 0 && <span className="chip" title="Una skill con lo stesso nome è già presente">già in: {elsewhere.join(", ")}</span>}
-                      </div>
-                      <div className="row">
-                        {r.url && <button className="btn btn-small" onClick={() => openResult(r)}><Icon name="external" size={12} /> Apri</button>}
-                        <span className="spacer" />
-                        <button className="btn btn-small btn-primary" disabled={!!key} onClick={() => setInstalling(r)}>
-                          {key ? "Installata" : "Anteprima e installa"}</button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {list.map((r) => r.kind === "PLUGIN" || r.kind === "CONNECTOR"
+                  ? <ExtensionCard key={`${r.provider}:${r.ref}`} result={r} presentIn={presentIn(r)} appName={appName}
+                                   onOpen={() => openResult(r)} onInstall={() => setInstalling(r)} />
+                  : <SkillCard key={`${r.provider}:${r.ref}`} result={r} libraryKey={installedKey(r)} presentIn={presentIn(r)}
+                               onOpen={() => openResult(r)} onInstall={() => setInstalling(r)} />)}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <div className="section-title">Cataloghi installabili da qui</div>
+      <div className="section-title">{current.label} · cataloghi installabili da qui</div>
+      {searchable.length === 0 && <div className="muted" style={{ fontSize: 12.5 }}>Nessun catalogo con un'interfaccia da usare qui.</div>}
       <div className="tile-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
         {searchable.map((p) => (
           <button key={p.key} className="tile" onClick={() => browse(p)} title={p.description}>
@@ -198,12 +224,13 @@ export function MarketplacePanel({ installed, onInstalled }: {
             <div>
               <span className={p.official ? "badge badge-accent" : "chip"}>{p.official ? "ufficiale" : "community"}</span>
               <span className="badge badge-ok">cerca e installa qui</span>
+              {(p.targets ?? []).length > 0 && <span className="chip">per {(p.targets ?? []).map(appName).join(", ")}</span>}
             </div>
           </button>
         ))}
       </div>
 
-      <div className="section-title">Altri marketplace e directory · si aprono nel browser</div>
+      <div className="section-title">{current.label} · altri marketplace e directory, si aprono nel browser</div>
       <div className="tile-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
         {others.map((p) => (
           <button key={p.key} className="tile" onClick={() => openSite(p)} title={p.description}>
@@ -217,20 +244,82 @@ export function MarketplacePanel({ installed, onInstalled }: {
           </button>
         ))}
       </div>
-      <div className="muted" style={{ fontSize: 12 }}>
-        Da un sito esterno puoi copiare il link di un SKILL.md e usarlo in «Libreria e catalogo → Importa da URL».
-      </div>
-
-      {installing && (
-        <InstallDialog result={installing} installed={installed} providerName={providerName(installing.provider)}
-                       onClose={() => setInstalling(null)}
-                       onInstalled={(outcome) => {
-                         setInstalling(null);
-                         const copies = outcome.copies.map((c) => `${installed?.apps.find((a) => a.id === c.app)?.name ?? c.app}: ${
-                           c.outcome === "FAILED" ? `non installata (${c.message})` : "installata"}`);
-                         onInstalled(`Installata nella libreria come «${outcome.key}»${copies.length ? " · " + copies.join(" · ") : ""}`);
-                       }} />
+      {kind === "SKILL" && (
+        <div className="muted" style={{ fontSize: 12 }}>
+          Da un sito esterno puoi copiare il link di un SKILL.md e usarlo in «Libreria e catalogo → Importa da URL».
+        </div>
       )}
+
+      {installing && (installing.kind === "PLUGIN" || installing.kind === "CONNECTOR"
+        ? <ExtensionInstallDialog result={installing} installed={installed} providerName={providerName(installing.provider)}
+                                  onClose={() => setInstalling(null)} onInstalled={onInstalled} />
+        : <InstallDialog result={installing} installed={installed} providerName={providerName(installing.provider)}
+                         onClose={() => setInstalling(null)}
+                         onInstalled={(outcome) => {
+                           setInstalling(null);
+                           const copies = outcome.copies.map((c) => `${appName(c.app)}: ${
+                             c.outcome === "FAILED" ? `non installata (${c.message})` : "installata"}`);
+                           onInstalled(`Installata nella libreria come «${outcome.key}»${copies.length ? " · " + copies.join(" · ") : ""}`);
+                         }} />)}
+    </div>
+  );
+}
+
+function SkillCard({ result: r, libraryKey, presentIn, onOpen, onInstall }: {
+  result: HubResult; libraryKey: string | null; presentIn: string[]; onOpen: () => void; onInstall: () => void;
+}) {
+  return (
+    <div className="agent-card hub-card" style={{ cursor: "default" }}>
+      <div className="row" style={{ gap: 6 }}>
+        <strong>{r.name}</strong><span className="spacer" />
+        {r.installs ? <span className="chip" title="Installazioni o download">↓ {formatCount(r.installs)}</span> : null}
+      </div>
+      {r.description && <small className="muted desc">{r.description}</small>}
+      <div>
+        {r.source && <span className="chip">{r.source}</span>}
+        {r.version && <span className="chip">v{r.version}</span>}
+        {r.suspicious && <span className="badge badge-danger">segnalata come sospetta</span>}
+        {libraryKey && <span className="badge badge-ok">installata come {libraryKey}</span>}
+        {!libraryKey && presentIn.length > 0 && <span className="chip" title="Una skill con lo stesso nome è già presente">già in: {presentIn.join(", ")}</span>}
+      </div>
+      <div className="row">
+        {r.url && <button className="btn btn-small" onClick={onOpen}><Icon name="external" size={12} /> Apri</button>}
+        <span className="spacer" />
+        <button className="btn btn-small btn-primary" disabled={!!libraryKey} onClick={onInstall}>
+          {libraryKey ? "Installata" : "Anteprima e installa"}</button>
+      </div>
+    </div>
+  );
+}
+
+function ExtensionCard({ result: r, presentIn, appName, onOpen, onInstall }: {
+  result: HubResult; presentIn: string[]; appName: (id: string) => string; onOpen: () => void; onInstall: () => void;
+}) {
+  const details = r.details ?? {};
+  const targets = r.targets ?? [];
+  return (
+    <div className={`agent-card hub-card hub-card-${(r.kind ?? "skill").toLowerCase()}`} style={{ cursor: "default" }}>
+      <div className="row" style={{ gap: 6 }}>
+        <span className="chip hub-kind">{r.kind === "PLUGIN" ? "plugin" : "MCP"}</span>
+        <strong style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</strong><span className="spacer" />
+        {r.version && <span className="chip">v{r.version}</span>}
+      </div>
+      {r.description && <small className="muted desc">{r.description}</small>}
+      <div>
+        {r.author && <span className="chip">{r.author}</span>}
+        {details.Categoria && <span className="chip">{details.Categoria}</span>}
+        {details.Tipo && <span className="chip">{details.Tipo}</span>}
+        {details.Richiede && <span className="chip" title="Da inserire all'installazione">richiede {details.Richiede}</span>}
+        {targets.length > 0 && <span className="chip">per {targets.map(appName).join(", ")}</span>}
+        {presentIn.length > 0 && <span className="badge badge-ok" title="Lo stesso nome è già installato">già in: {presentIn.join(", ")}</span>}
+      </div>
+      <div className="row">
+        {r.url && <button className="btn btn-small" onClick={onOpen}><Icon name="external" size={12} /> Apri</button>}
+        <span className="spacer" />
+        {targets.length > 0
+          ? <button className="btn btn-small btn-primary" onClick={onInstall}>Dettagli e installa</button>
+          : <span className="muted" style={{ fontSize: 12 }}>da configurare a mano</span>}
+      </div>
     </div>
   );
 }

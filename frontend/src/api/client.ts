@@ -19,6 +19,7 @@ import type {
   BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
   BlueprintVocabulary, HubInstalled, HubFoundDetail, HubSyncReport, HubSyncEvent, HubMarketplace, HubSearchResults,
   HubResult, HubPreview, HubInstallResult, HubCopyTarget, HubDeployResult, HubUpdates, HubApplied,
+  HubOfferKind, HubExtensionPreview, HubInstallOutcome,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -829,9 +830,10 @@ export class ControlPlane {
     return this.plain("GET", "/api/skill-hub/marketplaces");
   }
 
-  hubSearch(q: string, providers: string[] = []): Promise<HubSearchResults> {
+  hubSearch(q: string, providers: string[] = [], kind?: HubOfferKind): Promise<HubSearchResults> {
     const only = providers.map((p) => `&provider=${encodeURIComponent(p)}`).join("");
-    return this.plain("GET", `/api/skill-hub/marketplaces/search?q=${encodeURIComponent(q)}${only}`);
+    const ofKind = kind ? `&kind=${kind}` : "";
+    return this.plain("GET", `/api/skill-hub/marketplaces/search?q=${encodeURIComponent(q)}${only}${ofKind}`);
   }
 
   hubBrowse(provider: string): Promise<HubResult[]> {
@@ -844,6 +846,22 @@ export class ControlPlane {
 
   hubInstall(provider: string, ref: string, key: string | undefined, targets: string[]): Promise<HubInstallResult> {
     return this.plain("POST", "/api/skill-hub/install", { body: { provider, ref, key: key || undefined, targets } });
+  }
+
+  /** A plugin or connector of the Marketplace: what it asks, how each application would get it. */
+  hubItem(provider: string, ref: string): Promise<HubExtensionPreview> {
+    return this.plain("GET", `/api/skill-hub/marketplaces/${encodeURIComponent(provider)}/item?ref=${encodeURIComponent(ref)}`);
+  }
+
+  hubInstallPlugin(provider: string, ref: string, target: string, confirmation?: string): Promise<HubInstallOutcome> {
+    return this.plain("POST", "/api/skill-hub/plugins/install", { body: { provider, ref, target, confirmation } });
+  }
+
+  /** The values (API keys...) go to the applications only: the server neither keeps nor returns them. */
+  hubInstallConnector(request: {
+    provider: string; ref: string; targets: string[]; name?: string; values: Record<string, string>; replace?: boolean;
+  }): Promise<{ results: HubInstallOutcome[] }> {
+    return this.plain("POST", "/api/skill-hub/connectors/install", { body: request });
   }
 
   hubCopies(key: string): Promise<HubCopyTarget[]> {

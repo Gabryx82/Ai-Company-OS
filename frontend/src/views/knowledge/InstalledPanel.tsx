@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import type { HubApp, HubInstalled, HubKind, HubScope, HubSkill } from "../../api/types";
 import { Icon } from "../../components/icons";
 import {
-  COPY_LABEL, countBy, KIND_LABEL, KIND_ORDER, kindOf, matches, NO_FILTERS, presence, presenceKey, SCOPE_HINT,
-  SCOPE_LABEL, SCOPE_ORDER, sections, type Filters, type StatusFilter,
+  belongsTo, COPY_LABEL, countBy, KIND_LABEL, KIND_ORDER, kindOf, matches, NO_FILTERS, presence, presenceKey, readersByLocation,
+  SCOPE_HINT, SCOPE_LABEL, SCOPE_ORDER, sections, type Filters, type StatusFilter,
 } from "./hubModel";
 import { FoundSkillDetail } from "./FoundSkillDetail";
 
@@ -28,12 +28,14 @@ export function InstalledPanel({ installed, onChanged, renderLibraryDetail }: {
 
   const skills = installed.skills ?? [];
   const apps = installed.apps ?? [];
-  const visible = useMemo(() => skills.filter((s) => matches(s, filters)), [skills, filters]);
-  const grouped = useMemo(() => sections(apps, visible), [apps, visible]);
+  const readers = useMemo(() => readersByLocation(apps), [apps]);
+  const visible = useMemo(() => skills.filter((s) => matches(s, filters, readers)), [skills, filters, readers]);
+  const grouped = useMemo(() => sections(apps, visible, filters.app), [apps, visible, filters.app]);
   const families = useMemo(() => presence(skills), [skills]);
   const appName = (id: string) => apps.find((a) => a.id === id)?.name ?? id;
-  const byApp = countBy(skills, (s) => s.app);
-  const inApp = filters.app ? skills.filter((s) => s.app === filters.app) : skills;
+  const byApp = useMemo(() => new Map(apps.map((a) => [a.id, skills.filter((s) => belongsTo(s, a.id, readers)).length])),
+    [apps, skills, readers]);
+  const inApp = filters.app ? skills.filter((s) => belongsTo(s, filters.app!, readers)) : skills;
   const byKind = countBy(inApp, (s) => kindOf(s));
   const ofKind = filters.kind ? inApp.filter((s) => kindOf(s) === filters.kind) : inApp;
   const byScope = countBy(ofKind, (s) => s.scope);

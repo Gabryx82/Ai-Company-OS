@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HubApp, HubSkill } from "../../api/types";
-import { family, matches, NO_FILTERS, presence, sections, slug } from "./hubModel";
+import { belongsTo, family, matches, NO_FILTERS, presence, readersByLocation, sections, slug } from "./hubModel";
 
 function app(id: string, name: string): HubApp {
   return { id, name, description: "", detected: true, software: null, targets: [], agents: [], locations: [], count: 0, installable: false };
@@ -59,6 +59,23 @@ describe("hubModel", () => {
   it("knows the same skill in two applications by its name", () => {
     expect(family("Commit Helper")).toBe(family("commit-helper"));
     expect(presence(skills).get("SKILL:commit-helper")).toEqual(["claude-code", "aicos"]);
+  });
+
+  it("lists what an application reads from a shared folder with that application, under the folder's name", () => {
+    const shared = { ...app("agents", "Agent Skills condivise"), locations: [{ id: "agents.personal", label: "Skill personali condivise",
+      scope: "PERSONAL" as const, path: "~/.agents/skills", exists: true, writable: true, readers: ["codex"], count: 1 }] };
+    const all = [...apps, shared];
+    const readers = readersByLocation(all);
+    const emil = skill({ id: "a1", app: "agents", location: "agents.personal", name: "emil-design-eng" });
+    expect(belongsTo(emil, "codex", readers)).toBe(true);
+    expect(belongsTo(emil, "claude-code", readers)).toBe(false);
+    const visible = [...skills, emil].filter((s) => matches(s, { ...NO_FILTERS, app: "codex" }, readers));
+    const out = sections(all, visible, "codex");
+    expect(out.map((s) => s.app.id)).toEqual(["codex"]);
+    const group = out[0].groups.find((g) => g.title === "Lette anche da qui · Skill personali condivise")!;
+    expect(group.skills.map((s) => s.name)).toEqual(["emil-design-eng"]);
+    expect(group.subtitle).toBe("Agent Skills condivise · ~/.agents/skills");
+    expect(out[0].total).toBe(5);
   });
 
   it("makes a library key out of any name", () => {

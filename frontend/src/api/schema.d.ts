@@ -1636,6 +1636,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/skill-hub/connectors/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["installMarketplaceConnector"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/skill-hub/events": {
         parameters: {
             query?: never;
@@ -1828,6 +1844,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/skill-hub/marketplaces/{provider}/item": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["previewMarketplaceItem"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/skill-hub/marketplaces/{provider}/package": {
         parameters: {
             query?: never;
@@ -1838,6 +1870,22 @@ export interface paths {
         get: operations["previewSkillPackage"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/plugins/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["installMarketplacePlugin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2910,6 +2958,27 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        ConnectorInput: {
+            defaultValue?: string;
+            description?: string;
+            kind?: string;
+            name?: string;
+            required?: boolean;
+            secret?: boolean;
+        };
+        ConnectorInstallRequest: {
+            name?: string;
+            provider: string;
+            ref: string;
+            replace?: boolean;
+            targets: string[];
+            values?: {
+                [key: string]: string;
+            };
+        };
+        ConnectorInstallResponse: {
+            results?: components["schemas"]["InstallOutcome"][];
+        };
         Content: {
             content: string;
         };
@@ -3056,6 +3125,22 @@ export interface components {
             providers?: string[];
             software?: string;
         };
+        ExtensionPreview: {
+            description?: string;
+            details?: {
+                [key: string]: string;
+            };
+            inputs?: components["schemas"]["ConnectorInput"][];
+            installName?: string;
+            kind?: string;
+            name?: string;
+            provider?: string;
+            ref?: string;
+            sourceUrl?: string;
+            targets?: components["schemas"]["InstallPlan"][];
+            version?: string;
+            warnings?: string[];
+        };
         FileResponse: {
             absolutePath?: string;
             content?: string;
@@ -3143,6 +3228,24 @@ export interface components {
         };
         ImportRequest: {
             key?: string;
+        };
+        InstallOutcome: {
+            command?: string;
+            confirmation?: string;
+            message?: string;
+            output?: string;
+            software?: string;
+            /** @enum {string} */
+            status?: "INSTALLED" | "NEEDS_CONFIRMATION" | "MANUAL" | "FAILED";
+            target?: string;
+        };
+        InstallPlan: {
+            app?: string;
+            appName?: string;
+            available?: boolean;
+            command?: string;
+            method?: string;
+            note?: string;
         };
         InstallRequest: {
             key?: string;
@@ -3442,6 +3545,12 @@ export interface components {
             role?: string;
             templateKey?: string;
         };
+        PluginInstallRequest: {
+            confirmation?: string;
+            provider: string;
+            ref: string;
+            target: string;
+        };
         Preview: {
             description?: string;
             files?: components["schemas"]["PackageFile"][];
@@ -3530,15 +3639,18 @@ export interface components {
         };
         Provider: {
             /** @enum {string} */
-            api?: "SKILLS_SH" | "CLAWHUB" | "GITHUB";
+            api?: "SKILLS_SH" | "CLAWHUB" | "GITHUB" | "CLAUDE_MARKETPLACE" | "CODEX_MARKETPLACE" | "MCP_REGISTRY";
             community?: boolean;
             description?: string;
             homepage?: string;
             key?: string;
+            kind?: string;
+            marketplace?: string;
             name?: string;
             official?: boolean;
             repo?: string;
             searchUrl?: string;
+            targets?: string[];
         };
         ProviderError: {
             message?: string;
@@ -3652,13 +3764,18 @@ export interface components {
         Result: {
             author?: string;
             description?: string;
+            details?: {
+                [key: string]: string;
+            };
             /** Format: int64 */
             installs?: number;
+            kind?: string;
             name?: string;
             provider?: string;
             ref?: string;
             source?: string;
             suspicious?: boolean;
+            targets?: string[];
             url?: string;
             version?: string;
         };
@@ -7175,6 +7292,30 @@ export interface operations {
             };
         };
     };
+    installMarketplaceConnector: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectorInstallRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConnectorInstallResponse"];
+                };
+            };
+        };
+    };
     skillSyncEvents: {
         parameters: {
             query?: {
@@ -7432,6 +7573,7 @@ export interface operations {
             query: {
                 q: string;
                 provider?: string[];
+                kind?: string;
             };
             header?: never;
             path?: never;
@@ -7472,6 +7614,30 @@ export interface operations {
             };
         };
     };
+    previewMarketplaceItem: {
+        parameters: {
+            query: {
+                ref: string;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ExtensionPreview"];
+                };
+            };
+        };
+    };
     previewSkillPackage: {
         parameters: {
             query: {
@@ -7492,6 +7658,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Preview"];
+                };
+            };
+        };
+    };
+    installMarketplacePlugin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PluginInstallRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstallOutcome"];
                 };
             };
         };

@@ -70,8 +70,20 @@ export function kindOf(skill: HubSkill): HubKind {
   return KIND_ORDER.includes(skill.kind as HubKind) ? skill.kind as HubKind : "SKILL";
 }
 
-export function matches(skill: HubSkill, filters: Filters): boolean {
-  if (filters.app && skill.app !== filters.app) return false;
+/** For every location, the applications that read it: a shared folder (~/.agents/skills) serves several. */
+export function readersByLocation(apps: HubApp[]): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const app of apps) for (const location of app.locations ?? []) out.set(location.id, location.readers ?? []);
+  return out;
+}
+
+/** An item is an application's when it is in one of its folders -- or in a shared folder that application reads. */
+export function belongsTo(skill: HubSkill, app: string, readers: Map<string, string[]> = new Map()): boolean {
+  return skill.app === app || (readers.get(skill.location) ?? []).includes(app);
+}
+
+export function matches(skill: HubSkill, filters: Filters, readers?: Map<string, string[]>): boolean {
+  if (filters.app && !belongsTo(skill, filters.app, readers)) return false;
   if (filters.kind && kindOf(skill) !== filters.kind) return false;
   if (filters.scope && skill.scope !== filters.scope) return false;
   if (filters.category && skill.category !== filters.category) return false;
@@ -108,11 +120,14 @@ export interface AppSection {
  * skills; each plugin's skills (with the plugin's version); knowledge and
  * memory. Sorted by name; applications with nothing left are left out.
  */
-export function sections(apps: HubApp[], skills: HubSkill[]): AppSection[] {
+export function sections(apps: HubApp[], skills: HubSkill[], focus: string | null = null): AppSection[] {
   const out: AppSection[] = [];
   for (const app of apps) {
+    if (focus && app.id !== focus) continue;
     const mine = skills.filter((s) => s.app === app.id);
-    if (mine.length === 0) continue;
+    // Looking at one application: what it reads from a shared folder is listed with it, under that folder's name.
+    const shared = focus ? skills.filter((s) => s.app !== app.id) : [];
+    if (mine.length === 0 && shared.length === 0) continue;
     const groups: Group[] = [];
     const add = (key: string, scope: HubScope, kind: Group["kind"], title: string, list: HubSkill[], subtitle: string | null = null) => {
       if (list.length > 0) groups.push({ key: `${app.id}:${key}`, scope, kind, title, subtitle, skills: byName(list) });
@@ -138,7 +153,15 @@ export function sections(apps: HubApp[], skills: HubSkill[]): AppSection[] {
         [version ? `v${version}` : null, market].filter(Boolean).join(" · ") || null);
     }
     add("knowledge", "KNOWLEDGE", "KNOWLEDGE", "Knowledge, istruzioni e memoria", rest.filter((s) => kindOf(s) === "KNOWLEDGE"));
-    out.push({ app, groups, total: mine.length });
+    const byLocation = new Map<string, HubSkill[]>();
+    for (const skill of shared) byLocation.set(skill.location, [...(byLocation.get(skill.location) ?? []), skill]);
+    for (const [location, list] of byLocation) {
+      const owner = apps.find((a) => a.id === list[0].app);
+      const where = owner?.locations?.find((l) => l.id === location);
+      add(`shared:${location}`, list[0].scope, "SKILL", `Lette anche da qui · ${where?.label ?? location}`, list,
+        [owner?.name, where?.path].filter(Boolean).join(" · ") || null);
+    }
+    out.push({ app, groups, total: mine.length + shared.length });
   }
   return out;
 }

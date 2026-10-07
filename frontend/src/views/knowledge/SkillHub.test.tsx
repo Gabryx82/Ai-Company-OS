@@ -21,7 +21,8 @@ const INSTALLED = {
   scannedAt: "2026-10-07T10:00:00Z", lastSync: null, syncIntervalSeconds: 300,
   apps: [app("aicos", "AI Company OS", true), app("claude-code", "Claude Code", true), app("claude-desktop", "Claude Desktop"),
     app("codex", "Codex · ChatGPT"),
-    app("agents", "Agent Skills condivise", true)],
+    { ...app("agents", "Agent Skills condivise", true), locations: [{ id: "agents.personal", label: "Skill personali condivise",
+      scope: "PERSONAL", path: "C:/Users/me/.agents/skills", exists: true, writable: true, readers: ["codex", "gemini-cli"], count: 1 }] }],
   skills: [
     skill({ id: "aicos:pdf", app: "aicos", location: "aicos.library", scope: "LIBRARY", name: "pdf", libraryKey: "pdf",
       provenance: { provider: "skills-sh", providerName: "skills.sh", reference: "anthropics/skills:skills/pdf", sourceUrl: null,
@@ -37,10 +38,25 @@ const INSTALLED = {
     skill({ id: "d2", app: "claude-desktop", location: "claude-desktop.connectors", scope: "PLUGIN", kind: "CONNECTOR",
       name: "slack", description: "http · https://mcp.slack.com/mcp · da 8 fonti", writable: false, path: null,
       details: { Tipo: "http", Indirizzo: "https://mcp.slack.com/mcp", "Fornito da": "plugin design, plugin sales" } }),
+    skill({ id: "a1", app: "agents", location: "agents.personal", name: "emil-design-eng", description: "Design engineering" }),
   ],
   categories: [{ key: "sviluppo", label: "Sviluppo software" }, { key: "browser", label: "Browser e automazione" }],
   notes: [], summary: { total: 4, apps: 2, libraryEntries: 1, updates: 0, copies: 0 },
 };
+
+const MARKETPLACES = [
+  { key: "skillsmp", name: "SkillsMP", description: "Aggregatore", homepage: "https://skillsmp.com",
+    searchUrl: "https://skillsmp.com/search?q={q}", api: null, repo: null, official: false, community: true },
+  { key: "claude-plugins-official", name: "Claude Code · plugin ufficiali", description: "Plugin", homepage: "https://claude.com/plugins",
+    searchUrl: null, api: "CLAUDE_MARKETPLACE", repo: "anthropics/claude-plugins-official", official: true, community: false,
+    kind: "PLUGIN", marketplace: "claude-plugins-official", targets: ["claude-code"] },
+  { key: "mcp-registry", name: "Registro ufficiale MCP", description: "Server MCP", homepage: "https://registry.modelcontextprotocol.io",
+    searchUrl: null, api: "MCP_REGISTRY", repo: null, official: true, community: false, kind: "CONNECTOR", marketplace: null,
+    targets: ["claude-code", "codex", "claude-desktop"] },
+  { key: "smithery-servers", name: "Smithery · server MCP", description: "Server MCP", homepage: "https://smithery.ai",
+    searchUrl: "https://smithery.ai/search?q={q}", api: null, repo: null, official: false, community: true, kind: "CONNECTOR",
+    marketplace: null, targets: null },
+];
 
 function mount(routes: Parameters<typeof fakeFetch>[0]) {
   const { fetcher, calls } = fakeFetch({
@@ -90,8 +106,13 @@ describe("Knowledge Hub across applications", () => {
     fireEvent.click(within(types).getByRole("button", { name: /Di sistema/ }));
     expect(screen.getByText("imagegen")).toBeTruthy();
     expect(screen.queryByText("browser-use")).toBeNull();
-    fireEvent.click(within(nav).getByRole("button", { name: /Tutte le app/ }));
     fireEvent.click(within(types).getByRole("button", { name: /Tutte le tipologie/ }));
+    // What Codex reads from the shared ~/.agents/skills is Codex's too, under that folder's name.
+    expect(screen.getByText("emil-design-eng")).toBeTruthy();
+    expect(screen.getByText("Lette anche da qui · Skill personali condivise")).toBeTruthy();
+    fireEvent.click(within(nav).getByRole("button", { name: /Claude Code/ }));
+    expect(screen.queryByText("emil-design-eng")).toBeNull();
+    fireEvent.click(within(nav).getByRole("button", { name: /Tutte le app/ }));
 
     fireEvent.click(screen.getByRole("button", { name: /commit-helper/ }));
     expect((await screen.findByLabelText("Contenuto della skill")).textContent).toContain("# Commit");
@@ -156,6 +177,113 @@ describe("Knowledge Hub across applications", () => {
     expect(calls.find((c) => c.path === "/api/skill-hub/install")!.body)
       .toEqual({ provider: "skills-sh", ref: "anthropics/skills/xlsx", key: "xlsx", targets: ["claude-code"] });
     expect(await screen.findByText(/Installata nella libreria come «xlsx»/)).toBeTruthy();
+  });
+
+  it("finds connectors, asks what they need, and installs them in the applications chosen without keeping the key", async () => {
+    const calls = mount({
+      "GET /api/skill-hub/marketplaces": () => ({ body: MARKETPLACES }),
+      "GET /api/skill-hub/marketplaces/search": () => ({ body: { results: [
+        { provider: "mcp-registry", ref: "io.github.acme/files", name: "files", description: "Files", author: "io.github.acme",
+          source: null, installs: null, version: "0.3.0", url: null, suspicious: false, kind: "CONNECTOR",
+          targets: ["claude-code", "codex", "claude-desktop"], details: { Tipo: "locale", Richiede: "ACME_KEY" } },
+        { provider: "mcp-registry", ref: "io.github.acme/templated", name: "templated", description: null, author: "io.github.acme",
+          source: null, installs: null, version: null, url: null, suspicious: false, kind: "CONNECTOR", targets: [],
+          details: { Tipo: "non installabile da qui" } },
+      ], errors: [] } }),
+      "GET /api/skill-hub/marketplaces/mcp-registry/item": () => ({ body: {
+        provider: "mcp-registry", ref: "io.github.acme/files", kind: "CONNECTOR", name: "Acme Files", installName: "files",
+        description: "Files", version: "0.3.0", sourceUrl: null, details: { Tipo: "locale", Avvio: "npx -y @acme/files-mcp@0.3.0" },
+        inputs: [{ name: "ACME_KEY", kind: "ENV", required: true, secret: true, description: "API key", defaultValue: null }],
+        targets: [
+          { app: "claude-code", appName: "Claude Code", available: true, method: "CLI",
+            command: "claude mcp add --scope user files -- cmd /c npx -y @acme/files-mcp@0.3.0", note: null },
+          { app: "codex", appName: "ChatGPT · Codex", available: false, method: "CLI", command: "codex mcp add files", note: null },
+          { app: "claude-desktop", appName: "Claude Desktop", available: true, method: "CONFIG",
+            command: "claude_desktop_config.json → mcpServers.files", note: "Riavvia Claude Desktop" },
+        ],
+        warnings: ["Un connettore locale è un programma"] } }),
+      "POST /api/skill-hub/connectors/install": () => ({ body: { results: [
+        { target: "claude-code", status: "INSTALLED", message: "Connettore «files» aggiunto a Claude Code",
+          command: "claude mcp add --scope user -e ACME_KEY=•••• files", output: "Added", confirmation: null, software: null },
+        { target: "claude-desktop", status: "INSTALLED", message: "Connettore «files» aggiunto a Claude Desktop: riavvia l'app",
+          command: null, output: null, confirmation: null, software: "claude-desktop" },
+      ] } }),
+    });
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Marketplace" }));
+    const kinds = await screen.findByRole("tablist", { name: "Cosa cercare" });
+    fireEvent.click(within(kinds).getByRole("tab", { name: /^Connettori/ }));
+    // Only the catalogs of connectors: the skill ones are behind their own tab.
+    expect((await screen.findAllByText("Registro ufficiale MCP")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("SkillsMP")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Cerca nei marketplace"), { target: { value: "acme" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cerca nei marketplace" }));
+    await waitFor(() => expect(calls.some((c) => c.path.startsWith("/api/skill-hub/marketplaces/search"))).toBe(true));
+    expect(calls.find((c) => c.path.startsWith("/api/skill-hub/marketplaces/search"))!.path).toContain("kind=CONNECTOR");
+    expect(await screen.findByText("richiede ACME_KEY")).toBeTruthy();
+    expect(screen.getByText("da configurare a mano")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dettagli e installa" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText(/programma/)).toBeTruthy();
+    // Where it can go, as it would be done; an application not on this PC cannot be chosen.
+    expect(within(dialog).getByText("claude mcp add --scope user files -- cmd /c npx -y @acme/files-mcp@0.3.0")).toBeTruthy();
+    expect((within(dialog).getByRole("checkbox", { name: /ChatGPT · Codex/ }) as HTMLInputElement).disabled).toBe(true);
+    const install = within(dialog).getByRole("button", { name: "Installa" }) as HTMLButtonElement;
+    expect(install.disabled).toBe(true);
+    const key = within(dialog).getByLabelText(/ACME_KEY/) as HTMLInputElement;
+    expect(key.type).toBe("password");
+    fireEvent.change(key, { target: { value: "sk-SECRET-1" } });
+    fireEvent.click(install);
+
+    await waitFor(() => expect(calls.some((c) => c.path === "/api/skill-hub/connectors/install")).toBe(true));
+    expect(calls.find((c) => c.path === "/api/skill-hub/connectors/install")!.body).toEqual({
+      provider: "mcp-registry", ref: "io.github.acme/files", targets: ["claude-code", "claude-desktop"], name: "files",
+      values: { ACME_KEY: "sk-SECRET-1" }, replace: false });
+    expect(await within(dialog).findByText(/aggiunto a Claude Desktop/)).toBeTruthy();
+    expect(within(dialog).getAllByText("installato")).toHaveLength(2);
+    expect(dialog.innerHTML).not.toContain("sk-SECRET-1");
+    expect(await screen.findByText(/installato in: Claude Code, Claude Desktop/)).toBeTruthy();
+  });
+
+  it("installs a plugin with the application's CLI, and runs a declared command only once it was read and approved", async () => {
+    const sha = "a".repeat(64);
+    const calls = mount({
+      "GET /api/skill-hub/marketplaces": () => ({ body: MARKETPLACES }),
+      "GET /api/skill-hub/marketplaces/claude-plugins-official/browse": () => ({ body: [
+        { provider: "claude-plugins-official", ref: "frontend-design", name: "frontend-design", description: "Distinctive UI",
+          author: "Anthropic", source: "anthropics/claude-plugins-official", installs: null, version: null, url: null, suspicious: false,
+          kind: "PLUGIN", targets: ["claude-code"], details: { Marketplace: "claude-plugins-official", Categoria: "development" } },
+      ] }),
+      "GET /api/skill-hub/marketplaces/claude-plugins-official/item": () => ({ body: {
+        provider: "claude-plugins-official", ref: "frontend-design", kind: "PLUGIN", name: "frontend-design", installName: "frontend-design",
+        description: "Distinctive UI", version: null, sourceUrl: null, details: { Marketplace: "claude-plugins-official" }, inputs: [],
+        targets: [{ app: "claude-code", appName: "Claude Code", available: true, method: "CLI",
+          command: "claude plugin install frontend-design@claude-plugins-official --scope user", note: null }],
+        warnings: [] } }),
+      "POST /api/skill-hub/plugins/install": (call) => ({ body: (call.body as { confirmation?: string }).confirmation
+        ? { target: "claude-code", status: "INSTALLED", message: "Installato in Claude Code", command: null, output: null,
+          confirmation: null, software: null }
+        : { target: "claude-code", status: "NEEDS_CONFIRMATION", message: "Il marketplace dichiara un comando",
+          command: "npx -y @anthropic/setup", output: null, confirmation: sha, software: null } }),
+    });
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Marketplace" }));
+    fireEvent.click(within(await screen.findByRole("tablist", { name: "Cosa cercare" })).getByRole("tab", { name: /^Plugin/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /plugin ufficiali.*cerca e installa qui/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Dettagli e installa" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Installa" }));
+
+    expect((await within(dialog).findByLabelText("Comando dichiarato")).textContent).toBe("npx -y @anthropic/setup");
+    expect(calls.filter((c) => c.path === "/api/skill-hub/plugins/install")).toHaveLength(1);
+    expect(calls.find((c) => c.path === "/api/skill-hub/plugins/install")!.body)
+      .toEqual({ provider: "claude-plugins-official", ref: "frontend-design", target: "claude-code" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ho letto il comando: installa" }));
+    await waitFor(() => expect(calls.filter((c) => c.path === "/api/skill-hub/plugins/install")).toHaveLength(2));
+    expect(calls.filter((c) => c.path === "/api/skill-hub/plugins/install")[1].body)
+      .toEqual({ provider: "claude-plugins-official", ref: "frontend-design", target: "claude-code", confirmation: sha });
+    expect(await within(dialog).findByText("Installato in Claude Code")).toBeTruthy();
   });
 
   it("applies the safe updates at once, and overwrites a change only after asking", async () => {
