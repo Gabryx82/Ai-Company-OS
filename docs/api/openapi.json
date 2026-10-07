@@ -2644,7 +2644,7 @@
             "type" : "array"
           },
           "scope" : {
-            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "INSTRUCTIONS", "KNOWLEDGE" ],
+            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "ACCOUNT", "INSTRUCTIONS", "KNOWLEDGE" ],
             "type" : "string"
           },
           "writable" : {
@@ -4256,11 +4256,27 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "connectors" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "copies" : {
             "format" : "int32",
             "type" : "integer"
           },
+          "knowledge" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "libraryEntries" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "plugins" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "skills" : {
             "format" : "int32",
             "type" : "integer"
           },
@@ -4298,6 +4314,12 @@
           },
           "description" : {
             "type" : "string"
+          },
+          "details" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
           },
           "enabled" : {
             "type" : "boolean"
@@ -4337,7 +4359,7 @@
             "$ref" : "#/components/schemas/ProvenanceView"
           },
           "scope" : {
-            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "INSTRUCTIONS", "KNOWLEDGE" ],
+            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "ACCOUNT", "INSTRUCTIONS", "KNOWLEDGE" ],
             "type" : "string"
           },
           "updateAvailable" : {

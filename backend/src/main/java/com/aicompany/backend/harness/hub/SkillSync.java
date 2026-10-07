@@ -15,6 +15,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,11 +41,17 @@ public class SkillSync {
     private static final Logger LOG = LoggerFactory.getLogger(SkillSync.class);
     static final int KEPT_EVENTS = 1000;
     /**
-     * A row of the snapshot that is no skill: it says the first synchronisation
-     * happened. Without it, a machine with no skill at all would look like a
-     * first run forever, and its first installs would never be reported.
+     * The first rows of the snapshot that are no item: one per location, saying
+     * that location has been looked at once ({@code baseline:<location>}).
+     * Without them a machine with no skill at all would look like a first run
+     * forever, and its first installs would never be reported. And a location
+     * read for the first time -- a new application, a folder the Hub learned to
+     * read (Claude Desktop from the Microsoft Store, plugins, connectors) -- is
+     * photographed, not reported as hundreds of installs that happened today.
+     * {@code baseline} alone is the marker of the first version of the snapshot.
      */
     static final String BASELINE = "baseline";
+    static final String BASELINE_PREFIX = "baseline:";
 
     public enum Change { ADDED, REMOVED, MODIFIED }
 
@@ -61,6 +69,7 @@ public class SkillSync {
     }
 
     private final SkillScanner scanner;
+    private final SkillLocations locations;
     private final SkillLibrary library;
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transactions;
@@ -68,9 +77,10 @@ public class SkillSync {
     private volatile Instant lastRun;
     private ScheduledExecutorService schedule;
 
-    public SkillSync(SkillScanner scanner, SkillLibrary library, JdbcTemplate jdbc, TransactionTemplate transactions,
-                     @Value("${aicos.hub.sync-interval:PT5M}") Duration interval) {
+    public SkillSync(SkillScanner scanner, SkillLocations locations, SkillLibrary library, JdbcTemplate jdbc,
+                     TransactionTemplate transactions, @Value("${aicos.hub.sync-interval:PT5M}") Duration interval) {
         this.scanner = scanner;
+        this.locations = locations;
         this.library = library;
         this.jdbc = jdbc;
         this.transactions = transactions;
@@ -143,12 +153,22 @@ public class SkillSync {
                 });
         boolean firstRun = before.isEmpty();
         before.remove(BASELINE);
+        Set<String> known = new HashSet<>();
+        before.keySet().removeIf(id -> {
+            if (id.startsWith(BASELINE_PREFIX)) {
+                known.add(id.substring(BASELINE_PREFIX.length()));
+                return true;
+            }
+            return false;
+        });
         Instant now = scan.at();
         Timestamp at = Timestamp.from(now);
-        if (firstRun) {
-            jdbc.update("INSERT INTO skill_snapshot (id, app, location, relative_path, name, fingerprint, plugin_version, "
-                    + "first_seen_at, last_changed_at) VALUES (?, 'aicos', 'baseline', '', 'baseline', '', NULL, ?, ?)",
-                    BASELINE, at, at);
+        for (SkillLocations.Location location : locations.locations()) {
+            if (!known.contains(location.id())) {
+                jdbc.update("INSERT INTO skill_snapshot (id, app, location, relative_path, name, fingerprint, plugin_version, "
+                        + "first_seen_at, last_changed_at) VALUES (?, 'aicos', ?, '', 'baseline', '', NULL, ?, ?)",
+                        BASELINE_PREFIX + location.id(), cut(location.id(), 48), at, at);
+            }
         }
         List<Event> events = new ArrayList<>();
         Map<String, FoundSkill> current = new HashMap<>();
@@ -164,8 +184,9 @@ public class SkillSync {
                                 + "first_seen_at, last_changed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         skill.id(), skill.app(), skill.location(), path, name, skill.fingerprint(),
                         cut(skill.pluginVersion(), 120), at, at);
-                if (!firstRun) {
-                    events.add(event(now, Change.ADDED, skill, skill.plugin() == null ? null
+                if (known.contains(skill.location())) {
+                    events.add(event(now, Change.ADDED, skill, skill.plugin() == null || FoundSkill.PLUGIN.equals(skill.kind())
+                            ? (skill.pluginVersion() == null ? null : "Versione " + skill.pluginVersion())
                             : "Plugin " + skill.plugin() + (skill.pluginVersion() == null ? "" : " " + skill.pluginVersion())));
                 }
             } else if (!was.fingerprint().equals(skill.fingerprint()) || !Objects.equals(was.pluginVersion(), skill.pluginVersion())) {

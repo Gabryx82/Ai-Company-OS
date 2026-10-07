@@ -85,10 +85,13 @@ public class SkillHubService {
                             String description, String category, String categoryLabel, String plugin,
                             String pluginVersion, String marketplace, Boolean enabled, String version, String path,
                             boolean writable, Instant modified, String libraryKey, CopyStatus copyStatus,
-                            ProvenanceView provenance, List<CopyView> copies, boolean updateAvailable) {
+                            ProvenanceView provenance, List<CopyView> copies, boolean updateAvailable,
+                            Map<String, String> details) {
     }
 
-    public record SkillHubSummary(int total, int apps, int libraryEntries, int updates, int copies) {
+    /** Counts for the page's summary; {@code skills} … {@code knowledge} by kind, everywhere. */
+    public record SkillHubSummary(int total, int apps, int libraryEntries, int updates, int copies,
+                                  int skills, int plugins, int connectors, int knowledge) {
     }
 
     public record InstalledView(Instant scannedAt, List<AppView> apps, List<SkillView> skills,
@@ -194,7 +197,7 @@ public class SkillHubService {
             libraryViews.add(new SkillView(LIBRARY_APP + ":" + entry.getKey(), LIBRARY_APP, LIBRARY_LOCATION, Scope.LIBRARY,
                     entry.getKind().name(), entry.getName(), description, category.key(), category.label(), null, null,
                     null, null, pv == null ? null : pv.installedVersion(), path, true, null, entry.getKey(), null, pv,
-                    copies, pv != null && pv.updateAvailable()));
+                    copies, pv != null && pv.updateAvailable(), Map.of()));
         }
 
         List<SkillView> all = new ArrayList<>(libraryViews);
@@ -221,9 +224,11 @@ public class SkillHubService {
                 && s.copyStatus() != CopyStatus.ORPHAN).count();
         int copies = (int) found.stream().filter(s -> s.copyStatus() != null).count();
         SkillHubSummary summary = new SkillHubSummary(all.size(), (int) apps.stream().filter(a -> a.detected() && a.count() > 0).count(),
-                libraryViews.size(), updates, copies);
+                libraryViews.size(), updates, copies, countKind(all, FoundSkill.SKILL), countKind(all, FoundSkill.PLUGIN),
+                countKind(all, FoundSkill.CONNECTOR), countKind(all, FoundSkill.KNOWLEDGE));
         List<SkillCategories.Category> categories = new ArrayList<>(SkillCategories.all());
         categories.add(SkillScanner.INSTRUCTIONS);
+        categories.add(SkillScanner.CONNECTORS);
         return new InstalledView(scan.at(), apps, all, categories, scan.notes(), summary);
     }
 
@@ -237,12 +242,21 @@ public class SkillHubService {
                 .findFirst().flatMap(p -> resources.findById(p.getResourceId())).map(HarnessResource::getKey).orElse(null);
         String content;
         boolean truncated;
-        try {
-            String text = Files.readString(skill.file(), StandardCharsets.UTF_8);
-            truncated = text.length() > MAX_CONTENT;
-            content = truncated ? text.substring(0, MAX_CONTENT) : text;
-        } catch (IOException e) {
-            throw HubProblemException.notFound("The file of '" + skill.name() + "' could not be read: " + e.getMessage());
+        if (FoundSkill.CONNECTOR.equals(skill.kind())) {
+            // Never the configuration file: it holds tokens, environments and the account. Only what the scan kept.
+            content = summary(skill);
+            truncated = false;
+        } else {
+            try {
+                String text = Files.isRegularFile(skill.file()) ? Files.readString(skill.file(), StandardCharsets.UTF_8) : "";
+                if (FoundSkill.PLUGIN.equals(skill.kind())) {
+                    text = summary(skill) + (text.isEmpty() ? "" : "\n\n" + skill.file().getFileName() + "\n\n" + text);
+                }
+                truncated = text.length() > MAX_CONTENT;
+                content = truncated ? text.substring(0, MAX_CONTENT) : text;
+            } catch (IOException e) {
+                throw HubProblemException.notFound("The file of '" + skill.name() + "' could not be read: " + e.getMessage());
+            }
         }
         List<SkillMarketplaces.PackageFile> list = new ArrayList<>();
         if ("SKILL".equals(skill.kind())) {
@@ -262,6 +276,9 @@ public class SkillHubService {
     @Transactional(readOnly = true)
     public String open(String id) {
         FoundSkill skill = found(id);
+        if (FoundSkill.CONNECTOR.equals(skill.kind())) {
+            throw HubProblemException.readOnly("Un connettore si configura nella sua app: la sua cartella è quella della configurazione");
+        }
         software.launchIn(com.aicompany.backend.harness.controller.LibraryController.EDITOR, skill.folder(), List.of());
         return skill.folder().toString();
     }
@@ -276,6 +293,10 @@ public class SkillHubService {
      */
     public HarnessResource importFound(String id, String requestedKey) {
         FoundSkill skill = found(id);
+        if (FoundSkill.PLUGIN.equals(skill.kind()) || FoundSkill.CONNECTOR.equals(skill.kind())) {
+            throw HubProblemException.readOnly("I plugin e i connettori restano della loro app: nella libreria si importano "
+                    + "le skill e le knowledge");
+        }
         if (skill.marker() != null) {
             throw HubProblemException.conflict("È una copia della skill «" + skill.marker().key()
                     + "» della libreria, scritta dal Knowledge Hub: è già nella libreria");
@@ -545,8 +566,26 @@ public class SkillHubService {
     private SkillView view(FoundSkill s, String libraryKey, CopyStatus status) {
         return new SkillView(s.id(), s.app(), s.location(), s.scope(), s.kind(), s.name(), s.description(),
                 s.category().key(), s.category().label(), s.plugin(), s.pluginVersion(), s.marketplace(), s.enabled(),
-                s.version(), s.file().toString(), s.writable(), s.modified(), libraryKey, status, null, List.of(),
-                status == CopyStatus.OUTDATED || status == CopyStatus.MODIFIED || status == CopyStatus.CONFLICT);
+                s.version(), FoundSkill.CONNECTOR.equals(s.kind()) ? null : s.file().toString(), s.writable(), s.modified(),
+                libraryKey, status, null, List.of(),
+                status == CopyStatus.OUTDATED || status == CopyStatus.MODIFIED || status == CopyStatus.CONFLICT,
+                s.details() == null ? Map.of() : s.details());
+    }
+
+    /** What the scan kept about a plugin or a connector, as text: label by label. */
+    private static String summary(FoundSkill skill) {
+        StringBuilder out = new StringBuilder(skill.name()).append('\n');
+        if (skill.description() != null) {
+            out.append(skill.description()).append('\n');
+        }
+        out.append('\n');
+        (skill.details() == null ? Map.<String, String>of() : skill.details())
+                .forEach((label, value) -> out.append(label).append(": ").append(value).append('\n'));
+        return out.toString().strip();
+    }
+
+    private static int countKind(List<SkillView> views, String kind) {
+        return (int) views.stream().filter(v -> kind.equals(v.kind())).count();
     }
 
     private ProvenanceView provenanceView(SkillInstallation p, HarnessResource entry, Function<String, String> libraryPrint) {

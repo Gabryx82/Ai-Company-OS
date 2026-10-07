@@ -71,6 +71,9 @@ class SkillHubApiTest extends AbstractPostgresTest {
     @Value("${aicos.home}")
     private String aicosHome;
 
+    @Value("${aicos.hub.local-app-data}")
+    private String localAppData;
+
     private final JsonMapper json = JsonMapper.builder().build();
 
     private Path home;
@@ -88,8 +91,10 @@ class SkillHubApiTest extends AbstractPostgresTest {
         jdbc.update("DELETE FROM harness_resources WHERE origin <> 'CATALOG'");
         jdbc.update("UPDATE harness_resources SET file_path = NULL, file_synced_at = NULL");
         home = locations.home();
-        desktop = locations.location("claude-desktop.account").root();
-        for (Path folder : List.of(home, desktop.getParent().getParent(), library.root(), Path.of(aicosHome).resolve("backups"))) {
+        // Claude Desktop from the Microsoft Store: its data is only in the package's virtualised AppData.
+        desktop = Path.of(localAppData).resolve("Packages/Claude_test1234/LocalCache/Roaming/Claude/local-agent-mode-sessions");
+        for (Path folder : List.of(home, locations.claudeDesktopCandidates().getFirst().getParent(), Path.of(localAppData),
+                library.root(), Path.of(aicosHome).resolve("backups"))) {
             deleteTree(folder);
         }
         Files.createDirectories(home);
@@ -125,6 +130,40 @@ class SkillHubApiTest extends AbstractPostgresTest {
                 + "\"marketplaceName\": \"knowledge-work-plugins\"}]}");
         write(rpm.resolve("plugin_1/.claude-plugin/plugin.json"), "{\"name\": \"render\", \"version\": \"0.2.2\"}");
         write(rpm.resolve("plugin_1/skills/render-deploy/SKILL.md"), "---\nname: render-deploy\ndescription: Deploy on Render\n---\n");
+        write(rpm.resolve("plugin_1/.mcp.json"), "{\"mcpServers\": {\"render\": {\"type\": \"http\", \"url\": \"https://mcp.render.com/mcp\"},"
+                + " \"slack\": {\"type\": \"http\", \"url\": \"https://mcp.slack.com/mcp\"}}}");
+        // A plugin made only of hooks: it has no skill, and it is still installed.
+        write(rpm.resolve("manifest.json"), "{\"lastUpdated\": 2, \"plugins\": [{\"id\": \"plugin_1\", \"name\": \"render\", "
+                + "\"marketplaceName\": \"knowledge-work-plugins\"}, {\"id\": \"plugin_2\", \"name\": \"security-guidance\", "
+                + "\"marketplaceName\": \"knowledge-work-plugins\"}, {\"id\": \"plugin_3\", \"name\": \"sales\"}]}");
+        write(rpm.resolve("plugin_2/.claude-plugin/plugin.json"), "{\"name\": \"security-guidance\", \"version\": \"2.0.8\", "
+                + "\"description\": \"Security review\"}");
+        write(rpm.resolve("plugin_2/hooks/hooks.json"), "{}");
+        write(rpm.resolve("plugin_3/.claude-plugin/plugin.json"), "{\"name\": \"sales\", \"version\": \"2.0.1\"}");
+        write(rpm.resolve("plugin_3/.mcp.json"), "{\"mcpServers\": {\"slack\": {\"type\": \"http\", \"url\": \"https://mcp.slack.com/mcp\"}}}");
+        Path desktopHome = desktop.getParent();
+        write(desktopHome.resolve("extensions-installations.json"), "{\"extensions\": {\"ant.dir.blender\": {\"id\": \"ant.dir.blender\","
+                + " \"manifest\": {\"name\": \"Blender\", \"version\": \"1.0.1\", \"server\": {\"type\": \"uv\"}}}}}");
+        write(desktopHome.resolve("Claude Extensions Settings/ant.dir.blender.json"), "{\"isEnabled\": false}");
+
+        // Claude Code: a plugin with its components, its MCP servers, and the user's own servers -- one with a secret.
+        Path ccPlugin = home.resolve(".claude/plugins/cache/claude-plugins-official/frontend-design/abc123");
+        write(ccPlugin.resolve(".claude-plugin/plugin.json"), "{\"name\": \"frontend-design\", \"description\": \"Frontend design\", "
+                + "\"author\": {\"name\": \"Anthropic\"}}");
+        write(ccPlugin.resolve("skills/frontend-design/SKILL.md"), "---\nname: frontend-design\ndescription: Distinctive UI\n---\n");
+        write(ccPlugin.resolve("commands/review.md"), "# Review\n");
+        write(ccPlugin.resolve("agents/critic.md"), "# Critic\n");
+        write(home.resolve(".claude/plugins/installed_plugins.json"), "{\"version\": 2, \"plugins\": {\"frontend-design@claude-plugins-official\": "
+                + "[{\"scope\": \"user\", \"installPath\": " + json.writeValueAsString(ccPlugin.toString()) + ", \"version\": \"abc123\"}]}}");
+        write(home.resolve(".claude/settings.json"), "{\"enabledPlugins\": {\"frontend-design@claude-plugins-official\": false}}");
+        write(home.resolve(".claude.json"), "{\"oauthAccount\": {\"emailAddress\": \"someone@example.org\"}, \"mcpServers\": {"
+                + "\"blender\": {\"type\": \"stdio\", \"command\": \"C:\\\\Tools\\\\uvx.EXE\", \"args\": [\"blender-mcp\", \"--token=SECRET-ARG-123\"],"
+                + " \"env\": {\"BLENDER_API_KEY\": \"SECRET-ENV-456\"}},"
+                + "\"remote\": {\"type\": \"http\", \"url\": \"https://user:pw@mcp.example.org/mcp?api_key=SECRET-QUERY-789\"}},"
+                + "\"projects\": {\"C:/Work/Shop\": {\"mcpServers\": {}}},"
+                + "\"claudeAiMcpEverConnected\": [\"claude.ai Claude Docs\"]}");
+        write(home.resolve(".claude/projects/C--Work-Shop/memory/MEMORY.md"), "- [Prezzi](prezzi.md) — IVA inclusa\n");
+        write(home.resolve(".claude/projects/C--Work-Shop/memory/prezzi.md"), "I prezzi si mostrano con l'IVA.\n");
 
         JsonNode view = getJson("/api/skill-hub/installed?rescan=true");
 
@@ -158,6 +197,52 @@ class SkillHubApiTest extends AbstractPostgresTest {
         assertThat(render.path("pluginVersion").asString()).isEqualTo("0.2.2");
         assertThat(render.path("marketplace").asString()).isEqualTo("knowledge-work-plugins");
         assertThat(render.path("category").asString()).isEqualTo("devops");
+
+        // Every plugin, even the one without skills, with what it is made of.
+        JsonNode security = item(view, "PLUGIN", "security-guidance");
+        assertThat(security.path("app").asString()).isEqualTo("claude-desktop");
+        assertThat(security.path("details").path("Skill").asString()).isEqualTo("0");
+        assertThat(security.path("details").path("Hook").asString()).isEqualTo("sì");
+        assertThat(item(view, "PLUGIN", "render").path("details").path("Connettori").asString()).startsWith("2");
+        JsonNode frontend = item(view, "PLUGIN", "frontend-design");
+        assertThat(frontend.path("app").asString()).isEqualTo("claude-code");
+        assertThat(frontend.path("enabled").asBoolean()).isFalse();
+        assertThat(frontend.path("details").path("Comandi").asString()).isEqualTo("1");
+        assertThat(frontend.path("details").path("Agenti").asString()).isEqualTo("1");
+        assertThat(frontend.path("details").path("Autore").asString()).isEqualTo("Anthropic");
+
+        // Connectors: one per name, whoever provides it; the user's, the extension's, the account's.
+        JsonNode slack = item(view, "CONNECTOR", "slack");
+        assertThat(slack.path("app").asString()).isEqualTo("claude-desktop");
+        assertThat(slack.path("details").path("Fornito da").asString()).isEqualTo("plugin render, plugin sales");
+        assertThat(view.path("skills").findValues("name").stream().filter(n -> n.asString().equals("slack")).count()).isEqualTo(1);
+        JsonNode extension = item(view, "CONNECTOR", "Blender");
+        assertThat(extension.path("app").asString()).isEqualTo("claude-desktop");
+        assertThat(extension.path("enabled").asBoolean()).isFalse();
+        assertThat(extension.path("details").path("Versione").asString()).isEqualTo("1.0.1");
+        JsonNode blender = connector(view, "claude-code", "blender");
+        assertThat(blender.path("scope").asString()).isEqualTo("PERSONAL");
+        assertThat(blender.path("details").path("Avvio").asString()).isEqualTo("uvx.EXE");
+        assertThat(connector(view, "claude-code", "remote").path("details").path("Indirizzo").asString())
+                .isEqualTo("https://mcp.example.org/mcp");
+        assertThat(connector(view, "claude-code", "Claude Docs").path("scope").asString()).isEqualTo("ACCOUNT");
+        // Knowledge: what Claude Code remembers about a project.
+        JsonNode memory = item(view, "KNOWLEDGE", "Memoria · Shop");
+        assertThat(memory.path("details").path("Progetto").asString()).isEqualTo("C:/Work/Shop");
+        assertThat(memory.path("details").path("Ricordi").asString()).isEqualTo("1");
+        assertThat(view.path("summary").path("plugins").asInt()).isGreaterThanOrEqualTo(4);
+
+        // Never a secret: not in the list, not in a connector's detail, which never shows the configuration file.
+        String everything = view.toString() + getJson("/api/skill-hub/installed/" + blender.path("id").asString())
+                + getJson("/api/skill-hub/installed/" + connector(view, "claude-code", "remote").path("id").asString());
+        assertThat(everything).doesNotContain("SECRET-ARG-123", "SECRET-ENV-456", "SECRET-QUERY-789", "user:pw",
+                "someone@example.org", "BLENDER_API_KEY");
+        mockMvc.perform(post("/api/skill-hub/installed/" + blender.path("id").asString() + "/import")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:skill-location-read-only"));
+        mockMvc.perform(post("/api/skill-hub/installed/" + blender.path("id").asString() + "/open"))
+                .andExpect(status().isConflict());
 
         JsonNode agentsMd = skill(view, "AGENTS.md");
         assertThat(agentsMd.path("kind").asString()).isEqualTo("KNOWLEDGE");
@@ -196,6 +281,17 @@ class SkillHubApiTest extends AbstractPostgresTest {
         assertThat(seen).containsExactlyInAnyOrder("ADDED arrive claude-code", "MODIFIED change claude-code",
                 "REMOVED leave claude-code");
 
+        // A plugin updated by its application is a change of the plugin, with its versions.
+        Path plugin = home.resolve(".claude/plugins/cache/mkt/tools/1.0.0");
+        write(plugin.resolve(".claude-plugin/plugin.json"), "{\"name\": \"tools\", \"version\": \"1.0.0\"}");
+        write(home.resolve(".claude/plugins/installed_plugins.json"), "{\"plugins\": {\"tools@mkt\": [{\"installPath\": "
+                + json.writeValueAsString(plugin.toString()) + ", \"version\": \"1.0.0\"}]}}");
+        mockMvc.perform(post("/api/skill-hub/sync")).andExpect(status().isOk()).andExpect(jsonPath("$.added").value(1));
+        write(plugin.resolve(".claude-plugin/plugin.json"), "{\"name\": \"tools\", \"version\": \"1.1.0\"}");
+        mockMvc.perform(post("/api/skill-hub/sync")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.modified").value(1))
+                .andExpect(jsonPath("$.events[0].detail").value("Plugin tools: 1.0.0 → 1.1.0"));
+
         mockMvc.perform(post("/api/skill-hub/sync")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.events.length()").value(0));
     }
@@ -211,6 +307,35 @@ class SkillHubApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.firstRun").value(false))
                 .andExpect(jsonPath("$.added").value(1))
                 .andExpect(jsonPath("$.removed").value(0));
+    }
+
+    /**
+     * What a newer Hub learns to read -- Claude Desktop from the Microsoft Store,
+     * plugins, connectors -- was installed before, not today: a location read for
+     * the first time is photographed, not reported as hundreds of installs.
+     */
+    @Test
+    void whatTheHubLearnsToReadIsPhotographedNotReportedAsInstalledToday() throws Exception {
+        // The snapshot an earlier version left: the global marker, and one skill since removed.
+        jdbc.update("INSERT INTO skill_snapshot (id, app, location, relative_path, name, fingerprint, first_seen_at, last_changed_at) "
+                + "VALUES ('baseline', 'aicos', 'baseline', '', 'baseline', '', now(), now()), "
+                + "('gone1', 'claude-code', 'claude-code.personal', 'gone/SKILL.md', 'gone', 'x', now(), now())");
+        write(home.resolve(".claude/skills/kept/SKILL.md"), "---\nname: kept\ndescription: Was there\n---\n");
+        Path account = desktop.resolve("skills-plugin/org1/acct1");
+        write(account.resolve("manifest.json"), "{\"lastUpdated\": 2, \"skills\": [{\"skillId\": \"pdf\", \"creatorType\": \"anthropic\"}]}");
+        write(account.resolve("skills/pdf/SKILL.md"), "---\nname: pdf\ndescription: Fill PDF forms\n---\n");
+
+        mockMvc.perform(post("/api/skill-hub/sync")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstRun").value(false))
+                .andExpect(jsonPath("$.added").value(0))
+                .andExpect(jsonPath("$.removed").value(1));
+
+        write(account.resolve("manifest.json"), "{\"lastUpdated\": 3, \"skills\": [{\"skillId\": \"pdf\", \"creatorType\": \"anthropic\"},"
+                + " {\"skillId\": \"xlsx\", \"creatorType\": \"anthropic\"}]}");
+        write(account.resolve("skills/xlsx/SKILL.md"), "---\nname: xlsx\ndescription: Spreadsheets\n---\n");
+        mockMvc.perform(post("/api/skill-hub/sync")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.added").value(1))
+                .andExpect(jsonPath("$.events[0].name").value("xlsx"));
     }
 
     // --- into the library -----------------------------------------------------------------
@@ -573,6 +698,25 @@ class SkillHubApiTest extends AbstractPostgresTest {
             }
         }
         throw new AssertionError("No skill " + name + " in " + names(view));
+    }
+
+    private static JsonNode item(JsonNode view, String kind, String name) {
+        for (JsonNode item : view.path("skills")) {
+            if (item.path("kind").asString().equals(kind) && item.path("name").asString().equals(name)) {
+                return item;
+            }
+        }
+        throw new AssertionError("No " + kind + " " + name + " in " + names(view));
+    }
+
+    private static JsonNode connector(JsonNode view, String app, String name) {
+        for (JsonNode item : view.path("skills")) {
+            if (item.path("kind").asString().equals("CONNECTOR") && item.path("app").asString().equals(app)
+                    && item.path("name").asString().equals(name)) {
+                return item;
+            }
+        }
+        throw new AssertionError("No connector " + name + " of " + app);
     }
 
     private static JsonNode skillById(JsonNode view, String id) {
