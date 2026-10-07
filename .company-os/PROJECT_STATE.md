@@ -95,7 +95,20 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   restituite) o in `claude_desktop_config.json` (con backup). ADR-036 §2b e §6b. Suite: Java **579**, console
   **68**; mutazioni **7/7** backend e **4/4** console. Smoke su `aicompany_p31c` con CLI sostitute che
   stampano soltanto: nessuna installazione reale nelle app.
-- **Debiti**: aperti TD-74…TD-90; TD-59 ripetuto ed evitato; prossimo libero **TD-91**.
+- **Terza correzione** (stesso giorno: «cambiando scheda il terminale si chiude», «non posso scorrere la chat di
+  Claude Code nel terminale», «i pannelli di skill e agenti non sono ridimensionati»): il terminale usava **winpty**
+  (default di pty4j, ADR-029 diceva ConPTY): ora **ConPTY** incluso in pty4j, e la rotella arriva a Claude Code a
+  schermo intero; la vista Terminale resta montata; **le shell vivono sul server** e sopravvivono a ricaricamento e
+  chiusura della scheda (riaggancio con output e modalità, «In background», scadenza 24 h), con l'**ambiente
+  dell'utente** (`CreateEnvironmentBlock`) senza i marcatori di una sessione Claude Code genitore — ADR-029 §5,
+  chiusi **TD-91** e **TD-92** aperti e risolti nello stesso giorno. Pannelli di dettaglio (agente, skill, risorsa,
+  software) e colonna delle app del Hub: altezza della finestra, scroll proprio (`.side-panel`). API: `GET
+  /api/terminal/sessions`, `DELETE /api/terminal/sessions/{id}`, ticket con `attach`, problema
+  `terminal-not-found` (OpenAPI additivo). Suite: Java **596**, console **72**; mutazioni **7/7** backend e
+  **4/4** console. Verificato dal vivo su `aicompany_p32term` (porta 8091, console 5180): stesso PID dopo F5, Claude
+  Code ridisegnato con mouse e rotella, passaggio fra due schede del browser, nessun processo residuo.
+- **Debiti**: aperti TD-74…TD-90; TD-59 ripetuto ed evitato; TD-91 e TD-92 aperti e chiusi; prossimo libero
+  **TD-93**. Direttiva del 2026-10-07: **risolvere tutti i debiti del registro** (in corso).
 - **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review
   (`docs/handoff/FINAL_HANDOFF_PHASE_31.md`).
 

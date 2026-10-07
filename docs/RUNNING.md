@@ -41,7 +41,9 @@ per provare senza toccare i dati, clonare prima (vedi l'intestazione dello scrip
 7. **Review**: «Accetta e completa» o «Richiedi modifiche», con nota.
 8. Altro: **Knowledge Hub** (tutte le skill e knowledge della libreria, di Claude Code, Claude Desktop,
    Codex e delle altre app, divise per app e tipologia; marketplace; copie sincronizzate; aggiornamenti —
-   ADR-036), **Terminale** (admin),
+   ADR-036), **Terminale** (admin: le shell restano attive mentre usi le altre schede e anche se
+   ricarichi la pagina, che le riaggancia; quelle di altre schede del browser sono «In background»;
+   finiscono chiudendo la scheda nella console, uscendo, o dopo 24 ore staccate — ADR-029 §5),
    **Codice** nel progetto (grafo), **Consumi** (quote, costi e budget), **Impostazioni** (utenti,
    registro di sicurezza, ecosistema all'avvio), eliminazione di progetti e task (admin, digitando
    il nome).

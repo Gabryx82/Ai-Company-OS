@@ -170,7 +170,10 @@ ferma a `TD-22`.
 | **TD-89** | Connettori del registro MCP non installabili dal Hub, per prudenza: indirizzi remoti con query string, `%`, variabili da completare; pacchetti con argomenti obbligatori; per Codex, connettori remoti con un header d'autenticazione (la CLI non lo accetta). La scheda dice «da configurare a mano» e perché | **aperto**, MINOR | PHASE 31 |
 | **TD-90** | Plugin e connettori installati dal Marketplace si disinstallano dalle loro app (`claude plugin uninstall`, `claude mcp remove`, `codex mcp remove`…), non dal Hub; nessuna verifica di aggiornamenti per i connettori | **aperto**, MINOR | PHASE 31 |
 
-**Prossimo identificatore libero: `TD-91`.**
+| **TD-91** | Una shell del terminale integrato non sopravviveva a un ricaricamento o alla chiusura della scheda del browser: il socket chiuso terminava il processo | **chiuso** il 2026-10-07 (ADR-029 §5): la shell vive sul server, staccata con gli ultimi 512 KiB e le modalità del terminale; la console la riaggancia dopo un ricaricamento e la elenca «In background»; finisce se chiusa dalla console, dopo `aicos.terminal.detached-ttl` o con il control plane | PHASE 31 |
+| **TD-92** | Le shell del terminale ereditavano l'ambiente del backend, compresi i marcatori di una sessione Claude Code che lo avesse avviato (Claude Code nella console non salvava la trascrizione) | **chiuso** il 2026-10-07 (ADR-029 §5): su Windows ambiente dell'utente (`CreateEnvironmentBlock`), marcatori di sessione tolti ovunque | PHASE 31 |
+
+**Prossimo identificatore libero: `TD-93`.**
 
 ## 6. Come si apre un debito nuovo
 
