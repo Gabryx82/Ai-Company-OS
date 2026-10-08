@@ -103,6 +103,21 @@ class SkillHubApiTest extends AbstractPostgresTest {
 
     // --- what is on the machine -----------------------------------------------------------
 
+    @Autowired
+    private SkillSync sync;
+
+    /** PHASE 32 (TD-82): the scheduled synchronisation re-reads the library folder too. */
+    @Test
+    void theScheduledSyncAlsoReadsTheLibraryFolder() throws Exception {
+        write(library.root().resolve("skills/scheduled-skill/SKILL.md"),
+                "---\nkey: scheduled-skill\nname: Letta dalla pianificazione\nkind: SKILL\ndescription: Scritta a mano nella cartella.\n---\n");
+        sync.scheduledSync();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM harness_resources WHERE key = 'scheduled-skill'", Integer.class))
+                .isEqualTo(1);
+        jdbc.update("DELETE FROM harness_resources WHERE key = 'scheduled-skill'");
+        Files.delete(library.root().resolve("skills/scheduled-skill/SKILL.md"));
+    }
+
     @Test
     void everyApplicationsSkillsAreListedByApplicationAndTypeNextToTheLibrarys() throws Exception {
         write(home.resolve(".claude/skills/commit-helper/SKILL.md"),

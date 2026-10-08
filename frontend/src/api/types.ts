@@ -162,6 +162,8 @@ export type Handoff = S["HandoffResponse"];
 export type Review = S["ReviewResponse"];
 /** PHASE 32 (TD-38): one edge a task took -- who, when, through what. */
 export type TaskMove = S["TaskTransitionResponse"];
+/** PHASE 32 (TD-55): what a task produced -- a run's output, or the Esito of its document. */
+export type TaskOutcome = S["TaskOutcome"];
 /** PHASE 32 (TD-45): what the operator's work says about the level they could work at. */
 export type Learning = S["Learning"];
 /** PHASE 32 (TD-63): an AI action asked about a Blueprint block, with what its task produced. */

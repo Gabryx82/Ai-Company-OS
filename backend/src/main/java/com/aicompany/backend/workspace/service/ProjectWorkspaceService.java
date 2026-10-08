@@ -425,6 +425,12 @@ public class ProjectWorkspaceService implements ProjectFolders {
         return folder;
     }
 
+    /** PHASE 32 (TD-55): where a task outside any project is handed off, without creating it. */
+    @Transactional(readOnly = true)
+    public Path inboxOf(Long taskId) {
+        return root.resolve("_inbox").resolve("task-" + taskId);
+    }
+
     /** Writes a document inside a folder this service handed out (a project's or an inbox), under W2/W3. */
     @Transactional(readOnly = true)
     public void writeIn(Path folder, String relative, String content) {

@@ -6,6 +6,7 @@ import com.aicompany.backend.orchestrator.model.TaskHandoff;
 import com.aicompany.backend.orchestrator.model.TaskReview;
 import com.aicompany.backend.orchestrator.service.ExecutionService;
 import com.aicompany.backend.orchestrator.service.OrchestrationService;
+import com.aicompany.backend.orchestrator.service.TaskOutcomes;
 import com.aicompany.backend.task.dto.TaskResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -63,10 +64,22 @@ public class OrchestratorController {
 
     private final OrchestrationService orchestration;
     private final ExecutionService execution;
+    private final TaskOutcomes outcomes;
 
-    public OrchestratorController(OrchestrationService orchestration, ExecutionService execution) {
+    public OrchestratorController(OrchestrationService orchestration, ExecutionService execution, TaskOutcomes outcomes) {
         this.orchestration = orchestration;
         this.execution = execution;
+        this.outcomes = outcomes;
+    }
+
+    /**
+     * What the task produced, the most recent first (PHASE 32, TD-55): its last
+     * successful run, and the Esito an agent wrote in its document after a handoff.
+     * Read, never applied: the operator reviews it.
+     */
+    @GetMapping("/api/tasks/{id}/outcomes")
+    public List<TaskOutcomes.TaskOutcome> taskOutcomes(@PathVariable Long id) {
+        return outcomes.of(id);
     }
 
     /** What the orchestrator would do with this task, and why. Changes nothing. */

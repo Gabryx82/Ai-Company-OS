@@ -1,20 +1,17 @@
 package com.aicompany.backend.blueprint.service;
 
 import com.aicompany.backend.blueprint.model.AiAction;
-import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
+import com.aicompany.backend.orchestrator.service.TaskOutcomes;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * The outcome of an AI action, back in the block it was asked about (PHASE 32,
@@ -27,12 +24,6 @@ import java.util.regex.Pattern;
  */
 @Service
 public class BlueprintAiOutcomes {
-
-    /**
-     * The Esito section: to the Note section that follows it in a plan's task document,
-     * or to the end -- an agent may well use second-level headings inside it.
-     */
-    private static final Pattern ESITO = Pattern.compile("(?ms)^##\\s+Esito\\s*$(.*?)(?=^##\\s+Note\\s*$|\\z)");
 
     /** Where an outcome may go when the operator applies it; null when it is only to be read. */
     static @Nullable String appliesTo(AiAction action) {
@@ -50,12 +41,12 @@ public class BlueprintAiOutcomes {
     }
 
     private final JdbcTemplate jdbc;
-    private final ProjectWorkspaceService workspace;
+    private final TaskOutcomes taskOutcomes;
     private final BlueprintService blueprint;
 
-    public BlueprintAiOutcomes(JdbcTemplate jdbc, ProjectWorkspaceService workspace, BlueprintService blueprint) {
+    public BlueprintAiOutcomes(JdbcTemplate jdbc, TaskOutcomes taskOutcomes, BlueprintService blueprint) {
         this.jdbc = jdbc;
-        this.workspace = workspace;
+        this.taskOutcomes = taskOutcomes;
         this.blueprint = blueprint;
     }
 
@@ -69,52 +60,22 @@ public class BlueprintAiOutcomes {
     @Transactional(readOnly = true)
     public List<BlueprintAiActionView> of(Long projectId, Long nodeId) {
         blueprint.requireNode(projectId, nodeId);
-        Optional<Path> folder = workspace.folderOf(projectId);
         return jdbc.queryForList("""
-                SELECT a.id, a.action, a.task_id, a.requested_by, a.created_at, t.title, t.status, t.code, t.document_path
+                SELECT a.id, a.action, a.task_id, a.requested_by, a.created_at, t.title, t.status
                 FROM blueprint_ai_actions a JOIN tasks t ON t.id = a.task_id
                 WHERE a.project_id = ? AND a.node_id = ? ORDER BY a.id DESC""", projectId, nodeId)
-                .stream().map(row -> view(row, folder)).toList();
+                .stream().map(this::view).toList();
     }
 
-    private BlueprintAiActionView view(Map<String, Object> row, Optional<Path> folder) {
+    private BlueprintAiActionView view(Map<String, Object> row) {
         Long taskId = ((Number) row.get("task_id")).longValue();
         AiAction action = AiAction.valueOf((String) row.get("action"));
-        String outcome = null;
-        String source = null;
-        Instant at = null;
-        List<Map<String, Object>> runs = jdbc.queryForList("""
-                SELECT id, output, finished_at FROM task_runs WHERE task_id = ? AND status = 'SUCCEEDED'
-                ORDER BY id DESC LIMIT 1""", taskId);
-        if (!runs.isEmpty() && runs.get(0).get("output") != null) {
-            outcome = (String) runs.get(0).get("output");
-            source = "esecuzione #" + runs.get(0).get("id");
-            at = instant(runs.get(0).get("finished_at"));
-        } else if (folder.isPresent()) {
-            String document = row.get("document_path") != null ? (String) row.get("document_path")
-                    : "tasks/" + (row.get("code") != null ? row.get("code") : "TASK-" + taskId) + ".md";
-            Optional<String> esito = workspace.readIn(folder.get(), document).flatMap(BlueprintAiOutcomes::esito);
-            if (esito.isPresent()) {
-                outcome = esito.get();
-                source = "sezione Esito di " + document;
-            }
-        }
+        Optional<TaskOutcomes.TaskOutcome> outcome = taskOutcomes.of(taskId).stream().findFirst();
         return new BlueprintAiActionView(((Number) row.get("id")).longValue(), action, taskId, (String) row.get("title"),
-                (String) row.get("status"), (String) row.get("requested_by"), instant(row.get("created_at")), outcome, source,
-                at, appliesTo(action));
-    }
-
-    /** The Esito section of a task document, unless it is still the placeholder. */
-    static Optional<String> esito(String document) {
-        Matcher m = ESITO.matcher(document);
-        if (!m.find()) {
-            return Optional.empty();
-        }
-        String text = m.group(1).strip();
-        if (text.isEmpty() || text.startsWith("_Da compilare")) {
-            return Optional.empty();
-        }
-        return Optional.of(text);
+                (String) row.get("status"), (String) row.get("requested_by"), instant(row.get("created_at")),
+                outcome.map(TaskOutcomes.TaskOutcome::text).orElse(null),
+                outcome.map(TaskOutcomes.TaskOutcome::source).orElse(null),
+                outcome.map(TaskOutcomes.TaskOutcome::at).orElse(null), appliesTo(action));
     }
 
     private static @Nullable Instant instant(@Nullable Object value) {

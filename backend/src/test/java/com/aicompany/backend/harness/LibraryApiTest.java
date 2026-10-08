@@ -187,6 +187,30 @@ class LibraryApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$[0].origin").value("FILE"));
     }
 
+    /** PHASE 32 (TD-82): re-reading the folder changes only the entries whose file changed. */
+    @Test
+    void aSyncTouchesOnlyTheEntriesWhoseFileChanged() throws Exception {
+        Path skill = library.root().resolve("skills/api-review/SKILL.md");
+        Files.createDirectories(skill.getParent());
+        Files.writeString(skill, NEW_SKILL);
+        mockMvc.perform(post("/api/library/sync")).andExpect(status().isOk());
+        String first = versionOf("api-review");
+
+        mockMvc.perform(post("/api/library/sync")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.updated").isEmpty());
+        assertThat(versionOf("api-review")).as("an unchanged file leaves its entry as it was").isEqualTo(first);
+
+        Files.writeString(skill, NEW_SKILL.replace("Controlla verbi", "Controlla con cura verbi"));
+        mockMvc.perform(post("/api/library/sync")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.updated").value(hasItem("skills/api-review/SKILL.md")));
+        assertThat(versionOf("api-review")).isNotEqualTo(first);
+    }
+
+    private String versionOf(String key) throws Exception {
+        return mockMvc.perform(get("/api/resources").param("q", "Revisione delle API")).andReturn().getResponse().getContentAsString()
+                .replaceAll("(?s).*?\"key\":\"" + key + "\".*?\"version\":(\\d+).*", "$1");
+    }
+
     /**
      * PHASE 31: the SKILL.md of Claude Code, Codex and the marketplaces has a
      * frontmatter with a name and no key. It used to be refused ("'key' must be

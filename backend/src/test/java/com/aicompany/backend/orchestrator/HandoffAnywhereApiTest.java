@@ -149,6 +149,35 @@ class HandoffAnywhereApiTest extends AbstractPostgresTest {
         assertThat(host.launches().getFirst().command()).contains("--prompt");
     }
 
+    /** PHASE 32 (TD-55): what the agent wrote in the Esito of the task document comes back by itself. */
+    @Test
+    void theEsitoAnAgentWritesComesBackToTheConsole() throws Exception {
+        long inProject = task(project());
+        handoff(inProject, "claude-code");
+        JsonNode none = json.readTree(mockMvc.perform(get("/api/tasks/" + inProject + "/outcomes"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(none).as("the placeholder is not an outcome").isEmpty();
+
+        Path document = folder.resolve("rubrica/tasks/TASK-" + inProject + ".md");
+        Files.writeString(document, Files.readString(document).replaceAll("(?s)## Esito.*",
+                "## Esito\n\nCRUD dei contatti fatto, 6 test verdi. Resta la paginazione.\n"));
+        JsonNode outcome = json.readTree(mockMvc.perform(get("/api/tasks/" + inProject + "/outcomes"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get(0);
+        assertThat(outcome.path("text").asString()).isEqualTo("CRUD dei contatti fatto, 6 test verdi. Resta la paginazione.");
+        assertThat(outcome.path("source").asString()).isEqualTo("sezione Esito di tasks/TASK-" + inProject + ".md");
+        assertThat(outcome.path("at").asString()).isNotBlank();
+
+        // Outside a project: the TASK.md of the inbox folder.
+        long alone = task(null);
+        Path inbox = Path.of(handoff(alone, "opencode").path("folder").asString());
+        Files.writeString(inbox.resolve("TASK.md"), Files.readString(inbox.resolve("TASK.md"))
+                .replaceAll("(?s)## Esito.*", "## Esito\n\nFatto.\n"));
+        mockMvc.perform(get("/api/tasks/" + alone + "/outcomes"))
+                .andExpect(jsonPath("$[0].text").value("Fatto."))
+                .andExpect(jsonPath("$[0].source").value("sezione Esito di TASK.md"));
+        mockMvc.perform(get("/api/tasks/999999/outcomes")).andExpect(status().isNotFound());
+    }
+
     @Test
     void anIdeGetsItsRulesFileButAFileTheOperatorWroteIsNeverOverwritten() throws Exception {
         long projectId = project();

@@ -124,6 +124,15 @@ public class HarnessResource {
         this.origin = Origin.USER;
     }
 
+    /** PHASE 32 (TD-82): whether a file's frontmatter would change this entry if it were applied. */
+    public boolean differsFrom(String name, String description, List<String> tags, String sourceUrl, String relativePath) {
+        return !java.util.Objects.equals(this.name, name)
+                || !java.util.Objects.equals(this.description, description)
+                || !java.util.Objects.equals(this.tags, Tags.join(tags))
+                || (sourceUrl != null && !sourceUrl.isBlank() && !sourceUrl.equals(this.sourceUrl))
+                || !java.util.Objects.equals(this.filePath, relativePath);
+    }
+
     public void linkFile(String relativePath, Origin origin) {
         this.filePath = relativePath;
         this.fileSyncedAt = DatabaseClock.now();

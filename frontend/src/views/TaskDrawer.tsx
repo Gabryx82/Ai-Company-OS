@@ -4,7 +4,7 @@ import { DeleteDialog } from "../components/DeleteDialog";
 import { ApiProblem, type Versioned } from "../api/client";
 import {
   TASK_PRIORITIES, TRANSITIONS, type Agent, type AgentConfiguration, type ModelInfo, type Project, type Run,
-  type Suggestion, type Task, type TaskMove, type TaskPriority, type Transition,
+  type Suggestion, type Task, type TaskMove, type TaskOutcome, type TaskPriority, type Transition,
 } from "../api/types";
 import { Field, Modal, PriorityBadge, ProblemNote, StatusBadge, when } from "../components/ui";
 import { BindingChain } from "../components/BindingChain";
@@ -28,6 +28,7 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
   const [version, setVersion] = useState<Versioned<Task> | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [moves, setMoves] = useState<TaskMove[]>([]);
+  const [outcomes, setOutcomes] = useState<TaskOutcome[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [bindings, setBindings] = useState<AgentConfiguration[]>([]);
@@ -43,7 +44,19 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
     setSuggestions(fits);
     // The history is read on its own: a server without it (before PHASE 32) still shows the task.
     api.taskTransitions(taskId).then(setMoves).catch(() => setMoves([]));
+    api.taskOutcomes(taskId).then(setOutcomes).catch(() => setOutcomes([]));
   }, [api, taskId]);
+
+  // PHASE 32 (TD-55): an agent working elsewhere writes its Esito in the task document; while the
+  // task is in progress the drawer looks again, so the outcome comes back without a reload.
+  const inProgress = version?.body.status === "IN_PROGRESS";
+  useEffect(() => {
+    if (!inProgress) return;
+    const timer = window.setInterval(() => {
+      api.taskOutcomes(taskId).then(setOutcomes).catch(() => undefined);
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [api, taskId, inProgress]);
 
   useEffect(() => {
     load().catch(setProblem);
@@ -136,6 +149,8 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
             <DetailsSection key={version.etag} task={task} busy={busy}
                             onSave={(details) => act((etag) => api.updateTask(task.id, etag, details))} />
 
+            <OutcomeSection outcomes={outcomes} />
+
             <HistorySection moves={moves} />
 
             <div className="section">
@@ -166,6 +181,22 @@ const MOVE_LABEL: Record<string, string> = { START: "Avviata", COMPLETE: "Comple
 const VIA_LABEL: Record<string, string> = {
   API: "dalla console", RUN: "lanciando un'esecuzione", HANDOFF: "con un handoff", REVIEW: "con una review",
 };
+
+/** PHASE 32 (TD-55): what the task produced -- read here, accepted or sent back through the review. */
+function OutcomeSection({ outcomes }: { outcomes: TaskOutcome[] }) {
+  if (outcomes.length === 0) return null;
+  return (
+    <div className="section">
+      <div className="section-title">Esito</div>
+      {outcomes.map((o) => (
+        <div key={o.source} className="stack" style={{ gap: 4 }} aria-label={`Esito: ${o.source}`}>
+          <pre className="bp-pseudo" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{o.text}</pre>
+          <span className="muted" style={{ fontSize: 12 }}>Da {o.source}{o.at ? ` · ${when(o.at)}` : ""}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /** PHASE 32 (TD-38): who moved the task, when and through what. */
 function HistorySection({ moves }: { moves: TaskMove[] }) {

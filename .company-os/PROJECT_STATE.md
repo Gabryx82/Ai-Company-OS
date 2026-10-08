@@ -59,9 +59,9 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   visto rosso per mutazione.
 - **Chiusi finora**: lo spazio dell'audit intero (TD-01, 02, 03, 05, 06, 09, 10, 14, 15, 16, 19, 20, 21,
   22 — `AuditDebtGuardTest`, `ApiShapeGuardTest`, `RouteCoverageTest`); vivi TD-26, TD-32, TD-33,
-  TD-34, TD-35, TD-38, TD-39, TD-41, TD-43, TD-45, TD-47, TD-54, TD-59, TD-60, TD-61, TD-62, TD-63,
-  TD-65, TD-66, TD-68, TD-69, TD-70, TD-73. Dettagli in `docs/DEBT_REGISTRY.md` e nelle revisioni di ADR-009,
-  ADR-010, ADR-014, ADR-016, ADR-017, ADR-021, ADR-022, ADR-031, ADR-033, ADR-034, ADR-035.
+  TD-34, TD-35, TD-38, TD-39, TD-41, TD-43, TD-45, TD-47, TD-54, TD-55, TD-59, TD-60, TD-61, TD-62,
+  TD-63, TD-65, TD-66, TD-68, TD-69, TD-70, TD-73, TD-82. Dettagli in `docs/DEBT_REGISTRY.md` e nelle revisioni di ADR-009,
+  ADR-010, ADR-014, ADR-016, ADR-017, ADR-021, ADR-022, ADR-031, ADR-033, ADR-034, ADR-035, ADR-036.
 - **Note di metodo**: `RouteCoverageTest` usa un intercettore presente solo nei test
   (`support/RouteRecorder`, registrato via `AutoConfiguration.imports` dei test) e
   `junit-platform.properties` per girare per ultimo; con `-Dtest=…` si salta. Le entità prendono
@@ -75,7 +75,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Contratto**: i campi delle risposte sono richiesti e `@Nullable` dove possono essere null (`ResponseShapes`);
   `ResponseContractTest` confronta ogni risposta JSON della suite con `docs/api/openapi.json`. Un record nuovo
   con un campo che può essere null va annotato, o la suite lo segnala con schema, campo e rotta.
-- **Suite**: Java **664** verdi (1 saltato preesistente), console **83**, engine **71**.
+- **Suite**: Java **667** verdi (1 saltato preesistente), console **84**, engine **71**.
 - **Prossimo passo**: i debiti vivi restanti, nell'ordine del registro; poi le proposte per quelli che
   richiedono una decisione dell'operatore.
 

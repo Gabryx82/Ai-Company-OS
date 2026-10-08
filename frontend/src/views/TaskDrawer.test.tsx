@@ -126,6 +126,16 @@ describe("TaskDrawer", () => {
       .toContain("Avviata da operator dalla console"));
   });
 
+  it("shows what a handoff produced, from the Esito of the task document (TD-55)", async () => {
+    renderDrawer({
+      "GET /api/tasks/7": () => ({ body: { ...TASK, status: "IN_PROGRESS" }, etag: '"2"' }),
+      "GET /api/tasks/7/outcomes": () => ({ body: [{ taskId: 7, text: "CRUD fatto, 6 test verdi.",
+        source: "sezione Esito di tasks/TASK-7.md", at: "2026-10-08T10:00:00Z", runId: null, documentPath: "tasks/TASK-7.md" }] }),
+    });
+    const outcome = await screen.findByLabelText("Esito: sezione Esito di tasks/TASK-7.md");
+    expect(outcome.textContent).toContain("CRUD fatto, 6 test verdi.");
+  });
+
   it("does not offer a run for a task nobody holds", async () => {
     renderDrawer({ "GET /api/tasks/7": () => ({ body: { ...TASK, agentId: null }, etag: '"0"' }) });
     await screen.findByText("Assegna prima un agente.");

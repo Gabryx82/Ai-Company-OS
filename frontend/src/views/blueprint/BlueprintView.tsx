@@ -114,8 +114,10 @@ function Workspace({ projectId, projectName, onOpenTask }: {
     if (initialized && !fitted.current && blocks.length > 0) {
       fitted.current = true;
       flow.fitView({ padding: 0.12, duration: 0 });
+      // the zoom just chosen decides whether the texts of the area are shown: read them if so
+      window.setTimeout(loadVisible, 0);
     }
-  }, [initialized, blocks.length, flow]);
+  }, [initialized, blocks.length, flow, loadVisible]);
 
   // What the selection points at: the block and its relations, the rest dimmed.
   useEffect(() => {

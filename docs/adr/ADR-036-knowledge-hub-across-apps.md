@@ -322,3 +322,12 @@ la cartella resta come backup. Il Hub mostra il contenuto dei file di istruzioni
 ## 13. Che cosa resta fuori
 
 Registrato come debito: TD-74 … TD-82, TD-83 … TD-85, TD-86 … TD-90 (`docs/DEBT_REGISTRY.md`).
+
+## Revisione PHASE 32 (2026-10-08) — la sincronizzazione automatica rilegge la libreria (TD-82)
+
+Rileggere la cartella della libreria aggiornava ogni voce (`fileSyncedAt`, quindi la versione) anche
+quando il file non era cambiato: per questo la sincronizzazione pianificata non la rileggeva, e un file
+scritto a mano nella libreria entrava nell'indice solo con «Sincronizza ora» o «Rileggi cartella». Ora una
+voce si tocca solo se il file dice qualcosa di nuovo (nome, descrizione, tag, sorgente, percorso); così la
+sincronizzazione ogni 5 minuti rilegge anche la libreria, e un editor aperto su una voce diventa obsoleto
+solo se quel file è cambiato davvero. `LibraryApiTest`, `SkillHubApiTest`.

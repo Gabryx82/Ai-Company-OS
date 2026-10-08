@@ -234,9 +234,14 @@ public class SkillLibrary {
                         invalid.add(relative + ": '" + document.key() + "' is already a " + existing.get().getKind());
                         continue;
                     }
-                    existing.get().describe(document.name(), document.description(), document.tags(), document.source());
-                    existing.get().linkFile(relative, null);
-                    updated.add(relative);
+                    // PHASE 32 (TD-82): an entry is touched only when its file says something
+                    // new -- otherwise a sync would bump every version and stale every open editor.
+                    if (existing.get().differsFrom(document.name(), document.description(), document.tags(),
+                            document.source(), relative)) {
+                        existing.get().describe(document.name(), document.description(), document.tags(), document.source());
+                        existing.get().linkFile(relative, null);
+                        updated.add(relative);
+                    }
                 } else {
                     HarnessResource resource = new HarnessResource(document.key(), document.kind(), document.name(),
                             document.description(), document.tags(), document.source(), null, null);

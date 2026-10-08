@@ -2244,6 +2244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/{id}/outcomes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["taskOutcomes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/{id}/project": {
         parameters: {
             query?: never;
@@ -4311,6 +4327,17 @@ export interface components {
             /** Format: int64 */
             taskId: number;
             title: string;
+        };
+        TaskOutcome: {
+            /** Format: date-time */
+            at: string | null;
+            documentPath: string | null;
+            /** Format: int64 */
+            runId: number | null;
+            source: string;
+            /** Format: int64 */
+            taskId: number;
+            text: string;
         };
         TaskProjectAssignmentRequest: {
             /** Format: int64 */
@@ -8671,6 +8698,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Orchestration"];
+                };
+            };
+        };
+    };
+    taskOutcomes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TaskOutcome"][];
                 };
             };
         };

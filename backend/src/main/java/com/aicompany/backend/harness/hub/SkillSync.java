@@ -106,13 +106,20 @@ public class SkillSync {
             t.setDaemon(true);
             return t;
         });
-        schedule.scheduleWithFixedDelay(() -> {
-            try {
-                sync(false);
-            } catch (RuntimeException e) {
-                LOG.warn("Scheduled skill synchronisation failed", e);
-            }
-        }, 20, interval.toSeconds(), TimeUnit.SECONDS);
+        schedule.scheduleWithFixedDelay(this::scheduledSync, 20, interval.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    /**
+     * What the schedule runs (PHASE 32, TD-82): the applications and the library folder
+     * too -- re-reading it changes only the entries whose file changed, so an editor open
+     * on any other entry stays current.
+     */
+    void scheduledSync() {
+        try {
+            sync(true);
+        } catch (RuntimeException e) {
+            LOG.warn("Scheduled skill synchronisation failed", e);
+        }
     }
 
     @jakarta.annotation.PreDestroy
@@ -124,9 +131,8 @@ public class SkillSync {
 
     /**
      * One synchronisation now. One at a time. {@code withLibrary} also re-reads the
-     * library folder into its index, as «Rileggi cartella» does -- the operator's
-     * gesture, not the schedule's: re-indexing touches every entry's version, and a
-     * background run must not make the console's open editors stale.
+     * library folder into its index, as «Rileggi cartella» does; since PHASE 32 (TD-82)
+     * it touches only the entries whose file changed, so the schedule does it too.
      */
     public synchronized Report sync(boolean withLibrary) {
         SkillLibrary.SyncReport libraryReport = withLibrary ? transactions.execute(status -> library.sync())

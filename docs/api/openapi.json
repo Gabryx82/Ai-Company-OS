@@ -5521,6 +5521,33 @@
         "required" : [ "code", "file", "taskId", "title" ],
         "type" : "object"
       },
+      "TaskOutcome" : {
+        "properties" : {
+          "at" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "documentPath" : {
+            "type" : [ "string", "null" ]
+          },
+          "runId" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "source" : {
+            "type" : "string"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "at", "documentPath", "runId", "source", "taskId", "text" ],
+        "type" : "object"
+      },
       "TaskProjectAssignmentRequest" : {
         "properties" : {
           "projectId" : {
@@ -11548,6 +11575,36 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Orchestration"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "orchestrator-controller" ]
+      }
+    },
+    "/api/tasks/{id}/outcomes" : {
+      "get" : {
+        "operationId" : "taskOutcomes",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TaskOutcome"
+                  },
+                  "type" : "array"
                 }
               }
             },

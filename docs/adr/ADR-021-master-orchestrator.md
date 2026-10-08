@@ -108,3 +108,14 @@ Col 9B locale una generazione dura circa 13 minuti; ora si può fermare.
   una run finita); una run già finita è restituita com'è.
 
 La console mostra «Annulla» accanto all'avanzamento e, dopo, «Ultima pianificazione annullata».
+
+## Revisione PHASE 32 (2026-10-08) — l'esito di un handoff torna da solo (TD-55)
+
+Un handoff non ha un'API da cui ricevere il risultato, ma ha un posto dove l'agente lo scrive: la sezione
+**Esito** del documento della task (§4), che il pacchetto gli chiede di compilare. `GET /api/tasks/{id}/outcomes`
+(`TaskOutcomes`) legge ciò che la task ha prodotto, il più recente per primo: l'output dell'ultima
+esecuzione riuscita, e la sezione Esito del documento — `tasks/<TASK>.md` o il documento del piano nella
+cartella del progetto, `TASK.md` nella cartella inbox di una task senza progetto — fino a `## Note` o alla
+fine, segnaposto escluso. Il pannello della task lo mostra in «Esito» e, mentre la task è in corso, lo
+rilegge da solo ogni 15 secondi: l'operatore non deve aprire il documento. Accettarlo o rimandarlo resta la
+review (§5). Lo stesso servizio dà l'esito delle azioni AI del Blueprint (ADR-033, TD-63).

@@ -150,13 +150,13 @@ describe("BlueprintView", () => {
   });
 
   it("loads an outline first, then the texts of the area in view (TD-61)", async () => {
-    const outline = { ...graph, outline: true, partial: false,
-      nodes: graph.nodes.map((n) => ({ ...n, description: null, pseudocodePreview: null })),
-      edges: graph.edges.map((e) => ({ ...e, label: null, description: null, code: null })) };
+    // one block: the zoom that fits it shows the texts, whichever comes first, the fit or the first read
+    const one = { ...graph, nodes: [graph.nodes[0]], edges: [], layout: { positions: { 1: { x: 0, y: 0 } }, version: 4 } };
+    const outline = { ...one, outline: true, partial: false, nodes: one.nodes.map((n) => ({ ...n, description: null, pseudocodePreview: null })) };
     const server = mount({
-      "GET /api/projects/7/blueprint": (call) => ({ body: call.path.includes("within=") ? { ...graph, outline: false, partial: true } : outline }),
+      "GET /api/projects/7/blueprint": (call) => ({ body: call.path.includes("within=") ? { ...one, outline: false, partial: true } : outline }),
     });
-    await waitFor(() => expect(server.calls.some((c) => c.path.includes("within="))).toBe(true), { timeout: 4000 });
+    expect((await screen.findAllByText("Business rules.", {}, { timeout: 4000 })).length).toBeGreaterThan(0);
     const reads = server.calls.filter((c) => c.method === "GET" && c.path.startsWith("/api/projects/7/blueprint")
       && !c.path.includes("/vocabulary"));
     expect(reads[0].path).toBe("/api/projects/7/blueprint?detail=outline");
