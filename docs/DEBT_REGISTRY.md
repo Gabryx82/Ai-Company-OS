@@ -33,11 +33,11 @@ Sono queste, e sono tutte. Ogni altro identificatore o coincide (§3) o esiste i
 
 | ID | **Audit** (TASK-000) | **Vivo** (`PROJECT_STATE.md`) |
 |---|---|---|
-| **TD-14** | Build non riproducibile offline: `./mvnw -o test` fallisce per plugin assenti dalla cache. **Non rivalutato**, e resta aperto nello spazio dell'audit | **CHIUSO** il 2026-09-23. `origin` → `Gabryx82/Ai-Company-OS`, `master` pushato (`14f70b3`), workflow `CI` **registrato e attivo**, e la **run `35863517006` è passata in verde** su `ubuntu-latest` in 1m26s, eseguendo `./mvnw -B clean test` con tutti e 9 gli step `success`. Non è un file YAML: è una CI che ha girato. `tasks/TASK-012/EVIDENCE_TD14.md` §11 |
-| **TD-19** | Metadati `pom.xml` vuoti | Componente del ciclo di vita del progetto. **Chiuso da TASK-004** |
-| **TD-20** | Igiene Git | Le eccezioni che Spring solleva **prima** del nostro codice non entravano nel contratto d'errore. **Chiuso da TASK-005** |
-| **TD-21** | `System.out.println` invece di logging | **Chiuso da TASK-005**, dentro la normalizzazione del contratto d'errore |
-| **TD-22** | Configurazione porta e ambiente assenti | Mancava il test incrementale `V1 → V2`. **Chiuso da TASK-006**, con un test su **ogni** coppia consecutiva invece che su quella specifica |
+| **TD-14** | Build non riproducibile offline: `./mvnw -o test` fallisce per plugin assenti dalla cache. **Chiuso** (PHASE 32, verificato): la suite intera gira con `./mvnw -o test` (627 test) e in CI online (TD-14 vivo) | **CHIUSO** il 2026-09-23. `origin` → `Gabryx82/Ai-Company-OS`, `master` pushato (`14f70b3`), workflow `CI` **registrato e attivo**, e la **run `35863517006` è passata in verde** su `ubuntu-latest` in 1m26s, eseguendo `./mvnw -B clean test` con tutti e 9 gli step `success`. Non è un file YAML: è una CI che ha girato. `tasks/TASK-012/EVIDENCE_TD14.md` §11 |
+| **TD-19** | Metadati `pom.xml` vuoti — **chiuso** (PHASE 32): metadati compilati, `AuditDebtGuardTest.td19…` | Componente del ciclo di vita del progetto. **Chiuso da TASK-004** |
+| **TD-20** | Igiene Git — **chiuso** (PHASE 32): `backend/HELP.md` non più tracciato; `AuditDebtGuardTest.td20…` (nessun file ignorato e tracciato) | Le eccezioni che Spring solleva **prima** del nostro codice non entravano nel contratto d'errore. **Chiuso da TASK-005** |
+| **TD-21** | `System.out.println` invece di logging — **chiuso** (PHASE 32): `AuditDebtGuardTest.td21…` | **Chiuso da TASK-005**, dentro la normalizzazione del contratto d'errore |
+| **TD-22** | Configurazione porta e ambiente assenti — **chiuso** (PHASE 32): `AuditDebtGuardTest.td22…` | Mancava il test incrementale `V1 → V2`. **Chiuso da TASK-006**, con un test su **ogni** coppia consecutiva invece che su quella specifica |
 
 **Nota importante su questi cinque.** Le voci della colonna «Audit» **non sono state rivalutate**
 da TASK-011: non si sa, da questo documento, se il `pom.xml` abbia ancora i metadati vuoti. Dire
@@ -58,7 +58,7 @@ problema non esista.
 | **TD-11** | CORS incoerente | **Chiuso da TASK-014**: una policy globale, origini dichiarate, niente wildcard, `ETag` esposto |
 | **TD-12** | Nessun dominio per `status` e `priority` | **Chiuso**: la metà `status` da TASK-010, la metà `priority` (TD-36) da TASK-016 |
 | **TD-13** | Nessuna relazione tra entità | **Risolto da TASK-009** |
-| **TD-15** | Lombok dichiarato e mai usato | **Aperto** |
+| **TD-15** | Lombok dichiarato e mai usato | **Chiuso** (PHASE 32): rimosso dal `pom.xml`; `AuditDebtGuardTest.td15…` fallisce se torna dichiarato senza usi |
 | **TD-17** | `README.md` con escape markdown errati | **Chiuso** (blocco PHASE 3–7): README riscritto; `ReadmeTruthTest` fallisce se tornano |
 | **TD-18** | `README.md` descrive uno stack inesistente | **Chiuso** (blocco PHASE 3–7): README descrive lo stack reale; `ReadmeTruthTest` rifiuta Supabase/Vercel/LangGraph e verifica le cartelle citate |
 
@@ -72,16 +72,19 @@ precisamente ciò che il charter vieta.
 
 | ID | Contenuto | Stato |
 |---|---|---|
-| **TD-01** | Persistenza volatile (H2 in-memory) | non rivalutato qui |
-| **TD-02** | Schema generato da Hibernate senza migrazioni | non rivalutato qui |
-| **TD-03** | Nessuna validazione degli input | non rivalutato qui |
-| **TD-05** | Entità JPA esposte come contratto API | non rivalutato qui |
-| **TD-06** | Deserializzazione basata su costruttore implicito | non rivalutato qui |
-| **TD-09** | Copertura di test funzionale nulla | non rivalutato qui |
-| **TD-10** | Violazioni di layering nei package | non rivalutato qui |
-| **TD-16** | `open-in-view` non configurato | non rivalutato qui |
+| **TD-01** | Persistenza volatile (H2 in-memory) | **chiuso** (PHASE 32): PostgreSQL in ogni profilo, nessun H2 — `AuditDebtGuardTest.td01…` |
+| **TD-02** | Schema generato da Hibernate senza migrazioni | **chiuso** (PHASE 32): Flyway possiede lo schema, `ddl-auto=validate` in ogni profilo — `AuditDebtGuardTest.td02…` |
+| **TD-03** | Nessuna validazione degli input | **chiuso** (PHASE 32): ogni corpo di richiesta con vincoli è `@Valid` — `ApiShapeGuardTest.td03…` |
+| **TD-05** | Entità JPA esposte come contratto API | **chiuso** (PHASE 32): nessuna entità raggiungibile da ciò che un controller risponde — `ApiShapeGuardTest.td05…` |
+| **TD-06** | Deserializzazione basata su costruttore implicito | **chiuso** (PHASE 32): ogni corpo di richiesta è un record — `ApiShapeGuardTest.td06…` |
+| **TD-09** | Copertura di test funzionale nulla | **chiuso** (PHASE 32): ogni rotta dei controller è raggiunta da un test della suite — `RouteCoverageTest`, che registra le rotte davvero chiamate e gira per ultimo; coperte le 14 che non lo erano |
+| **TD-10** | Violazioni di layering nei package | **chiuso** (PHASE 32): i pacchetti `repository`, `controller` e `model` contengono solo il loro tipo di classe — `ApiShapeGuardTest.td10…` |
+| **TD-16** | `open-in-view` non configurato | **chiuso** (PHASE 32): `open-in-view=false` in ogni profilo — `AuditDebtGuardTest.td16…` |
 
-**Rivalutarli è una task a sé**, e vale la pena farla: un registro di debiti in cui metà delle voci
+**Rivalutati in PHASE 32** (2026-10-08), ciascuno con un test che fallisce se il difetto torna
+(`AuditDebtGuardTest`, `ApiShapeGuardTest`, `RouteCoverageTest`), insieme ai cinque della §2 e a
+TD-15: lo spazio dell'audit non ha più voci aperte. Il testo che segue spiega perché TASK-011 non
+lo fece. **Rivalutarli è una task a sé**, e vale la pena farla: un registro di debiti in cui metà delle voci
 sono risolte senza che nessuno lo dica è rumore che nasconde le voci vere. Non è stata fatta qui
 perché `AUTONOMOUS_LOOP.md` §4 mette il cleanup al livello 6 e il charter §4 vieta di allargare lo
 scope per sistemare tutto.
@@ -96,16 +99,16 @@ ferma a `TD-22`.
 | **TD-23** | L'elenco delle tabelle è dichiarato a mano, e la spiegazione diceva il contrario | chiuso | TASK-006 |
 | **TD-24** | Una scrittura che funzionava solo perché il self-invocation aggirava il proxy e ignorava un `readOnly = true` | chiuso — e reso **inesprimibile**, non solo assente (AC-18) | TASK-004 |
 | **TD-25** | Finestra fra il controllo «il progetto è `ACTIVE`» e il commit: lo stato poteva cambiare nel mezzo | chiuso interamente da L2+L3+L4, nessun residuo | TASK-004 |
-| **TD-26** | Il path lazy non è esercitato fuori transazione | **aperto**, parzialmente coperto | TASK-004 |
+| **TD-26** | Il path lazy non è esercitato fuori transazione | **chiuso** (PHASE 32): `LazyAssociationsOutsideTransactionTest` — fuori transazione gli id restano leggibili, l'attraversamento fallisce, servizio ed endpoint rispondono | TASK-004 |
 | **TD-27** | Due dialetti d'errore sulla **stessa rotta**: `GET /api/projects/999/tasks` e `.../abc/tasks` rispondevano in forme diverse | chiuso | TASK-005 |
 | **TD-28** | `PUT /api/projects/{id}` esposto alla sovrascrittura con dati stantii | chiuso | TASK-008 |
 | **TD-29** | Forma della risposta per gli errori di locking | chiuso | TASK-005 |
 | **TD-30** | Due riassegnazioni concorrenti dello stesso task: last-write-wins | chiuso | TASK-008 |
 | **TD-31** | `Agent` usava un booleano dove `Project` usa un enum chiuso. Unificarli eliminava una colonna → era **hard stop #3** | **CHIUSO** 2026-09-19 da **TASK-012**: decisione umana esplicita, `V8`, ADR-012. Backfill biiettivo, contratto pubblico invariato | TASK-007 |
-| **TD-32** | L'entity-tag deriva dalla versione di riga, non dai byte della rappresentazione | **aperto**, MINOR | TASK-008 |
-| **TD-33** | I listati non portano ETag: mutare N risorse costa N letture | **aperto**, MINOR | TASK-008 |
-| **TD-34** | Nessun modo di chiedere «i task fermi su agenti inattivi» | **aperto**, MINOR | TASK-009 |
-| **TD-35** | Nessun `DELETE` dell'associazione con l'agente | **aperto**, MINOR | TASK-009 |
+| **TD-32** | L'entity-tag deriva dalla versione di riga, non dai byte della rappresentazione | **chiuso** (PHASE 32): ETag `"<versione>.<digest dei byte>"` (`RepresentationTagAdvice`), `If-Match` confronta la versione; orari delle entità alla precisione del database (`DatabaseClock`) — `RepresentationTagTest`, `PreconditionContractTest` | TASK-008 |
+| **TD-33** | I listati non portano ETag: mutare N risorse costa N letture | **chiuso** (PHASE 32): `version` per elemento nei listati di progetti, task e agenti — `ListingVersionTest` | TASK-008 |
+| **TD-34** | Nessun modo di chiedere «i task fermi su agenti inattivi» | **chiuso** (PHASE 32): `GET /api/tasks?agentStatus=INACTIVE`, filtro «Solo su agenti disattivati» nel Task Board — `TaskAgentAssignmentApiTest` | TASK-009 |
+| **TD-35** | Nessun `DELETE` dell'associazione con l'agente | **chiuso** (PHASE 32): `DELETE /api/tasks/{id}/agent` sotto `If-Match`, con la regola del progetto archiviato; «Togli agente» nella console — `TaskAgentAssignmentApiTest` | TASK-009 |
 | **TD-36** | `Task.priority` resta una stringa libera senza vincolo DB | **chiuso** da TASK-016: `TaskPriority`, `V9`, censimento | TASK-010 |
 | **TD-37** | Nessun percorso muta lo `status` di un task esistente: vocabolario chiuso, ciclo di vita non percorribile | **chiuso** da TASK-015: quattro archi, ADR-014 | TASK-010 |
 | **TD-38** | Nessuna storia delle transizioni: non si sa chi ha mosso un task né quando | **aperto**, MINOR | TASK-015 |
@@ -113,7 +116,7 @@ ferma a `TD-22`.
 | **TD-40** | Nessuna contabilità né limite di costo per le run su modelli a consumo (`anthropic`): i token sono registrati per run, mai sommati o limitati | **chiuso** in PHASE 24 (ADR-031): costo per run, budget mensili per provider a consumo, prezzi per modello; nessuna run a consumo senza budget e prezzo | TASK-019 |
 
 | **TD-40** *(nota PHASE 8)* | Ora vale anche per OpenRouter (`AICOS_ENGINE_OPENROUTER_API_KEY`). La scheda Consumi **somma** i token delle run a consumo per finestra, ma non **limita** nulla | **chiuso** in PHASE 24 (ADR-031), anche per OpenRouter | PHASE 8 |
-| **TD-41** | La fase di un task passa a `IN_PROGRESS`/`DONE` da handoff e review **senza lock di riga** sulla fase: un'approvazione concorrente può produrre un conflitto di `@Version` (500) invece di un 409 | **aperto**, MINOR | PHASE 11 |
+| **TD-41** | La fase di un task passa a `IN_PROGRESS`/`DONE` da handoff e review **senza lock di riga** sulla fase: un'approvazione concorrente può produrre un conflitto di `@Version` (500) invece di un 409 | **chiuso** (PHASE 32): la fase è riletta sotto lock esclusivo prima di scriverne l'avanzamento — `PhaseProgressRaceTest`, con intreccio deterministico | PHASE 11 |
 | **TD-42** | Il terminale integrato nella pagina (PTY nel browser) non esiste: la scheda Terminale apre Windows Terminal nella cartella del progetto | **chiuso** in PHASE 22 (ADR-029): PTY + WebSocket + xterm.js, solo admin, ticket monouso | PHASE 8 |
 | **TD-43** | Una generazione di piano non si può annullare; col 9B locale dura ~13 minuti (misurato) | **aperto**, MINOR | PHASE 10 |
 | **TD-44** | Gmail, Drive, ClickUp, ChatGPT web, Gemini non sono incorporabili (policy di framing misurate): si aprono in finestre dedicate | **aperto** → PHASE 18, **decisione umana** (shell desktop, credenziali OAuth) | PHASE 8 |
@@ -132,7 +135,7 @@ ferma a `TD-22`.
 
 | **TD-57** | Blueprint: TypeScript, JavaScript e Python sono letti in modo **lessicale** (un blocco per file, import e rotte), non con un AST; il punto di estensione `BlueprintLanguagePlugin` esiste, i plugin AST no (ADR-033 §5) | **aperto** | PHASE 28 |
 | **TD-58** | Blueprint Java senza symbol solver: le chiamate su risultati di catene (`a.b().c()`), su campi ereditati o su tipi qualificati per package non generano relazioni; nessun call graph interprocedurale | **aperto**, MINOR | PHASE 28 |
-| **TD-59** | springdoc nomina gli schemi con il nome **semplice** della classe: due record omonimi in package diversi si sovrascrivono in silenzio nel contratto. Trovato e evitato in PHASE 28 (prefisso `Blueprint`), ma nessun test impedisce che si ripeta. **Ripetuto in PHASE 31** (`Summary`, `Opened`, `Installed`, e `operationId` duplicati): trovato confrontando il contratto con il precedente, evitato con nomi univoci | **aperto** | PHASE 28 |
+| **TD-59** | springdoc nomina gli schemi con il nome **semplice** della classe: due record omonimi in package diversi si sovrascrivono in silenzio nel contratto. Trovato e evitato in PHASE 28 (prefisso `Blueprint`), ma nessun test impedisce che si ripeta. **Ripetuto in PHASE 31** (`Summary`, `Opened`, `Installed`, e `operationId` duplicati): trovato confrontando il contratto con il precedente, evitato con nomi univoci | **chiuso** (PHASE 32): `ApiShapeGuardTest.td59…` fallisce se due tipi raggiungibili dal contratto hanno lo stesso nome semplice o due handler lo stesso nome di metodo. Ha trovato cinque collisioni reali che il contratto descriveva male (`Edge`, `Node`, `ProfileRequest`, `ReviewRequest`, `SoftwareRef`) e 19 `operationId` numerati: rinominati | PHASE 28 |
 | **TD-60** | La riconciliazione di una scansione salva nodi e archi uno a uno (≈12 s per 614 blocchi e 2289 relazioni su questo repository): senza batching JDBC | **aperto**, MINOR | PHASE 28 |
 | **TD-61** | `GET …/blueprint` restituisce l'intero grafo (≈1,1 MB per 614 blocchi): nessun caricamento progressivo per livello o per area del canvas | **aperto**, MINOR | PHASE 28 |
 | **TD-62** | L'autorizzazione di un endpoint nel Blueprint viene solo dalle annotazioni (`@PreAuthorize`, `@Secured`): le regole per percorso di `SecurityConfiguration` non sono lette, e il campo dice «autenticato (regola globale)» | **aperto**, MINOR | PHASE 28 |
@@ -143,12 +146,12 @@ ferma a `TD-22`.
 | **TD-66** | Il ruolo `CODER` del catalogo non ha più un modello `ACTIVE`: il lavoro di codice arriva a `qwen3.5:9b` per il ripiego sul ruolo `PLANNER`, e la console lo dice come «ripiego». Un modello ha un solo ruolo | **aperto**, MINOR | PHASE 29 |
 | **TD-67** | L'iGPU Intel Arc 140V (Vulkan, `OLLAMA_IGPU_ENABLE=1`) accelera l'elaborazione del prompt di 2–3,7× su Qwen 3.5 e Gemma 4 ma dimezza la generazione di LFM2.5; Ollama la attiva per tutti i modelli insieme. Lasciata spenta: servirebbe una scelta per modello (`num_gpu`) nell'engine | **aperto**, opportunità misurata | PHASE 29 |
 
-| **TD-68** | Un software aggiunto con `POST /api/software` (admin, solo API: la console non ne crea) non si elimina: si disabilita (`enabled`). Quando la console permetterà di aggiungerne, servirà l'eliminazione, scollegando `agent_software` ed `ecosystem_autostart` (ADR-035 §9) | **aperto**, MINOR | PHASE 30 |
-| **TD-69** | Un servizio dell'avvio coordinato aggiunto con `POST /api/admin/ecosystem/services` (solo API) non si rimuove: se ne spegne l'autostart (ADR-035 §9) | **aperto**, MINOR | PHASE 30 |
-| **TD-70** | Un crash tra il commit e la rimozione dei file preparati lascia nella cartella un file nascosto `.<nome>.aicos-deleting-<uuid>`: invisibile a ogni elenco, ma nessuno lo spazza (ADR-035 §5) | **aperto**, MINOR | PHASE 30 |
+| **TD-68** | Un software aggiunto con `POST /api/software` (admin, solo API: la console non ne crea) non si elimina: si disabilita (`enabled`). Quando la console permetterà di aggiungerne, servirà l'eliminazione, scollegando `agent_software` ed `ecosystem_autostart` (ADR-035 §9) | **chiuso** (PHASE 32): anteprima e `DELETE /api/software/{key}` (admin, `If-Match`) per le voci aggiunte, scollegandole da agenti e avvio; il catalogo spedito resta `409`; «Elimina» nel Software Hub — `SoftwareHubApiTest` | PHASE 30 |
+| **TD-69** | Un servizio dell'avvio coordinato aggiunto con `POST /api/admin/ecosystem/services` (solo API) non si rimuove: se ne spegne l'autostart (ADR-035 §9) | **chiuso** (PHASE 32): anteprima e `DELETE /api/admin/ecosystem/services/{key}` per i servizi aggiunti; quelli di serie `409`; «Togli dall'avvio» nella console — `EcosystemApiTest` | PHASE 30 |
+| **TD-70** | Un crash tra il commit e la rimozione dei file preparati lascia nella cartella un file nascosto `.<nome>.aicos-deleting-<uuid>`: invisibile a ogni elenco, ma nessuno lo spazza (ADR-035 §5) | **chiuso** (PHASE 32): `ManagedFiles.sweep` rimuove i file in staging rimasti, mai quelli di una transazione ancora aperta; `StagedFileSweeper` lo esegue a ogni avvio sulla libreria e, per ogni progetto, su `references/` e sulle cartelle dei documenti — `ManagedFilesTest`, `StagedFileSweeperTest` | PHASE 30 |
 | **TD-71** | Le voci del catalogo spedito (skill, framework, software, modelli) non si possono congedare: si scollegano ma restano negli elenchi, perché l'avvio le reinserisce. Servirebbe un elenco di chiavi congedate letto da `CatalogBootstrap` (ADR-035 §7) | **aperto** | PHASE 30 |
 | **TD-72** | Due forme di eliminazione convivono: progetti e task (ADR-027) rispondono `200` con `DeletionImpact` e usano il dialog con il nome digitato; le eliminazioni di PHASE 30 rispondono `204` con `DeletionPreview` e `ConfirmDeletion`. Unificarle cambierebbe un contratto pubblicato (non additivo) | **aperto**, MINOR | PHASE 30 |
-| **TD-73** | `POST /api/resources` registra `origin = CATALOG` anche per una voce creata da una persona: l'eliminazione decide sulla presenza della chiave nel catalogo spedito e non ne è toccata, ma la console etichetta quella voce «catalogo» | **aperto**, MINOR | PHASE 30 |
+| **TD-73** | `POST /api/resources` registra `origin = CATALOG` anche per una voce creata da una persona: l'eliminazione decide sulla presenza della chiave nel catalogo spedito e non ne è toccata, ma la console etichetta quella voce «catalogo» | **chiuso** (PHASE 32): una voce creata con `POST /api/resources` è `USER`; quelle registrate prima come `CATALOG` e assenti dal catalogo spedito sono rietichettate all'avvio — `HarnessApiTest` | PHASE 30 |
 
 | **TD-74** | Plugin di Codex: nessuna verifica di aggiornamenti. Il catalogo locale `~/.codex/.tmp/plugins` è di un altro canale e più vecchio delle versioni installate (misurato: `github` 0.1.0 contro 0.1.12): confrontarlo darebbe solo falsi segnali. Codex li aggiorna da sé (ADR-036 §8) | **aperto**, vincolo esterno | PHASE 31 |
 | **TD-75** | I plugin di Claude Desktop, Claude Code e Codex non si aggiornano dal Knowledge Hub: il Hub segnala la versione più recente e apre l'app, o mostra il comando (`claude plugin update …`). Sono gli store delle app (ADR-036 §2) | **aperto**, per scelta | PHASE 31 |

@@ -44,9 +44,32 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶▶▶▶▶▶▶ PHASE 31 — Il Knowledge Hub come punto unico — COMPLETATA il 2026-10-07, in attesa di Human Final Review
+## ▶▶▶▶▶▶▶▶ PHASE 32 — Debito zero — IN CORSO dal 2026-10-07
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttiva** dell'operatore (2026-10-07): «non restare debiti aperti alla fine, nel senso che devi
+  risolverli tutti» — confermata con una domanda esplicita: **tutti i debiti del registro**, sia
+  dello spazio dell'audit sia di quello vivo. Quelli che non dipendono dal codice (vincoli esterni,
+  decisioni umane, hard stop del charter §5) si portano all'operatore con una proposta, non si chiudono
+  per finta.
+- **Branch**: `autonomous/phase-32-debt-zero`, dalla punta di PHASE 31 (`021404c`, che contiene anche le
+  correzioni del terminale e dei pannelli). Non pushato; `master` intoccato.
+- **Regola di chiusura** (charter §4): ogni debito chiuso ha un test che fallisce se il difetto torna,
+  visto rosso per mutazione.
+- **Chiusi finora**: lo spazio dell'audit intero (TD-01, 02, 03, 05, 06, 09, 10, 14, 15, 16, 19, 20, 21,
+  22 — `AuditDebtGuardTest`, `ApiShapeGuardTest`, `RouteCoverageTest`); vivi TD-26, TD-32, TD-33,
+  TD-34, TD-35, TD-41, TD-59, TD-68, TD-69, TD-70, TD-73. Dettagli in `docs/DEBT_REGISTRY.md` e nelle revisioni di
+  ADR-009, ADR-010, ADR-035.
+- **Note di metodo**: `RouteCoverageTest` usa un intercettore presente solo nei test
+  (`support/RouteRecorder`, registrato via `AutoConfiguration.imports` dei test) e
+  `junit-platform.properties` per girare per ultimo; con `-Dtest=…` si salta. Le entità prendono
+  l'ora da `persistence/DatabaseClock` (microsecondi), mai da `Instant.now()`.
+- **Suite**: Java **627+** verdi (1 saltato preesistente), console **74**.
+- **Prossimo passo**: i debiti vivi restanti, nell'ordine del registro; poi le proposte per quelli che
+  richiedono una decisione dell'operatore.
+
+## ▶▶▶▶▶▶▶ PHASE 31 — Il Knowledge Hub come punto unico — COMPLETATA il 2026-10-07, in attesa di Human Final Review
 
 - **Direttiva** del 2026-10-07: trasformare il Knowledge Hub in un punto unico per le skill e le knowledge di
   tutti gli agenti — quelle della libreria e quelle installate con Claude Desktop, Codex e le altre app,

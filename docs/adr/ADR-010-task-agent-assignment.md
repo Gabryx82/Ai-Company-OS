@@ -322,3 +322,13 @@ Le tre decisioni sono le stesse di `V3`, e reggono per le stesse ragioni:
 | `agentActive` o `agentStatus` in `TaskResponse` | Nessun invariante lo richiede; pubblicare un campo è irreversibile. ADR-006 §3 |
 | Relazione bidirezionale, `Agent` con una collezione di task | Esattamente ciò che ADR-005 §7 evitò: rende la cascata un flag invece di una decisione |
 | `DELETE /api/tasks/{id}/agent` | Si può aggiungere domani senza rompere nessuno; toglierlo dopo no. TD-35 |
+
+## Revisione PHASE 32 (2026-10-08) — TD-34 e TD-35 chiusi
+
+- **`DELETE /api/tasks/{id}/agent`** (rivede l'ultima alternativa scartata): sotto `If-Match` sulla
+  task, con lo stesso ordine dell'assegnazione — L0 sulla task, P1, L2 sul progetto — e con la sola
+  regola del progetto archiviato. Nessuna riga dell'agente è letta (D3). Già non assegnata: `200`,
+  nulla da fare. La console offre «Togli agente».
+- **`GET /api/tasks?agentStatus=INACTIVE`** risponde «quali task aspettano un agente disattivato»
+  senza incrociare due liste; si combina con `status`. Nessun campo derivato in `TaskResponse`: la
+  decisione di ADR-006 §3 resta, la domanda si fa al listato.

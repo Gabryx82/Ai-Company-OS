@@ -371,3 +371,20 @@ Nessun client reale esiste ancora: il costo della rottura è oggi il più basso 
 | Accettare `If-Match: *` | Un bypass documentato dell'intero protocollo. §5.3 |
 | `409` invece di `412` | `412` esiste per questo, e `409` è già il codice dei rifiuti di dominio di ADR-004/005/006: riusarlo renderebbe indistinguibili «lo stato non lo permette» e «non sapevi qual era lo stato» |
 | `400` invece di `428` per l'header assente | `428` dice al client **che cosa fare**: rileggi e rimanda con la precondizione. `400` dice solo che ha sbagliato |
+
+## Revisione PHASE 32 (2026-10-08) — TD-32 e TD-33 chiusi
+
+- **Il tag segue i byte.** Il controller imposta il tag di stato `"<versione>"`; prima che il corpo sia
+  scritto `RepresentationTagAdvice` lo completa in `"<versione>.<digest>"`, con i primi 16 caratteri
+  esadecimali dello SHA-256 della rappresentazione. Due rappresentazioni diverse — forma cambiata, o
+  dati di un'altra riga — non condividono più un tag. `If-Match` resta un confronto di **stato**
+  (§2): `Precondition` legge la versione davanti al punto, accetta anche `"<versione>"` e rifiuta un
+  suffisso che non è esadecimale. La console tratta il tag come stringa opaca e non cambia.
+- **La versione nei listati (rivede §7).** Progetti, task e agenti portano `version` per elemento:
+  mutare N risorse non costa più N letture prima. §7 temeva «lo stesso fatto in due canali che
+  possono divergere»; non divergono perché la versione è una sola e il tag la contiene, e diverse
+  risorse più recenti (utenti, voci del Daily, catalogo) la esponevano già.
+- **Effetto collaterale trovato e corretto.** Con il tag sui byte, la risposta di una scrittura e la
+  lettura successiva risultavano diverse: le entità registravano `Instant.now()` con 100 ns di
+  precisione e PostgreSQL ne conserva 1 µs. Ora ogni orario di un'entità viene da `DatabaseClock`,
+  troncato ai microsecondi; un test impedisce che `Instant.now()` torni nei modelli.

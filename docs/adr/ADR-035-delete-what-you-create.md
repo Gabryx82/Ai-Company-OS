@@ -203,3 +203,14 @@ rimosso il codice, e la mutazione della rilettura stessa è rossa.
 **Smoke dal vivo** su un database separato: ha trovato un solo comportamento da cambiare — un file già
 eliminato fuori dalla console, o un agente eliminato da altri nel frattempo, rispondeva `404` e il dialog lo
 mostrava come errore. È lo stato che l'operatore chiedeva: ora la console lo dice e rilegge l'elenco.
+
+## Revisione PHASE 32 (2026-10-08) — TD-68, TD-69 e TD-73 chiusi
+
+| Entità | Elimina | Note |
+|---|---|---|
+| Software aggiunto con `POST /api/software` | **Sì** — admin, `If-Match`, anteprima (`GET /api/software/{key}/deletion`) | si scollega dagli agenti e dall'avvio coordinato; il programma installato non è toccato. Il catalogo spedito resta `409` (si disabilita) |
+| Servizio aggiunto all'avvio coordinato | **Sì** — admin, `If-Match`, anteprima | `DELETE /api/admin/ecosystem/services/{key}`; i tre di serie restano `409` (si spegne l'avvio automatico) |
+
+`POST /api/resources` registra ora `origin = USER`; all'avvio le voci etichettate `CATALOG` che il
+catalogo spedito non contiene sono rietichettate `USER`. La console mostra «Elimina» nel Software Hub
+e «Togli dall'avvio» nel pannello dell'ecosistema solo per ciò che si può eliminare.
