@@ -23,6 +23,7 @@ import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
+import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.EnclosedExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
@@ -102,18 +103,38 @@ public final class JavaAstPlugin implements BlueprintLanguagePlugin {
 
     @Override
     public FileAnalysis analyze(SourceFile file) {
-        ParseResult<CompilationUnit> parsed = parser.parse(file.text());
-        if (parsed.getResult().isEmpty()) {
-            return FileAnalysis.empty();
+        return analyze(file, null);
+    }
+
+    /** PHASE 32 (TD-58): the project's type index, built once per scan. */
+    @Override
+    public Object prepare(List<SourceFile> files) {
+        synchronized (parser) {
+            return JavaProjectIndex.of(parser, files);
         }
-        CompilationUnit cu = parsed.getResult().get();
+    }
+
+    @Override
+    public FileAnalysis analyze(SourceFile file, Object prepared) {
+        JavaProjectIndex project = prepared instanceof JavaProjectIndex index ? index : null;
+        CompilationUnit cu = project == null ? null : project.parsed(file.path()).orElse(null);
+        if (cu == null) {
+            ParseResult<CompilationUnit> parsed;
+            synchronized (parser) {
+                parsed = parser.parse(file.text());
+            }
+            if (parsed.getResult().isEmpty()) {
+                return FileAnalysis.empty();
+            }
+            cu = parsed.getResult().get();
+        }
         String pkg = cu.getPackageDeclaration().map(p -> p.getNameAsString()).orElse("");
         Resolver resolver = new Resolver(pkg, cu.getImports());
         List<Component> components = new ArrayList<>();
         List<Reference> references = new ArrayList<>();
         boolean testFile = TEST_PATH.matcher(file.path()).find();
         for (TypeDeclaration<?> type : cu.getTypes()) {
-            new TypeReader(file, pkg, resolver, type, testFile, components, references).read();
+            new TypeReader(file, pkg, resolver, type, testFile, components, references, project).read();
         }
         return new FileAnalysis(components, references, testFile ? List.of() : accessRules(cu, file.path()));
     }
@@ -273,9 +294,12 @@ public final class JavaAstPlugin implements BlueprintLanguagePlugin {
         private final String name;
         /** Field and constructor-parameter names to their type, for calls on {@code this.x} and {@code x}. */
         private final Map<String, Type> members = new LinkedHashMap<>();
+        /** PHASE 32 (TD-58): the project's types, when the scan indexed them. */
+        private final JavaProjectIndex project;
 
         TypeReader(SourceFile file, String pkg, Resolver resolver, TypeDeclaration<?> type, boolean testFile,
-                   List<Component> components, List<Reference> references) {
+                   List<Component> components, List<Reference> references, JavaProjectIndex project) {
+            this.project = project;
             this.file = file;
             this.pkg = pkg;
             this.resolver = resolver;
@@ -459,17 +483,27 @@ public final class JavaAstPlugin implements BlueprintLanguagePlugin {
 
             List<String> calls = new ArrayList<>();
             Map<String, String> targets = new LinkedHashMap<>();
+            Set<String> invokes = new LinkedHashSet<>();
             for (MethodCallExpr call : m.findAll(MethodCallExpr.class)) {
+                // PHASE 32 (TD-58): the type the call is made on, through the project's index.
+                Optional<String> on = project == null ? Optional.empty() : typeOf(call.getScope().orElse(null), scope, 0);
+                on.flatMap(k -> project.declaring(k, call.getNameAsString()))
+                        .ifPresent(k -> invokes.add(k.substring("java:".length()) + "#" + call.getNameAsString()));
                 Optional<String> receiver = receiverName(call);
-                if (receiver.isEmpty()) {
+                Type t = receiver.map(scope::get).orElse(null);
+                boolean isStaticCall = receiver.isPresent() && t == null && Character.isUpperCase(receiver.get().charAt(0));
+                if (receiver.isEmpty() || (t == null && !isStaticCall)) {
+                    // A chain, an inherited field, a package-qualified type: what only the index can say.
+                    if (on.isPresent() && !on.get().equals(key)) {
+                        String typeName = on.get().substring(on.get().lastIndexOf('.') + 1);
+                        calls.add(typeName + "." + call.getNameAsString() + "()");
+                        targets.putIfAbsent(on.get(), on.get());
+                        references.add(new Reference(key, List.of(on.get()), RelationType.CALLS, call.getNameAsString() + "()",
+                                file.path(), line(call), JavaPseudocode.shorten(call), true));
+                    }
                     continue;
                 }
                 String r = receiver.get();
-                Type t = scope.get(r);
-                boolean isStaticCall = t == null && Character.isUpperCase(r.charAt(0));
-                if (t == null && !isStaticCall) {
-                    continue;
-                }
                 String label = call.getNameAsString();
                 calls.add(r + "." + label + "()");
                 String simple = t != null ? mainTypeName(t) : r;
@@ -508,7 +542,71 @@ public final class JavaAstPlugin implements BlueprintLanguagePlugin {
             String signature = m.getType().asString() + " " + m.getNameAsString() + "(" + String.join(", ", params) + ")";
             return new CodeStructure.CodeMethod(m.getNameAsString(), signature, visibility(m.getAccessSpecifier().asString()),
                     m.getType().asString(), params, annotationNames(m), distinctExceptions, List.copyOf(new LinkedHashSet<>(calls)),
-                    List.copyOf(targets.values()), m.isStatic(), begin(m), end(m), JavaPseudocode.of(m.getBody().orElse(null)));
+                    List.copyOf(targets.values()), m.isStatic(), begin(m), end(m), JavaPseudocode.of(m.getBody().orElse(null)),
+                    List.copyOf(invokes));
+        }
+
+        /** Methods that hand back what a wrapper holds: the type read through Optional, List… stays the same. */
+        private static final Set<String> UNWRAPPING = Set.of("orElseThrow", "orElse", "orElseGet", "get", "getFirst",
+                "getLast", "findFirst", "findAny", "iterator", "next", "join", "block");
+
+        /**
+         * PHASE 32 (TD-58): the key of the project type an expression is, or empty: a
+         * local, a field (inherited too), a type named simply or with its package, the
+         * result of a call whose method the index knows. {@code null} is {@code this}.
+         */
+        private Optional<String> typeOf(Expression e, Map<String, Type> scope, int depth) {
+            if (depth > 8) {
+                return Optional.empty();
+            }
+            if (e == null || e instanceof ThisExpr) {
+                return project.type(key).isPresent() ? Optional.of(key) : Optional.empty();
+            }
+            if (e instanceof EnclosedExpr enclosed) {
+                return typeOf(enclosed.getInner(), scope, depth + 1);
+            }
+            if (e instanceof CastExpr cast) {
+                return project.keyOf(cast.getType(), resolver);
+            }
+            if (e instanceof NameExpr n) {
+                String var = n.getNameAsString();
+                if (scope.containsKey(var)) {
+                    return project.keyOf(scope.get(var), resolver);
+                }
+                Optional<JavaProjectIndex.Member> inherited = project.field(key, var);
+                if (inherited.isPresent()) {
+                    return project.keyOf(inherited.get().type(), inherited.get().owner().resolver());
+                }
+                return Character.isUpperCase(var.charAt(0)) ? project.resolve(resolver.candidates(var)) : Optional.empty();
+            }
+            if (e instanceof FieldAccessExpr f) {
+                Optional<String> qualified = project.byName(f.toString());
+                if (qualified.isPresent()) {
+                    return qualified;
+                }
+                return typeOf(f.getScope(), scope, depth + 1).flatMap(owner -> project.field(owner, f.getNameAsString()))
+                        .flatMap(member -> project.keyOf(member.type(), member.owner().resolver()));
+            }
+            if (e instanceof MethodCallExpr c) {
+                Optional<String> owner = typeOf(c.getScope().orElse(null), scope, depth + 1);
+                if (owner.isEmpty()) {
+                    return Optional.empty();
+                }
+                Optional<JavaProjectIndex.Member> returned = project.returns(owner.get(), c.getNameAsString());
+                if (returned.isPresent()) {
+                    return project.keyOf(returned.get().type(), returned.get().owner().resolver());
+                }
+                // A Spring Data repository reads and saves its entity: find…, get…, save… return it (or a wrapper of it).
+                String method = c.getNameAsString();
+                if (method.startsWith("find") || method.startsWith("get") || method.startsWith("save") || method.startsWith("load")) {
+                    Optional<String> entity = project.managedEntity(owner.get());
+                    if (entity.isPresent()) {
+                        return entity;
+                    }
+                }
+                return UNWRAPPING.contains(method) ? owner : Optional.empty();
+            }
+            return Optional.empty();
         }
 
         private static Optional<String> receiverName(MethodCallExpr call) {

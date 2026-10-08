@@ -109,6 +109,12 @@ public class BlueprintController {
         return blueprint.graph(id, new BlueprintService.GraphQuery("outline".equals(detail), area(within)));
     }
 
+    /** PHASE 32 (TD-58, TD-46): the interprocedural call graph, from the last scan. */
+    @GetMapping(BASE + "/call-graph")
+    public BlueprintService.CallGraph blueprintCallGraph(@PathVariable Long id) {
+        return blueprint.callGraph(id);
+    }
+
     private static double[] area(String within) {
         if (within == null || within.isBlank()) {
             return null;

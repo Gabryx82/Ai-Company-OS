@@ -129,11 +129,25 @@ public final class BlueprintScanner {
         List<BlueprintLanguagePlugin.AccessRule> accessRules = new ArrayList<>();
         Map<String, Integer> languages = new TreeMap<>();
         Map<String, String> fidelity = new TreeMap<>();
+        // PHASE 32 (TD-58): each plugin first sees every file of its language (Java: an index of the types).
+        Map<BlueprintLanguagePlugin, Object> prepared = new java.util.IdentityHashMap<>();
+        for (BlueprintLanguagePlugin plugin : plugins) {
+            List<SourceFile> mine = sources.stream().filter(s -> plugins.stream().filter(p -> p.supports(s.path()))
+                    .findFirst().orElse(null) == plugin).toList();
+            try {
+                Object project = mine.isEmpty() ? null : plugin.prepare(mine);
+                if (project != null) {
+                    prepared.put(plugin, project);
+                }
+            } catch (RuntimeException unreadable) {
+                log.warn("Blueprint: the {} plugin could not index the project: {}", plugin.language(), unreadable.toString());
+            }
+        }
         for (SourceFile source : sources) {
             BlueprintLanguagePlugin plugin = plugins.stream().filter(p -> p.supports(source.path())).findFirst().orElseThrow();
             FileAnalysis analysis;
             try {
-                analysis = plugin.analyze(source);
+                analysis = plugin.analyze(source, prepared.get(plugin));
             } catch (RuntimeException unreadable) {
                 // One file a plugin cannot read does not cost the scan of the project.
                 log.warn("Blueprint: {} could not be analysed by the {} plugin: {}", source.path(), plugin.language(),

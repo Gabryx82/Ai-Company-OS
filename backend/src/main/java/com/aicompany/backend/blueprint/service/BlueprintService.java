@@ -131,6 +131,60 @@ public class BlueprintService {
         public static final GraphQuery WHOLE = new GraphQuery(false, null);
     }
 
+    /** PHASE 32 (TD-58, TD-46): one call between two methods of the project; the blocks, when they are blocks. */
+    public record MethodCall(String from, String to, @Nullable Long fromNode, @Nullable Long toNode) {
+    }
+
+    /** PHASE 32 (TD-58, TD-46): the interprocedural call graph of the project's Java code. */
+    public record CallGraph(int methods, List<MethodCall> calls) {
+    }
+
+    /**
+     * PHASE 32 (TD-58, TD-46): who calls whom, method by method -- read from the
+     * blocks' structures, which the last scan wrote: {@code com.acme.Type#method}
+     * to the method of the project it invokes, its own or inherited.
+     */
+    @Transactional(readOnly = true)
+    public CallGraph callGraph(Long projectId) {
+        projects.findById(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
+        List<BlueprintNode> all = nodes.findAllByProjectIdOrderByIdAsc(projectId);
+        Map<String, Long> byKey = new HashMap<>();
+        all.stream().filter(n -> n.getKey() != null).forEach(n -> byKey.putIfAbsent(n.getKey(), n.getId()));
+        int methods = 0;
+        List<MethodCall> calls = new ArrayList<>();
+        for (BlueprintNode node : all) {
+            String key = node.getKey();
+            if (key == null || !key.startsWith("java:") || key.contains("#")) {
+                continue;
+            }
+            for (CodeStructure.CodeMethod method : BlueprintJson.structure(node.getStructure()).methods()) {
+                methods++;
+                for (String target : method.invokes()) {
+                    calls.add(new MethodCall(key.substring("java:".length()) + "#" + method.name(), target, node.getId(),
+                            nodeOf(target, byKey)));
+                }
+            }
+        }
+        return new CallGraph(methods, calls);
+    }
+
+    /** The block of a method's type -- a nested type's is its top-level type's. */
+    private static @Nullable Long nodeOf(String method, Map<String, Long> byKey) {
+        String type = method.contains("#") ? method.substring(0, method.indexOf('#')) : method;
+        while (!type.isEmpty()) {
+            Long id = byKey.get("java:" + type);
+            if (id != null) {
+                return id;
+            }
+            int dot = type.lastIndexOf('.');
+            if (dot < 0) {
+                return null;
+            }
+            type = type.substring(0, dot);
+        }
+        return null;
+    }
+
     /** The size of a block on the canvas, so that one partly inside a rectangle counts as inside. */
     static final double BLOCK_WIDTH = 260;
     static final double BLOCK_HEIGHT = 160;

@@ -29,6 +29,20 @@ public interface BlueprintLanguagePlugin {
 
     FileAnalysis analyze(SourceFile file);
 
+    /**
+     * PHASE 32 (TD-58): what the plugin learns from every file of its language before
+     * reading them one by one -- for Java, an index of the project's types. Null when
+     * a plugin needs nothing; a plugin is shared by scans, so this is per scan.
+     */
+    default Object prepare(List<SourceFile> files) {
+        return null;
+    }
+
+    /** One file, with what {@link #prepare} learned from all of them. */
+    default FileAnalysis analyze(SourceFile file, Object project) {
+        return analyze(file);
+    }
+
     /** A file of the project: its path relative to the project folder, with forward slashes, and its text. */
     record SourceFile(String path, String text) {
     }

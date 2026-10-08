@@ -59,7 +59,24 @@ public record CodeStructure(
     public record CodeMethod(String name, String signature, String visibility, String returnType, List<String> parameters,
                          List<String> annotations, List<String> exceptions, List<String> calls,
                          List<String> callTargets, boolean isStatic, Integer startLine, Integer endLine,
-                         String pseudocode) {
+                         String pseudocode, List<String> invokes) {
+
+        /**
+         * {@code invokes}: PHASE 32 (TD-58), the methods of the project this one calls, as
+         * {@code com.acme.Type#method} -- the type that declares the method, its own or
+         * inherited: the edges of the interprocedural call graph. Empty for a structure
+         * read before it existed.
+         */
+        public CodeMethod {
+            invokes = invokes == null ? List.of() : List.copyOf(invokes);
+        }
+
+        public CodeMethod(String name, String signature, String visibility, String returnType, List<String> parameters,
+                          List<String> annotations, List<String> exceptions, List<String> calls, List<String> callTargets,
+                          boolean isStatic, Integer startLine, Integer endLine, String pseudocode) {
+            this(name, signature, visibility, returnType, parameters, annotations, exceptions, calls, callTargets, isStatic,
+                    startLine, endLine, pseudocode, List.of());
+        }
     }
 
     public static CodeStructure empty() {

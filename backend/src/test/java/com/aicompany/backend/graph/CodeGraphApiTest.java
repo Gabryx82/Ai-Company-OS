@@ -89,4 +89,32 @@ class CodeGraphApiTest extends AbstractPostgresTest {
 
         mockMvc.perform(get("/api/projects/" + projectId + "/code-graph")).andExpect(status().isOk());
     }
+
+    /**
+     * PHASE 32 (TD-46): the semantic call graph reaches the code graph -- after a Blueprint scan,
+     * CODE_GRAPH.md names the methods called the most, and the call graph is served whole.
+     */
+    @Test
+    void afterABlueprintScanTheCodeGraphNamesTheMethodsCalledTheMost() throws Exception {
+        write("server/src/main/java/com/acme/Store.java", "package com.acme;\npublic class Store {\n"
+                + "  public void save(String x) { }\n}\n");
+        write("server/src/main/java/com/acme/Orders.java", "package com.acme;\npublic class Orders {\n"
+                + "  private final Store store;\n  public Orders(Store store) { this.store = store; }\n"
+                + "  public void place(String o) { store.save(o); audit(); }\n"
+                + "  public void cancel(String o) { store.save(o); }\n  private void audit() { }\n}\n");
+        mockMvc.perform(post("/api/projects/" + projectId + "/blueprint/scan")).andExpect(status().is2xxSuccessful());
+
+        JsonNode calls = json.readTree(mockMvc.perform(get("/api/projects/" + projectId + "/blueprint/call-graph"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(calls.path("calls").toString())
+                .contains("{\"from\":\"com.acme.Orders#place\",\"to\":\"com.acme.Store#save\"")
+                .contains("\"from\":\"com.acme.Orders#place\",\"to\":\"com.acme.Orders#audit\"");
+
+        JsonNode graph = json.readTree(mockMvc.perform(post("/api/projects/" + projectId + "/code-graph"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(graph.path("mostCalled").path(0).path("method").asString()).isEqualTo("com.acme.Store#save");
+        assertThat(graph.path("mostCalled").path(0).path("calledBy").asInt()).isEqualTo(2);
+        assertThat(Files.readString(folder.resolve(".aicos/CODE_GRAPH.md")))
+                .contains("## I metodi più chiamati (dal Blueprint)").contains("`com.acme.Store#save` — chiamato da 2 metodi");
+    }
 }

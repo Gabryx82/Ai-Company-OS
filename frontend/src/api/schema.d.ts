@@ -1028,6 +1028,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/blueprint/call-graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["blueprintCallGraph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/blueprint/deletion": {
         parameters: {
             query?: never;
@@ -3109,6 +3125,11 @@ export interface components {
             /** @enum {string} */
             subagents?: "DETACH" | "DELETE";
         };
+        CallGraph: {
+            calls: components["schemas"]["MethodCall"][];
+            /** Format: int32 */
+            methods: number;
+        };
         Category: {
             key: string;
             label: string;
@@ -3125,6 +3146,9 @@ export interface components {
             languages: {
                 [key: string]: number;
             };
+            /** Format: int32 */
+            methodCalls: number;
+            mostCalled: components["schemas"]["MethodHotspot"][];
             mostImported: components["schemas"]["Hotspot"][];
             nodes: components["schemas"]["CodeGraphNode"][];
             taskLinks: components["schemas"]["TaskLink"][];
@@ -3157,6 +3181,7 @@ export interface components {
             /** Format: int32 */
             endLine?: number;
             exceptions?: string[];
+            invokes?: string[];
             isStatic?: boolean;
             name?: string;
             parameters?: string[];
@@ -3668,6 +3693,19 @@ export interface components {
             /** @enum {string} */
             role: "ADMIN" | "OPERATOR";
             user: components["schemas"]["UserResponse"] | null;
+        };
+        MethodCall: {
+            from: string;
+            /** Format: int64 */
+            fromNode: number | null;
+            to: string;
+            /** Format: int64 */
+            toNode: number | null;
+        };
+        MethodHotspot: {
+            /** Format: int32 */
+            calledBy: number;
+            method: string;
         };
         ModelCatalogResponse: {
             engineDefault: string | null;
@@ -6538,6 +6576,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    blueprintCallGraph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CallGraph"];
+                };
             };
         };
     };

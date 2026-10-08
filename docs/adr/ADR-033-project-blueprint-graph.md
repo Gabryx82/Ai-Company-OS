@@ -222,3 +222,23 @@ in vista, con un margine, e li tiene finché la riga non cambia (`version`); sce
 non ha ancora i testi chiede l'area dei suoi due blocchi. `BlueprintApiTest` (il contorno è più leggero
 almeno di quanto ha tolto, l'area contiene solo relazioni interne), `blueprintModel.test.ts`,
 `BlueprintView.test.tsx`.
+
+## Revisione PHASE 32 (2026-10-08) — un indice dei tipi al posto del symbol solver; il call graph (TD-58)
+
+Il plugin Java legge prima **tutti** i file Java del progetto (`BlueprintLanguagePlugin.prepare`, per
+scansione: i plugin sono condivisi) e ne fa un indice dei tipi — supertipi, campi, che cosa restituiscono i
+metodi, i record e i loro accessor, i tipi annidati — poi legge i file uno a uno con quell'indice. Così una
+chiamata arriva al tipo su cui è fatta anche quando il tipo non è scritto lì: su un **campo ereditato**
+(`audit.record()` dichiarato nella superclasse), sul **risultato di un'altra chiamata**
+(`orders.findById(id).orElseThrow().customer().notify()`: un repository Spring Data restituisce la sua entità,
+`orElseThrow`/`get`/`getFirst`… quello che il wrapper contiene, poi il tipo di ritorno dei metodi del
+progetto), su un **tipo qualificato per package** (`com.acme.mail.Mailer.send()`). Ne nascono relazioni
+`CALLS` che prima mancavano. La libreria JavaParser Symbol Solver non è disponibile offline: l'indice copre ciò
+che il Blueprint chiede, senza risolvere i generics né l'overloading (un metodo per nome).
+
+Ogni metodo dice inoltre quali metodi del progetto **invoca** (`CodeMethod.invokes`, come
+`com.acme.Type#metodo`, il tipo che dichiara il metodo, proprio o ereditato): è il call graph
+interprocedurale, servito intero da `GET /api/projects/{id}/blueprint/call-graph` (chi chiama chi, con i
+blocchi dei due tipi) e mostrato nell'Inspector sotto ogni metodo («invokes»). Una struttura salvata prima ne è
+priva (lista vuota) finché non si riscansiona. Test: `BlueprintCallGraphTest` (rosso senza l'indice),
+`CodeGraphApiTest`, console `StructurePanel.test.tsx`.

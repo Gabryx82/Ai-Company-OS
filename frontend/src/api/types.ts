@@ -298,6 +298,8 @@ export interface CodeGraph {
   generatedAt: string; files: number; truncated: boolean; languages: Record<string, number>; nodes: CodeNode[];
   edges: CodeEdge[]; cycles: string[][]; mostImported: { id: string; importedBy: number }[]; externals: number;
   taskLinks: { taskId: number; code: string | null; title: string; file: string }[];
+  /** PHASE 32 (TD-46): from the Blueprint's call graph, when the project has one. */
+  methodCalls?: number; mostCalled?: { method: string; calledBy: number }[];
 }
 
 // --- PHASE 24: cost governance (ADR-031) --------------------------------------------------

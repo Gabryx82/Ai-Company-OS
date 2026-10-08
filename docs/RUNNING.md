@@ -334,6 +334,7 @@ relazioni fra loro, **letti dal codice** (Java con AST, TypeScript/Python/SQL le
 | `GET /api/projects/{id}/blueprint` | blocchi, relazioni, posizioni (con la versione del layout), ultima scansione, metriche |
 | `POST /api/projects/{id}/blueprint/scan` | legge la cartella del progetto e riconcilia; rispetta override e blocchi manuali |
 | `GET /api/projects/{id}/blueprint/scans` | le ultime 10 scansioni |
+| `GET /api/projects/{id}/blueprint/call-graph` | il call graph interprocedurale dell'ultima scansione: `com.acme.Type#metodo` → metodo invocato, con i blocchi (TD-58) |
 | `POST /api/projects/{id}/blueprint/nodes` | blocco manuale (`201`, `ETag`); un percorso reale diventa `LINKED` |
 | `GET` / `PUT` / `DELETE /api/projects/{id}/blueprint/nodes/{nodeId}` | leggere (con `ETag`), modificare, eliminare. **`If-Match`** |
 | `POST …/nodes/{nodeId}/revert` · `/pseudocode` · `/expand` · `/collapse` | ripristinare i valori del codice, rigenerare lo pseudocodice, espandere i metodi in blocchi. **`If-Match`** |

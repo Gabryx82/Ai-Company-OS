@@ -136,6 +136,13 @@ export function CodeGraphView({ projectId }: { projectId: number }) {
               <div className="section-title" style={{ margin: 0 }}>I file più importati</div>
               {graph.mostImported.map((h) => <div key={h.id} className="row" style={{ fontSize: 12.5 }}><code>{h.id}</code><span className="spacer" /><span className="muted">{h.importedBy}</span></div>)}
               {graph.mostImported.length === 0 && <span className="muted">Nessun import interno.</span>}
+              {(graph.mostCalled ?? []).length > 0 && (
+                <>
+                  <div className="section-title" style={{ margin: "8px 0 0" }}>I metodi più chiamati (dal Blueprint)</div>
+                  {(graph.mostCalled ?? []).map((h) => <div key={h.method} className="row" style={{ fontSize: 12.5 }}><code>{h.method}</code>
+                    <span className="spacer" /><span className="muted">{h.calledBy}</span></div>)}
+                </>
+              )}
             </div>
             <div className="card card-body stack" style={{ gap: 4 }}>
               <div className="section-title" style={{ margin: 0 }}>Cicli di import</div>

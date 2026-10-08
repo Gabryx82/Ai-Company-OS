@@ -1446,6 +1446,22 @@
         "required" : [ "agents" ],
         "type" : "object"
       },
+      "CallGraph" : {
+        "properties" : {
+          "calls" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MethodCall"
+            },
+            "type" : "array"
+          },
+          "methods" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "calls", "methods" ],
+        "type" : "object"
+      },
       "Category" : {
         "properties" : {
           "key" : {
@@ -1494,6 +1510,16 @@
             },
             "type" : "object"
           },
+          "methodCalls" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "mostCalled" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MethodHotspot"
+            },
+            "type" : "array"
+          },
           "mostImported" : {
             "items" : {
               "$ref" : "#/components/schemas/Hotspot"
@@ -1516,7 +1542,7 @@
             "type" : "boolean"
           }
         },
-        "required" : [ "cycles", "edges", "externals", "files", "generatedAt", "languages", "mostImported", "nodes", "taskLinks", "truncated" ],
+        "required" : [ "cycles", "edges", "externals", "files", "generatedAt", "languages", "methodCalls", "mostCalled", "mostImported", "nodes", "taskLinks", "truncated" ],
         "type" : "object"
       },
       "CodeGraphEdge" : {
@@ -1604,6 +1630,12 @@
             "type" : "integer"
           },
           "exceptions" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "invokes" : {
             "items" : {
               "type" : "string"
             },
@@ -3238,6 +3270,39 @@
           }
         },
         "required" : [ "kind", "name", "role", "user" ],
+        "type" : "object"
+      },
+      "MethodCall" : {
+        "properties" : {
+          "from" : {
+            "type" : "string"
+          },
+          "fromNode" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "toNode" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          }
+        },
+        "required" : [ "from", "fromNode", "to", "toNode" ],
+        "type" : "object"
+      },
+      "MethodHotspot" : {
+        "properties" : {
+          "calledBy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "method" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "calledBy", "method" ],
         "type" : "object"
       },
       "ModelCatalogResponse" : {
@@ -8548,6 +8613,33 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/BlueprintGraph"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      }
+    },
+    "/api/projects/{id}/blueprint/call-graph" : {
+      "get" : {
+        "operationId" : "blueprintCallGraph",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CallGraph"
                 }
               }
             },

@@ -132,11 +132,21 @@ function MethodLine({ method }: { method: CodeMethod }) {
       <div className="stack" style={{ gap: 4, padding: "4px 0 6px 12px" }}>
         {method.annotations.length > 0 && <div className="muted" style={{ fontSize: 12 }}>@{method.annotations.join(" @")}</div>}
         {method.calls.length > 0 && <div style={{ fontSize: 12 }}><span className="muted">calls </span><Chips values={method.calls} /></div>}
+        {(method.invokes ?? []).length > 0 && (
+          <div style={{ fontSize: 12 }} aria-label={`Metodi invocati da ${method.name}`}><span className="muted">invokes </span>
+            {(method.invokes ?? []).map((m) => <span key={m} className="chip mono" title={m}>{shortMethod(m)}</span>)}</div>
+        )}
         {method.exceptions.length > 0 && <div style={{ fontSize: 12 }}><span className="muted">throws </span><Chips values={method.exceptions} /></div>}
         {method.pseudocode && <pre className="bp-pseudo">{method.pseudocode}</pre>}
       </div>
     </details>
   );
+}
+
+/** PHASE 32 (TD-58): {@code com.acme.Store#save} as {@code Store.save()}; the whole name stays in the title. */
+export function shortMethod(method: string): string {
+  const [type, name] = method.split("#");
+  return `${type.slice(type.lastIndexOf(".") + 1)}.${name ?? ""}()`;
 }
 
 function Pair({ label, children }: { label: string; children: ReactNode }) {
@@ -155,5 +165,5 @@ function hasValue(s: CodeStructure, r: Row): boolean {
 
 function emptyMethod(): CodeMethod {
   return { name: "", signature: null, visibility: "public", returnType: "void", parameters: [], annotations: [], exceptions: [],
-    calls: [], callTargets: [], isStatic: false, startLine: null, endLine: null, pseudocode: null };
+    calls: [], callTargets: [], isStatic: false, startLine: null, endLine: null, pseudocode: null, invokes: [] };
 }

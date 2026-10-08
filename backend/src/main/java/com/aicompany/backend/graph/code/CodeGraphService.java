@@ -45,17 +45,29 @@ public class CodeGraphService {
     public record TaskLink(Long taskId, @Nullable String code, String title, String file) {
     }
 
+    /** PHASE 32 (TD-46): a method of the project and how many methods call it, from the Blueprint's call graph. */
+    public record MethodHotspot(String method, int calledBy) {
+    }
+
     public record CodeGraph(Instant generatedAt, int files, boolean truncated, Map<String, Integer> languages,
                             List<CodeGraphScanner.CodeGraphNode> nodes, List<CodeGraphScanner.CodeGraphEdge> edges,
                             List<List<String>> cycles, List<Hotspot> mostImported, int externals,
-                            List<TaskLink> taskLinks) {
+                            List<TaskLink> taskLinks, int methodCalls, List<MethodHotspot> mostCalled) {
+
+        /** {@code methodCalls}, {@code mostCalled}: PHASE 32 (TD-46); absent from a graph written before. */
+        public CodeGraph {
+            mostCalled = mostCalled == null ? List.of() : mostCalled;
+        }
     }
 
     private final ProjectWorkspaceService workspace;
     private final TaskRepository tasks;
+    private final com.aicompany.backend.blueprint.service.BlueprintService blueprint;
     private final JsonMapper json = JsonMapper.builder().build();
 
-    public CodeGraphService(ProjectWorkspaceService workspace, TaskRepository tasks) {
+    public CodeGraphService(ProjectWorkspaceService workspace, TaskRepository tasks,
+                            com.aicompany.backend.blueprint.service.BlueprintService blueprint) {
+        this.blueprint = blueprint;
         this.workspace = workspace;
         this.tasks = tasks;
     }
@@ -95,8 +107,17 @@ public class CodeGraphService {
                 .limit(10).map(e -> new Hotspot(e.getKey(), e.getValue())).toList();
         int externals = (int) graph.nodes().stream().filter(n -> n.kind().equals("EXTERNAL")).count();
 
+        // PHASE 32 (TD-46): the semantic side -- who calls whom -- from the Blueprint's last scan, when there is one.
+        List<com.aicompany.backend.blueprint.service.BlueprintService.MethodCall> calls = blueprint.callGraph(projectId).calls();
+        Map<String, Set<String>> callers = new HashMap<>();
+        calls.stream().filter(c -> !c.from().equals(c.to()))
+                .forEach(c -> callers.computeIfAbsent(c.to(), k -> new HashSet<>()).add(c.from()));
+        List<MethodHotspot> mostCalled = callers.entrySet().stream()
+                .sorted(Comparator.comparing((Map.Entry<String, Set<String>> e) -> e.getValue().size()).reversed()
+                        .thenComparing(Map.Entry::getKey))
+                .limit(10).map(e -> new MethodHotspot(e.getKey(), e.getValue().size())).toList();
         CodeGraph result = new CodeGraph(Instant.now(), graph.files(), graph.truncated(), graph.languages(),
-                graph.nodes(), graph.edges(), graph.cycles(), hotspots, externals, links);
+                graph.nodes(), graph.edges(), graph.cycles(), hotspots, externals, links, calls.size(), mostCalled);
         workspace.write(projectId, JSON_FILE, json.writeValueAsString(result));
         workspace.write(projectId, MARKDOWN_FILE, markdown(result));
         return result;
@@ -135,6 +156,13 @@ public class CodeGraphService {
                 .map(n -> n.label() + " (" + n.language() + ")").toList();
         if (!externals.isEmpty()) {
             md.append("## Dipendenze esterne\n\n").append(String.join(", ", externals)).append("\n\n");
+        }
+        if (!g.mostCalled().isEmpty()) {
+            md.append("## I metodi più chiamati (dal Blueprint)\n\n");
+            g.mostCalled().forEach(h -> md.append("- `").append(h.method()).append("` — chiamato da ").append(h.calledBy())
+                    .append(h.calledBy() == 1 ? " metodo\n" : " metodi\n"));
+            md.append("\n").append(g.methodCalls()).append(" chiamate tra metodi in tutto: il grafo completo è "
+                    + "`GET /api/projects/{id}/blueprint/call-graph`. Si aggiorna con una nuova scansione del Blueprint.\n\n");
         }
         if (!g.taskLinks().isEmpty()) {
             md.append("## Task e file\n\n");

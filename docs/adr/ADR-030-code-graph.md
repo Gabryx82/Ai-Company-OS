@@ -39,3 +39,13 @@ Il grafo di dipendenze tra **task** e il grafo **agenti** esistono già nel Seco
 `CodeGraphApiTest`: un progetto con TypeScript, Java, Python e manifest; import interni risolti (anche
 relativi Python e classi Java per package), pacchetti esterni senza librerie standard, `node_modules`
 ignorato, ciclo trovato, file scritti.
+
+## Revisione PHASE 32 (2026-10-08) — il lato semantico: chi chiama chi (TD-46)
+
+Il grafo del codice resta quello dei file e degli import; il call graph semantico è del Blueprint (ADR-033,
+revisione TD-58), che risolve il tipo su cui ogni chiamata è fatta. La scansione del grafo del codice ora lo
+legge, quando il progetto ha un Blueprint: `methodCalls` (quante chiamate tra metodi) e `mostCalled` (i dieci
+metodi chiamati da più metodi) entrano in `.aicos/code-graph.json`, e `.aicos/CODE_GRAPH.md` — il contesto che
+gli agenti ricevono — ha la sezione «I metodi più chiamati (dal Blueprint)», con il rimando al grafo completo. La
+vista *Codice* della console li mostra accanto ai file più importati. Test: `CodeGraphApiTest` (rosso senza i
+metodi più chiamati).
