@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useApi } from "../../context";
 import { ApiProblem } from "../../api/client";
 import type {
-  AiAction, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintConnection, BlueprintGraph, BlueprintRelation, BlueprintSnippet, BlueprintVocabulary,
+  AiAction, BlueprintAiAction, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintConnection, BlueprintGraph, BlueprintRelation, BlueprintSnippet, BlueprintVocabulary,
   CodeStructure, NodeKind, NodeStatus, PathState, RelationType,
 } from "../../api/types";
 import { ProblemNote, when } from "../../components/ui";
@@ -49,12 +49,15 @@ export function BlockInspector({ projectId, nodeId, vocabulary, editable, action
   const [busy, setBusy] = useState(false);
   const [snippet, setSnippet] = useState<BlueprintSnippet | null>(null);
   const [action, setAction] = useState<AiAction>("EXPLAIN_COMPONENT");
+  const [outcomes, setOutcomes] = useState<BlueprintAiAction[]>([]);
 
   const load = useCallback(() => {
     setProblem(null);
     api.blueprintNode(projectId, nodeId).then(({ body, etag }) => {
       setDetail(body); setEtag(etag); setDraft(draftOf(body));
     }).catch(setProblem);
+    // PHASE 32 (TD-63): what the AI actions asked about this block produced
+    api.blueprintAiActions(projectId, nodeId).then(setOutcomes).catch(() => setOutcomes([]));
   }, [api, projectId, nodeId]);
 
   useEffect(() => { setSnippet(null); setNote(null); load(); }, [load]);
@@ -227,6 +230,36 @@ export function BlockInspector({ projectId, nodeId, vocabulary, editable, action
         </div>
       </Section>
 
+      {outcomes.length > 0 && (
+        <Section title="Esiti delle azioni AI">
+          <ul className="history" aria-label="Esiti delle azioni AI">
+            {outcomes.map((o) => (
+              <li key={o.id}>
+                <div className="row">
+                  <strong>{vocabulary.actions.find((a) => a.action === o.action)?.label ?? o.action}</strong>
+                  <button type="button" className="bp-link" onClick={() => actions.openTask(o.taskId)}>task #{o.taskId}</button>
+                  <span className="muted">{o.taskStatus} · {when(o.requestedAt)}</span>
+                </div>
+                {o.outcome
+                  ? <>
+                      <pre className="bp-pseudo" style={{ whiteSpace: "pre-wrap" }}>{o.outcome}</pre>
+                      <span className="muted" style={{ fontSize: 12 }}>Da {o.outcomeSource}{o.outcomeAt ? ` · ${when(o.outcomeAt)}` : ""}</span>
+                      {editable && o.appliesTo && (
+                        <button type="button" className="btn btn-small" style={{ marginLeft: 8 }} disabled={busy}
+                                onClick={() => run(() => api.updateBlueprintNode(projectId, d.id, etag,
+                                  { ...write(), [o.appliesTo as string]: o.outcome ?? undefined }),
+                                  "Applicato al blocco: è una modifica manuale, ripristinabile.")}>
+                          {o.appliesTo === "pseudocode" ? "Usa come pseudocodice" : "Usa come descrizione"}
+                        </button>
+                      )}
+                    </>
+                  : <span className="muted" style={{ fontSize: 12 }}>Nessun esito ancora: arriva con un'esecuzione riuscita o con la sezione Esito del documento della task.</span>}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       <Section title="Actions">
         <div className="bp-actions">
           {d.filePath && d.pathState === "LINKED" && <button type="button" className="btn btn-small" onClick={() => actions.openFile(d.id)}>Apri file</button>}
@@ -259,6 +292,7 @@ export function BlockInspector({ projectId, nodeId, vocabulary, editable, action
             <button type="button" className="btn btn-small" disabled={busy}
                     onClick={() => run(async () => {
                       const outcome = await api.blueprintAiAction(projectId, d.id, action);
+                      api.blueprintAiActions(projectId, d.id).then(setOutcomes).catch(() => undefined);
                       setNote(`Task creata: «${outcome.taskTitle}». L'orchestratore la assegna; il risultato passa dalla review.`);
                       actions.openTask(outcome.taskId);
                     })}>

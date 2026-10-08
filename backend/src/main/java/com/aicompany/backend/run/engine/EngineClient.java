@@ -1,6 +1,7 @@
 package com.aicompany.backend.run.engine;
 
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The control plane's side of the AI Engine contract v1 (ADR-015).
@@ -44,7 +45,7 @@ public interface EngineClient {
     record ModelInfo(String id, String provider, boolean available, String detail, boolean billed) {
     }
 
-    record ModelList(String defaultModel, java.util.List<ModelInfo> models) {
+    record ModelList(@Nullable String defaultModel, java.util.List<ModelInfo> models) {
     }
 
     /** What comes back, already mapped from the wire. */

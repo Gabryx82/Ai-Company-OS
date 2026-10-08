@@ -11,6 +11,7 @@ import com.aicompany.backend.software.service.SoftwareService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,8 +48,8 @@ public class LibraryController {
     public record LibraryInfo(String root, boolean exists, long skills, long knowledge, String layout) {
     }
 
-    public record FileResponse(String key, String relativePath, String absolutePath, boolean exists, String content,
-                               Instant modified, long version) {
+    public record FileResponse(String key, String relativePath, String absolutePath, boolean exists, @Nullable String content,
+                               @Nullable Instant modified, long version) {
     }
 
     public record Content(@NotBlank @Size(max = SkillLibrary.MAX_DOCUMENT) String content) {

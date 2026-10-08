@@ -67,9 +67,12 @@ public class ChangeProposalService {
     private final BlueprintService blueprint;
     private final ProjectWorkspaceService workspace;
     private final TaskService tasks;
+    private final BlueprintAiOutcomes outcomes;
 
     public ChangeProposalService(ChangeProposalRepository proposals, BlueprintEdgeRepository edges,
-                                 BlueprintService blueprint, ProjectWorkspaceService workspace, TaskService tasks) {
+                                 BlueprintService blueprint, ProjectWorkspaceService workspace, TaskService tasks,
+                                 BlueprintAiOutcomes outcomes) {
+        this.outcomes = outcomes;
         this.proposals = proposals;
         this.edges = edges;
         this.blueprint = blueprint;
@@ -177,6 +180,8 @@ public class ChangeProposalService {
         Versioned<TaskResponse> task = tasks.create(title, BlueprintService.cut(d.toString(), TASK_DESCRIPTION),
                 TaskStatus.OPEN, action == AiAction.CREATE_IMPLEMENTATION_TASK ? TaskPriority.MEDIUM : TaskPriority.LOW,
                 projectId, null);
+        // PHASE 32 (TD-63): the link that brings the outcome back to this block.
+        outcomes.record(projectId, nodeId, task.body().id(), action, by);
         return new BlueprintViews.BlueprintActionOutcome(task.body().id(), task.body().title(), action.name());
     }
 

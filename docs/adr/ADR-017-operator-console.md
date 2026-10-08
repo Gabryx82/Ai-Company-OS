@@ -57,3 +57,23 @@ la risorsa singola e agisce col suo tag. È dichiarato, non nascosto.
 Router con URL profonde (la navigazione è per hash), aggiornamenti push (si fa polling solo mentre
 una run è in corso), gestione multi-utente, internazionalizzazione, test end-to-end in browser nella
 CI (i test di componente usano un `fetch` finto; la verifica dal vivo è documentata in TASK-022).
+
+## Revisione PHASE 32 (2026-10-08) — il contratto dice che cosa può essere null (TD-47)
+
+springdoc non segnava nessun campo di risposta come richiesto: i tipi generati erano tutti facoltativi
+e la console li correggeva con `Wire<T>` (primo livello) e `Deep<T>` (livelli annidati), che però
+dichiarava non-null campi che il server manda `null`.
+
+- **Il contratto**: `ResponseShapes` (un `OpenApiCustomizer`) rende *richiesti* tutti i componenti di
+  ogni record raggiungibile solo dalle risposte — un record li serializza sempre, Jackson scrive i null —
+  e *nullable* esattamente quelli annotati `@Nullable` (jspecify; mai un primitivo). Nel 3.1:
+  `"type": ["string", "null"]`, o `anyOf` con `null` per un riferimento. Le forme che sono anche corpi di
+  richiesta restano come le genera springdoc: lì un campo si può omettere.
+- **La verifica**: un filtro presente solo nei test (`ResponseContractRecorder`) confronta **ogni**
+  risposta JSON della suite con `docs/api/openapi.json`; `ResponseContractTest` fallisce su un campo
+  richiesto assente o su un `null` non dichiarato, con lo schema, il campo e la rotta. Le annotazioni
+  sono state ricavate così (217 campi) e completate a mano per i casi che i test non producono (30:
+  l'utente di un token di servizio, il primo accesso, una sessione di terminale collegata…).
+- **La console** usa i tipi generati così come sono: `Deep<T>` è eliminato, e con lui le correzioni a
+  mano di `WorkspaceDocuments`, `AgentProfile`, `DailyItem` (ora le dice il contratto). `Wire<T>` resta
+  solo per la struttura di un blocco del Blueprint, che è anche un corpo di richiesta.

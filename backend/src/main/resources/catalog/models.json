@@ -4,6 +4,7 @@
     "providerKey": "ollama",
     "displayName": "Qwen 3.5 9B",
     "role": "PLANNER",
+    "alsoServes": ["CODER"],
     "capabilities": [
       "tools",
       "thinking",

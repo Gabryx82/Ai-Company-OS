@@ -12,6 +12,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,9 +33,9 @@ import java.util.List;
 @RestController
 public class HarnessController {
 
-    public record ResourceResponse(Long id, String key, HarnessResource.Kind kind, String name, String description,
-                                   List<String> tags, String sourceUrl, String searchUrl, String configuration,
-                                   HarnessResource.Origin origin, boolean fileBacked, String filePath, long version) {
+    public record ResourceResponse(Long id, String key, HarnessResource.Kind kind, String name, @Nullable String description,
+                                   List<String> tags, @Nullable String sourceUrl, @Nullable String searchUrl, @Nullable String configuration,
+                                   HarnessResource.Origin origin, boolean fileBacked, @Nullable String filePath, long version) {
         public static ResourceResponse from(HarnessResource r) {
             return new ResourceResponse(r.getId(), r.getKey(), r.getKind(), r.getName(), r.getDescription(), r.getTags(),
                     r.getSourceUrl(), r.getSearchUrl(), r.getConfiguration(), r.getOrigin(),
@@ -64,10 +65,10 @@ public class HarnessController {
     public record AgentSoftwareRef(String key, String name) {
     }
 
-    public record AgentProfileResponse(Long agentId, String name, String role, String specialization, String model,
-                                       boolean active, Long parentId, String domain, String systemPrompt,
-                                       String responsibilities, String limits, String outputFormat,
-                                       List<String> directives, String contextPolicy, List<ResourceResponse> resources,
+    public record AgentProfileResponse(Long agentId, String name, String role, String specialization, @Nullable String model,
+                                       boolean active, @Nullable Long parentId, @Nullable String domain, @Nullable String systemPrompt,
+                                       @Nullable String responsibilities, @Nullable String limits, @Nullable String outputFormat,
+                                       List<String> directives, @Nullable String contextPolicy, List<ResourceResponse> resources,
                                        List<AgentSoftwareRef> software, long version) {
         public static AgentProfileResponse from(HarnessService.AgentHarness h) {
             Agent a = h.agent();

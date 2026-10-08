@@ -9,6 +9,7 @@ import com.aicompany.backend.task.exception.TaskNotFoundException;
 import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.user.service.SecurityLog;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,7 +39,7 @@ public class DeletionService {
 
     public record Impact(String kind, Long id, String name, int tasks, int runs, int handoffs, int reviews,
                          int dailyItems, int phases, int planRuns, int resources, boolean runInProgress,
-                         String folder, List<String> notes) {
+                         @Nullable String folder, List<String> notes) {
     }
 
     private final TaskRepository tasks;
@@ -97,6 +98,7 @@ public class DeletionService {
         List<Long> taskIds = jdbc.queryForList("SELECT id FROM tasks WHERE project_id = ?", Long.class, projectId);
         // PHASE 28 (ADR-033): the Blueprint is the project's own description; it goes with it.
         // Proposals first -- they point at tasks that may be deleted just below.
+        jdbc.update("DELETE FROM blueprint_ai_actions WHERE project_id = ?", projectId);
         jdbc.update("DELETE FROM blueprint_change_proposals WHERE project_id = ?", projectId);
         jdbc.update("DELETE FROM blueprint_edges WHERE project_id = ?", projectId);
         jdbc.update("DELETE FROM blueprint_nodes WHERE project_id = ?", projectId);
@@ -152,6 +154,7 @@ public class DeletionService {
         precondition.requireSatisfiedBy(layoutVersion);
         requireConfirmation(project.getName(), confirmation);
         com.aicompany.backend.deletion.DeletionPreview impact = blueprintImpact(project).requireAllowed();
+        jdbc.update("DELETE FROM blueprint_ai_actions WHERE project_id = ?", projectId);
         jdbc.update("DELETE FROM blueprint_change_proposals WHERE project_id = ?", projectId);
         jdbc.update("DELETE FROM blueprint_edges WHERE project_id = ?", projectId);
         jdbc.update("UPDATE blueprint_nodes SET parent_id = NULL WHERE project_id = ?", projectId);
@@ -197,6 +200,7 @@ public class DeletionService {
             // A proposal accepted into this task keeps its record, without the task.
             jdbc.update("UPDATE blueprint_change_proposals SET task_id = NULL WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_transitions WHERE task_id = ?", id);
+            jdbc.update("DELETE FROM blueprint_ai_actions WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_reviews WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_handoffs WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_runs WHERE task_id = ?", id);

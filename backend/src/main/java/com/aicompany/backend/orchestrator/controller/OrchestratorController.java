@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -36,7 +37,7 @@ public class OrchestratorController {
     }
 
     public record HandoffResponse(Long id, Long taskId, String target, String documentPath, String prompt,
-                                  String command, String requestedBy, Instant createdAt) {
+                                  @Nullable String command, String requestedBy, Instant createdAt) {
         public static HandoffResponse from(TaskHandoff h) {
             return new HandoffResponse(h.getId(), h.getTaskId(), h.getTarget(), h.getDocumentPath(), h.getPrompt(),
                     h.getCommand(), h.getRequestedBy(), h.getCreatedAt());
@@ -44,13 +45,13 @@ public class OrchestratorController {
     }
 
     public record HandoffResult(HandoffResponse handoff, TaskResponse task, String prompt, String fullPrompt,
-                                String delivery, String folder, String openUrl, List<String> written,
+                                String delivery, String folder, @Nullable String openUrl, List<String> written,
                                 boolean promptToClipboard) {
     }
 
-    public record ReviewResponse(Long id, Long taskId, TaskReview.Verdict verdict, String note, Long runId,
-                                 Long handoffId, String reviewer, Instant createdAt,
-                                 com.aicompany.backend.project.model.AutonomyLevel autonomyLevel) {
+    public record ReviewResponse(Long id, Long taskId, TaskReview.Verdict verdict, @Nullable String note, @Nullable Long runId,
+                                 @Nullable Long handoffId, String reviewer, Instant createdAt,
+                                 com.aicompany.backend.project.model.@Nullable AutonomyLevel autonomyLevel) {
         public static ReviewResponse from(TaskReview r) {
             return new ReviewResponse(r.getId(), r.getTaskId(), r.getVerdict(), r.getNote(), r.getRunId(),
                     r.getHandoffId(), r.getReviewer(), r.getCreatedAt(), r.getAutonomyLevel());

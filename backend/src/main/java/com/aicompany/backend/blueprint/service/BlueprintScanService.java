@@ -150,10 +150,12 @@ public class BlueprintScanService {
                 }
             }
         }
+        Map<Long, BlueprintNode> existingById = existing.stream()
+                .collect(Collectors.toMap(BlueprintNode::getId, n -> n, (a, b) -> a));
         for (BlueprintNode node : existing) {
             // the methods of a class that is gone are gone with it
             if (node.getParentId() != null) {
-                BlueprintNode parent = existing.stream().filter(p -> p.getId().equals(node.getParentId())).findFirst().orElse(null);
+                BlueprintNode parent = existingById.get(node.getParentId());
                 if (parent != null && parent.getPathState() == PathState.MISSING) {
                     node.setPathState(PathState.MISSING);
                 }

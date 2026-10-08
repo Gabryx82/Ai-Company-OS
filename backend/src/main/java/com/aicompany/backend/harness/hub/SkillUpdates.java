@@ -2,6 +2,7 @@ package com.aicompany.backend.harness.hub;
 
 import com.aicompany.backend.harness.hub.SkillHubService.CopyStatus;
 import com.aicompany.backend.harness.hub.SkillHubService.SkillView;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -46,11 +47,11 @@ public class SkillUpdates {
      * One thing that can be updated. {@code applicable} items the Hub applies itself;
      * the others say where to do it ({@code software} to open, a {@code command}).
      */
-    public record Item(String id, Type type, String app, String name, String key, String from, String to,
-                       String detail, boolean applicable, boolean needsOverwrite, String software, String command) {
+    public record Item(String id, Type type, String app, String name, String key, @Nullable String from, @Nullable String to,
+                       String detail, boolean applicable, boolean needsOverwrite, @Nullable String software, @Nullable String command) {
     }
 
-    public record UpdatesView(Instant checkedAt, List<Item> items, List<String> errors) {
+    public record UpdatesView(@Nullable Instant checkedAt, List<Item> items, List<String> errors) {
     }
 
     public record Applied(String id, String outcome, String message) {

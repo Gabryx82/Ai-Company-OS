@@ -1099,7 +1099,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["blueprintAiActions"];
         put?: never;
         post: operations["requestBlueprintAiAction"];
         delete?: never;
@@ -2474,12 +2474,12 @@ export interface components {
     schemas: {
         AgentChoice: {
             /** Format: int64 */
-            agentId?: number;
-            assigned?: boolean;
-            model?: string;
-            name?: string;
-            reason?: string;
-            role?: string;
+            agentId: number | null;
+            assigned: boolean;
+            model: string | null;
+            name: string | null;
+            reason: string;
+            role: string | null;
         };
         AgentCreateRequest: {
             model?: string;
@@ -2499,62 +2499,62 @@ export interface components {
             systemPrompt?: string;
         };
         AgentProfileResponse: {
-            active?: boolean;
+            active: boolean;
             /** Format: int64 */
-            agentId?: number;
-            contextPolicy?: string;
-            directives?: string[];
-            domain?: string;
-            limits?: string;
-            model?: string;
-            name?: string;
-            outputFormat?: string;
+            agentId: number;
+            contextPolicy: string | null;
+            directives: string[];
+            domain: string | null;
+            limits: string | null;
+            model: string | null;
+            name: string;
+            outputFormat: string | null;
             /** Format: int64 */
-            parentId?: number;
-            resources?: components["schemas"]["ResourceResponse"][];
-            responsibilities?: string;
-            role?: string;
-            software?: components["schemas"]["AgentSoftwareRef"][];
-            specialization?: string;
-            systemPrompt?: string;
+            parentId: number | null;
+            resources: components["schemas"]["ResourceResponse"][];
+            responsibilities: string | null;
+            role: string;
+            software: components["schemas"]["AgentSoftwareRef"][];
+            specialization: string;
+            systemPrompt: string | null;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         AgentRef: {
             /** Format: int64 */
-            id?: number;
-            name?: string;
-            target?: string;
+            id: number;
+            name: string;
+            target: string;
         };
         AgentResponse: {
-            active?: boolean;
+            active: boolean;
             /** Format: date-time */
-            createdAt?: string;
+            createdAt: string;
             /** Format: int64 */
-            id?: number;
-            model?: string;
-            name?: string;
-            role?: string;
-            specialization?: string;
-            status?: string;
+            id: number;
+            model: string | null;
+            name: string;
+            role: string;
+            specialization: string;
+            status: string;
             /** Format: date-time */
-            updatedAt?: string;
+            updatedAt: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         AgentSoftwareRef: {
-            key?: string;
-            name?: string;
+            key: string;
+            name: string;
         };
         AgentSpend: {
             /** Format: int64 */
-            agentId?: number;
-            agentName?: string;
-            costUsd?: number;
+            agentId: number | null;
+            agentName: string;
+            costUsd: number;
             /** Format: int32 */
-            runs?: number;
+            runs: number;
             /** Format: int64 */
-            tokens?: number;
+            tokens: number;
         };
         AgentUpdateRequest: {
             model?: string;
@@ -2569,29 +2569,29 @@ export interface components {
             version: number;
         };
         AppView: {
-            agents?: components["schemas"]["AgentRef"][];
+            agents: components["schemas"]["AgentRef"][];
             /** Format: int32 */
-            count?: number;
-            description?: string;
-            detected?: boolean;
-            id?: string;
-            installable?: boolean;
-            locations?: components["schemas"]["LocationView"][];
-            name?: string;
-            software?: string;
-            targets?: string[];
+            count: number;
+            description: string;
+            detected: boolean;
+            id: string;
+            installable: boolean;
+            locations: components["schemas"]["LocationView"][];
+            name: string;
+            software: string | null;
+            targets: string[];
         };
         Applied: {
-            id?: string;
-            message?: string;
-            outcome?: string;
+            id: string;
+            message: string;
+            outcome: string;
         };
         ApplyRequest: {
             ids: string[];
             overwrite?: boolean;
         };
         ApplyResponse: {
-            results?: components["schemas"]["Applied"][];
+            results: components["schemas"]["Applied"][];
         };
         Autostart: {
             autostart: boolean;
@@ -2601,111 +2601,129 @@ export interface components {
             timeoutSeconds: number;
         };
         Binding: {
-            model?: components["schemas"]["ModelRef"];
-            problems?: string[];
-            provider?: components["schemas"]["ProviderRef"];
-            summary?: string;
-            target?: components["schemas"]["TargetRef"];
-            valid?: boolean;
-            warnings?: string[];
+            model: components["schemas"]["ModelRef"] | null;
+            problems: string[];
+            provider: components["schemas"]["ProviderRef"] | null;
+            summary: string;
+            target: components["schemas"]["TargetRef"];
+            valid: boolean;
+            warnings: string[];
         };
         BindingSoftwareRef: {
-            key?: string;
-            name?: string;
+            key: string;
+            name: string;
         };
         BlueprintActionInfo: {
             /** @enum {string} */
-            action?: "EXPLAIN_COMPONENT" | "GENERATE_PSEUDOCODE" | "DETECT_MISSING_RELATIONS" | "EXPLAIN_DEPENDENCY" | "SUGGEST_REFACTOR" | "FIND_ARCHITECTURAL_ISSUE" | "GENERATE_DOCUMENTATION" | "CREATE_IMPLEMENTATION_TASK";
-            description?: string;
-            label?: string;
+            action: "EXPLAIN_COMPONENT" | "GENERATE_PSEUDOCODE" | "DETECT_MISSING_RELATIONS" | "EXPLAIN_DEPENDENCY" | "SUGGEST_REFACTOR" | "FIND_ARCHITECTURAL_ISSUE" | "GENERATE_DOCUMENTATION" | "CREATE_IMPLEMENTATION_TASK";
+            description: string;
+            label: string;
         };
         BlueprintActionOutcome: {
-            action?: string;
+            action: string;
             /** Format: int64 */
-            taskId?: number;
-            taskTitle?: string;
+            taskId: number;
+            taskTitle: string;
         };
         BlueprintActionRequest: {
             /** @enum {string} */
             action?: "EXPLAIN_COMPONENT" | "GENERATE_PSEUDOCODE" | "DETECT_MISSING_RELATIONS" | "EXPLAIN_DEPENDENCY" | "SUGGEST_REFACTOR" | "FIND_ARCHITECTURAL_ISSUE" | "GENERATE_DOCUMENTATION" | "CREATE_IMPLEMENTATION_TASK";
         };
+        BlueprintAiActionView: {
+            /** @enum {string} */
+            action: "EXPLAIN_COMPONENT" | "GENERATE_PSEUDOCODE" | "DETECT_MISSING_RELATIONS" | "EXPLAIN_DEPENDENCY" | "SUGGEST_REFACTOR" | "FIND_ARCHITECTURAL_ISSUE" | "GENERATE_DOCUMENTATION" | "CREATE_IMPLEMENTATION_TASK";
+            appliesTo: string | null;
+            /** Format: int64 */
+            id: number;
+            outcome: string | null;
+            /** Format: date-time */
+            outcomeAt: string | null;
+            outcomeSource: string | null;
+            /** Format: date-time */
+            requestedAt: string;
+            requestedBy: string;
+            /** Format: int64 */
+            taskId: number;
+            taskStatus: string;
+            taskTitle: string;
+        };
         BlueprintBlock: {
-            description?: string;
-            expandable?: boolean;
-            expanded?: boolean;
+            description: string | null;
+            expandable: boolean;
+            expanded: boolean;
             /** @enum {string} */
-            family?: "FILES" | "CLASSES" | "METHODS" | "APIS" | "DATA" | "TESTS" | "CUSTOM";
-            filePath?: string;
+            family: "FILES" | "CLASSES" | "METHODS" | "APIS" | "DATA" | "TESTS" | "CUSTOM";
+            filePath: string | null;
             /** Format: int64 */
-            id?: number;
-            key?: string;
+            id: number;
+            key: string;
             /** @enum {string} */
-            kind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
-            language?: string;
+            kind: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            language: string | null;
             /** @enum {string} */
-            layer?: "BACKEND" | "FRONTEND" | "DATABASE" | "TESTS" | "DOCS" | "OTHER";
+            layer: "BACKEND" | "FRONTEND" | "DATABASE" | "TESTS" | "DOCS" | "OTHER";
             /** Format: int32 */
-            members?: number;
-            name?: string;
+            members: number;
+            name: string;
             /** @enum {string} */
-            origin?: "DETECTED" | "MANUAL";
+            origin: "DETECTED" | "MANUAL";
             /** Format: int64 */
-            parentId?: number;
+            parentId: number | null;
             /** @enum {string} */
-            pathState?: "LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING";
-            pseudocodePreview?: string;
+            pathState: "LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING";
+            pseudocodePreview: string | null;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED";
-            tags?: string[];
+            status: "PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED";
+            tags: string[];
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         BlueprintBlockDetail: {
             /** Format: date-time */
-            createdAt?: string;
-            description?: string;
-            detected?: components["schemas"]["BlueprintDetectedValues"];
+            createdAt: string;
+            description: string | null;
+            detected: components["schemas"]["BlueprintDetectedValues"] | null;
             /** Format: int32 */
-            endLine?: number;
-            expandable?: boolean;
-            expanded?: boolean;
+            endLine: number | null;
+            expandable: boolean;
+            expanded: boolean;
             /** @enum {string} */
-            family?: "FILES" | "CLASSES" | "METHODS" | "APIS" | "DATA" | "TESTS" | "CUSTOM";
-            filePath?: string;
+            family: "FILES" | "CLASSES" | "METHODS" | "APIS" | "DATA" | "TESTS" | "CUSTOM";
+            filePath: string | null;
             /** Format: int64 */
-            id?: number;
-            incoming?: components["schemas"]["BlueprintConnection"][];
-            key?: string;
+            id: number;
+            incoming: components["schemas"]["BlueprintConnection"][];
+            key: string;
             /** @enum {string} */
-            kind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
-            language?: string;
+            kind: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            language: string | null;
             /** Format: date-time */
-            lastScanAt?: string;
+            lastScanAt: string | null;
             /** @enum {string} */
-            layer?: "BACKEND" | "FRONTEND" | "DATABASE" | "TESTS" | "DOCS" | "OTHER";
-            name?: string;
-            notes?: string;
+            layer: "BACKEND" | "FRONTEND" | "DATABASE" | "TESTS" | "DOCS" | "OTHER";
+            name: string;
+            notes: string | null;
             /** @enum {string} */
-            origin?: "DETECTED" | "MANUAL";
-            outgoing?: components["schemas"]["BlueprintConnection"][];
-            overrides?: string[];
+            origin: "DETECTED" | "MANUAL";
+            outgoing: components["schemas"]["BlueprintConnection"][];
+            overrides: string[];
             /** Format: int64 */
-            parentId?: number;
+            parentId: number | null;
             /** @enum {string} */
-            pathState?: "LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING";
-            pseudocode?: string;
+            pathState: "LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING";
+            pseudocode: string | null;
             /** @enum {string} */
-            section?: "CLASS" | "FUNCTION" | "ENDPOINT" | "FRONTEND" | "DATABASE" | "NONE";
+            section: "CLASS" | "FUNCTION" | "ENDPOINT" | "FRONTEND" | "DATABASE" | "NONE";
             /** Format: int32 */
-            startLine?: number;
+            startLine: number | null;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED";
-            structure?: components["schemas"]["CodeStructure"];
-            tags?: string[];
+            status: "PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED";
+            structure: components["schemas"]["CodeStructure"];
+            tags: string[];
             /** Format: date-time */
-            updatedAt?: string;
+            updatedAt: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         BlueprintBlockRequest: {
             description?: string;
@@ -2728,64 +2746,66 @@ export interface components {
             y?: number;
         };
         BlueprintCanvasLayout: {
-            positions?: {
+            positions: {
                 [key: string]: components["schemas"]["BlueprintPoint"];
             };
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         BlueprintCodeReference: {
-            excerpt?: string;
+            excerpt: string | null;
             /** Format: int32 */
-            line?: number;
-            path?: string;
+            line: number | null;
+            path: string;
         };
         BlueprintConnection: {
             /** Format: int64 */
-            edgeId?: number;
-            label?: string;
+            edgeId: number;
+            label: string | null;
             /** Format: int64 */
-            nodeId?: number;
+            nodeId: number;
             /** @enum {string} */
-            nodeKind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
-            nodeName?: string;
+            nodeKind: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            nodeName: string;
             /** @enum {string} */
-            origin?: "DETECTED" | "MANUAL" | "PROPOSED";
+            origin: "DETECTED" | "MANUAL" | "PROPOSED";
             /** @enum {string} */
-            relation?: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
+            relation: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
         };
         BlueprintDetectedValues: {
-            description?: string;
+            description: string | null;
             /** @enum {string} */
-            kind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
-            name?: string;
-            pseudocode?: string;
+            kind: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            name: string;
+            pseudocode: string | null;
         };
         BlueprintGraph: {
-            archived?: boolean;
-            edges?: components["schemas"]["BlueprintRelation"][];
-            lastScan?: components["schemas"]["BlueprintScanReport"];
-            layout?: components["schemas"]["BlueprintCanvasLayout"];
-            metrics?: components["schemas"]["BlueprintMetrics"];
-            nodes?: components["schemas"]["BlueprintBlock"][];
+            archived: boolean;
+            edges: components["schemas"]["BlueprintRelation"][];
+            lastScan: components["schemas"]["BlueprintScanReport"] | null;
+            layout: components["schemas"]["BlueprintCanvasLayout"];
+            metrics: components["schemas"]["BlueprintMetrics"];
+            nodes: components["schemas"]["BlueprintBlock"][];
+            outline: boolean;
+            partial: boolean;
             /** Format: int32 */
-            pendingProposals?: number;
+            pendingProposals: number;
             /** Format: int64 */
-            projectId?: number;
-            workspaceReady?: boolean;
+            projectId: number;
+            workspaceReady: boolean;
         };
         BlueprintKindInfo: {
             /** Format: int32 */
-            column?: number;
+            column: number;
             /** @enum {string} */
-            defaultLayer?: "BACKEND" | "FRONTEND" | "DATABASE" | "TESTS" | "DOCS" | "OTHER";
+            defaultLayer: "BACKEND" | "FRONTEND" | "DATABASE" | "TESTS" | "DOCS" | "OTHER";
             /** @enum {string} */
-            family?: "FILES" | "CLASSES" | "METHODS" | "APIS" | "DATA" | "TESTS" | "CUSTOM";
+            family: "FILES" | "CLASSES" | "METHODS" | "APIS" | "DATA" | "TESTS" | "CUSTOM";
             /** @enum {string} */
-            kind?: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
-            label?: string;
+            kind: "FILE" | "CLASS" | "INTERFACE" | "ENUM" | "FUNCTION" | "CONTROLLER" | "SERVICE" | "REPOSITORY" | "DTO" | "ENTITY" | "CONFIGURATION" | "DATABASE" | "ENDPOINT" | "COMPONENT" | "HOOK" | "STORE" | "TEST" | "SCRIPT" | "SNIPPET" | "DOCUMENT" | "CUSTOM";
+            label: string;
             /** @enum {string} */
-            section?: "CLASS" | "FUNCTION" | "ENDPOINT" | "FRONTEND" | "DATABASE" | "NONE";
+            section: "CLASS" | "FUNCTION" | "ENDPOINT" | "FRONTEND" | "DATABASE" | "NONE";
         };
         BlueprintLayoutRequest: {
             positions?: {
@@ -2793,34 +2813,34 @@ export interface components {
             };
         };
         BlueprintMetrics: {
-            byFamily?: {
+            byFamily: {
                 [key: string]: number;
             };
-            byLayer?: {
+            byLayer: {
                 [key: string]: number;
             };
             /** Format: int32 */
-            classes?: number;
+            classes: number;
             /** Format: int32 */
-            databaseEntities?: number;
+            databaseEntities: number;
             /** Format: int32 */
-            detectedRelations?: number;
+            detectedRelations: number;
             /** Format: int32 */
-            endpoints?: number;
+            endpoints: number;
             /** Format: int32 */
-            files?: number;
+            files: number;
             /** Format: int32 */
-            manualRelations?: number;
+            manualRelations: number;
             /** Format: int32 */
-            missingNodes?: number;
+            missingNodes: number;
             /** Format: int32 */
-            proposedRelations?: number;
+            proposedRelations: number;
             /** Format: int32 */
-            tests?: number;
+            tests: number;
             /** Format: int32 */
-            totalNodes?: number;
+            totalNodes: number;
             /** Format: int32 */
-            unresolvedRelations?: number;
+            unresolvedRelations: number;
         };
         BlueprintPoint: {
             /** Format: double */
@@ -2829,31 +2849,31 @@ export interface components {
             y?: number;
         };
         BlueprintProposal: {
-            consequences?: string;
+            consequences: string;
             /** Format: date-time */
-            createdAt?: string;
+            createdAt: string;
             /** Format: date-time */
-            decidedAt?: string;
-            decidedBy?: string;
-            diff?: string;
+            decidedAt: string | null;
+            decidedBy: string | null;
+            diff: string;
             /** Format: int64 */
-            edgeId?: number;
-            filePath?: string;
+            edgeId: number | null;
+            filePath: string;
             /** Format: int64 */
-            id?: number;
+            id: number;
             /** @enum {string} */
-            kind?: "CREATE_FILE" | "ADD_DEPENDENCY" | "CUSTOM";
+            kind: "CREATE_FILE" | "ADD_DEPENDENCY" | "CUSTOM";
             /** Format: int64 */
-            nodeId?: number;
-            proposedBy?: string;
-            reason?: string;
+            nodeId: number;
+            proposedBy: string;
+            reason: string;
             /** @enum {string} */
-            status?: "PROPOSED" | "ACCEPTED" | "REJECTED";
+            status: "PROPOSED" | "ACCEPTED" | "REJECTED";
             /** Format: int64 */
-            taskId?: number;
-            title?: string;
+            taskId: number | null;
+            title: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         BlueprintProposalRequest: {
             consequences?: string;
@@ -2869,31 +2889,31 @@ export interface components {
             title?: string;
         };
         BlueprintRelation: {
-            code?: components["schemas"]["BlueprintCodeReference"];
-            description?: string;
+            code: components["schemas"]["BlueprintCodeReference"] | null;
+            description: string | null;
             /** @enum {string} */
-            family?: "DEPENDENCY" | "STRUCTURE" | "DATA" | "EVENTS" | "TESTS" | "CUSTOM";
+            family: "DEPENDENCY" | "STRUCTURE" | "DATA" | "EVENTS" | "TESTS" | "CUSTOM";
             /** Format: int64 */
-            id?: number;
-            label?: string;
+            id: number;
+            label: string | null;
             /** @enum {string} */
-            origin?: "DETECTED" | "MANUAL" | "PROPOSED";
+            origin: "DETECTED" | "MANUAL" | "PROPOSED";
             /** @enum {string} */
-            relation?: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
+            relation: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
             /** Format: int64 */
-            source?: number;
+            source: number;
             /** Format: int64 */
-            target?: number;
+            target: number;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         BlueprintRelationInfo: {
-            description?: string;
+            description: string;
             /** @enum {string} */
-            family?: "DEPENDENCY" | "STRUCTURE" | "DATA" | "EVENTS" | "TESTS" | "CUSTOM";
-            label?: string;
+            family: "DEPENDENCY" | "STRUCTURE" | "DATA" | "EVENTS" | "TESTS" | "CUSTOM";
+            label: string;
             /** @enum {string} */
-            relation?: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
+            relation: "IMPORTS" | "USES" | "CALLS" | "EXTENDS" | "IMPLEMENTS" | "READS" | "WRITES" | "CREATES" | "CONTAINS" | "BELONGS_TO" | "VALIDATES" | "EMITS" | "SUBSCRIBES" | "MAPS_TO" | "ENDPOINT_TO_SERVICE" | "SERVICE_TO_REPOSITORY" | "ENTITY_TO_TABLE" | "TEST_COVERS" | "CUSTOM";
         };
         BlueprintRelationRequest: {
             description?: string;
@@ -2912,58 +2932,58 @@ export interface components {
         };
         BlueprintScanReport: {
             /** Format: int32 */
-            edgesDetected?: number;
+            edgesDetected: number;
             /** Format: int32 */
-            files?: number;
+            files: number;
             /** Format: date-time */
-            finishedAt?: string;
+            finishedAt: string;
             /** Format: int64 */
-            id?: number;
-            languages?: string;
+            id: number;
+            languages: string;
             /** Format: int32 */
-            nodesAdded?: number;
+            nodesAdded: number;
             /** Format: int32 */
-            nodesDetected?: number;
+            nodesDetected: number;
             /** Format: int32 */
-            nodesMissing?: number;
-            requestedBy?: string;
+            nodesMissing: number;
+            requestedBy: string;
             /** Format: date-time */
-            startedAt?: string;
-            truncated?: boolean;
+            startedAt: string;
+            truncated: boolean;
             /** Format: int32 */
-            unresolved?: number;
+            unresolved: number;
         };
         BlueprintSnippet: {
             /** Format: int32 */
-            endLine?: number;
-            language?: string;
-            path?: string;
+            endLine: number;
+            language: string;
+            path: string;
             /** Format: int32 */
-            startLine?: number;
-            text?: string;
-            truncated?: boolean;
+            startLine: number;
+            text: string;
+            truncated: boolean;
         };
         BlueprintVocabularyView: {
-            actions?: components["schemas"]["BlueprintActionInfo"][];
-            kinds?: components["schemas"]["BlueprintKindInfo"][];
-            pathStates?: ("LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING")[];
-            proposalKinds?: ("CREATE_FILE" | "ADD_DEPENDENCY" | "CUSTOM")[];
-            relations?: components["schemas"]["BlueprintRelationInfo"][];
-            statuses?: ("PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED")[];
+            actions: components["schemas"]["BlueprintActionInfo"][];
+            kinds: components["schemas"]["BlueprintKindInfo"][];
+            pathStates: ("LINKED" | "TO_CREATE" | "DOCUMENT_REFERENCE" | "VIRTUAL" | "MISSING")[];
+            proposalKinds: ("CREATE_FILE" | "ADD_DEPENDENCY" | "CUSTOM")[];
+            relations: components["schemas"]["BlueprintRelationInfo"][];
+            statuses: ("PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED")[];
         };
         Budget: {
-            alert?: boolean;
+            alert: boolean;
             /** Format: int32 */
-            alertPercent?: number;
-            exceeded?: boolean;
-            monthlyLimitUsd?: number;
+            alertPercent: number;
+            exceeded: boolean;
+            monthlyLimitUsd: number;
             /** Format: int32 */
-            percent?: number;
-            providerKey?: string;
-            providerName?: string;
-            spentThisMonthUsd?: number;
+            percent: number;
+            providerKey: string;
+            providerName: string;
+            spentThisMonthUsd: number;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         BudgetRequest: {
             /** Format: int32 */
@@ -2978,39 +2998,39 @@ export interface components {
             subagents?: "DETACH" | "DELETE";
         };
         Category: {
-            key?: string;
-            label?: string;
+            key: string;
+            label: string;
         };
         CodeGraph: {
-            cycles?: string[][];
-            edges?: components["schemas"]["CodeGraphEdge"][];
+            cycles: string[][];
+            edges: components["schemas"]["CodeGraphEdge"][];
             /** Format: int32 */
-            externals?: number;
+            externals: number;
             /** Format: int32 */
-            files?: number;
+            files: number;
             /** Format: date-time */
-            generatedAt?: string;
-            languages?: {
+            generatedAt: string;
+            languages: {
                 [key: string]: number;
             };
-            mostImported?: components["schemas"]["Hotspot"][];
-            nodes?: components["schemas"]["CodeGraphNode"][];
-            taskLinks?: components["schemas"]["TaskLink"][];
-            truncated?: boolean;
+            mostImported: components["schemas"]["Hotspot"][];
+            nodes: components["schemas"]["CodeGraphNode"][];
+            taskLinks: components["schemas"]["TaskLink"][];
+            truncated: boolean;
         };
         CodeGraphEdge: {
-            kind?: string;
-            source?: string;
-            target?: string;
+            kind: string;
+            source: string;
+            target: string;
         };
         CodeGraphNode: {
-            directory?: string;
-            id?: string;
-            kind?: string;
-            label?: string;
-            language?: string;
+            directory: string;
+            id: string;
+            kind: string;
+            label: string;
+            language: string;
             /** Format: int32 */
-            lines?: number;
+            lines: number;
         };
         CodeMember: {
             annotations?: string[];
@@ -3086,48 +3106,48 @@ export interface components {
             systemPrompt?: string;
         };
         ConfigurationResponse: {
-            binding?: components["schemas"]["Binding"];
-            capabilities?: string[];
-            children?: components["schemas"]["Ref"][];
-            contextPolicy?: string;
+            binding: components["schemas"]["Binding"];
+            capabilities: string[];
+            children: components["schemas"]["Ref"][];
+            contextPolicy: string | null;
             /** Format: date-time */
-            customizedAt?: string;
-            customizedBy?: string;
-            defaults?: {
+            customizedAt: string | null;
+            customizedBy: string | null;
+            defaults: {
                 [key: string]: unknown;
-            };
-            description?: string;
-            directives?: string[];
-            domain?: string;
-            executionTarget?: string;
+            } | null;
+            description: string | null;
+            directives: string[];
+            domain: string | null;
+            executionTarget: string;
             /** Format: int64 */
-            id?: number;
-            limits?: string;
-            model?: string;
-            modified?: string[];
-            name?: string;
-            origin?: string;
-            outputFormat?: string;
-            parent?: components["schemas"]["Ref"];
-            resources?: {
+            id: number;
+            limits: string | null;
+            model: string | null;
+            modified: string[];
+            name: string;
+            origin: string;
+            outputFormat: string | null;
+            parent: components["schemas"]["Ref"] | null;
+            resources: {
                 [key: string]: components["schemas"]["ResourceRef"][];
             };
-            responsibilities?: string;
-            role?: string;
-            software?: components["schemas"]["BindingSoftwareRef"][];
-            specialization?: string;
-            status?: string;
-            systemPrompt?: string;
+            responsibilities: string | null;
+            role: string;
+            software: components["schemas"]["BindingSoftwareRef"][];
+            specialization: string;
+            status: string;
+            systemPrompt: string | null;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         ConnectorInput: {
-            defaultValue?: string;
-            description?: string;
-            kind?: string;
-            name?: string;
-            required?: boolean;
-            secret?: boolean;
+            defaultValue: string | null;
+            description: string | null;
+            kind: string;
+            name: string;
+            required: boolean;
+            secret: boolean;
         };
         ConnectorInstallRequest: {
             name?: string;
@@ -3140,35 +3160,35 @@ export interface components {
             };
         };
         ConnectorInstallResponse: {
-            results?: components["schemas"]["InstallOutcome"][];
+            results: components["schemas"]["InstallOutcome"][];
         };
         Content: {
             content: string;
         };
         ContextFile: {
-            exists?: boolean;
-            path?: string;
-            why?: string;
+            exists: boolean;
+            path: string;
+            why: string;
         };
         CopyTarget: {
-            app?: string;
-            appName?: string;
-            available?: boolean;
+            app: string;
+            appName: string;
+            available: boolean;
             /** Format: date-time */
-            deployedAt?: string;
-            path?: string;
-            skillId?: string;
-            status?: string;
+            deployedAt: string | null;
+            path: string;
+            skillId: string | null;
+            status: string;
         };
         CopyView: {
-            app?: string;
+            app: string;
             /** Format: date-time */
-            deployedAt?: string;
-            location?: string;
-            path?: string;
-            skillId?: string;
+            deployedAt: string | null;
+            location: string;
+            path: string;
+            skillId: string;
             /** @enum {string} */
-            status?: "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN";
+            status: "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN";
         };
         DailyRequest: {
             /** Format: date */
@@ -3188,212 +3208,212 @@ export interface components {
         };
         DailyResponse: {
             /** Format: date */
-            day?: string;
+            day: string;
             /** Format: time-local */
-            dueTime?: string;
+            dueTime: string | null;
             /** Format: int64 */
-            id?: number;
-            notes?: string;
+            id: number;
+            notes: string | null;
             /** Format: int32 */
-            position?: number;
+            position: number;
             /** @enum {string} */
-            priority?: "LOW" | "MEDIUM" | "HIGH";
+            priority: "LOW" | "MEDIUM" | "HIGH";
             /** @enum {string} */
-            status?: "TODO" | "DOING" | "DONE";
-            task?: components["schemas"]["TaskRef"];
-            title?: string;
+            status: "TODO" | "DOING" | "DONE";
+            task: components["schemas"]["TaskRef"] | null;
+            title: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         DeletionPreview: {
-            allowed?: boolean;
-            blockers?: string[];
-            deletes?: string[];
-            detaches?: string[];
-            files?: string[];
-            keeps?: string[];
-            kind?: string;
-            subjects?: components["schemas"]["Subject"][];
+            allowed: boolean;
+            blockers: string[];
+            deletes: string[];
+            detaches: string[];
+            files: string[];
+            keeps: string[];
+            kind: string;
+            subjects: components["schemas"]["Subject"][];
         };
         DeployRequest: {
             replace?: boolean;
         };
         DeployResult: {
-            app?: string;
-            backup?: string;
-            message?: string;
-            outcome?: string;
-            path?: string;
+            app: string;
+            backup: string | null;
+            message: string;
+            outcome: string;
+            path: string;
         };
         Document: {
             /** Format: date-time */
-            modified?: string;
-            path?: string;
+            modified: string;
+            path: string;
             /** Format: int64 */
-            size?: number;
+            size: number;
         };
         DocumentWrite: {
             content: string;
         };
         Documents: {
-            agents?: components["schemas"]["Document"];
-            exists?: boolean;
-            handoffs?: components["schemas"]["Document"][];
-            implementationPlan?: components["schemas"]["Document"];
-            masterPrompt?: components["schemas"]["Document"];
-            masterPromptIsTemplate?: boolean;
-            phases?: components["schemas"]["Document"][];
-            planJson?: components["schemas"]["Document"];
-            referenceFiles?: components["schemas"]["Document"][];
-            references?: components["schemas"]["Document"][];
-            tasks?: components["schemas"]["Document"][];
-            workspacePath?: string;
+            agents: components["schemas"]["Document"] | null;
+            exists: boolean;
+            handoffs: components["schemas"]["Document"][];
+            implementationPlan: components["schemas"]["Document"] | null;
+            masterPrompt: components["schemas"]["Document"] | null;
+            masterPromptIsTemplate: boolean;
+            phases: components["schemas"]["Document"][];
+            planJson: components["schemas"]["Document"] | null;
+            referenceFiles: components["schemas"]["Document"][];
+            references: components["schemas"]["Document"][];
+            tasks: components["schemas"]["Document"][];
+            workspacePath: string;
         };
         EcosystemEdge: {
-            kind?: string;
-            source?: string;
-            target?: string;
+            kind: string;
+            source: string;
+            target: string;
         };
         EcosystemNode: {
-            id?: string;
-            label?: string;
-            meta?: {
+            id: string;
+            label: string;
+            meta: {
                 [key: string]: unknown;
             };
-            status?: string;
-            type?: string;
+            status: string | null;
+            type: string;
         };
         Event: {
-            app?: string;
+            app: string;
             /** Format: date-time */
-            at?: string;
+            at: string;
             /** @enum {string} */
-            change?: "ADDED" | "REMOVED" | "MODIFIED";
-            detail?: string;
+            change: "ADDED" | "REMOVED" | "MODIFIED";
+            detail: string | null;
             /** Format: int64 */
-            id?: number;
-            location?: string;
-            name?: string;
-            path?: string;
+            id: number;
+            location: string;
+            name: string;
+            path: string;
         };
         EventResponse: {
-            detail?: string;
+            detail: string | null;
             /** Format: int64 */
-            id?: number;
+            id: number;
             /** Format: date-time */
-            occurredAt?: string;
-            principal?: string;
-            source?: string;
-            type?: string;
+            occurredAt: string;
+            principal: string | null;
+            source: string | null;
+            type: string;
         };
         ExecutionTarget: {
-            contextFile?: string;
+            contextFile: string | null;
             /** @enum {string} */
-            delivery?: "ENGINE_RUN" | "CLI_PROMPT" | "IDE_FOLDER" | "APP_PASTE" | "WEB_PASTE" | "MANUAL";
+            delivery: "ENGINE_RUN" | "CLI_PROMPT" | "IDE_FOLDER" | "APP_PASTE" | "WEB_PASTE" | "MANUAL";
             engine?: boolean;
-            howItWorks?: string;
-            key?: string;
-            name?: string;
-            providers?: string[];
-            software?: string;
+            howItWorks: string;
+            key: string;
+            name: string;
+            providers: string[];
+            software: string | null;
         };
         ExtensionPreview: {
-            description?: string;
-            details?: {
+            description: string;
+            details: {
                 [key: string]: string;
             };
-            inputs?: components["schemas"]["ConnectorInput"][];
-            installName?: string;
-            kind?: string;
-            name?: string;
-            provider?: string;
-            ref?: string;
-            sourceUrl?: string;
-            targets?: components["schemas"]["InstallPlan"][];
-            version?: string;
-            warnings?: string[];
+            inputs: components["schemas"]["ConnectorInput"][];
+            installName: string;
+            kind: string;
+            name: string;
+            provider: string;
+            ref: string;
+            sourceUrl: string | null;
+            targets: components["schemas"]["InstallPlan"][];
+            version: string | null;
+            warnings: string[];
         };
         FileResponse: {
-            absolutePath?: string;
-            content?: string;
-            exists?: boolean;
-            key?: string;
+            absolutePath: string;
+            content: string | null;
+            exists: boolean;
+            key: string;
             /** Format: date-time */
-            modified?: string;
-            relativePath?: string;
+            modified: string | null;
+            relativePath: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         FoundDetail: {
-            content?: string;
-            files?: components["schemas"]["PackageFile"][];
-            folder?: string;
-            skill?: components["schemas"]["SkillView"];
-            truncated?: boolean;
+            content: string;
+            files: components["schemas"]["PackageFile"][];
+            folder: string;
+            skill: components["schemas"]["SkillView"];
+            truncated: boolean;
         };
         GenerateRequest: {
             model?: string;
         };
         Graph: {
-            edges?: components["schemas"]["EcosystemEdge"][];
-            nodes?: components["schemas"]["EcosystemNode"][];
+            edges: components["schemas"]["EcosystemEdge"][];
+            nodes: components["schemas"]["EcosystemNode"][];
         };
         HandoffRequest: {
             target: string;
         };
         HandoffResponse: {
-            command?: string;
+            command: string | null;
             /** Format: date-time */
-            createdAt?: string;
-            documentPath?: string;
+            createdAt: string;
+            documentPath: string;
             /** Format: int64 */
-            id?: number;
-            prompt?: string;
-            requestedBy?: string;
-            target?: string;
+            id: number;
+            prompt: string;
+            requestedBy: string;
+            target: string;
             /** Format: int64 */
-            taskId?: number;
+            taskId: number;
         };
         HandoffResult: {
-            delivery?: string;
-            folder?: string;
-            fullPrompt?: string;
-            handoff?: components["schemas"]["HandoffResponse"];
-            openUrl?: string;
-            prompt?: string;
-            promptToClipboard?: boolean;
-            task?: components["schemas"]["TaskResponse"];
-            written?: string[];
+            delivery: string;
+            folder: string;
+            fullPrompt: string;
+            handoff: components["schemas"]["HandoffResponse"];
+            openUrl: string | null;
+            prompt: string;
+            promptToClipboard: boolean;
+            task: components["schemas"]["TaskResponse"];
+            written: string[];
         };
         Hotspot: {
-            id?: string;
+            id: string;
             /** Format: int32 */
-            importedBy?: number;
+            importedBy: number;
         };
         Impact: {
             /** Format: int32 */
-            dailyItems?: number;
-            folder?: string;
+            dailyItems: number;
+            folder: string | null;
             /** Format: int32 */
-            handoffs?: number;
+            handoffs: number;
             /** Format: int64 */
-            id?: number;
-            kind?: string;
-            name?: string;
-            notes?: string[];
+            id: number;
+            kind: string;
+            name: string;
+            notes: string[];
             /** Format: int32 */
-            phases?: number;
+            phases: number;
             /** Format: int32 */
-            planRuns?: number;
+            planRuns: number;
             /** Format: int32 */
-            resources?: number;
+            resources: number;
             /** Format: int32 */
-            reviews?: number;
-            runInProgress?: boolean;
+            reviews: number;
+            runInProgress: boolean;
             /** Format: int32 */
-            runs?: number;
+            runs: number;
             /** Format: int32 */
-            tasks?: number;
+            tasks: number;
         };
         Import: {
             url: string;
@@ -3402,22 +3422,22 @@ export interface components {
             key?: string;
         };
         InstallOutcome: {
-            command?: string;
-            confirmation?: string;
-            message?: string;
-            output?: string;
-            software?: string;
+            command: string | null;
+            confirmation: string | null;
+            message: string;
+            output: string | null;
+            software: string | null;
             /** @enum {string} */
-            status?: "INSTALLED" | "NEEDS_CONFIRMATION" | "MANUAL" | "FAILED";
-            target?: string;
+            status: "INSTALLED" | "NEEDS_CONFIRMATION" | "MANUAL" | "FAILED";
+            target: string;
         };
         InstallPlan: {
-            app?: string;
-            appName?: string;
-            available?: boolean;
-            command?: string;
-            method?: string;
-            note?: string;
+            app: string;
+            appName: string;
+            available: boolean;
+            command: string | null;
+            method: string;
+            note: string | null;
         };
         InstallRequest: {
             key?: string;
@@ -3426,97 +3446,97 @@ export interface components {
             targets?: string[];
         };
         InstallResult: {
-            copies?: components["schemas"]["DeployResult"][];
-            filePath?: string;
-            key?: string;
-            name?: string;
+            copies: components["schemas"]["DeployResult"][];
+            filePath: string;
+            key: string;
+            name: string;
         };
         Installed: {
             /** Format: int64 */
-            agentId?: number;
-            name?: string;
+            agentId: number;
+            name: string;
             /** @enum {string} */
-            outcome?: "CREATED" | "EXISTING";
+            outcome: "CREATED" | "EXISTING";
             /** Format: int64 */
-            parentId?: number;
+            parentId: number | null;
         };
         Issued: {
             command?: string[];
             directory?: string;
             /** Format: date-time */
-            expiresAt?: string;
+            expiresAt: string;
             shell?: string;
             ticket?: string;
         };
         Item: {
-            app?: string;
-            applicable?: boolean;
-            command?: string;
-            detail?: string;
-            from?: string;
-            id?: string;
-            key?: string;
-            name?: string;
-            needsOverwrite?: boolean;
-            software?: string;
-            to?: string;
+            app: string;
+            applicable: boolean;
+            command: string | null;
+            detail: string;
+            from: string | null;
+            id: string;
+            key: string;
+            name: string;
+            needsOverwrite: boolean;
+            software: string | null;
+            to: string | null;
             /** @enum {string} */
-            type?: "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN";
+            type: "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN";
         };
         LaunchRequest: {
             /** Format: int64 */
             projectId?: number;
         };
         LaunchResponse: {
-            command?: string[];
-            folderOpened?: boolean;
-            key?: string;
-            workingDirectory?: string;
+            command: string[];
+            folderOpened: boolean;
+            key: string;
+            workingDirectory: string;
         };
         Learning: {
             /** Format: int32 */
-            changesRequested?: number;
+            changesRequested: number;
             /** Format: int32 */
-            firstPassAccepted?: number;
+            firstPassAccepted: number;
             /** @enum {string} */
-            level?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
+            level: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
             /** Format: int32 */
-            operatorCompletions?: number;
-            pieces?: components["schemas"]["Piece"][];
+            operatorCompletions: number;
+            pieces: components["schemas"]["Piece"][];
             /** Format: int32 */
-            piecesOpen?: number;
-            piecesTruncated?: boolean;
+            piecesOpen: number | null;
+            piecesTruncated: boolean;
             /** Format: int32 */
-            reviewedTasks?: number;
-            suggestion?: components["schemas"]["LevelSuggestion"];
+            reviewedTasks: number;
+            suggestion: components["schemas"]["LevelSuggestion"];
         };
         LevelSuggestion: {
             /** @enum {string} */
-            direction?: "UP" | "DOWN" | "STAY";
+            direction: "UP" | "DOWN" | "STAY";
             /** @enum {string} */
-            level?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
-            reasons?: string[];
+            level: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
+            reasons: string[];
         };
         LibraryInfo: {
-            exists?: boolean;
+            exists: boolean;
             /** Format: int64 */
-            knowledge?: number;
-            layout?: string;
-            root?: string;
+            knowledge: number;
+            layout: string;
+            root: string;
             /** Format: int64 */
-            skills?: number;
+            skills: number;
         };
         LocationView: {
             /** Format: int32 */
-            count?: number;
-            exists?: boolean;
-            id?: string;
-            label?: string;
-            path?: string;
-            readers?: string[];
+            count: number;
+            exists: boolean;
+            id: string;
+            label: string;
+            path: string;
+            readers: string[];
             /** @enum {string} */
-            scope?: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
-            writable?: boolean;
+            scope: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
+            writable: boolean;
         };
         LoginRequest: {
             password: string;
@@ -3524,31 +3544,32 @@ export interface components {
         };
         LoginResponse: {
             /** Format: date-time */
-            expiresAt?: string;
-            token?: string;
-            user?: components["schemas"]["UserResponse"];
+            expiresAt: string;
+            token: string;
+            user: components["schemas"]["UserResponse"];
         };
         MeResponse: {
             /** @enum {string} */
-            kind?: "USER" | "SERVICE";
-            name?: string;
+            kind: "USER" | "SERVICE";
+            name: string;
             /** @enum {string} */
-            role?: "ADMIN" | "OPERATOR";
-            user?: components["schemas"]["UserResponse"];
+            role: "ADMIN" | "OPERATOR";
+            user: components["schemas"]["UserResponse"] | null;
         };
         ModelCatalogResponse: {
-            engineDefault?: string;
-            engineReachable?: boolean;
-            models?: components["schemas"]["ModelResponse"][];
-            uncatalogued?: components["schemas"]["UncataloguedModel"][];
+            engineDefault: string | null;
+            engineReachable: boolean;
+            models: components["schemas"]["ModelResponse"][];
+            uncatalogued: components["schemas"]["UncataloguedModel"][];
         };
         ModelChoice: {
-            available?: boolean;
-            model?: string;
-            reason?: string;
-            role?: string;
+            available: boolean | null;
+            model: string | null;
+            reason: string;
+            role: string | null;
         };
         ModelClassificationRequest: {
+            alsoServes?: ("FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST")[];
             /** @enum {string} */
             lifecycle: "ACTIVE" | "CANDIDATE" | "DEPRECATED" | "RETIRED";
             notes?: string;
@@ -3557,64 +3578,65 @@ export interface components {
             role: "FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST";
         };
         ModelInfo: {
-            available?: boolean;
-            billed?: boolean;
-            detail?: string;
-            id?: string;
-            provider?: string;
+            available: boolean;
+            billed: boolean;
+            detail: string;
+            id: string;
+            provider: string;
         };
         ModelList: {
-            defaultModel?: string;
-            models?: components["schemas"]["ModelInfo"][];
+            defaultModel: string | null;
+            models: components["schemas"]["ModelInfo"][];
         };
         ModelRef: {
-            catalogued?: boolean;
-            displayName?: string;
-            engineRunnable?: boolean;
-            key?: string;
-            lifecycle?: string;
-            replacedBy?: string;
-            role?: string;
+            catalogued: boolean;
+            displayName: string;
+            engineRunnable: boolean;
+            key: string;
+            lifecycle: string;
+            replacedBy: string | null;
+            role: string;
         };
         ModelResponse: {
-            capabilities?: string[];
+            alsoServes: ("FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST")[];
+            capabilities: string[];
             /** Format: int32 */
-            contextWindow?: number;
-            displayName?: string;
-            engineAvailable?: boolean;
-            engineDetail?: string;
-            inputPricePerMtok?: number;
-            key?: string;
+            contextWindow: number | null;
+            displayName: string;
+            engineAvailable: boolean | null;
+            engineDetail: string | null;
+            inputPricePerMtok: number | null;
+            key: string;
             /** @enum {string} */
-            lifecycle?: "ACTIVE" | "CANDIDATE" | "DEPRECATED" | "RETIRED";
-            notes?: string;
-            outputPricePerMtok?: number;
-            parameters?: string;
-            providerKey?: string;
-            replacedBy?: string;
+            lifecycle: "ACTIVE" | "CANDIDATE" | "DEPRECATED" | "RETIRED";
+            notes: string | null;
+            outputPricePerMtok: number | null;
+            parameters: string | null;
+            providerKey: string;
+            replacedBy: string | null;
             /** @enum {string} */
-            role?: "FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST";
-            sizeGb?: number;
+            role: "FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST";
+            sizeGb: number | null;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         ModelSpend: {
-            costUsd?: number;
-            inputPricePerMtok?: number;
+            costUsd: number;
+            inputPricePerMtok: number | null;
             /** Format: int64 */
-            inputTokens?: number;
-            model?: string;
-            outputPricePerMtok?: number;
+            inputTokens: number;
+            model: string;
+            outputPricePerMtok: number | null;
             /** Format: int64 */
-            outputTokens?: number;
-            providerKey?: string;
+            outputTokens: number;
+            providerKey: string;
             /** Format: int32 */
-            runs?: number;
+            runs: number;
         };
         ModelTokens: {
-            model?: string;
+            model: string;
             /** Format: int64 */
-            tokens?: number;
+            tokens: number;
         };
         NewService: {
             key: string;
@@ -3627,41 +3649,41 @@ export interface components {
             username: string;
         };
         Opened: {
-            command?: string[];
-            folder?: string;
+            command: string[];
+            folder: string;
         };
         Orchestration: {
-            agent?: components["schemas"]["AgentChoice"];
+            agent: components["schemas"]["AgentChoice"];
             /** @enum {string} */
-            autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
-            autonomyRules?: string;
-            binding?: components["schemas"]["Binding"];
-            blockers?: string[];
-            code?: string;
-            context?: components["schemas"]["ContextFile"][];
-            model?: components["schemas"]["ModelChoice"];
-            phaseApproved?: boolean;
+            autonomyLevel: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
+            autonomyRules: string;
+            binding: components["schemas"]["Binding"] | null;
+            blockers: string[];
+            code: string | null;
+            context: components["schemas"]["ContextFile"][];
+            model: components["schemas"]["ModelChoice"];
+            phaseApproved: boolean;
             /** Format: int64 */
-            phaseId?: number;
+            phaseId: number | null;
             /** Format: int32 */
-            phaseNumber?: number;
-            phaseTitle?: string;
+            phaseNumber: number | null;
+            phaseTitle: string | null;
             /** Format: int64 */
-            projectId?: number;
-            projectName?: string;
-            prompt?: string;
-            software?: components["schemas"]["SoftwareChoice"][];
+            projectId: number | null;
+            projectName: string | null;
+            prompt: string;
+            software: components["schemas"]["SoftwareChoice"][];
             /** @enum {string} */
-            status?: "OPEN" | "IN_PROGRESS" | "DONE";
-            targets?: components["schemas"]["Target"][];
+            status: "OPEN" | "IN_PROGRESS" | "DONE";
+            targets: components["schemas"]["Target"][];
             /** Format: int64 */
-            taskId?: number;
-            title?: string;
+            taskId: number;
+            title: string;
         };
         PackageFile: {
-            path?: string;
+            path: string;
             /** Format: int64 */
-            size?: number;
+            size: number;
         };
         PasswordChange: {
             currentPassword: string;
@@ -3672,74 +3694,74 @@ export interface components {
         };
         PhaseResponse: {
             /** @enum {string} */
-            approval?: "PENDING" | "APPROVED" | "CHANGES_REQUESTED";
-            approvalNote?: string;
+            approval: "PENDING" | "APPROVED" | "CHANGES_REQUESTED";
+            approvalNote: string | null;
             /** Format: date-time */
-            approvedAt?: string;
-            documentPath?: string;
+            approvedAt: string | null;
+            documentPath: string;
             /** Format: int64 */
-            id?: number;
+            id: number;
             /** Format: int32 */
-            number?: number;
-            objective?: string;
+            number: number;
+            objective: string;
             /** Format: int64 */
-            projectId?: number;
+            projectId: number;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "DONE";
-            tasks?: components["schemas"]["TaskResponse"][];
-            title?: string;
+            status: "PLANNED" | "IN_PROGRESS" | "DONE";
+            tasks: components["schemas"]["TaskResponse"][];
+            title: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         PhaseReviewRequest: {
             note?: string;
         };
         Piece: {
             /** Format: int32 */
-            line?: number;
-            path?: string;
-            text?: string;
+            line: number;
+            path: string;
+            text: string;
         };
         PlanResponse: {
-            phases?: components["schemas"]["PhaseResponse"][];
-            project?: components["schemas"]["ProjectResponse"];
-            runs?: components["schemas"]["PlanRunResponse"][];
+            phases: components["schemas"]["PhaseResponse"][];
+            project: components["schemas"]["ProjectResponse"];
+            runs: components["schemas"]["PlanRunResponse"][];
         };
         PlanRunResponse: {
             /** Format: date-time */
-            createdAt?: string;
-            failureDetail?: string;
+            createdAt: string;
+            failureDetail: string | null;
             /** Format: date-time */
-            finishedAt?: string;
+            finishedAt: string | null;
             /** Format: int64 */
-            id?: number;
+            id: number;
             /** Format: int32 */
-            inputTokens?: number;
-            output?: string;
+            inputTokens: number | null;
+            output: string | null;
             /** Format: int32 */
-            outputTokens?: number;
+            outputTokens: number | null;
             /** Format: int32 */
-            phases?: number;
-            progress?: string;
+            phases: number | null;
+            progress: string | null;
             /** Format: int64 */
-            projectId?: number;
-            requestedBy?: string;
-            requestedModel?: string;
-            servedModel?: string;
+            projectId: number;
+            requestedBy: string;
+            requestedModel: string | null;
+            servedModel: string | null;
             /** @enum {string} */
-            source?: "ENGINE" | "IMPORT";
+            source: "ENGINE" | "IMPORT";
             /** @enum {string} */
-            status?: "RUNNING" | "SUCCEEDED" | "FAILED";
+            status: "RUNNING" | "SUCCEEDED" | "FAILED";
             /** Format: int32 */
-            tasks?: number;
+            tasks: number | null;
         };
         Planned: {
-            name?: string;
+            name: string;
             /** @enum {string} */
-            outcome?: "CREATED" | "EXISTING";
-            parentName?: string;
-            role?: string;
-            templateKey?: string;
+            outcome: "CREATED" | "EXISTING";
+            parentName: string | null;
+            role: string;
+            templateKey: string;
         };
         PluginInstallRequest: {
             confirmation?: string;
@@ -3748,27 +3770,27 @@ export interface components {
             target: string;
         };
         Preview: {
-            description?: string;
-            files?: components["schemas"]["PackageFile"][];
-            name?: string;
-            provider?: string;
-            ref?: string;
-            security?: string;
-            skillMd?: string;
-            sourceUrl?: string;
-            version?: string;
-            warnings?: string[];
+            description: string;
+            files: components["schemas"]["PackageFile"][];
+            name: string;
+            provider: string;
+            ref: string;
+            security: string | null;
+            skillMd: string;
+            sourceUrl: string;
+            version: string | null;
+            warnings: string[];
         };
         PriceRequest: {
             inputPricePerMtok?: number;
             outputPricePerMtok?: number;
         };
         PriceResponse: {
-            inputPricePerMtok?: number;
-            model?: string;
-            outputPricePerMtok?: number;
+            inputPricePerMtok: number;
+            model: string;
+            outputPricePerMtok: number;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         ProfileChange: {
             displayName?: string;
@@ -3787,107 +3809,107 @@ export interface components {
         };
         ProjectResponse: {
             /** @enum {string} */
-            autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
+            autonomyLevel: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
             /** Format: date-time */
-            createdAt?: string;
-            description?: string;
+            createdAt: string;
+            description: string | null;
             /** Format: int64 */
-            id?: number;
-            name?: string;
+            id: number;
+            name: string;
             /** @enum {string} */
-            planStatus?: "NONE" | "DRAFT" | "APPROVED";
+            planStatus: "NONE" | "DRAFT" | "APPROVED";
+            /** @enum {string|null} */
+            projectType: "WEB_APP" | "BACKEND" | "MOBILE" | "DESKTOP" | "AI_ML" | "GAME" | "THREE_D" | "DATA" | "AUTOMATION" | "API" | "FULL_STACK" | "OTHER" | null;
+            stack: string | null;
             /** @enum {string} */
-            projectType?: "WEB_APP" | "BACKEND" | "MOBILE" | "DESKTOP" | "AI_ML" | "GAME" | "THREE_D" | "DATA" | "AUTOMATION" | "API" | "FULL_STACK" | "OTHER";
-            stack?: string;
-            /** @enum {string} */
-            status?: "ACTIVE" | "ARCHIVED";
+            status: "ACTIVE" | "ARCHIVED";
             /** Format: date-time */
-            updatedAt?: string;
+            updatedAt: string;
             /** Format: int64 */
-            version?: number;
-            workspacePath?: string;
+            version: number;
+            workspacePath: string | null;
         };
         ProjectTypeInfo: {
-            agentRoles?: string[];
-            description?: string;
-            label?: string;
-            software?: string[];
-            stack?: string[];
+            agentRoles: string[];
+            description: string;
+            label: string;
+            software: string[];
+            stack: string[];
             /** @enum {string} */
-            type?: "WEB_APP" | "BACKEND" | "MOBILE" | "DESKTOP" | "AI_ML" | "GAME" | "THREE_D" | "DATA" | "AUTOMATION" | "API" | "FULL_STACK" | "OTHER";
+            type: "WEB_APP" | "BACKEND" | "MOBILE" | "DESKTOP" | "AI_ML" | "GAME" | "THREE_D" | "DATA" | "AUTOMATION" | "API" | "FULL_STACK" | "OTHER";
         };
         ProjectUpdateRequest: {
             description?: string;
             name: string;
         };
         ProvenanceView: {
-            checkError?: string;
+            checkError: string | null;
             /** Format: date-time */
-            checkedAt?: string;
+            checkedAt: string | null;
             /** Format: date-time */
-            installedAt?: string;
-            installedVersion?: string;
-            latestVersion?: string;
-            localChanges?: boolean;
-            provider?: string;
-            providerName?: string;
-            reference?: string;
-            sourceUrl?: string;
-            updateAvailable?: boolean;
+            installedAt: string;
+            installedVersion: string | null;
+            latestVersion: string | null;
+            localChanges: boolean;
+            provider: string;
+            providerName: string;
+            reference: string;
+            sourceUrl: string | null;
+            updateAvailable: boolean;
         };
         Provider: {
-            /** @enum {string} */
-            api?: "SKILLS_SH" | "CLAWHUB" | "GITHUB" | "CLAUDE_MARKETPLACE" | "CODEX_MARKETPLACE" | "MCP_REGISTRY";
-            community?: boolean;
-            description?: string;
-            homepage?: string;
-            key?: string;
-            kind?: string;
-            marketplace?: string;
-            name?: string;
-            official?: boolean;
-            repo?: string;
-            searchUrl?: string;
-            targets?: string[];
+            /** @enum {string|null} */
+            api: "SKILLS_SH" | "CLAWHUB" | "GITHUB" | "CLAUDE_MARKETPLACE" | "CODEX_MARKETPLACE" | "MCP_REGISTRY" | null;
+            community: boolean;
+            description: string;
+            homepage: string;
+            key: string;
+            kind: string;
+            marketplace: string | null;
+            name: string;
+            official: boolean;
+            repo: string | null;
+            searchUrl: string | null;
+            targets: string[] | null;
         };
         ProviderError: {
-            message?: string;
-            provider?: string;
+            message: string;
+            provider: string;
         };
         ProviderRef: {
-            billing?: string;
-            key?: string;
-            kind?: string;
-            name?: string;
-            status?: string;
+            billing: string;
+            key: string;
+            kind: string;
+            name: string;
+            status: string;
         };
         ProviderResponse: {
-            baseUrl?: string;
+            baseUrl: string | null;
             /** @enum {string} */
-            billing?: "FREE" | "PAY_PER_TOKEN" | "SUBSCRIPTION";
-            docsUrl?: string;
-            engineProvider?: string;
-            key?: string;
+            billing: "FREE" | "PAY_PER_TOKEN" | "SUBSCRIPTION";
+            docsUrl: string | null;
+            engineProvider: string | null;
+            key: string;
             /** @enum {string} */
-            kind?: "LOCAL" | "CLOUD_API" | "ROUTER" | "SUBSCRIPTION" | "TEST";
-            name?: string;
-            notes?: string;
+            kind: "LOCAL" | "CLOUD_API" | "ROUTER" | "SUBSCRIPTION" | "TEST";
+            name: string;
+            notes: string | null;
             /** @enum {string} */
-            status?: "ENABLED" | "DISABLED" | "INCOMPATIBLE_HARDWARE";
+            status: "ENABLED" | "DISABLED" | "INCOMPATIBLE_HARDWARE";
         };
         ProviderSpend: {
-            billing?: string;
-            costUsd?: number;
+            billing: string;
+            costUsd: number;
             /** Format: int64 */
-            inputTokens?: number;
+            inputTokens: number;
             /** Format: int64 */
-            outputTokens?: number;
-            providerKey?: string;
-            providerName?: string;
+            outputTokens: number;
+            providerKey: string;
+            providerName: string;
             /** Format: int32 */
-            runs?: number;
+            runs: number;
             /** Format: int32 */
-            runsWithoutPrice?: number;
+            runsWithoutPrice: number;
         };
         QuotaAnchorRequest: {
             limitNote?: string;
@@ -3898,36 +3920,36 @@ export interface components {
         };
         Ref: {
             /** Format: int64 */
-            id?: number;
-            name?: string;
-            role?: string;
+            id: number;
+            name: string;
+            role: string;
         };
         ReferenceSelection: {
             paths: string[];
         };
         Report: {
             /** Format: int32 */
-            added?: number;
+            added: number;
             /** Format: date-time */
-            at?: string;
-            events?: components["schemas"]["Event"][];
-            firstRun?: boolean;
-            libraryCreated?: string[];
-            libraryInvalid?: string[];
-            libraryUpdated?: string[];
+            at: string;
+            events: components["schemas"]["Event"][];
+            firstRun: boolean;
+            libraryCreated: string[];
+            libraryInvalid: string[];
+            libraryUpdated: string[];
             /** Format: int32 */
-            modified?: number;
+            modified: number;
             /** Format: int32 */
-            removed?: number;
+            removed: number;
             /** Format: int32 */
-            total?: number;
+            total: number;
         };
         ResourceRef: {
-            configuration?: string;
-            description?: string;
-            key?: string;
-            kind?: string;
-            name?: string;
+            configuration: string;
+            description: string;
+            key: string;
+            kind: string;
+            name: string;
         };
         ResourceRequest: {
             configuration?: string;
@@ -3941,63 +3963,63 @@ export interface components {
             tags?: string[];
         };
         ResourceResponse: {
-            configuration?: string;
-            description?: string;
-            fileBacked?: boolean;
-            filePath?: string;
+            configuration: string | null;
+            description: string | null;
+            fileBacked: boolean;
+            filePath: string | null;
             /** Format: int64 */
-            id?: number;
-            key?: string;
+            id: number;
+            key: string;
             /** @enum {string} */
-            kind?: "SKILL" | "KNOWLEDGE" | "MCP" | "TOOL" | "FRAMEWORK" | "TEMPLATE_PROVIDER";
-            name?: string;
+            kind: "SKILL" | "KNOWLEDGE" | "MCP" | "TOOL" | "FRAMEWORK" | "TEMPLATE_PROVIDER";
+            name: string;
             /** @enum {string} */
-            origin?: "CATALOG" | "FILE" | "WEB" | "USER";
-            searchUrl?: string;
-            sourceUrl?: string;
-            tags?: string[];
+            origin: "CATALOG" | "FILE" | "WEB" | "USER";
+            searchUrl: string | null;
+            sourceUrl: string | null;
+            tags: string[];
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         Result: {
-            author?: string;
-            description?: string;
-            details?: {
+            author: string | null;
+            description: string | null;
+            details: {
                 [key: string]: string;
             };
             /** Format: int64 */
-            installs?: number;
-            kind?: string;
-            name?: string;
-            provider?: string;
-            ref?: string;
-            source?: string;
-            suspicious?: boolean;
-            targets?: string[];
-            url?: string;
-            version?: string;
+            installs: number | null;
+            kind: string;
+            name: string;
+            provider: string;
+            ref: string;
+            source: string | null;
+            suspicious: boolean;
+            targets: string[] | null;
+            url: string | null;
+            version: string | null;
         };
         ReviewResponse: {
-            /** @enum {string} */
-            autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
+            /** @enum {string|null} */
+            autonomyLevel: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW" | null;
             /** Format: date-time */
-            createdAt?: string;
+            createdAt: string;
             /** Format: int64 */
-            handoffId?: number;
+            handoffId: number | null;
             /** Format: int64 */
-            id?: number;
-            note?: string;
-            reviewer?: string;
+            id: number;
+            note: string | null;
+            reviewer: string;
             /** Format: int64 */
-            runId?: number;
+            runId: number | null;
             /** Format: int64 */
-            taskId?: number;
+            taskId: number;
             /** @enum {string} */
-            verdict?: "ACCEPTED" | "CHANGES_REQUESTED";
+            verdict: "ACCEPTED" | "CHANGES_REQUESTED";
         };
         ReviewResult: {
-            review?: components["schemas"]["ReviewResponse"];
-            task?: components["schemas"]["TaskResponse"];
+            review: components["schemas"]["ReviewResponse"];
+            task: components["schemas"]["TaskResponse"];
         };
         RoutingRequest: {
             text: string;
@@ -4007,147 +4029,147 @@ export interface components {
         };
         RunResponse: {
             /** Format: int64 */
-            agentId?: number;
-            correlationId?: string;
+            agentId: number | null;
+            correlationId: string;
             /** Format: date-time */
-            createdAt?: string;
-            deletedAgentName?: string;
-            failureDetail?: string;
-            failureType?: string;
-            finishReason?: string;
+            createdAt: string;
+            deletedAgentName: string | null;
+            failureDetail: string | null;
+            failureType: string | null;
+            finishReason: string | null;
             /** Format: date-time */
-            finishedAt?: string;
+            finishedAt: string | null;
             /** Format: int64 */
-            id?: number;
+            id: number;
             /** Format: int32 */
-            inputTokens?: number;
+            inputTokens: number | null;
             /** Format: int64 */
-            latencyMs?: number;
-            output?: string;
+            latencyMs: number | null;
+            output: string | null;
             /** Format: int32 */
-            outputTokens?: number;
-            requestedBy?: string;
-            requestedModel?: string;
-            servedModel?: string;
+            outputTokens: number | null;
+            requestedBy: string;
+            requestedModel: string | null;
+            servedModel: string | null;
             /** Format: date-time */
-            startedAt?: string;
+            startedAt: string | null;
             /** @enum {string} */
-            status?: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
-            systemPrompt?: string;
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
+            systemPrompt: string;
             /** Format: int64 */
-            taskId?: number;
-            userPrompt?: string;
+            taskId: number;
+            userPrompt: string;
         };
         ScaffoldEntry: {
             /** @enum {string} */
-            outcome?: "CREATED" | "EXISTING";
-            path?: string;
+            outcome: "CREATED" | "EXISTING";
+            path: string;
         };
         SearchResults: {
-            errors?: components["schemas"]["ProviderError"][];
-            results?: components["schemas"]["Result"][];
+            errors: components["schemas"]["ProviderError"][];
+            results: components["schemas"]["Result"][];
         };
         ServiceView: {
-            autostart?: boolean;
-            availability?: string;
-            command?: string;
-            healthUrl?: string;
-            key?: string;
+            autostart: boolean;
+            availability: string;
+            command: string | null;
+            healthUrl: string | null;
+            key: string;
             /** Format: date-time */
-            lastAttemptAt?: string;
-            lastMessage?: string;
+            lastAttemptAt: string | null;
+            lastMessage: string | null;
             /** @enum {string} */
-            lastStatus?: "NEVER" | "ALREADY_RUNNING" | "STARTING" | "RUNNING" | "FAILED";
-            name?: string;
+            lastStatus: "NEVER" | "ALREADY_RUNNING" | "STARTING" | "RUNNING" | "FAILED";
+            name: string;
             /** Format: int32 */
-            position?: number;
-            removable?: boolean;
+            position: number;
+            removable: boolean;
             /** Format: int32 */
-            timeoutSeconds?: number;
-            url?: string;
+            timeoutSeconds: number;
+            url: string | null;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         ShellView: {
-            available?: boolean;
-            detail?: string;
-            key?: string;
-            name?: string;
+            available: boolean;
+            detail: string;
+            key: string;
+            name: string;
         };
         SkillFolderOpened: {
-            folder?: string;
+            folder: string;
         };
         SkillHubInstalled: {
-            apps?: components["schemas"]["AppView"][];
-            categories?: components["schemas"]["Category"][];
+            apps: components["schemas"]["AppView"][];
+            categories: components["schemas"]["Category"][];
             /** Format: date-time */
-            lastSync?: string;
-            notes?: string[];
+            lastSync: string | null;
+            notes: string[];
             /** Format: date-time */
-            scannedAt?: string;
-            skills?: components["schemas"]["SkillView"][];
-            summary?: components["schemas"]["SkillHubSummary"];
+            scannedAt: string;
+            skills: components["schemas"]["SkillView"][];
+            summary: components["schemas"]["SkillHubSummary"];
             /** Format: int64 */
-            syncIntervalSeconds?: number;
+            syncIntervalSeconds: number;
         };
         SkillHubSummary: {
             /** Format: int32 */
-            apps?: number;
+            apps: number;
             /** Format: int32 */
-            connectors?: number;
+            connectors: number;
             /** Format: int32 */
-            copies?: number;
+            copies: number;
             /** Format: int32 */
-            knowledge?: number;
+            knowledge: number;
             /** Format: int32 */
-            libraryEntries?: number;
+            libraryEntries: number;
             /** Format: int32 */
-            plugins?: number;
+            plugins: number;
             /** Format: int32 */
-            skills?: number;
+            skills: number;
             /** Format: int32 */
-            total?: number;
+            total: number;
             /** Format: int32 */
-            updates?: number;
+            updates: number;
         };
         SkillView: {
-            app?: string;
-            category?: string;
-            categoryLabel?: string;
-            copies?: components["schemas"]["CopyView"][];
-            /** @enum {string} */
-            copyStatus?: "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN";
-            description?: string;
-            details?: {
+            app: string;
+            category: string;
+            categoryLabel: string;
+            copies: components["schemas"]["CopyView"][];
+            /** @enum {string|null} */
+            copyStatus: "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN" | null;
+            description: string | null;
+            details: {
                 [key: string]: string;
             };
-            enabled?: boolean;
-            id?: string;
-            kind?: string;
-            libraryKey?: string;
-            location?: string;
-            marketplace?: string;
+            enabled: boolean | null;
+            id: string;
+            kind: string;
+            libraryKey: string | null;
+            location: string;
+            marketplace: string | null;
             /** Format: date-time */
-            modified?: string;
-            name?: string;
-            path?: string;
-            plugin?: string;
-            pluginVersion?: string;
-            provenance?: components["schemas"]["ProvenanceView"];
+            modified: string | null;
+            name: string;
+            path: string | null;
+            plugin: string | null;
+            pluginVersion: string | null;
+            provenance: components["schemas"]["ProvenanceView"] | null;
             /** @enum {string} */
-            scope?: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
-            updateAvailable?: boolean;
-            version?: string;
-            writable?: boolean;
+            scope: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
+            updateAvailable: boolean;
+            version: string | null;
+            writable: boolean;
         };
         SoftwareChoice: {
             /** @enum {string} */
-            availability?: "INSTALLED" | "NOT_INSTALLED" | "WEB" | "RUNNING" | "STOPPED" | "INCOMPATIBLE_HARDWARE" | "UNKNOWN";
-            executionTarget?: boolean;
-            key?: string;
-            launchable?: boolean;
-            name?: string;
-            reason?: string;
+            availability: "INSTALLED" | "NOT_INSTALLED" | "WEB" | "RUNNING" | "STOPPED" | "INCOMPATIBLE_HARDWARE" | "UNKNOWN";
+            executionTarget: boolean;
+            key: string;
+            launchable: boolean;
+            name: string;
+            reason: string;
         };
         SoftwareRequest: {
             appId?: string;
@@ -4177,97 +4199,97 @@ export interface components {
             url?: string;
         };
         SoftwareResponse: {
-            appId?: string;
+            appId: string | null;
             /** @enum {string} */
-            availability?: "INSTALLED" | "NOT_INSTALLED" | "WEB" | "RUNNING" | "STOPPED" | "INCOMPATIBLE_HARDWARE" | "UNKNOWN";
-            availabilityDetail?: string;
-            capabilities?: string[];
-            catalog?: boolean;
+            availability: "INSTALLED" | "NOT_INSTALLED" | "WEB" | "RUNNING" | "STOPPED" | "INCOMPATIBLE_HARDWARE" | "UNKNOWN";
+            availabilityDetail: string | null;
+            capabilities: string[];
+            catalog: boolean;
             /** @enum {string} */
-            category?: "AGENTIC_IDE" | "IDE" | "EDITOR" | "TERMINAL" | "AI_CLOUD" | "AI_LOCAL" | "DATABASE" | "API" | "INFRASTRUCTURE" | "DIAGRAM" | "DESIGN" | "THREE_D" | "VCS" | "HOSTING" | "PRODUCTIVITY";
-            cliCommand?: string;
-            configuration?: string;
+            category: "AGENTIC_IDE" | "IDE" | "EDITOR" | "TERMINAL" | "AI_CLOUD" | "AI_LOCAL" | "DATABASE" | "API" | "INFRASTRUCTURE" | "DIAGRAM" | "DESIGN" | "THREE_D" | "VCS" | "HOSTING" | "PRODUCTIVITY";
+            cliCommand: string | null;
+            configuration: string | null;
             /** Format: date-time */
-            createdAt?: string;
-            embedNote?: string;
-            embeddable?: boolean;
-            enabled?: boolean;
-            executable?: string;
-            executableArgs?: string[];
-            executionTarget?: boolean;
-            healthUrl?: string;
-            iconUrl?: string;
+            createdAt: string;
+            embedNote: string | null;
+            embeddable: boolean;
+            enabled: boolean;
+            executable: string | null;
+            executableArgs: string[];
+            executionTarget: boolean;
+            healthUrl: string | null;
+            iconUrl: string | null;
             /** Format: int64 */
-            id?: number;
-            incompatibleReason?: string;
-            key?: string;
+            id: number;
+            incompatibleReason: string | null;
+            key: string;
             /** @enum {string} */
-            launchKind?: "DESKTOP" | "CLI" | "WEB" | "LOCAL_SERVICE";
-            launchable?: boolean;
-            name?: string;
-            openFolder?: boolean;
-            projectTypes?: string[];
-            purpose?: string;
-            requirements?: string;
-            resolvedExecutable?: string;
-            role?: string;
+            launchKind: "DESKTOP" | "CLI" | "WEB" | "LOCAL_SERVICE";
+            launchable: boolean;
+            name: string;
+            openFolder: boolean;
+            projectTypes: string[];
+            purpose: string | null;
+            requirements: string | null;
+            resolvedExecutable: string | null;
+            role: string;
             /** Format: date-time */
-            updatedAt?: string;
-            url?: string;
+            updatedAt: string;
+            url: string | null;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         Subject: {
-            id?: string;
-            name?: string;
+            id: string;
+            name: string;
         };
         Suggestion: {
             /** Format: int64 */
-            agentId?: number;
-            matchedTerms?: string[];
-            model?: string;
-            name?: string;
-            role?: string;
+            agentId: number;
+            matchedTerms: string[];
+            model: string | null;
+            name: string;
+            role: string;
             /** Format: int32 */
-            score?: number;
-            specialization?: string;
+            score: number;
+            specialization: string;
         };
         Summary: {
-            agents?: components["schemas"]["AgentSpend"][];
-            budgets?: components["schemas"]["Budget"][];
+            agents: components["schemas"]["AgentSpend"][];
+            budgets: components["schemas"]["Budget"][];
             /** Format: date */
-            from?: string;
-            models?: components["schemas"]["ModelSpend"][];
-            providers?: components["schemas"]["ProviderSpend"][];
+            from: string;
+            models: components["schemas"]["ModelSpend"][];
+            providers: components["schemas"]["ProviderSpend"][];
             /** Format: date */
-            to?: string;
-            totalUsd?: number;
+            to: string;
+            totalUsd: number;
         };
         SyncResponse: {
-            created?: string[];
-            invalid?: string[];
-            root?: string;
-            updated?: string[];
+            created: string[];
+            invalid: string[];
+            root: string;
+            updated: string[];
         };
         Target: {
-            available?: boolean;
-            delivery?: string;
-            detail?: string;
-            key?: string;
+            available: boolean;
+            delivery: string;
+            detail: string;
+            key: string;
             /** @enum {string} */
-            kind?: "ENGINE" | "CLI" | "DESKTOP" | "WEB" | "MANUAL";
-            name?: string;
-            recommended?: boolean;
+            kind: "ENGINE" | "CLI" | "DESKTOP" | "WEB" | "MANUAL";
+            name: string;
+            recommended: boolean;
         };
         TargetRef: {
-            availability?: string;
-            contextFile?: string;
-            delivery?: string;
-            howItWorks?: string;
-            key?: string;
-            name?: string;
-            providers?: string[];
-            software?: string;
+            availability: string | null;
+            contextFile: string | null;
+            delivery: string;
+            howItWorks: string;
+            key: string;
+            name: string;
+            providers: string[];
+            software: string | null;
         };
         TaskAgentAssignmentRequest: {
             /** Format: int64 */
@@ -4284,18 +4306,18 @@ export interface components {
             title: string;
         };
         TaskLink: {
-            code?: string;
-            file?: string;
+            code: string | null;
+            file: string;
             /** Format: int64 */
-            taskId?: number;
-            title?: string;
+            taskId: number;
+            title: string;
         };
         TaskProjectAssignmentRequest: {
             /** Format: int64 */
             projectId: number;
         };
         TaskRef: {
-            code?: string;
+            code: string | null;
             /** Format: int64 */
             id?: number;
             /** Format: int64 */
@@ -4306,23 +4328,23 @@ export interface components {
         };
         TaskResponse: {
             /** Format: int64 */
-            agentId?: number;
-            code?: string;
-            description?: string;
-            documentPath?: string;
+            agentId: number | null;
+            code: string | null;
+            description: string | null;
+            documentPath: string | null;
             /** Format: int64 */
-            id?: number;
+            id: number;
             /** Format: int64 */
-            phaseId?: number;
+            phaseId: number | null;
             /** @enum {string} */
-            priority?: "LOW" | "MEDIUM" | "HIGH";
+            priority: "LOW" | "MEDIUM" | "HIGH";
             /** Format: int64 */
-            projectId?: number;
+            projectId: number | null;
             /** @enum {string} */
-            status?: "OPEN" | "IN_PROGRESS" | "DONE";
-            title?: string;
+            status: "OPEN" | "IN_PROGRESS" | "DONE";
+            title: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         TaskReviewRequest: {
             /** Format: int64 */
@@ -4334,21 +4356,21 @@ export interface components {
             verdict: "ACCEPTED" | "CHANGES_REQUESTED";
         };
         TaskTransitionResponse: {
-            actor?: string;
+            actor: string;
             /** Format: date-time */
-            at?: string;
+            at: string;
             /** @enum {string} */
-            from?: "OPEN" | "IN_PROGRESS" | "DONE";
+            from: "OPEN" | "IN_PROGRESS" | "DONE";
             /** Format: int64 */
-            id?: number;
+            id: number;
             /** Format: int64 */
-            taskId?: number;
+            taskId: number;
             /** @enum {string} */
-            to?: "OPEN" | "IN_PROGRESS" | "DONE";
+            to: "OPEN" | "IN_PROGRESS" | "DONE";
             /** @enum {string} */
-            transition?: "START" | "COMPLETE" | "STOP" | "REOPEN";
+            transition: "START" | "COMPLETE" | "STOP" | "REOPEN";
             /** @enum {string} */
-            via?: "API" | "RUN" | "HANDOFF" | "REVIEW";
+            via: "API" | "RUN" | "HANDOFF" | "REVIEW";
         };
         TaskUpdateRequest: {
             description?: string;
@@ -4356,33 +4378,33 @@ export interface components {
             title: string;
         };
         Template: {
-            capabilities?: string[];
-            children?: components["schemas"]["Template"][];
-            description?: string;
-            directives?: string[];
-            domain?: string;
-            executionTarget?: string;
-            key?: string;
-            limits?: string;
-            model?: string;
-            name?: string;
-            outputFormat?: string;
-            resources?: string[];
-            responsibilities?: string;
-            role?: string;
-            software?: string[];
-            specialization?: string;
-            systemPrompt?: string;
+            capabilities: string[];
+            children: components["schemas"]["Template"][];
+            description: string | null;
+            directives: string[];
+            domain: string | null;
+            executionTarget: string | null;
+            key: string;
+            limits: string | null;
+            model: string | null;
+            name: string;
+            outputFormat: string | null;
+            resources: string[];
+            responsibilities: string;
+            role: string;
+            software: string[];
+            specialization: string;
+            systemPrompt: string | null;
         };
         TerminalSession: {
-            attached?: boolean;
+            attached: boolean;
             /** Format: date-time */
-            detachedAt?: string;
-            directory?: string;
-            id?: string;
-            shell?: string;
+            detachedAt: string | null;
+            directory: string;
+            id: string;
+            shell: string;
             /** Format: date-time */
-            startedAt?: string;
+            startedAt: string;
         };
         TicketRequest: {
             attach?: string;
@@ -4391,65 +4413,65 @@ export interface components {
             shell?: string;
         };
         UncataloguedModel: {
-            available?: boolean;
-            billed?: boolean;
-            key?: string;
-            provider?: string;
+            available: boolean;
+            billed: boolean;
+            key: string;
+            provider: string;
         };
         UpdatesView: {
             /** Format: date-time */
-            checkedAt?: string;
-            errors?: string[];
-            items?: components["schemas"]["Item"][];
+            checkedAt: string | null;
+            errors: string[];
+            items: components["schemas"]["Item"][];
         };
         UsageWindowResponse: {
-            byModel?: components["schemas"]["ModelTokens"][];
-            detail?: string;
-            key?: string;
-            limitNote?: string;
-            name?: string;
+            byModel: components["schemas"]["ModelTokens"][];
+            detail: string | null;
+            key: string;
+            limitNote: string | null;
+            name: string;
             /** Format: date-time */
-            nextResetAt?: string;
+            nextResetAt: string | null;
             /** Format: date-time */
-            observedAt?: string;
+            observedAt: string | null;
             /** Format: int64 */
-            outputTokens?: number;
-            resetTime?: string;
+            outputTokens: number | null;
+            resetTime: string | null;
             /** Format: int32 */
-            resetWeekday?: number;
-            resetZone?: string;
+            resetWeekday: number | null;
+            resetZone: string | null;
             /** @enum {string} */
-            source?: "CODEX_LOCAL" | "CLAUDE_CODE_LOCAL" | "ENGINE_RUNS" | "MANUAL";
+            source: "CODEX_LOCAL" | "CLAUDE_CODE_LOCAL" | "ENGINE_RUNS" | "MANUAL";
             /** @enum {string} */
-            status?: "MEASURED" | "COUNTED" | "RESET_SINCE_OBSERVATION" | "NO_DATA" | "CONFIGURATION_NEEDED";
-            subject?: string;
+            status: "MEASURED" | "COUNTED" | "RESET_SINCE_OBSERVATION" | "NO_DATA" | "CONFIGURATION_NEEDED";
+            subject: string;
             /** Format: int64 */
-            tokens?: number;
-            usageUrl?: string;
+            tokens: number | null;
+            usageUrl: string;
             /** Format: double */
-            usedPercent?: number;
+            usedPercent: number | null;
             /** Format: int64 */
-            version?: number;
+            version: number;
             /** @enum {string} */
-            windowKind?: "ROLLING_5H" | "DAILY" | "WEEKLY" | "MONTHLY";
+            windowKind: "ROLLING_5H" | "DAILY" | "WEEKLY" | "MONTHLY";
             /** Format: date-time */
-            windowStart?: string;
+            windowStart: string | null;
         };
         UserResponse: {
-            displayName?: string;
-            enabled?: boolean;
+            displayName: string | null;
+            enabled: boolean;
             /** Format: int64 */
-            id?: number;
+            id: number;
             /** Format: date-time */
-            lastLoginAt?: string;
-            mustChangePassword?: boolean;
+            lastLoginAt: string | null;
+            mustChangePassword: boolean;
             /** Format: date-time */
-            passwordChangedAt?: string;
+            passwordChangedAt: string;
             /** @enum {string} */
-            role?: "ADMIN" | "OPERATOR";
-            username?: string;
+            role: "ADMIN" | "OPERATOR";
+            username: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         UserUpdate: {
             displayName?: string;
@@ -6198,7 +6220,10 @@ export interface operations {
     };
     blueprintGraph: {
         parameters: {
-            query?: never;
+            query?: {
+                detail?: string;
+                within?: string;
+            };
             header?: never;
             path: {
                 id: number;
@@ -6517,6 +6542,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    blueprintAiActions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlueprintAiActionView"][];
+                };
             };
         };
     };

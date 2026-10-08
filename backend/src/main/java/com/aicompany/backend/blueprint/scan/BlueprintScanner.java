@@ -126,6 +126,7 @@ public final class BlueprintScanner {
     public Result analyze(List<SourceFile> sources, boolean truncated) {
         Map<String, Component> components = new LinkedHashMap<>();
         List<Reference> references = new ArrayList<>();
+        List<BlueprintLanguagePlugin.AccessRule> accessRules = new ArrayList<>();
         Map<String, Integer> languages = new TreeMap<>();
         Map<String, String> fidelity = new TreeMap<>();
         for (SourceFile source : sources) {
@@ -145,6 +146,12 @@ public final class BlueprintScanner {
                 components.merge(c.key(), c, BlueprintScanner::merge);
             }
             references.addAll(analysis.references());
+            accessRules.addAll(analysis.accessRules());
+        }
+        // PHASE 32 (TD-62): an endpoint no annotation guards is decided by the security
+        // configuration's rules by path -- the first that matches, as Spring Security does.
+        if (!accessRules.isEmpty()) {
+            components.replaceAll((k, c) -> c.kind() == NodeKind.ENDPOINT ? withPathRule(c, accessRules) : c);
         }
         // A table only ALTERed (created elsewhere, or outside the scan) still reads well.
         components.replaceAll((k, c) -> c.description() == null
@@ -333,6 +340,80 @@ public final class BlueprintScanner {
     }
 
     /** Two components with one key: a table created in one migration and altered in others. */
+    /**
+     * PHASE 32 (TD-62): the endpoint's authorization from the first rule by path that
+     * matches its method and route; unchanged when an annotation already decides, or
+     * when no rule matches.
+     */
+    static Component withPathRule(Component endpoint, List<BlueprintLanguagePlugin.AccessRule> rules) {
+        CodeStructure s = endpoint.structure();
+        if (s == null || s.route() == null || !JavaAstPlugin.GLOBAL_RULE.equals(s.authorization())) {
+            return endpoint;
+        }
+        for (BlueprintLanguagePlugin.AccessRule rule : rules) {
+            if (rule.httpMethod() != null && !rule.httpMethod().equalsIgnoreCase(s.httpMethod())) {
+                continue;
+            }
+            for (String pattern : rule.patterns()) {
+                if (pathMatches(pattern, s.route())) {
+                    String text = rule.rule() + " — regola per percorso " + (rule.httpMethod() == null ? "" : rule.httpMethod() + " ")
+                            + pattern + " (" + rule.source() + ")";
+                    return new Component(endpoint.key(), endpoint.kind(), endpoint.name(), endpoint.filePath(),
+                            endpoint.language(), endpoint.description(), endpoint.pseudocode(),
+                            s.toBuilder().authorization(text).build(), endpoint.startLine(), endpoint.endLine());
+                }
+            }
+        }
+        return endpoint;
+    }
+
+    /**
+     * A Spring path pattern against a route of the code: {@code *} is one segment,
+     * {@code **} any number of them, {@code {x}} one segment; a variable of the route
+     * ({@code {id}}) matches only a wildcard or a variable of the pattern.
+     */
+    public static boolean pathMatches(String pattern, String route) {
+        return matchSegments(segments(pattern), 0, segments(route), 0);
+    }
+
+    private static List<String> segments(String path) {
+        String clean = path.contains("?") ? path.substring(0, path.indexOf('?')) : path;
+        return java.util.Arrays.stream(clean.split("/")).filter(part -> !part.isEmpty()).toList();
+    }
+
+    private static boolean matchSegments(List<String> pattern, int p, List<String> route, int r) {
+        if (p == pattern.size()) {
+            return r == route.size();
+        }
+        if (pattern.get(p).equals("**")) {
+            for (int next = r; next <= route.size(); next++) {
+                if (matchSegments(pattern, p + 1, route, next)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return r < route.size() && segmentMatches(pattern.get(p), route.get(r))
+                && matchSegments(pattern, p + 1, route, r + 1);
+    }
+
+    private static boolean segmentMatches(String pattern, String segment) {
+        if (pattern.equals("*") || pattern.startsWith("{")) {
+            return true;
+        }
+        if (segment.startsWith("{")) {
+            return false;
+        }
+        if (!pattern.contains("*")) {
+            return pattern.equals(segment);
+        }
+        StringBuilder regex = new StringBuilder();
+        for (String part : pattern.split("\\*", -1)) {
+            regex.append(java.util.regex.Pattern.quote(part)).append(".*");
+        }
+        return segment.matches(regex.substring(0, regex.length() - 2));
+    }
+
     private static Component merge(Component first, Component second) {
         if (first.kind() != NodeKind.DATABASE || second.kind() != NodeKind.DATABASE) {
             return first;

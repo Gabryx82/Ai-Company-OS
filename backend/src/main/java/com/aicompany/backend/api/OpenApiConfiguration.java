@@ -5,6 +5,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -41,5 +42,11 @@ public class OpenApiConfiguration {
                 .components(new Components().addSecuritySchemes(BEARER,
                         new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("bearer")))
                 .addSecurityItem(new SecurityRequirement().addList(BEARER));
+    }
+
+    /** PHASE 32 (TD-47): which response fields are always there, and which may be null. */
+    @Bean
+    OpenApiCustomizer responseShapes() {
+        return ResponseShapes.forApplication();
     }
 }

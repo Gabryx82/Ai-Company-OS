@@ -26,6 +26,7 @@ import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.workspace.service.ProjectTypeCatalog;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import com.aicompany.backend.workspace.service.WorkspacePaths;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,10 +51,10 @@ import java.util.regex.Pattern;
 @Transactional(readOnly = true)
 public class OrchestrationService {
 
-    public record AgentChoice(Long agentId, String name, String role, String model, boolean assigned, String reason) {
+    public record AgentChoice(@Nullable Long agentId, @Nullable String name, @Nullable String role, @Nullable String model, boolean assigned, String reason) {
     }
 
-    public record ModelChoice(String model, String role, Boolean available, String reason) {
+    public record ModelChoice(@Nullable String model, @Nullable String role, @Nullable Boolean available, String reason) {
     }
 
     public record SoftwareChoice(String key, String name, Availability availability, boolean launchable,
@@ -74,12 +75,12 @@ public class OrchestrationService {
                          boolean recommended) {
     }
 
-    public record Orchestration(Long taskId, String code, String title, TaskStatus status, Long projectId,
-                                String projectName, Long phaseId, Integer phaseNumber, String phaseTitle,
+    public record Orchestration(Long taskId, @Nullable String code, String title, TaskStatus status, @Nullable Long projectId,
+                                @Nullable String projectName, @Nullable Long phaseId, @Nullable Integer phaseNumber, @Nullable String phaseTitle,
                                 boolean phaseApproved, AutonomyLevel autonomyLevel, String autonomyRules,
                                 AgentChoice agent, ModelChoice model, List<SoftwareChoice> software,
                                 List<ContextFile> context, String prompt, List<Target> targets,
-                                List<String> blockers, AgentBindingService.Binding binding) {
+                                List<String> blockers, AgentBindingService.@Nullable Binding binding) {
     }
 
     private static final Pattern CODE_WORK = Pattern.compile(
@@ -204,15 +205,19 @@ public class OrchestrationService {
         ModelRole wanted = CODE_WORK.matcher(work).find() ? ModelRole.CODER : ModelRole.GENERAL;
         LlmCatalogService.Catalog catalog = models.catalog();
         for (ModelRole role : List.of(wanted, ModelRole.PLANNER, ModelRole.GENERAL, ModelRole.FAST)) {
+            // PHASE 32 (TD-66): a model of this role first, then one that also serves it.
             Optional<LlmCatalogService.ModelView> found = catalog.models().stream()
-                    .filter(view -> view.model().getRole() == role)
+                    .filter(view -> view.model().serves(role))
                     .filter(view -> view.model().getLifecycle() == ModelLifecycle.ACTIVE)
                     .filter(view -> Boolean.TRUE.equals(view.engineAvailable()))
-                    .findFirst();
+                    .min(java.util.Comparator.comparing(view -> view.model().getRole() == role ? 0 : 1));
             if (found.isPresent()) {
+                boolean own = found.get().model().getRole() == role;
                 return new ModelChoice(found.get().model().getKey(), role.name(), true,
-                        role == wanted ? "Modello attivo del ruolo " + role + " richiesto dalla task"
-                                : "Nessun modello " + wanted + " pronto: ripiego su " + role);
+                        role != wanted ? "Nessun modello " + wanted + " pronto: ripiego su " + role
+                                : own ? "Modello attivo del ruolo " + role + " richiesto dalla task"
+                                : "Modello attivo che serve anche il ruolo " + role + " richiesto dalla task (ruolo proprio: "
+                                        + found.get().model().getRole() + ")");
             }
         }
         return new ModelChoice(catalog.engineDefault(), null, catalog.engineReachable() ? true : null,

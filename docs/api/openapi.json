@@ -5,24 +5,25 @@
         "properties" : {
           "agentId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "assigned" : {
             "type" : "boolean"
           },
           "model" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "name" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "reason" : {
             "type" : "string"
           },
           "role" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "agentId", "assigned", "model", "name", "reason", "role" ],
         "type" : "object"
       },
       "AgentCreateRequest" : {
@@ -106,7 +107,7 @@
             "type" : "integer"
           },
           "contextPolicy" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "directives" : {
             "items" : {
@@ -115,23 +116,23 @@
             "type" : "array"
           },
           "domain" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "limits" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "model" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "name" : {
             "type" : "string"
           },
           "outputFormat" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "parentId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "resources" : {
             "items" : {
@@ -140,7 +141,7 @@
             "type" : "array"
           },
           "responsibilities" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "role" : {
             "type" : "string"
@@ -155,13 +156,14 @@
             "type" : "string"
           },
           "systemPrompt" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "version" : {
             "format" : "int64",
             "type" : "integer"
           }
         },
+        "required" : [ "active", "agentId", "contextPolicy", "directives", "domain", "limits", "model", "name", "outputFormat", "parentId", "resources", "responsibilities", "role", "software", "specialization", "systemPrompt", "version" ],
         "type" : "object"
       },
       "AgentRef" : {
@@ -177,6 +179,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "id", "name", "target" ],
         "type" : "object"
       },
       "AgentResponse" : {
@@ -193,7 +196,7 @@
             "type" : "integer"
           },
           "model" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "name" : {
             "type" : "string"
@@ -216,6 +219,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "active", "createdAt", "id", "model", "name", "role", "specialization", "status", "updatedAt", "version" ],
         "type" : "object"
       },
       "AgentSoftwareRef" : {
@@ -227,13 +231,14 @@
             "type" : "string"
           }
         },
+        "required" : [ "key", "name" ],
         "type" : "object"
       },
       "AgentSpend" : {
         "properties" : {
           "agentId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "agentName" : {
             "type" : "string"
@@ -250,6 +255,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "agentId", "agentName", "costUsd", "runs", "tokens" ],
         "type" : "object"
       },
       "AgentUpdateRequest" : {
@@ -328,7 +334,7 @@
             "type" : "string"
           },
           "software" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "targets" : {
             "items" : {
@@ -337,6 +343,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "agents", "count", "description", "detected", "id", "installable", "locations", "name", "software", "targets" ],
         "type" : "object"
       },
       "Applied" : {
@@ -351,6 +358,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "id", "message", "outcome" ],
         "type" : "object"
       },
       "ApplyRequest" : {
@@ -381,6 +389,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "results" ],
         "type" : "object"
       },
       "Autostart" : {
@@ -403,7 +412,11 @@
       "Binding" : {
         "properties" : {
           "model" : {
-            "$ref" : "#/components/schemas/ModelRef"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/ModelRef"
+            }, {
+              "type" : "null"
+            } ]
           },
           "problems" : {
             "items" : {
@@ -412,7 +425,11 @@
             "type" : "array"
           },
           "provider" : {
-            "$ref" : "#/components/schemas/ProviderRef"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/ProviderRef"
+            }, {
+              "type" : "null"
+            } ]
           },
           "summary" : {
             "type" : "string"
@@ -430,6 +447,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "model", "problems", "provider", "summary", "target", "valid", "warnings" ],
         "type" : "object"
       },
       "BindingSoftwareRef" : {
@@ -441,6 +459,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "key", "name" ],
         "type" : "object"
       },
       "BlueprintActionInfo" : {
@@ -456,6 +475,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "action", "description", "label" ],
         "type" : "object"
       },
       "BlueprintActionOutcome" : {
@@ -471,6 +491,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "action", "taskId", "taskTitle" ],
         "type" : "object"
       },
       "BlueprintActionRequest" : {
@@ -482,10 +503,54 @@
         },
         "type" : "object"
       },
+      "BlueprintAiActionView" : {
+        "properties" : {
+          "action" : {
+            "enum" : [ "EXPLAIN_COMPONENT", "GENERATE_PSEUDOCODE", "DETECT_MISSING_RELATIONS", "EXPLAIN_DEPENDENCY", "SUGGEST_REFACTOR", "FIND_ARCHITECTURAL_ISSUE", "GENERATE_DOCUMENTATION", "CREATE_IMPLEMENTATION_TASK" ],
+            "type" : "string"
+          },
+          "appliesTo" : {
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "outcome" : {
+            "type" : [ "string", "null" ]
+          },
+          "outcomeAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "outcomeSource" : {
+            "type" : [ "string", "null" ]
+          },
+          "requestedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "requestedBy" : {
+            "type" : "string"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "taskStatus" : {
+            "type" : "string"
+          },
+          "taskTitle" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "action", "appliesTo", "id", "outcome", "outcomeAt", "outcomeSource", "requestedAt", "requestedBy", "taskId", "taskStatus", "taskTitle" ],
+        "type" : "object"
+      },
       "BlueprintBlock" : {
         "properties" : {
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "expandable" : {
             "type" : "boolean"
@@ -498,7 +563,7 @@
             "type" : "string"
           },
           "filePath" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -512,7 +577,7 @@
             "type" : "string"
           },
           "language" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "layer" : {
             "enum" : [ "BACKEND", "FRONTEND", "DATABASE", "TESTS", "DOCS", "OTHER" ],
@@ -531,14 +596,14 @@
           },
           "parentId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "pathState" : {
             "enum" : [ "LINKED", "TO_CREATE", "DOCUMENT_REFERENCE", "VIRTUAL", "MISSING" ],
             "type" : "string"
           },
           "pseudocodePreview" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "status" : {
             "enum" : [ "PLANNED", "IN_PROGRESS", "IMPLEMENTED", "DEPRECATED" ],
@@ -555,6 +620,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "description", "expandable", "expanded", "family", "filePath", "id", "key", "kind", "language", "layer", "members", "name", "origin", "parentId", "pathState", "pseudocodePreview", "status", "tags", "version" ],
         "type" : "object"
       },
       "BlueprintBlockDetail" : {
@@ -564,14 +630,18 @@
             "type" : "string"
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "detected" : {
-            "$ref" : "#/components/schemas/BlueprintDetectedValues"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/BlueprintDetectedValues"
+            }, {
+              "type" : "null"
+            } ]
           },
           "endLine" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "expandable" : {
             "type" : "boolean"
@@ -584,7 +654,7 @@
             "type" : "string"
           },
           "filePath" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -604,11 +674,11 @@
             "type" : "string"
           },
           "language" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "lastScanAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "layer" : {
             "enum" : [ "BACKEND", "FRONTEND", "DATABASE", "TESTS", "DOCS", "OTHER" ],
@@ -618,7 +688,7 @@
             "type" : "string"
           },
           "notes" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "origin" : {
             "enum" : [ "DETECTED", "MANUAL" ],
@@ -638,14 +708,14 @@
           },
           "parentId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "pathState" : {
             "enum" : [ "LINKED", "TO_CREATE", "DOCUMENT_REFERENCE", "VIRTUAL", "MISSING" ],
             "type" : "string"
           },
           "pseudocode" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "section" : {
             "enum" : [ "CLASS", "FUNCTION", "ENDPOINT", "FRONTEND", "DATABASE", "NONE" ],
@@ -653,7 +723,7 @@
           },
           "startLine" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "status" : {
             "enum" : [ "PLANNED", "IN_PROGRESS", "IMPLEMENTED", "DEPRECATED" ],
@@ -677,6 +747,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "createdAt", "description", "detected", "endLine", "expandable", "expanded", "family", "filePath", "id", "incoming", "key", "kind", "language", "lastScanAt", "layer", "name", "notes", "origin", "outgoing", "overrides", "parentId", "pathState", "pseudocode", "section", "startLine", "status", "structure", "tags", "updatedAt", "version" ],
         "type" : "object"
       },
       "BlueprintBlockRequest" : {
@@ -744,21 +815,23 @@
             "type" : "integer"
           }
         },
+        "required" : [ "positions", "version" ],
         "type" : "object"
       },
       "BlueprintCodeReference" : {
         "properties" : {
           "excerpt" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "line" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "path" : {
             "type" : "string"
           }
         },
+        "required" : [ "excerpt", "line", "path" ],
         "type" : "object"
       },
       "BlueprintConnection" : {
@@ -768,7 +841,7 @@
             "type" : "integer"
           },
           "label" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "nodeId" : {
             "format" : "int64",
@@ -790,12 +863,13 @@
             "type" : "string"
           }
         },
+        "required" : [ "edgeId", "label", "nodeId", "nodeKind", "nodeName", "origin", "relation" ],
         "type" : "object"
       },
       "BlueprintDetectedValues" : {
         "properties" : {
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "kind" : {
             "enum" : [ "FILE", "CLASS", "INTERFACE", "ENUM", "FUNCTION", "CONTROLLER", "SERVICE", "REPOSITORY", "DTO", "ENTITY", "CONFIGURATION", "DATABASE", "ENDPOINT", "COMPONENT", "HOOK", "STORE", "TEST", "SCRIPT", "SNIPPET", "DOCUMENT", "CUSTOM" ],
@@ -805,9 +879,10 @@
             "type" : "string"
           },
           "pseudocode" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "description", "kind", "name", "pseudocode" ],
         "type" : "object"
       },
       "BlueprintGraph" : {
@@ -822,7 +897,11 @@
             "type" : "array"
           },
           "lastScan" : {
-            "$ref" : "#/components/schemas/BlueprintScanReport"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/BlueprintScanReport"
+            }, {
+              "type" : "null"
+            } ]
           },
           "layout" : {
             "$ref" : "#/components/schemas/BlueprintCanvasLayout"
@@ -836,6 +915,12 @@
             },
             "type" : "array"
           },
+          "outline" : {
+            "type" : "boolean"
+          },
+          "partial" : {
+            "type" : "boolean"
+          },
           "pendingProposals" : {
             "format" : "int32",
             "type" : "integer"
@@ -848,6 +933,7 @@
             "type" : "boolean"
           }
         },
+        "required" : [ "archived", "edges", "lastScan", "layout", "metrics", "nodes", "outline", "partial", "pendingProposals", "projectId", "workspaceReady" ],
         "type" : "object"
       },
       "BlueprintKindInfo" : {
@@ -876,6 +962,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "column", "defaultLayer", "family", "kind", "label", "section" ],
         "type" : "object"
       },
       "BlueprintLayoutRequest" : {
@@ -950,6 +1037,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "byFamily", "byLayer", "classes", "databaseEntities", "detectedRelations", "endpoints", "files", "manualRelations", "missingNodes", "proposedRelations", "tests", "totalNodes", "unresolvedRelations" ],
         "type" : "object"
       },
       "BlueprintPoint" : {
@@ -976,17 +1064,17 @@
           },
           "decidedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "decidedBy" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "diff" : {
             "type" : "string"
           },
           "edgeId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "filePath" : {
             "type" : "string"
@@ -1015,7 +1103,7 @@
           },
           "taskId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "title" : {
             "type" : "string"
@@ -1025,6 +1113,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "consequences", "createdAt", "decidedAt", "decidedBy", "diff", "edgeId", "filePath", "id", "kind", "nodeId", "proposedBy", "reason", "status", "taskId", "title", "version" ],
         "type" : "object"
       },
       "BlueprintProposalRequest" : {
@@ -1062,10 +1151,14 @@
       "BlueprintRelation" : {
         "properties" : {
           "code" : {
-            "$ref" : "#/components/schemas/BlueprintCodeReference"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/BlueprintCodeReference"
+            }, {
+              "type" : "null"
+            } ]
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "family" : {
             "enum" : [ "DEPENDENCY", "STRUCTURE", "DATA", "EVENTS", "TESTS", "CUSTOM" ],
@@ -1076,7 +1169,7 @@
             "type" : "integer"
           },
           "label" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "origin" : {
             "enum" : [ "DETECTED", "MANUAL", "PROPOSED" ],
@@ -1099,6 +1192,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "code", "description", "family", "id", "label", "origin", "relation", "source", "target", "version" ],
         "type" : "object"
       },
       "BlueprintRelationInfo" : {
@@ -1118,6 +1212,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "description", "family", "label", "relation" ],
         "type" : "object"
       },
       "BlueprintRelationRequest" : {
@@ -1206,6 +1301,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "edgesDetected", "files", "finishedAt", "id", "languages", "nodesAdded", "nodesDetected", "nodesMissing", "requestedBy", "startedAt", "truncated", "unresolved" ],
         "type" : "object"
       },
       "BlueprintSnippet" : {
@@ -1231,6 +1327,7 @@
             "type" : "boolean"
           }
         },
+        "required" : [ "endLine", "language", "path", "startLine", "text", "truncated" ],
         "type" : "object"
       },
       "BlueprintVocabularyView" : {
@@ -1275,6 +1372,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "actions", "kinds", "pathStates", "proposalKinds", "relations", "statuses" ],
         "type" : "object"
       },
       "Budget" : {
@@ -1310,6 +1408,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "alert", "alertPercent", "exceeded", "monthlyLimitUsd", "percent", "providerKey", "providerName", "spentThisMonthUsd", "version" ],
         "type" : "object"
       },
       "BudgetRequest" : {
@@ -1356,6 +1455,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "key", "label" ],
         "type" : "object"
       },
       "CodeGraph" : {
@@ -1416,6 +1516,7 @@
             "type" : "boolean"
           }
         },
+        "required" : [ "cycles", "edges", "externals", "files", "generatedAt", "languages", "mostImported", "nodes", "taskLinks", "truncated" ],
         "type" : "object"
       },
       "CodeGraphEdge" : {
@@ -1430,6 +1531,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "kind", "source", "target" ],
         "type" : "object"
       },
       "CodeGraphNode" : {
@@ -1454,6 +1556,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "directory", "id", "kind", "label", "language", "lines" ],
         "type" : "object"
       },
       "CodeMember" : {
@@ -1778,21 +1881,21 @@
             "type" : "array"
           },
           "contextPolicy" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "customizedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "customizedBy" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "defaults" : {
             "additionalProperties" : { },
-            "type" : "object"
+            "type" : [ "object", "null" ]
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "directives" : {
             "items" : {
@@ -1801,7 +1904,7 @@
             "type" : "array"
           },
           "domain" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "executionTarget" : {
             "type" : "string"
@@ -1811,10 +1914,10 @@
             "type" : "integer"
           },
           "limits" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "model" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "modified" : {
             "items" : {
@@ -1829,10 +1932,14 @@
             "type" : "string"
           },
           "outputFormat" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "parent" : {
-            "$ref" : "#/components/schemas/Ref"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/Ref"
+            }, {
+              "type" : "null"
+            } ]
           },
           "resources" : {
             "additionalProperties" : {
@@ -1844,7 +1951,7 @@
             "type" : "object"
           },
           "responsibilities" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "role" : {
             "type" : "string"
@@ -1862,22 +1969,23 @@
             "type" : "string"
           },
           "systemPrompt" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "version" : {
             "format" : "int64",
             "type" : "integer"
           }
         },
+        "required" : [ "binding", "capabilities", "children", "contextPolicy", "customizedAt", "customizedBy", "defaults", "description", "directives", "domain", "executionTarget", "id", "limits", "model", "modified", "name", "origin", "outputFormat", "parent", "resources", "responsibilities", "role", "software", "specialization", "status", "systemPrompt", "version" ],
         "type" : "object"
       },
       "ConnectorInput" : {
         "properties" : {
           "defaultValue" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "kind" : {
             "type" : "string"
@@ -1892,6 +2000,7 @@
             "type" : "boolean"
           }
         },
+        "required" : [ "defaultValue", "description", "kind", "name", "required", "secret" ],
         "type" : "object"
       },
       "ConnectorInstallRequest" : {
@@ -1943,6 +2052,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "results" ],
         "type" : "object"
       },
       "Content" : {
@@ -1968,6 +2078,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "exists", "path", "why" ],
         "type" : "object"
       },
       "CopyTarget" : {
@@ -1983,18 +2094,19 @@
           },
           "deployedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "path" : {
             "type" : "string"
           },
           "skillId" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "status" : {
             "type" : "string"
           }
         },
+        "required" : [ "app", "appName", "available", "deployedAt", "path", "skillId", "status" ],
         "type" : "object"
       },
       "CopyView" : {
@@ -2004,7 +2116,7 @@
           },
           "deployedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "location" : {
             "type" : "string"
@@ -2020,6 +2132,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "app", "deployedAt", "location", "path", "skillId", "status" ],
         "type" : "object"
       },
       "DailyRequest" : {
@@ -2069,14 +2182,14 @@
           },
           "dueTime" : {
             "format" : "time-local",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
             "type" : "integer"
           },
           "notes" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "position" : {
             "format" : "int32",
@@ -2091,7 +2204,11 @@
             "type" : "string"
           },
           "task" : {
-            "$ref" : "#/components/schemas/TaskRef"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/TaskRef"
+            }, {
+              "type" : "null"
+            } ]
           },
           "title" : {
             "type" : "string"
@@ -2101,6 +2218,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "day", "dueTime", "id", "notes", "position", "priority", "status", "task", "title", "version" ],
         "type" : "object"
       },
       "DeletionPreview" : {
@@ -2148,6 +2266,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "allowed", "blockers", "deletes", "detaches", "files", "keeps", "kind", "subjects" ],
         "type" : "object"
       },
       "DeployRequest" : {
@@ -2164,7 +2283,7 @@
             "type" : "string"
           },
           "backup" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "message" : {
             "type" : "string"
@@ -2176,6 +2295,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "app", "backup", "message", "outcome", "path" ],
         "type" : "object"
       },
       "Document" : {
@@ -2192,6 +2312,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "modified", "path", "size" ],
         "type" : "object"
       },
       "DocumentWrite" : {
@@ -2208,7 +2329,11 @@
       "Documents" : {
         "properties" : {
           "agents" : {
-            "$ref" : "#/components/schemas/Document"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/Document"
+            }, {
+              "type" : "null"
+            } ]
           },
           "exists" : {
             "type" : "boolean"
@@ -2220,10 +2345,18 @@
             "type" : "array"
           },
           "implementationPlan" : {
-            "$ref" : "#/components/schemas/Document"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/Document"
+            }, {
+              "type" : "null"
+            } ]
           },
           "masterPrompt" : {
-            "$ref" : "#/components/schemas/Document"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/Document"
+            }, {
+              "type" : "null"
+            } ]
           },
           "masterPromptIsTemplate" : {
             "type" : "boolean"
@@ -2235,7 +2368,11 @@
             "type" : "array"
           },
           "planJson" : {
-            "$ref" : "#/components/schemas/Document"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/Document"
+            }, {
+              "type" : "null"
+            } ]
           },
           "referenceFiles" : {
             "items" : {
@@ -2259,6 +2396,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "agents", "exists", "handoffs", "implementationPlan", "masterPrompt", "masterPromptIsTemplate", "phases", "planJson", "referenceFiles", "references", "tasks", "workspacePath" ],
         "type" : "object"
       },
       "EcosystemEdge" : {
@@ -2273,6 +2411,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "kind", "source", "target" ],
         "type" : "object"
       },
       "EcosystemNode" : {
@@ -2288,12 +2427,13 @@
             "type" : "object"
           },
           "status" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "type" : {
             "type" : "string"
           }
         },
+        "required" : [ "id", "label", "meta", "status", "type" ],
         "type" : "object"
       },
       "Event" : {
@@ -2310,7 +2450,7 @@
             "type" : "string"
           },
           "detail" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -2326,12 +2466,13 @@
             "type" : "string"
           }
         },
+        "required" : [ "app", "at", "change", "detail", "id", "location", "name", "path" ],
         "type" : "object"
       },
       "EventResponse" : {
         "properties" : {
           "detail" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -2342,21 +2483,22 @@
             "type" : "string"
           },
           "principal" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "source" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "type" : {
             "type" : "string"
           }
         },
+        "required" : [ "detail", "id", "occurredAt", "principal", "source", "type" ],
         "type" : "object"
       },
       "ExecutionTarget" : {
         "properties" : {
           "contextFile" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "delivery" : {
             "enum" : [ "ENGINE_RUN", "CLI_PROMPT", "IDE_FOLDER", "APP_PASTE", "WEB_PASTE", "MANUAL" ],
@@ -2381,9 +2523,10 @@
             "type" : "array"
           },
           "software" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "contextFile", "delivery", "howItWorks", "key", "name", "providers", "software" ],
         "type" : "object"
       },
       "ExtensionPreview" : {
@@ -2419,7 +2562,7 @@
             "type" : "string"
           },
           "sourceUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "targets" : {
             "items" : {
@@ -2428,7 +2571,7 @@
             "type" : "array"
           },
           "version" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "warnings" : {
             "items" : {
@@ -2437,6 +2580,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "description", "details", "inputs", "installName", "kind", "name", "provider", "ref", "sourceUrl", "targets", "version", "warnings" ],
         "type" : "object"
       },
       "FileResponse" : {
@@ -2445,7 +2589,7 @@
             "type" : "string"
           },
           "content" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "exists" : {
             "type" : "boolean"
@@ -2455,7 +2599,7 @@
           },
           "modified" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "relativePath" : {
             "type" : "string"
@@ -2465,6 +2609,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "absolutePath", "content", "exists", "key", "modified", "relativePath", "version" ],
         "type" : "object"
       },
       "FoundDetail" : {
@@ -2488,6 +2633,7 @@
             "type" : "boolean"
           }
         },
+        "required" : [ "content", "files", "folder", "skill", "truncated" ],
         "type" : "object"
       },
       "GenerateRequest" : {
@@ -2515,6 +2661,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "edges", "nodes" ],
         "type" : "object"
       },
       "HandoffRequest" : {
@@ -2531,7 +2678,7 @@
       "HandoffResponse" : {
         "properties" : {
           "command" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "createdAt" : {
             "format" : "date-time",
@@ -2558,6 +2705,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "command", "createdAt", "documentPath", "id", "prompt", "requestedBy", "target", "taskId" ],
         "type" : "object"
       },
       "HandoffResult" : {
@@ -2575,7 +2723,7 @@
             "$ref" : "#/components/schemas/HandoffResponse"
           },
           "openUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "prompt" : {
             "type" : "string"
@@ -2593,6 +2741,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "delivery", "folder", "fullPrompt", "handoff", "openUrl", "prompt", "promptToClipboard", "task", "written" ],
         "type" : "object"
       },
       "Hotspot" : {
@@ -2605,6 +2754,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "id", "importedBy" ],
         "type" : "object"
       },
       "Impact" : {
@@ -2614,7 +2764,7 @@
             "type" : "integer"
           },
           "folder" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "handoffs" : {
             "format" : "int32",
@@ -2664,6 +2814,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "dailyItems", "folder", "handoffs", "id", "kind", "name", "notes", "phases", "planRuns", "resources", "reviews", "runInProgress", "runs", "tasks" ],
         "type" : "object"
       },
       "Import" : {
@@ -2690,19 +2841,19 @@
       "InstallOutcome" : {
         "properties" : {
           "command" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "confirmation" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "message" : {
             "type" : "string"
           },
           "output" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "software" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "status" : {
             "enum" : [ "INSTALLED", "NEEDS_CONFIRMATION", "MANUAL", "FAILED" ],
@@ -2712,6 +2863,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "command", "confirmation", "message", "output", "software", "status", "target" ],
         "type" : "object"
       },
       "InstallPlan" : {
@@ -2726,15 +2878,16 @@
             "type" : "boolean"
           },
           "command" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "method" : {
             "type" : "string"
           },
           "note" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "app", "appName", "available", "command", "method", "note" ],
         "type" : "object"
       },
       "InstallRequest" : {
@@ -2786,6 +2939,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "copies", "filePath", "key", "name" ],
         "type" : "object"
       },
       "Installed" : {
@@ -2803,9 +2957,10 @@
           },
           "parentId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           }
         },
+        "required" : [ "agentId", "name", "outcome", "parentId" ],
         "type" : "object"
       },
       "Issued" : {
@@ -2830,6 +2985,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "expiresAt" ],
         "type" : "object"
       },
       "Item" : {
@@ -2841,13 +2997,13 @@
             "type" : "boolean"
           },
           "command" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "detail" : {
             "type" : "string"
           },
           "from" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "type" : "string"
@@ -2862,16 +3018,17 @@
             "type" : "boolean"
           },
           "software" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "to" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "type" : {
             "enum" : [ "MARKETPLACE", "SOURCE", "COPY", "PULL", "PLUGIN" ],
             "type" : "string"
           }
         },
+        "required" : [ "app", "applicable", "command", "detail", "from", "id", "key", "name", "needsOverwrite", "software", "to", "type" ],
         "type" : "object"
       },
       "LaunchRequest" : {
@@ -2901,6 +3058,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "command", "folderOpened", "key", "workingDirectory" ],
         "type" : "object"
       },
       "Learning" : {
@@ -2929,7 +3087,7 @@
           },
           "piecesOpen" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "piecesTruncated" : {
             "type" : "boolean"
@@ -2942,6 +3100,7 @@
             "$ref" : "#/components/schemas/LevelSuggestion"
           }
         },
+        "required" : [ "changesRequested", "firstPassAccepted", "level", "operatorCompletions", "pieces", "piecesOpen", "piecesTruncated", "reviewedTasks", "suggestion" ],
         "type" : "object"
       },
       "LevelSuggestion" : {
@@ -2961,6 +3120,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "direction", "level", "reasons" ],
         "type" : "object"
       },
       "LibraryInfo" : {
@@ -2983,6 +3143,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "exists", "knowledge", "layout", "root", "skills" ],
         "type" : "object"
       },
       "LocationView" : {
@@ -3017,6 +3178,7 @@
             "type" : "boolean"
           }
         },
+        "required" : [ "count", "exists", "id", "label", "path", "readers", "scope", "writable" ],
         "type" : "object"
       },
       "LoginRequest" : {
@@ -3048,6 +3210,7 @@
             "$ref" : "#/components/schemas/UserResponse"
           }
         },
+        "required" : [ "expiresAt", "token", "user" ],
         "type" : "object"
       },
       "MeResponse" : {
@@ -3064,15 +3227,20 @@
             "type" : "string"
           },
           "user" : {
-            "$ref" : "#/components/schemas/UserResponse"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/UserResponse"
+            }, {
+              "type" : "null"
+            } ]
           }
         },
+        "required" : [ "kind", "name", "role", "user" ],
         "type" : "object"
       },
       "ModelCatalogResponse" : {
         "properties" : {
           "engineDefault" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "engineReachable" : {
             "type" : "boolean"
@@ -3090,27 +3258,36 @@
             "type" : "array"
           }
         },
+        "required" : [ "engineDefault", "engineReachable", "models", "uncatalogued" ],
         "type" : "object"
       },
       "ModelChoice" : {
         "properties" : {
           "available" : {
-            "type" : "boolean"
+            "type" : [ "boolean", "null" ]
           },
           "model" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "reason" : {
             "type" : "string"
           },
           "role" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "available", "model", "reason", "role" ],
         "type" : "object"
       },
       "ModelClassificationRequest" : {
         "properties" : {
+          "alsoServes" : {
+            "items" : {
+              "enum" : [ "FAST", "GENERAL", "CODER", "PLANNER", "VISION", "REASONING", "PREMIUM", "EMBEDDING", "TEST" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "lifecycle" : {
             "enum" : [ "ACTIVE", "CANDIDATE", "DEPRECATED", "RETIRED" ],
             "type" : "string"
@@ -3151,12 +3328,13 @@
             "type" : "string"
           }
         },
+        "required" : [ "available", "billed", "detail", "id", "provider" ],
         "type" : "object"
       },
       "ModelList" : {
         "properties" : {
           "defaultModel" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "models" : {
             "items" : {
@@ -3165,6 +3343,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "defaultModel", "models" ],
         "type" : "object"
       },
       "ModelRef" : {
@@ -3185,16 +3364,24 @@
             "type" : "string"
           },
           "replacedBy" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "role" : {
             "type" : "string"
           }
         },
+        "required" : [ "catalogued", "displayName", "engineRunnable", "key", "lifecycle", "replacedBy", "role" ],
         "type" : "object"
       },
       "ModelResponse" : {
         "properties" : {
+          "alsoServes" : {
+            "items" : {
+              "enum" : [ "FAST", "GENERAL", "CODER", "PLANNER", "VISION", "REASONING", "PREMIUM", "EMBEDDING", "TEST" ],
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "capabilities" : {
             "items" : {
               "type" : "string"
@@ -3203,19 +3390,19 @@
           },
           "contextWindow" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "displayName" : {
             "type" : "string"
           },
           "engineAvailable" : {
-            "type" : "boolean"
+            "type" : [ "boolean", "null" ]
           },
           "engineDetail" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "inputPricePerMtok" : {
-            "type" : "number"
+            "type" : [ "number", "null" ]
           },
           "key" : {
             "type" : "string"
@@ -3225,32 +3412,33 @@
             "type" : "string"
           },
           "notes" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "outputPricePerMtok" : {
-            "type" : "number"
+            "type" : [ "number", "null" ]
           },
           "parameters" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "providerKey" : {
             "type" : "string"
           },
           "replacedBy" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "role" : {
             "enum" : [ "FAST", "GENERAL", "CODER", "PLANNER", "VISION", "REASONING", "PREMIUM", "EMBEDDING", "TEST" ],
             "type" : "string"
           },
           "sizeGb" : {
-            "type" : "number"
+            "type" : [ "number", "null" ]
           },
           "version" : {
             "format" : "int64",
             "type" : "integer"
           }
         },
+        "required" : [ "alsoServes", "capabilities", "contextWindow", "displayName", "engineAvailable", "engineDetail", "inputPricePerMtok", "key", "lifecycle", "notes", "outputPricePerMtok", "parameters", "providerKey", "replacedBy", "role", "sizeGb", "version" ],
         "type" : "object"
       },
       "ModelSpend" : {
@@ -3259,7 +3447,7 @@
             "type" : "number"
           },
           "inputPricePerMtok" : {
-            "type" : "number"
+            "type" : [ "number", "null" ]
           },
           "inputTokens" : {
             "format" : "int64",
@@ -3269,7 +3457,7 @@
             "type" : "string"
           },
           "outputPricePerMtok" : {
-            "type" : "number"
+            "type" : [ "number", "null" ]
           },
           "outputTokens" : {
             "format" : "int64",
@@ -3283,6 +3471,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "costUsd", "inputPricePerMtok", "inputTokens", "model", "outputPricePerMtok", "outputTokens", "providerKey", "runs" ],
         "type" : "object"
       },
       "ModelTokens" : {
@@ -3295,6 +3484,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "model", "tokens" ],
         "type" : "object"
       },
       "NewService" : {
@@ -3344,6 +3534,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "command", "folder" ],
         "type" : "object"
       },
       "Orchestration" : {
@@ -3359,7 +3550,11 @@
             "type" : "string"
           },
           "binding" : {
-            "$ref" : "#/components/schemas/Binding"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/Binding"
+            }, {
+              "type" : "null"
+            } ]
           },
           "blockers" : {
             "items" : {
@@ -3368,7 +3563,7 @@
             "type" : "array"
           },
           "code" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "context" : {
             "items" : {
@@ -3384,21 +3579,21 @@
           },
           "phaseId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "phaseNumber" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "phaseTitle" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "projectId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "projectName" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "prompt" : {
             "type" : "string"
@@ -3427,6 +3622,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "agent", "autonomyLevel", "autonomyRules", "binding", "blockers", "code", "context", "model", "phaseApproved", "phaseId", "phaseNumber", "phaseTitle", "projectId", "projectName", "prompt", "software", "status", "targets", "taskId", "title" ],
         "type" : "object"
       },
       "PackageFile" : {
@@ -3439,6 +3635,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "path", "size" ],
         "type" : "object"
       },
       "PasswordChange" : {
@@ -3475,11 +3672,11 @@
             "type" : "string"
           },
           "approvalNote" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "approvedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "documentPath" : {
             "type" : "string"
@@ -3517,6 +3714,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "approval", "approvalNote", "approvedAt", "documentPath", "id", "number", "objective", "projectId", "status", "tasks", "title", "version" ],
         "type" : "object"
       },
       "PhaseReviewRequest" : {
@@ -3542,6 +3740,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "line", "path", "text" ],
         "type" : "object"
       },
       "PlanResponse" : {
@@ -3562,6 +3761,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "phases", "project", "runs" ],
         "type" : "object"
       },
       "PlanRunResponse" : {
@@ -3571,11 +3771,11 @@
             "type" : "string"
           },
           "failureDetail" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "finishedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -3583,21 +3783,21 @@
           },
           "inputTokens" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "output" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "outputTokens" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "phases" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "progress" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "projectId" : {
             "format" : "int64",
@@ -3607,10 +3807,10 @@
             "type" : "string"
           },
           "requestedModel" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "servedModel" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "source" : {
             "enum" : [ "ENGINE", "IMPORT" ],
@@ -3622,9 +3822,10 @@
           },
           "tasks" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           }
         },
+        "required" : [ "createdAt", "failureDetail", "finishedAt", "id", "inputTokens", "output", "outputTokens", "phases", "progress", "projectId", "requestedBy", "requestedModel", "servedModel", "source", "status", "tasks" ],
         "type" : "object"
       },
       "Planned" : {
@@ -3637,7 +3838,7 @@
             "type" : "string"
           },
           "parentName" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "role" : {
             "type" : "string"
@@ -3646,6 +3847,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "name", "outcome", "parentName", "role", "templateKey" ],
         "type" : "object"
       },
       "PluginInstallRequest" : {
@@ -3695,7 +3897,7 @@
             "type" : "string"
           },
           "security" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "skillMd" : {
             "type" : "string"
@@ -3704,7 +3906,7 @@
             "type" : "string"
           },
           "version" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "warnings" : {
             "items" : {
@@ -3713,6 +3915,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "description", "files", "name", "provider", "ref", "security", "skillMd", "sourceUrl", "version", "warnings" ],
         "type" : "object"
       },
       "PriceRequest" : {
@@ -3742,6 +3945,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "inputPricePerMtok", "model", "outputPricePerMtok", "version" ],
         "type" : "object"
       },
       "ProfileChange" : {
@@ -3804,7 +4008,7 @@
             "type" : "string"
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -3819,10 +4023,10 @@
           },
           "projectType" : {
             "enum" : [ "WEB_APP", "BACKEND", "MOBILE", "DESKTOP", "AI_ML", "GAME", "THREE_D", "DATA", "AUTOMATION", "API", "FULL_STACK", "OTHER" ],
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "stack" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "status" : {
             "enum" : [ "ACTIVE", "ARCHIVED" ],
@@ -3837,9 +4041,10 @@
             "type" : "integer"
           },
           "workspacePath" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "autonomyLevel", "createdAt", "description", "id", "name", "planStatus", "projectType", "stack", "status", "updatedAt", "version", "workspacePath" ],
         "type" : "object"
       },
       "ProjectTypeInfo" : {
@@ -3873,6 +4078,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "agentRoles", "description", "label", "software", "stack", "type" ],
         "type" : "object"
       },
       "ProjectUpdateRequest" : {
@@ -3894,21 +4100,21 @@
       "ProvenanceView" : {
         "properties" : {
           "checkError" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "checkedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "installedAt" : {
             "format" : "date-time",
             "type" : "string"
           },
           "installedVersion" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "latestVersion" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "localChanges" : {
             "type" : "boolean"
@@ -3923,19 +4129,20 @@
             "type" : "string"
           },
           "sourceUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "updateAvailable" : {
             "type" : "boolean"
           }
         },
+        "required" : [ "checkError", "checkedAt", "installedAt", "installedVersion", "latestVersion", "localChanges", "provider", "providerName", "reference", "sourceUrl", "updateAvailable" ],
         "type" : "object"
       },
       "Provider" : {
         "properties" : {
           "api" : {
             "enum" : [ "SKILLS_SH", "CLAWHUB", "GITHUB", "CLAUDE_MARKETPLACE", "CODEX_MARKETPLACE", "MCP_REGISTRY" ],
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "community" : {
             "type" : "boolean"
@@ -3953,7 +4160,7 @@
             "type" : "string"
           },
           "marketplace" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "name" : {
             "type" : "string"
@@ -3962,18 +4169,19 @@
             "type" : "boolean"
           },
           "repo" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "searchUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "targets" : {
             "items" : {
               "type" : "string"
             },
-            "type" : "array"
+            "type" : [ "array", "null" ]
           }
         },
+        "required" : [ "api", "community", "description", "homepage", "key", "kind", "marketplace", "name", "official", "repo", "searchUrl", "targets" ],
         "type" : "object"
       },
       "ProviderError" : {
@@ -3985,6 +4193,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "message", "provider" ],
         "type" : "object"
       },
       "ProviderRef" : {
@@ -4005,22 +4214,23 @@
             "type" : "string"
           }
         },
+        "required" : [ "billing", "key", "kind", "name", "status" ],
         "type" : "object"
       },
       "ProviderResponse" : {
         "properties" : {
           "baseUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "billing" : {
             "enum" : [ "FREE", "PAY_PER_TOKEN", "SUBSCRIPTION" ],
             "type" : "string"
           },
           "docsUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "engineProvider" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "key" : {
             "type" : "string"
@@ -4033,13 +4243,14 @@
             "type" : "string"
           },
           "notes" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "status" : {
             "enum" : [ "ENABLED", "DISABLED", "INCOMPATIBLE_HARDWARE" ],
             "type" : "string"
           }
         },
+        "required" : [ "baseUrl", "billing", "docsUrl", "engineProvider", "key", "kind", "name", "notes", "status" ],
         "type" : "object"
       },
       "ProviderSpend" : {
@@ -4073,6 +4284,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "billing", "costUsd", "inputTokens", "outputTokens", "providerKey", "providerName", "runs", "runsWithoutPrice" ],
         "type" : "object"
       },
       "QuotaAnchorRequest" : {
@@ -4114,6 +4326,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "id", "name", "role" ],
         "type" : "object"
       },
       "ReferenceSelection" : {
@@ -4182,6 +4395,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "added", "at", "events", "firstRun", "libraryCreated", "libraryInvalid", "libraryUpdated", "modified", "removed", "total" ],
         "type" : "object"
       },
       "ResourceRef" : {
@@ -4202,6 +4416,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "configuration", "description", "key", "kind", "name" ],
         "type" : "object"
       },
       "ResourceRequest" : {
@@ -4259,16 +4474,16 @@
       "ResourceResponse" : {
         "properties" : {
           "configuration" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "fileBacked" : {
             "type" : "boolean"
           },
           "filePath" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -4289,10 +4504,10 @@
             "type" : "string"
           },
           "searchUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "sourceUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "tags" : {
             "items" : {
@@ -4305,15 +4520,16 @@
             "type" : "integer"
           }
         },
+        "required" : [ "configuration", "description", "fileBacked", "filePath", "id", "key", "kind", "name", "origin", "searchUrl", "sourceUrl", "tags", "version" ],
         "type" : "object"
       },
       "Result" : {
         "properties" : {
           "author" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "details" : {
             "additionalProperties" : {
@@ -4323,7 +4539,7 @@
           },
           "installs" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "kind" : {
             "type" : "string"
@@ -4338,7 +4554,7 @@
             "type" : "string"
           },
           "source" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "suspicious" : {
             "type" : "boolean"
@@ -4347,22 +4563,23 @@
             "items" : {
               "type" : "string"
             },
-            "type" : "array"
+            "type" : [ "array", "null" ]
           },
           "url" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "version" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "author", "description", "details", "installs", "kind", "name", "provider", "ref", "source", "suspicious", "targets", "url", "version" ],
         "type" : "object"
       },
       "ReviewResponse" : {
         "properties" : {
           "autonomyLevel" : {
             "enum" : [ "GUIDED", "SUPERVISED", "DELEGATED", "FINAL_REVIEW" ],
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "createdAt" : {
             "format" : "date-time",
@@ -4370,21 +4587,21 @@
           },
           "handoffId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "id" : {
             "format" : "int64",
             "type" : "integer"
           },
           "note" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "reviewer" : {
             "type" : "string"
           },
           "runId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "taskId" : {
             "format" : "int64",
@@ -4395,6 +4612,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "autonomyLevel", "createdAt", "handoffId", "id", "note", "reviewer", "runId", "taskId", "verdict" ],
         "type" : "object"
       },
       "ReviewResult" : {
@@ -4406,6 +4624,7 @@
             "$ref" : "#/components/schemas/TaskResponse"
           }
         },
+        "required" : [ "review", "task" ],
         "type" : "object"
       },
       "RoutingRequest" : {
@@ -4434,7 +4653,7 @@
         "properties" : {
           "agentId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "correlationId" : {
             "type" : "string"
@@ -4444,20 +4663,20 @@
             "type" : "string"
           },
           "deletedAgentName" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "failureDetail" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "failureType" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "finishReason" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "finishedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -4465,31 +4684,31 @@
           },
           "inputTokens" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "latencyMs" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "output" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "outputTokens" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "requestedBy" : {
             "type" : "string"
           },
           "requestedModel" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "servedModel" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "startedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "status" : {
             "enum" : [ "QUEUED", "RUNNING", "SUCCEEDED", "FAILED" ],
@@ -4506,6 +4725,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "agentId", "correlationId", "createdAt", "deletedAgentName", "failureDetail", "failureType", "finishReason", "finishedAt", "id", "inputTokens", "latencyMs", "output", "outputTokens", "requestedBy", "requestedModel", "servedModel", "startedAt", "status", "systemPrompt", "taskId", "userPrompt" ],
         "type" : "object"
       },
       "ScaffoldEntry" : {
@@ -4518,6 +4738,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "outcome", "path" ],
         "type" : "object"
       },
       "SearchResults" : {
@@ -4535,6 +4756,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "errors", "results" ],
         "type" : "object"
       },
       "ServiceView" : {
@@ -4546,20 +4768,20 @@
             "type" : "string"
           },
           "command" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "healthUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "key" : {
             "type" : "string"
           },
           "lastAttemptAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "lastMessage" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "lastStatus" : {
             "enum" : [ "NEVER", "ALREADY_RUNNING", "STARTING", "RUNNING", "FAILED" ],
@@ -4580,13 +4802,14 @@
             "type" : "integer"
           },
           "url" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "version" : {
             "format" : "int64",
             "type" : "integer"
           }
         },
+        "required" : [ "autostart", "availability", "command", "healthUrl", "key", "lastAttemptAt", "lastMessage", "lastStatus", "name", "position", "removable", "timeoutSeconds", "url", "version" ],
         "type" : "object"
       },
       "ShellView" : {
@@ -4604,6 +4827,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "available", "detail", "key", "name" ],
         "type" : "object"
       },
       "SkillFolderOpened" : {
@@ -4612,6 +4836,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "folder" ],
         "type" : "object"
       },
       "SkillHubInstalled" : {
@@ -4630,7 +4855,7 @@
           },
           "lastSync" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "notes" : {
             "items" : {
@@ -4656,6 +4881,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "apps", "categories", "lastSync", "notes", "scannedAt", "skills", "summary", "syncIntervalSeconds" ],
         "type" : "object"
       },
       "SkillHubSummary" : {
@@ -4697,6 +4923,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "apps", "connectors", "copies", "knowledge", "libraryEntries", "plugins", "skills", "total", "updates" ],
         "type" : "object"
       },
       "SkillView" : {
@@ -4718,10 +4945,10 @@
           },
           "copyStatus" : {
             "enum" : [ "IN_SYNC", "OUTDATED", "MODIFIED", "CONFLICT", "ORPHAN" ],
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "details" : {
             "additionalProperties" : {
@@ -4730,7 +4957,7 @@
             "type" : "object"
           },
           "enabled" : {
-            "type" : "boolean"
+            "type" : [ "boolean", "null" ]
           },
           "id" : {
             "type" : "string"
@@ -4739,32 +4966,36 @@
             "type" : "string"
           },
           "libraryKey" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "location" : {
             "type" : "string"
           },
           "marketplace" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "modified" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "name" : {
             "type" : "string"
           },
           "path" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "plugin" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "pluginVersion" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "provenance" : {
-            "$ref" : "#/components/schemas/ProvenanceView"
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/ProvenanceView"
+            }, {
+              "type" : "null"
+            } ]
           },
           "scope" : {
             "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "ACCOUNT", "INSTRUCTIONS", "KNOWLEDGE" ],
@@ -4774,12 +5005,13 @@
             "type" : "boolean"
           },
           "version" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "writable" : {
             "type" : "boolean"
           }
         },
+        "required" : [ "app", "category", "categoryLabel", "copies", "copyStatus", "description", "details", "enabled", "id", "kind", "libraryKey", "location", "marketplace", "modified", "name", "path", "plugin", "pluginVersion", "provenance", "scope", "updateAvailable", "version", "writable" ],
         "type" : "object"
       },
       "SoftwareChoice" : {
@@ -4804,6 +5036,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "availability", "executionTarget", "key", "launchable", "name", "reason" ],
         "type" : "object"
       },
       "SoftwareRequest" : {
@@ -4936,14 +5169,14 @@
       "SoftwareResponse" : {
         "properties" : {
           "appId" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "availability" : {
             "enum" : [ "INSTALLED", "NOT_INSTALLED", "WEB", "RUNNING", "STOPPED", "INCOMPATIBLE_HARDWARE", "UNKNOWN" ],
             "type" : "string"
           },
           "availabilityDetail" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "capabilities" : {
             "items" : {
@@ -4959,17 +5192,17 @@
             "type" : "string"
           },
           "cliCommand" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "configuration" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "createdAt" : {
             "format" : "date-time",
             "type" : "string"
           },
           "embedNote" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "embeddable" : {
             "type" : "boolean"
@@ -4978,7 +5211,7 @@
             "type" : "boolean"
           },
           "executable" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "executableArgs" : {
             "items" : {
@@ -4990,17 +5223,17 @@
             "type" : "boolean"
           },
           "healthUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "iconUrl" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
             "type" : "integer"
           },
           "incompatibleReason" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "key" : {
             "type" : "string"
@@ -5025,13 +5258,13 @@
             "type" : "array"
           },
           "purpose" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "requirements" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "resolvedExecutable" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "role" : {
             "type" : "string"
@@ -5041,13 +5274,14 @@
             "type" : "string"
           },
           "url" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "version" : {
             "format" : "int64",
             "type" : "integer"
           }
         },
+        "required" : [ "appId", "availability", "availabilityDetail", "capabilities", "catalog", "category", "cliCommand", "configuration", "createdAt", "embedNote", "embeddable", "enabled", "executable", "executableArgs", "executionTarget", "healthUrl", "iconUrl", "id", "incompatibleReason", "key", "launchKind", "launchable", "name", "openFolder", "projectTypes", "purpose", "requirements", "resolvedExecutable", "role", "updatedAt", "url", "version" ],
         "type" : "object"
       },
       "Subject" : {
@@ -5059,6 +5293,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "id", "name" ],
         "type" : "object"
       },
       "Suggestion" : {
@@ -5074,7 +5309,7 @@
             "type" : "array"
           },
           "model" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "name" : {
             "type" : "string"
@@ -5090,6 +5325,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "agentId", "matchedTerms", "model", "name", "role", "score", "specialization" ],
         "type" : "object"
       },
       "Summary" : {
@@ -5130,6 +5366,7 @@
             "type" : "number"
           }
         },
+        "required" : [ "agents", "budgets", "from", "models", "providers", "to", "totalUsd" ],
         "type" : "object"
       },
       "SyncResponse" : {
@@ -5156,6 +5393,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "created", "invalid", "root", "updated" ],
         "type" : "object"
       },
       "Target" : {
@@ -5183,15 +5421,16 @@
             "type" : "boolean"
           }
         },
+        "required" : [ "available", "delivery", "detail", "key", "kind", "name", "recommended" ],
         "type" : "object"
       },
       "TargetRef" : {
         "properties" : {
           "availability" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "contextFile" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "delivery" : {
             "type" : "string"
@@ -5212,9 +5451,10 @@
             "type" : "array"
           },
           "software" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "availability", "contextFile", "delivery", "howItWorks", "key", "name", "providers", "software" ],
         "type" : "object"
       },
       "TaskAgentAssignmentRequest" : {
@@ -5265,7 +5505,7 @@
       "TaskLink" : {
         "properties" : {
           "code" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "file" : {
             "type" : "string"
@@ -5278,6 +5518,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "code", "file", "taskId", "title" ],
         "type" : "object"
       },
       "TaskProjectAssignmentRequest" : {
@@ -5294,7 +5535,7 @@
       "TaskRef" : {
         "properties" : {
           "code" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -5314,22 +5555,23 @@
             "type" : "string"
           }
         },
+        "required" : [ "code" ],
         "type" : "object"
       },
       "TaskResponse" : {
         "properties" : {
           "agentId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "code" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "documentPath" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "id" : {
             "format" : "int64",
@@ -5337,7 +5579,7 @@
           },
           "phaseId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "priority" : {
             "enum" : [ "LOW", "MEDIUM", "HIGH" ],
@@ -5345,7 +5587,7 @@
           },
           "projectId" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "status" : {
             "enum" : [ "OPEN", "IN_PROGRESS", "DONE" ],
@@ -5359,6 +5601,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "agentId", "code", "description", "documentPath", "id", "phaseId", "priority", "projectId", "status", "title", "version" ],
         "type" : "object"
       },
       "TaskReviewRequest" : {
@@ -5418,6 +5661,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "actor", "at", "from", "id", "taskId", "to", "transition", "via" ],
         "type" : "object"
       },
       "TaskUpdateRequest" : {
@@ -5455,7 +5699,7 @@
             "type" : "array"
           },
           "description" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "directives" : {
             "items" : {
@@ -5464,25 +5708,25 @@
             "type" : "array"
           },
           "domain" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "executionTarget" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "key" : {
             "type" : "string"
           },
           "limits" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "model" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "name" : {
             "type" : "string"
           },
           "outputFormat" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "resources" : {
             "items" : {
@@ -5506,9 +5750,10 @@
             "type" : "string"
           },
           "systemPrompt" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "capabilities", "children", "description", "directives", "domain", "executionTarget", "key", "limits", "model", "name", "outputFormat", "resources", "responsibilities", "role", "software", "specialization", "systemPrompt" ],
         "type" : "object"
       },
       "TerminalSession" : {
@@ -5518,7 +5763,7 @@
           },
           "detachedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "directory" : {
             "type" : "string"
@@ -5534,6 +5779,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "attached", "detachedAt", "directory", "id", "shell", "startedAt" ],
         "type" : "object"
       },
       "TicketRequest" : {
@@ -5566,13 +5812,14 @@
             "type" : "string"
           }
         },
+        "required" : [ "available", "billed", "key", "provider" ],
         "type" : "object"
       },
       "UpdatesView" : {
         "properties" : {
           "checkedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "errors" : {
             "items" : {
@@ -5587,6 +5834,7 @@
             "type" : "array"
           }
         },
+        "required" : [ "checkedAt", "errors", "items" ],
         "type" : "object"
       },
       "UsageWindowResponse" : {
@@ -5598,38 +5846,38 @@
             "type" : "array"
           },
           "detail" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "key" : {
             "type" : "string"
           },
           "limitNote" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "name" : {
             "type" : "string"
           },
           "nextResetAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "observedAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "outputTokens" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "resetTime" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "resetWeekday" : {
             "format" : "int32",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "resetZone" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "source" : {
             "enum" : [ "CODEX_LOCAL", "CLAUDE_CODE_LOCAL", "ENGINE_RUNS", "MANUAL" ],
@@ -5644,14 +5892,14 @@
           },
           "tokens" : {
             "format" : "int64",
-            "type" : "integer"
+            "type" : [ "integer", "null" ]
           },
           "usageUrl" : {
             "type" : "string"
           },
           "usedPercent" : {
             "format" : "double",
-            "type" : "number"
+            "type" : [ "number", "null" ]
           },
           "version" : {
             "format" : "int64",
@@ -5663,15 +5911,16 @@
           },
           "windowStart" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           }
         },
+        "required" : [ "byModel", "detail", "key", "limitNote", "name", "nextResetAt", "observedAt", "outputTokens", "resetTime", "resetWeekday", "resetZone", "source", "status", "subject", "tokens", "usageUrl", "usedPercent", "version", "windowKind", "windowStart" ],
         "type" : "object"
       },
       "UserResponse" : {
         "properties" : {
           "displayName" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "enabled" : {
             "type" : "boolean"
@@ -5682,7 +5931,7 @@
           },
           "lastLoginAt" : {
             "format" : "date-time",
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "mustChangePassword" : {
             "type" : "boolean"
@@ -5703,6 +5952,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "displayName", "enabled", "id", "lastLoginAt", "mustChangePassword", "passwordChangedAt", "role", "username", "version" ],
         "type" : "object"
       },
       "UserUpdate" : {
@@ -8002,6 +8252,20 @@
             "format" : "int64",
             "type" : "integer"
           }
+        }, {
+          "in" : "query",
+          "name" : "detail",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "within",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -8443,6 +8707,42 @@
       }
     },
     "/api/projects/{id}/blueprint/nodes/{nodeId}/ai-actions" : {
+      "get" : {
+        "operationId" : "blueprintAiActions",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "nodeId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/BlueprintAiActionView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "blueprint-controller" ]
+      },
       "post" : {
         "operationId" : "requestBlueprintAiAction",
         "parameters" : [ {

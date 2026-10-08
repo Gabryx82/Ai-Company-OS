@@ -34,6 +34,7 @@ import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,7 +56,7 @@ import java.util.List;
 public class ExecutionService {
 
     public record HandoffResult(TaskHandoff handoff, Task task, String prompt, String fullPrompt, String delivery,
-                                String folder, String openUrl, List<String> written, boolean promptToClipboard) {
+                                String folder, @Nullable String openUrl, List<String> written, boolean promptToClipboard) {
     }
 
     public record ReviewResult(TaskReview review, Task task) {

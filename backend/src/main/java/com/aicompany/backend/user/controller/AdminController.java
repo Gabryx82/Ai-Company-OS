@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,8 +52,8 @@ public class AdminController {
     public record PasswordReset(@NotBlank @Size(max = 200) String temporaryPassword) {
     }
 
-    public record EventResponse(Long id, Instant occurredAt, String type, String principal, String source,
-                                String detail) {
+    public record EventResponse(Long id, Instant occurredAt, String type, @Nullable String principal, @Nullable String source,
+                                @Nullable String detail) {
         static EventResponse from(SecurityEvent e) {
             return new EventResponse(e.getId(), e.getOccurredAt(), e.getType(), e.getPrincipal(), e.getSource(),
                     e.getDetail());

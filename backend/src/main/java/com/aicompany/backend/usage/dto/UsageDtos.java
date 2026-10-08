@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /** The wire shapes of the usage view. */
 public final class UsageDtos {
@@ -21,10 +22,10 @@ public final class UsageDtos {
     }
 
     public record UsageWindowResponse(String key, String name, String subject, UsageSource source,
-                                      WindowKind windowKind, UsageService.Status status, Double usedPercent,
-                                      Long tokens, Long outputTokens, Instant windowStart, Instant nextResetAt,
-                                      Instant observedAt, String detail, List<ModelTokens> byModel,
-                                      Integer resetWeekday, String resetTime, String resetZone, String limitNote,
+                                      WindowKind windowKind, UsageService.Status status, @Nullable Double usedPercent,
+                                      @Nullable Long tokens, @Nullable Long outputTokens, @Nullable Instant windowStart, @Nullable Instant nextResetAt,
+                                      @Nullable Instant observedAt, @Nullable String detail, List<ModelTokens> byModel,
+                                      @Nullable Integer resetWeekday, @Nullable String resetTime, @Nullable String resetZone, @Nullable String limitNote,
                                       String usageUrl, long version) {
 
         public static UsageWindowResponse from(UsageService.Window w) {

@@ -10,6 +10,7 @@ import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.task.dto.TaskResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -36,9 +37,9 @@ public class PlanController {
     }
 
     public record PlanRunResponse(Long id, Long projectId, PlanRun.Source source, PlanRun.Status status,
-                                  String requestedModel, String servedModel, String failureDetail, Integer phases,
-                                  Integer tasks, Integer inputTokens, Integer outputTokens, String requestedBy,
-                                  Instant createdAt, Instant finishedAt, String output, String progress) {
+                                  @Nullable String requestedModel, @Nullable String servedModel, @Nullable String failureDetail, @Nullable Integer phases,
+                                  @Nullable Integer tasks, @Nullable Integer inputTokens, @Nullable Integer outputTokens, String requestedBy,
+                                  Instant createdAt, @Nullable Instant finishedAt, @Nullable String output, @Nullable String progress) {
         public static PlanRunResponse from(PlanRun run) {
             return new PlanRunResponse(run.getId(), run.getProjectId(), run.getSource(), run.getStatus(),
                     run.getRequestedModel(), run.getServedModel(), run.getFailureDetail(), run.getPhases(),
@@ -48,8 +49,8 @@ public class PlanController {
     }
 
     public record PhaseResponse(Long id, Long projectId, int number, String title, String objective,
-                                ProjectPhase.Status status, ProjectPhase.Approval approval, String approvalNote,
-                                Instant approvedAt, String documentPath, long version, List<TaskResponse> tasks) {
+                                ProjectPhase.Status status, ProjectPhase.Approval approval, @Nullable String approvalNote,
+                                @Nullable Instant approvedAt, String documentPath, long version, List<TaskResponse> tasks) {
         public static PhaseResponse from(ProjectPhase phase, List<TaskResponse> tasks) {
             return new PhaseResponse(phase.getId(), phase.getProjectId(), phase.getNumber(), phase.getTitle(),
                     phase.getObjective(), phase.getStatus(), phase.getApproval(), phase.getApprovalNote(),

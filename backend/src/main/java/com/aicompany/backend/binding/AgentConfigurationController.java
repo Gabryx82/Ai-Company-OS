@@ -8,6 +8,7 @@ import com.aicompany.backend.binding.ExecutionTargetCatalog.ExecutionTarget;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -57,15 +58,15 @@ public class AgentConfigurationController {
     }
 
     public record ConfigurationResponse(
-            Long id, String name, String role, String specialization, String description, List<String> capabilities,
-            String status, AgentConfigurationService.Ref parent, List<AgentConfigurationService.Ref> children,
-            String domain, String systemPrompt, String responsibilities, String limits, String outputFormat,
-            List<String> directives, String contextPolicy,
+            Long id, String name, String role, String specialization, @Nullable String description, List<String> capabilities,
+            String status, AgentConfigurationService.@Nullable Ref parent, List<AgentConfigurationService.Ref> children,
+            @Nullable String domain, @Nullable String systemPrompt, @Nullable String responsibilities, @Nullable String limits, @Nullable String outputFormat,
+            List<String> directives, @Nullable String contextPolicy,
             Map<String, List<AgentConfigurationService.ResourceRef>> resources,
             List<AgentConfigurationService.BindingSoftwareRef> software,
-            String model, String executionTarget, AgentBindingService.Binding binding,
-            String origin, Map<String, Object> defaults, List<String> modified,
-            Instant customizedAt, String customizedBy, long version) {
+            @Nullable String model, String executionTarget, AgentBindingService.Binding binding,
+            String origin, @Nullable Map<String, Object> defaults, List<String> modified,
+            @Nullable Instant customizedAt, @Nullable String customizedBy, long version) {
 
         static ConfigurationResponse from(Configuration c) {
             Agent a = c.agent();

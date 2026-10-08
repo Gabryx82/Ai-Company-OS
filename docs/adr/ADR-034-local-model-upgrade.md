@@ -280,3 +280,15 @@ Omniverse. Costo da sapere: in RAM sta a circa 6,9 GB (§3.3), e con `OLLAMA_MAX
 orchestratore o coach lavorano insieme a un agente su Qwen, Ollama tiene due modelli diversi in memoria.
 La generazione del piano usa il modello scelto nella scheda *Piano* (default `qwen3.5:9b`), non quello
 dell'agente: questa scelta cambia le run delle task assegnate ai due agenti.
+
+## Revisione PHASE 32 (2026-10-08) — un modello serve anche altri ruoli (TD-66)
+
+Dopo §4 nessun modello `ACTIVE` aveva il ruolo CODER: il lavoro di codice senza agente arrivava a
+`qwen3.5:9b` come «ripiego su PLANNER», pur essendo il modello misurato migliore sul codice (6/6). Un
+modello ha ancora **un** ruolo, il suo, e ora può **servirne anche altri** (`llm_models.also_serves`, V35;
+`alsoServes` nel catalogo, nella risposta e nella riclassificazione, dove assente lascia com'è). V35 lo
+imposta per il solo caso misurato — `qwen3.5:9b` serve anche CODER — e solo dove la riga è ancora quella di
+V27. L'orchestratore cerca prima un modello del ruolo, poi uno che lo serve anche, e lo dice: «Modello
+attivo che serve anche il ruolo CODER richiesto dalla task (ruolo proprio: PLANNER)»; il ripiego su PLANNER
+resta solo quando nessuno serve il ruolo. La pagina Modelli mostra «serve anche: Codice».
+`ModelRoleRoutingApiTest`, `Models.test.tsx`.

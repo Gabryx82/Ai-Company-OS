@@ -7,6 +7,7 @@ import com.pty4j.WinSize;
 import com.pty4j.windows.conpty.WinConPtyProcess;
 import com.pty4j.windows.winpty.WinPtyProcess;
 import jakarta.annotation.PreDestroy;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -75,7 +76,7 @@ public class TerminalSocketHandler extends TextWebSocketHandler {
     static final CloseStatus GONE = new CloseStatus(4004, "terminal ended");
 
     public record TerminalSession(String id, String shell, String directory, Instant startedAt, boolean attached,
-                            Instant detachedAt) {
+                            @Nullable Instant detachedAt) {
     }
 
     private final TerminalTickets tickets;

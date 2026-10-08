@@ -44,6 +44,10 @@ public class LlmModel {
     @Column(nullable = false, length = 16)
     private ModelRole role;
 
+    /** PHASE 32 (TD-66): the other roles this model serves besides its own, comma-separated; null for none. */
+    @Column(name = "also_serves", length = 200)
+    private String alsoServes;
+
     @Column(nullable = false, length = 500)
     private String capabilities = "";
 
@@ -107,6 +111,25 @@ public class LlmModel {
         this.lifecycle = lifecycle;
         this.replacedBy = replacedBy == null || replacedBy.isBlank() ? null : replacedBy.strip();
         this.notes = notes;
+        alsoServe(getAlsoServes()); // its own role is never also one of the others
+    }
+
+    /** PHASE 32 (TD-66): the other roles this model serves; its own is left out. */
+    public void alsoServe(java.util.Collection<ModelRole> roles) {
+        List<String> names = roles == null ? List.of() : roles.stream().filter(r -> r != null && r != role)
+                .distinct().sorted().map(Enum::name).toList();
+        this.alsoServes = names.isEmpty() ? null : String.join(",", names);
+    }
+
+    public List<ModelRole> getAlsoServes() {
+        return Tags.split(alsoServes).stream()
+                .flatMap(name -> java.util.Arrays.stream(ModelRole.values()).filter(r -> r.name().equals(name)))
+                .toList();
+    }
+
+    /** Whether work of this role may go to this model: its own role, or one it also serves. */
+    public boolean serves(ModelRole wanted) {
+        return role == wanted || getAlsoServes().contains(wanted);
     }
 
     @PrePersist

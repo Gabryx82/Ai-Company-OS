@@ -10,6 +10,7 @@ import com.aicompany.backend.llm.model.LlmModel;
 import com.aicompany.backend.llm.model.ModelProvider;
 import com.aicompany.backend.llm.repository.LlmModelRepository;
 import com.aicompany.backend.llm.repository.ModelProviderRepository;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,10 +52,10 @@ public class CostService {
     }
 
     public record ModelSpend(String model, String providerKey, int runs, long inputTokens, long outputTokens,
-                             BigDecimal costUsd, BigDecimal inputPricePerMtok, BigDecimal outputPricePerMtok) {
+                             BigDecimal costUsd, @Nullable BigDecimal inputPricePerMtok, @Nullable BigDecimal outputPricePerMtok) {
     }
 
-    public record AgentSpend(Long agentId, String agentName, int runs, long tokens, BigDecimal costUsd) {
+    public record AgentSpend(@Nullable Long agentId, String agentName, int runs, long tokens, BigDecimal costUsd) {
     }
 
     public record Budget(String providerKey, String providerName, BigDecimal monthlyLimitUsd, int alertPercent,

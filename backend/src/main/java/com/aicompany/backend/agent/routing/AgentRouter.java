@@ -3,6 +3,7 @@ package com.aicompany.backend.agent.routing;
 import com.aicompany.backend.agent.model.Agent;
 import com.aicompany.backend.agent.model.AgentStatus;
 import com.aicompany.backend.agent.repository.AgentRepository;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,7 +52,7 @@ public class AgentRouter {
         this.agents = agents;
     }
 
-    public record Suggestion(Long agentId, String name, String role, String specialization, String model,
+    public record Suggestion(Long agentId, String name, String role, String specialization, @Nullable String model,
                              int score, List<String> matchedTerms) {
     }
 

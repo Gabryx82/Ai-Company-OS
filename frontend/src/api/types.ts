@@ -1,10 +1,13 @@
 // Types of the control plane, derived from the generated contract
 // (src/api/schema.d.ts, from docs/api/openapi.json -- never edited by hand).
 //
-// springdoc marks no response field as required, so every generated response
-// type is all-optional. That is looser than the server: the fields below are
-// always sent. `Wire<T>` makes every field present and possibly null (Jackson
-// writes nulls), and each alias then pins the fields that are never null.
+// Since PHASE 32 (TD-47) the contract states, for every response record, that each
+// field is always present and which ones may be null (`@Nullable` on the server,
+// checked against every JSON response of its test suite by ResponseContractTest):
+// the aliases below use the generated types as they are, and only narrow an enum
+// or a list where the server is stricter than its schema. `Wire<T>` is kept for the
+// shapes that are also request bodies (a Blueprint block's structure), where the
+// contract stays loose because a client may omit a field.
 import type { components } from "./schema";
 
 type S = components["schemas"];
@@ -15,14 +18,14 @@ export type TaskPriority = NonNullable<S["TaskResponse"]["priority"]>;
 export type RunStatus = NonNullable<S["RunResponse"]["status"]>;
 export type ProjectStatus = NonNullable<S["ProjectResponse"]["status"]>;
 
-export type Task = Wire<S["TaskResponse"]> & {
+export type Task = S["TaskResponse"] & {
   id: number;
   title: string;
   status: TaskStatus;
   priority: TaskPriority;
 };
 
-export type Agent = Wire<S["AgentResponse"]> & {
+export type Agent = S["AgentResponse"] & {
   id: number;
   name: string;
   role: string;
@@ -31,13 +34,13 @@ export type Agent = Wire<S["AgentResponse"]> & {
   status: "ACTIVE" | "INACTIVE";
 };
 
-export type Project = Wire<S["ProjectResponse"]> & {
+export type Project = S["ProjectResponse"] & {
   id: number;
   name: string;
   status: ProjectStatus;
 };
 
-export type Run = Wire<S["RunResponse"]> & {
+export type Run = S["RunResponse"] & {
   id: number;
   taskId: number;
   /** Null once the agent has been deleted (PHASE 30): deletedAgentName then says who it was. */
@@ -50,14 +53,14 @@ export type Run = Wire<S["RunResponse"]> & {
   createdAt: string;
 };
 
-export type Suggestion = Wire<S["Suggestion"]> & {
+export type Suggestion = S["Suggestion"] & {
   agentId: number;
   name: string;
   score: number;
   matchedTerms: string[];
 };
 
-export type ModelInfo = Wire<S["ModelInfo"]> & { id: string; provider: string; available: boolean; billed: boolean };
+export type ModelInfo = S["ModelInfo"] & { id: string; provider: string; available: boolean; billed: boolean };
 export type ModelList = { defaultModel: string | null; models: ModelInfo[] };
 
 export type TaskCreate = S["TaskCreateRequest"];
@@ -79,7 +82,7 @@ export type Transition = keyof typeof TRANSITIONS;
 
 // --- PHASE 8: the ecosystem catalogs (ADR-018, ADR-019) -----------------------
 
-export type Software = Wire<S["SoftwareResponse"]> & {
+export type Software = S["SoftwareResponse"] & {
   id: number;
   key: string;
   name: string;
@@ -101,16 +104,16 @@ export type Software = Wire<S["SoftwareResponse"]> & {
 };
 export type SoftwareCategory = Software["category"];
 export type Availability = Software["availability"];
-export type LaunchResult = Wire<S["LaunchResponse"]> & { key: string; command: string[]; folderOpened: boolean };
+export type LaunchResult = S["LaunchResponse"] & { key: string; command: string[]; folderOpened: boolean };
 
-export type Provider = Wire<S["ProviderResponse"]> & {
+export type Provider = S["ProviderResponse"] & {
   key: string;
   name: string;
   kind: NonNullable<S["ProviderResponse"]["kind"]>;
   billing: NonNullable<S["ProviderResponse"]["billing"]>;
   status: NonNullable<S["ProviderResponse"]["status"]>;
 };
-export type CatalogModel = Wire<S["ModelResponse"]> & {
+export type CatalogModel = S["ModelResponse"] & {
   inputPricePerMtok?: number | null;
   outputPricePerMtok?: number | null;
   key: string;
@@ -128,7 +131,7 @@ export type ModelCatalog = {
   engineDefault: string | null;
 };
 
-export type UsageWindow = Wire<S["UsageWindowResponse"]> & {
+export type UsageWindow = S["UsageWindowResponse"] & {
   key: string;
   name: string;
   subject: string;
@@ -141,46 +144,38 @@ export type UsageWindow = Wire<S["UsageWindowResponse"]> & {
 
 // --- PHASE 9-11: workspace, plan, orchestration (ADR-020, 021, 022) -----------
 //
-// These responses nest objects, and `Wire<T>` only reaches the first level.
-// `Deep<T>` makes every nested field present; fields the server may send as
-// null are still read defensively where it matters (`?? "—"`), because the
-// generated schema cannot say which ones are nullable.
-type Deep<T> = T extends (infer U)[] ? Deep<U>[]
-  : T extends object ? { [K in keyof T]-?: Deep<Exclude<T[K], undefined>> } : T;
+// These responses nest objects. Since PHASE 32 (TD-47) the contract says, for every
+// response record, that each field is present and which ones may be null
+// (`@Nullable` on the server, checked against every response of its test suite),
+// so the generated types are used as they are, nested fields included.
 
-export type ProjectTypeInfo = Deep<S["ProjectTypeInfo"]>;
-export type ScaffoldEntry = Deep<S["ScaffoldEntry"]>;
-export type WorkspaceDocument = Deep<S["Document"]>;
-export type WorkspaceDocuments = Omit<Deep<S["Documents"]>, "masterPrompt" | "agents" | "implementationPlan" | "planJson"> & {
-  masterPrompt: WorkspaceDocument | null;
-  agents: WorkspaceDocument | null;
-  implementationPlan: WorkspaceDocument | null;
-  planJson: WorkspaceDocument | null;
-};
-export type Phase = Deep<S["PhaseResponse"]> & { tasks: Task[] };
-export type PlanRun = Deep<S["PlanRunResponse"]>;
+export type ProjectTypeInfo = S["ProjectTypeInfo"];
+export type ScaffoldEntry = S["ScaffoldEntry"];
+export type WorkspaceDocument = S["Document"];
+export type WorkspaceDocuments = S["Documents"];
+export type Phase = S["PhaseResponse"] & { tasks: Task[] };
+export type PlanRun = S["PlanRunResponse"];
 export type Plan = { project: Project; phases: Phase[]; runs: PlanRun[] };
-export type Orchestration = Deep<S["Orchestration"]>;
-export type HandoffOutcome = Deep<S["HandoffResult"]>;
-export type Handoff = Deep<S["HandoffResponse"]>;
-export type Review = Deep<S["ReviewResponse"]>;
+export type Orchestration = S["Orchestration"];
+export type HandoffOutcome = S["HandoffResult"];
+export type Handoff = S["HandoffResponse"];
+export type Review = S["ReviewResponse"];
 /** PHASE 32 (TD-38): one edge a task took -- who, when, through what. */
-export type TaskMove = Deep<S["TaskTransitionResponse"]>;
+export type TaskMove = S["TaskTransitionResponse"];
 /** PHASE 32 (TD-45): what the operator's work says about the level they could work at. */
-export type Learning = Deep<S["Learning"]>;
+export type Learning = S["Learning"];
+/** PHASE 32 (TD-63): an AI action asked about a Blueprint block, with what its task produced. */
+export type BlueprintAiAction = S["BlueprintAiActionView"];
 export type AutonomyLevel = NonNullable<S["ProjectResponse"]["autonomyLevel"]>;
 export type ProjectType = NonNullable<S["ProjectResponse"]["projectType"]>;
 
 // --- PHASE 12-13: agent ecosystem and daily work (ADR-023) ---------------------
 
-export type Resource = Deep<S["ResourceResponse"]>;
-export type AgentProfile = Omit<Deep<S["AgentProfileResponse"]>, "parentId" | "model"> & {
-  parentId: number | null;
-  model: string | null;
-};
-export type AgentTemplate = Deep<S["Template"]>;
-export type InstalledAgent = Deep<S["Installed"]>;
-export type DailyItem = Omit<Deep<S["DailyResponse"]>, "task"> & { task: Deep<S["TaskRef"]> | null };
+export type Resource = S["ResourceResponse"];
+export type AgentProfile = S["AgentProfileResponse"];
+export type AgentTemplate = S["Template"];
+export type InstalledAgent = S["Installed"];
+export type DailyItem = S["DailyResponse"];
 
 // --- PHASE 15: people and sessions (ADR-024) ------------------------------------
 
@@ -336,7 +331,7 @@ export type CodeMethod = Present<S["CodeMethod"], "name" | "parameters" | "annot
 /** The server normalises every list of a structure to [] (CodeStructure.normalized): they are never null. */
 type StructureLists = "implementsTypes" | "annotations" | "fields" | "methods" | "dependencies" | "exceptions" | "relatedTests"
   | "inputs" | "calls" | "calledBy" | "statusCodes" | "exports" | "imports" | "props" | "hooks" | "columns";
-export type CodeStructure = Omit<Wire<S["CodeStructure"]>, StructureLists> & {
+export type CodeStructure = Omit<S["CodeStructure"], StructureLists> & {
   implementsTypes: string[]; annotations: string[]; fields: CodeMember[]; methods: CodeMethod[]; dependencies: string[];
   exceptions: string[]; relatedTests: string[]; inputs: string[]; calls: string[]; calledBy: string[];
   statusCodes: string[]; exports: string[]; imports: string[]; props: string[]; hooks: string[]; columns: string[];

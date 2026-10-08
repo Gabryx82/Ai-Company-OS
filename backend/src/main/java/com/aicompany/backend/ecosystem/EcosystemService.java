@@ -10,6 +10,7 @@ import com.aicompany.backend.software.model.Software;
 import com.aicompany.backend.software.service.SoftwareService;
 import com.aicompany.backend.user.service.SecurityLog;
 import jakarta.annotation.PreDestroy;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,9 +59,9 @@ public class EcosystemService {
     public enum Status { NEVER, ALREADY_RUNNING, STARTING, RUNNING, FAILED }
 
     /** {@code removable}: added by an admin, not one of the {@link #DEFAULTS} a start would insert again (TD-69). */
-    public record ServiceView(String key, String name, String url, String healthUrl, String command,
+    public record ServiceView(String key, String name, @Nullable String url, @Nullable String healthUrl, @Nullable String command,
                               String availability, boolean autostart, int position, int timeoutSeconds,
-                              Status lastStatus, String lastMessage, Instant lastAttemptAt, long version,
+                              Status lastStatus, @Nullable String lastMessage, @Nullable Instant lastAttemptAt, long version,
                               boolean removable) {
     }
 

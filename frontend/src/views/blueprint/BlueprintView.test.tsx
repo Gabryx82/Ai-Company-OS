@@ -149,6 +149,49 @@ describe("BlueprintView", () => {
     expect(await within(inspector).findByText("Salvato.")).toBeTruthy();
   });
 
+  it("loads an outline first, then the texts of the area in view (TD-61)", async () => {
+    const outline = { ...graph, outline: true, partial: false,
+      nodes: graph.nodes.map((n) => ({ ...n, description: null, pseudocodePreview: null })),
+      edges: graph.edges.map((e) => ({ ...e, label: null, description: null, code: null })) };
+    const server = mount({
+      "GET /api/projects/7/blueprint": (call) => ({ body: call.path.includes("within=") ? { ...graph, outline: false, partial: true } : outline }),
+    });
+    await waitFor(() => expect(server.calls.some((c) => c.path.includes("within="))).toBe(true), { timeout: 4000 });
+    const reads = server.calls.filter((c) => c.method === "GET" && c.path.startsWith("/api/projects/7/blueprint")
+      && !c.path.includes("/vocabulary"));
+    expect(reads[0].path).toBe("/api/projects/7/blueprint?detail=outline");
+    expect(reads.some((c) => /within=-?\d+,-?\d+,-?\d+,-?\d+$/.test(decodeURIComponent(c.path)))).toBe(true);
+  });
+
+  it("shows what an AI action produced and applies it to the block only when asked (TD-63)", async () => {
+    const server = mount({
+      "GET /api/projects/7/blueprint": () => ({ body: graph }),
+      "GET /api/projects/7/blueprint/nodes/1": () => ({ body: detail, etag: "\"3\"" }),
+      "GET /api/projects/7/blueprint/nodes/1/ai-actions": () => ({ body: [
+        { id: 2, action: "EXPLAIN_COMPONENT", taskId: 41, taskTitle: "Spiega il componente: TaskService", taskStatus: "IN_PROGRESS",
+          requestedBy: "operator", requestedAt: "2026-10-08T09:00:00Z", outcome: "Coordina le task.", outcomeSource: "esecuzione #5",
+          outcomeAt: "2026-10-08T09:01:00Z", appliesTo: "description" },
+      ] }),
+      "PUT /api/projects/7/blueprint/nodes/1": (call) => ({ body: { ...detail, description: (call.body as { description: string }).description,
+        version: 4 }, etag: "\"4\"" }),
+    });
+    fireEvent.change(await screen.findByLabelText("Cerca un blocco"), { target: { value: "service" } });
+    fireEvent.click(await screen.findByRole("option", { name: /TaskService/ }));
+    const outcomes = await screen.findByRole("list", { name: "Esiti delle azioni AI" });
+    expect(within(outcomes).getByText("Coordina le task.")).toBeTruthy();
+    expect(within(outcomes).getByText(/Da esecuzione #5/)).toBeTruthy();
+    // reading mode: shown, not applicable
+    expect(within(outcomes).queryByRole("button", { name: "Usa come descrizione" })).toBeNull();
+    expect(server.calls.some((c) => c.method === "PUT")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Modifica" }));
+    fireEvent.click(await within(outcomes).findByRole("button", { name: "Usa come descrizione" }));
+    await waitFor(() => expect(server.calls.some((c) => c.method === "PUT")).toBe(true));
+    const put = server.calls.find((c) => c.method === "PUT")!;
+    expect(put.headers["If-Match"]).toBe("\"3\"");
+    expect((put.body as { description: string }).description).toBe("Coordina le task.");
+  });
+
   it("a stale tag is not retried: the block is read again", async () => {
     let reads = 0;
     const server = mount({

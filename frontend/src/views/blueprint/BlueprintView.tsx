@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ReactFlowProvider, useNodesInitialized, useReactFlow } from "@xyflow/react";
+import { ReactFlowProvider, useNodesInitialized, useReactFlow, useStoreApi } from "@xyflow/react";
 import { useApi } from "../../context";
 import { ApiProblem } from "../../api/client";
-import type { BlueprintBlock, BlueprintFamily, BlueprintGraph, BlueprintLayer, BlueprintVocabulary } from "../../api/types";
+import type {
+  BlueprintBlock, BlueprintFamily, BlueprintGraph, BlueprintLayer, BlueprintRelation, BlueprintVocabulary,
+} from "../../api/types";
 import { ProblemNote, when } from "../../components/ui";
 import { Icon } from "../../components/icons";
 import { ConfirmDeletion } from "../../components/Deletion";
@@ -12,7 +14,8 @@ import { BlockInspector, RelationInspector, type InspectorActions } from "./Insp
 import { AddBlockDialog, FileViewer, ProposalsDialog, RelationDialog } from "./BlueprintDialogs";
 import { BlockActionsContext, EmphasisContext, EmphasisStore } from "./emphasis";
 import {
-  ALL_ORIGINS, defaultFilters, freeSpot, neighbours, search, toggle, visibleBlocks, visibleRelations, type Filters,
+  ALL_ORIGINS, areaInView, blocksInArea, defaultFilters, detailFor, freeSpot, neighbours, overlayTexts, search, toggle,
+  visibleBlocks, visibleRelations, type Filters, type Texts,
 } from "./blueprintModel";
 import { FAMILY_LABEL, KIND_LOOK, LAYER_LABEL, ORIGIN_LABEL } from "./blueprintStyle";
 
@@ -62,10 +65,36 @@ function Workspace({ projectId, projectName, onOpenTask }: {
   const layoutVersion = useRef(0);
   const saving = useRef<Promise<void>>(Promise.resolve());
 
-  const reload = useCallback(() => api.blueprint(projectId).then((g) => {
-    setGraph(g);
+  // PHASE 32 (TD-61): the Blueprint arrives as an outline -- blocks, relations, positions,
+  // metrics -- and the texts the canvas shows from a closer zoom (descriptions, pseudocode,
+  // relation labels and code) are loaded for the area in view, and kept until their row changes.
+  const texts = useRef<Texts>({ blocks: new Map<number, BlueprintBlock>(), edges: new Map<number, BlueprintRelation>() });
+  const withTexts = useCallback((g: BlueprintGraph): BlueprintGraph => overlayTexts(g, texts.current), []);
+  const remember = useCallback((area: BlueprintGraph) => {
+    area.nodes.forEach((n) => texts.current.blocks.set(n.id, n));
+    area.edges.forEach((e) => texts.current.edges.set(e.id, e));
+    setGraph((g) => (g ? withTexts(g) : g));
+  }, [withTexts]);
+  const loadArea = useCallback((within: number[]) =>
+    api.blueprint(projectId, { within }).then(remember).catch(() => undefined), [api, projectId, remember]);
+
+  const store = useStoreApi();
+  const graphRef = useRef<BlueprintGraph | null>(null);
+  graphRef.current = graph;
+  const loadVisible = useCallback(() => {
+    const g = graphRef.current;
+    const { transform, width, height } = store.getState();
+    if (!g || !width || !height || detailFor(transform[2]) < 1) return;
+    const box = areaInView(transform, width, height);
+    if (blocksInArea(g, box).every((n) => texts.current.blocks.get(n.id)?.version === n.version)) return;
+    loadArea(box);
+  }, [store, loadArea]);
+
+  const reload = useCallback(() => api.blueprint(projectId, { outline: true }).then((g) => {
+    setGraph(withTexts(g));
     layoutVersion.current = g.layout.version;
-  }).catch(setProblem), [api, projectId]);
+    window.setTimeout(loadVisible, 0);
+  }).catch(setProblem), [api, projectId, withTexts, loadVisible]);
 
   useEffect(() => {
     api.blueprintVocabulary().then(setVocabulary).catch(setProblem);
@@ -101,6 +130,16 @@ function Workspace({ projectId, projectName, onOpenTask }: {
       emphasis.clear();
     }
   }, [selectedNode, selectedEdge, graph, emphasis]);
+
+  // A relation chosen before its area was read: read the area of its two blocks.
+  useEffect(() => {
+    if (!graph || selectedEdge === null || texts.current.edges.has(selectedEdge)) return;
+    const e = graph.edges.find((x) => x.id === selectedEdge);
+    const a = e && graph.layout.positions[String(e.source)];
+    const b = e && graph.layout.positions[String(e.target)];
+    if (!a || !b) return;
+    loadArea([Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y)]);
+  }, [selectedEdge, graph, loadArea]);
 
   const visibleRef = useRef(visibleIds);
   visibleRef.current = visibleIds;
@@ -310,7 +349,8 @@ function Workspace({ projectId, projectName, onOpenTask }: {
                 <BlueprintCanvas graph={graph} blocks={blocks} relations={relations} vocabulary={vocabulary} editMode={editable}
                                  emphasis={emphasis} onSelect={onSelect} onMoved={onMoved}
                                  onConnectRequest={(source, target) => setDialog({ kind: "relation", source, target })}
-                                 onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); }} />
+                                 onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); }}
+                                 onMoveEnd={loadVisible} />
               </BlockActionsContext.Provider>
             </EmphasisContext.Provider>
           )}

@@ -52,7 +52,7 @@ public class LlmCatalogController {
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
             @Valid @RequestBody ModelClassificationRequest request) {
         LlmModel model = service.classify(key, request.role(), request.lifecycle(), request.replacedBy(),
-                request.notes(), Precondition.fromHeader(ifMatch));
+                request.notes(), request.alsoServes(), Precondition.fromHeader(ifMatch));
         return ResponseEntity.ok()
                 .eTag(ETags.of(model.getVersion()))
                 .body(ModelResponse.from(new LlmCatalogService.ModelView(model, null, null)));

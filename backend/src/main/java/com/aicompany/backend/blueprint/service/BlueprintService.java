@@ -35,6 +35,7 @@ import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.workspace.exception.WorkspacePathRefusedException;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import com.aicompany.backend.workspace.service.WorkspacePaths;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -115,6 +116,27 @@ public class BlueprintService {
 
     @Transactional(readOnly = true)
     public BlueprintViews.BlueprintGraph graph(Long projectId) {
+        return graph(projectId, GraphQuery.WHOLE);
+    }
+
+    /**
+     * PHASE 32 (TD-61): what the canvas asks for, progressively. {@code outline}
+     * leaves out the texts -- block descriptions and pseudocode, relation labels,
+     * descriptions and code references -- which the canvas shows only from a
+     * closer zoom; {@code within} keeps the blocks whose position falls in a
+     * rectangle of the canvas, and the relations between them. Positions, metrics
+     * and counts always describe the whole Blueprint.
+     */
+    public record GraphQuery(boolean outline, double @Nullable [] within) {
+        public static final GraphQuery WHOLE = new GraphQuery(false, null);
+    }
+
+    /** The size of a block on the canvas, so that one partly inside a rectangle counts as inside. */
+    static final double BLOCK_WIDTH = 260;
+    static final double BLOCK_HEIGHT = 160;
+
+    @Transactional(readOnly = true)
+    public BlueprintViews.BlueprintGraph graph(Long projectId, GraphQuery query) {
         Project project = projects.findById(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
         List<BlueprintNode> all = nodes.findAllByProjectIdOrderByIdAsc(projectId);
         List<BlueprintEdge> relations = edges.findAllByProjectIdOrderByIdAsc(projectId);
@@ -123,9 +145,32 @@ public class BlueprintService {
         Optional<BlueprintScan> last = scans.findFirstByProjectIdOrderByIdDesc(projectId);
         int pending = (int) proposals.findAllByProjectIdOrderByIdDesc(projectId).stream()
                 .filter(p -> p.getStatus() == ProposalStatus.PROPOSED).count();
+        BlueprintViews.BlueprintCanvasLayout layout = layoutOf(projectId, all);
+        BlueprintViews.BlueprintMetrics metrics = metrics(summaries, edgeViews, last.map(BlueprintScan::getUnresolved).orElse(0));
+
+        List<BlueprintViews.BlueprintBlock> blocks = summaries;
+        List<BlueprintViews.BlueprintRelation> lines = edgeViews;
+        if (query.within() != null) {
+            double[] box = query.within();
+            blocks = blocks.stream().filter(b -> {
+                BlueprintViews.BlueprintPoint p = layout.positions().get(String.valueOf(b.id()));
+                return p != null && p.x() + BLOCK_WIDTH >= box[0] && p.x() <= box[2]
+                        && p.y() + BLOCK_HEIGHT >= box[1] && p.y() <= box[3];
+            }).toList();
+            java.util.Set<Long> inside = blocks.stream().map(BlueprintViews.BlueprintBlock::id)
+                    .collect(Collectors.toSet());
+            lines = lines.stream().filter(e -> inside.contains(e.source()) && inside.contains(e.target())).toList();
+        }
+        if (query.outline()) {
+            blocks = blocks.stream().map(b -> new BlueprintViews.BlueprintBlock(b.id(), b.key(), b.kind(), b.layer(),
+                    b.family(), b.origin(), b.status(), b.pathState(), b.name(), b.filePath(), b.language(), null, null,
+                    b.tags(), b.parentId(), b.expanded(), b.expandable(), b.members(), b.version())).toList();
+            lines = lines.stream().map(e -> new BlueprintViews.BlueprintRelation(e.id(), e.source(), e.target(),
+                    e.relation(), e.family(), e.origin(), null, null, null, e.version())).toList();
+        }
         return new BlueprintViews.BlueprintGraph(projectId, project.isArchived(), workspace.folderOf(projectId).isPresent(),
-                summaries, edgeViews, layoutOf(projectId, all), last.map(BlueprintService::scan).orElse(null),
-                metrics(summaries, edgeViews, last.map(BlueprintScan::getUnresolved).orElse(0)), pending);
+                blocks, lines, layout, last.map(BlueprintService::scan).orElse(null), metrics, pending,
+                query.outline(), query.within() != null);
     }
 
     @Transactional(readOnly = true)

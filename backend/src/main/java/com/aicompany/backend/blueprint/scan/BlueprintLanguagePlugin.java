@@ -33,11 +33,28 @@ public interface BlueprintLanguagePlugin {
     record SourceFile(String path, String text) {
     }
 
-    /** What one file contains, and what it points at. */
-    record FileAnalysis(List<Component> components, List<Reference> references) {
+    /**
+     * What one file contains, and what it points at; and, for a security
+     * configuration, the access rules it declares by path (PHASE 32, TD-62).
+     */
+    record FileAnalysis(List<Component> components, List<Reference> references, List<AccessRule> accessRules) {
+        public FileAnalysis(List<Component> components, List<Reference> references) {
+            this(components, references, List.of());
+        }
+
         public static FileAnalysis empty() {
             return new FileAnalysis(List.of(), List.of());
         }
+    }
+
+    /**
+     * One rule of a security configuration that decides by path (PHASE 32, TD-62):
+     * {@code requestMatchers(HttpMethod.DELETE, "/api/tasks/*").hasRole("ADMIN")}.
+     * {@code httpMethod} is null when the rule matches every method; the rules of a
+     * file are listed in the order they are declared, because the first that
+     * matches decides. {@code source} says where it is: {@code File.java:139}.
+     */
+    record AccessRule(String httpMethod, List<String> patterns, String rule, String source) {
     }
 
     /**

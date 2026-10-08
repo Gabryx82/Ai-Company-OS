@@ -3,6 +3,7 @@ package com.aicompany.backend.agent.dto;
 import com.aicompany.backend.agent.model.Agent;
 
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Output contract for an agent, so the JPA entity is not the public API shape.
@@ -29,7 +30,7 @@ public record AgentResponse(
         String name,
         String role,
         String specialization,
-        String model,
+        @Nullable String model,
         boolean active,
         String status,
         Instant createdAt,

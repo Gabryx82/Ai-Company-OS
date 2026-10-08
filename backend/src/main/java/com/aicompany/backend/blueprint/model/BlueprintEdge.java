@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
@@ -25,8 +26,10 @@ import java.time.Instant;
 @Table(name = "blueprint_edges")
 public class BlueprintEdge {
 
+    // PHASE 32 (TD-60): ids in blocks of 50 from the column's own sequence, so a scan's inserts are batched.
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "blueprint_edges_id")
+    @SequenceGenerator(name = "blueprint_edges_id", sequenceName = "blueprint_edges_seq", allocationSize = 50)
     private Long id;
 
     @Column(name = "project_id", nullable = false, updatable = false)

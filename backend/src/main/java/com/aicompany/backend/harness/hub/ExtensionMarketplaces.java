@@ -2,6 +2,7 @@ package com.aicompany.backend.harness.hub;
 
 import com.aicompany.backend.harness.hub.SkillMarketplaces.Provider;
 import com.aicompany.backend.harness.hub.SkillMarketplaces.Result;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -61,8 +62,8 @@ public class ExtensionMarketplaces {
     }
 
     /** Something the operator gives a connector: a header or an environment variable. */
-    public record ConnectorInput(String name, String kind, boolean required, boolean secret, String description,
-                        String defaultValue) {
+    public record ConnectorInput(String name, String kind, boolean required, boolean secret, @Nullable String description,
+                        @Nullable String defaultValue) {
     }
 
     /**

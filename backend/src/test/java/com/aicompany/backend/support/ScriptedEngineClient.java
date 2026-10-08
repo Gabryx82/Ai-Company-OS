@@ -39,6 +39,7 @@ public class ScriptedEngineClient implements EngineClient {
         modelsUnavailable = false;
         defaultModel = "echo:default";
         interrupted = false;
+        alsoServed.clear();
         hold = null;
         entered = null;
         holdFrom = 0;
@@ -108,15 +109,26 @@ public class ScriptedEngineClient implements EngineClient {
         modelsUnavailable = true;
     }
 
+    private final List<String> alsoServed = Collections.synchronizedList(new ArrayList<>());
+
+    /** PHASE 32 (TD-66): the engine serves this model too, as if Ollama had it installed. */
+    public void serves(String key) {
+        alsoServed.add(key);
+    }
+
     @Override
     public ModelList models() {
         if (modelsUnavailable) {
             modelsUnavailable = false;
             throw new EngineFailure("urn:ai-company-os:run-failure:engine-unreachable", "Nothing answered");
         }
-        return new ModelList(defaultModel, List.of(
+        List<ModelInfo> served = new ArrayList<>(List.of(
                 new ModelInfo("echo:default", "echo", true, "Deterministic echo; not a language model", false),
                 new ModelInfo("anthropic:claude-opus-5", "anthropic", false, "Set ANTHROPIC_API_KEY to enable", true)));
+        synchronized (alsoServed) {
+            alsoServed.forEach(key -> served.add(new ModelInfo(key, key.substring(0, key.indexOf(':')), true, "installed", false)));
+        }
+        return new ModelList(defaultModel, List.copyOf(served));
     }
 
     public List<Request> requests() {

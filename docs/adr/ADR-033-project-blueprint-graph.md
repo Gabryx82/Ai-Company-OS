@@ -172,3 +172,53 @@ prefisso `Blueprint` (o `Code…` per la struttura), e il contratto cambia solo 
   campo o un parametro di un tipo del progetto.
 - TypeScript e Python restano lessicali (§5).
 - Le azioni AI non chiamano un modello da sole (§8).
+
+## Revisione PHASE 32 (2026-10-08) — la riconciliazione scrive a lotti (TD-60)
+
+Nodi e archi del Blueprint prendono l'id da una sequenza a blocchi di 50 (V33, ottimizzatore *pooled* di
+Hibernate) invece che da `IDENTITY`, che obbligava a un `INSERT` per riga per leggere l'id; con
+`hibernate.jdbc.batch_size=50` e `order_inserts` gli inserimenti di una scansione partono in lotti JDBC.
+Gli aggiornamenti non sono riordinati: l'ordine in cui le righe si scrivono (e si bloccano) resta quello
+del codice. `BlueprintScanBatchingTest`: 120 classi collegate (240 righe) si scrivono con meno di 60
+statement preparati; senza batching il test è rosso.
+
+## Revisione PHASE 32 (2026-10-08) — l'autorizzazione degli endpoint dalle regole per percorso (TD-62)
+
+Un endpoint senza `@PreAuthorize` / `@Secured` diceva «autenticato (regola globale)» anche quando la
+configurazione di sicurezza lo riservava a un ruolo. Ora il plugin Java legge anche le regole per percorso
+di Spring Security — `requestMatchers(…)` (o `antMatchers`, `mvcMatchers`) seguito da `hasRole`,
+`hasAnyRole`, `hasAuthority`, `permitAll`, `authenticated`, `denyAll`… e `anyRequest()` — nell'ordine in
+cui sono scritte, con il metodo HTTP se c'è e i pattern letterali o costanti dello stesso file
+(`ADMIN_ONLY`); una costante di un'altra classe non si legge, e la sua regola non assegna nulla.
+Lo scanner, che vede tutti i file, dà a ogni endpoint la **prima** regola che combacia con metodo e rotta,
+come fa Spring Security (`*` un segmento, `**` quanti se ne vuole, `{id}` della rotta solo con un
+jolly), e lo scrive con la regola, il pattern e il punto del codice:
+`hasRole('ADMIN') — regola per percorso DELETE /api/tasks/* (SecurityConfiguration.java:139)`.
+Un'annotazione sul metodo resta quella mostrata. `BlueprintAccessRulesTest`, `BlueprintSelfScanTest`.
+
+## Revisione PHASE 32 (2026-10-08) — l'esito di un'azione AI torna nel blocco (TD-63)
+
+Rivede §8: un'azione AI resta una task (orchestratore, costi, review), ma ora è registrata con il suo
+blocco (V34, `blueprint_ai_actions`: blocco, azione, task, chi l'ha chiesta). `GET …/nodes/{id}/ai-actions`
+elenca le azioni chieste sul blocco con il loro esito, letto dov'è e mai copiato: l'output dell'ultima
+esecuzione riuscita della task attraverso l'AI Engine, altrimenti la sezione **Esito** del documento della
+task, che un agente esterno compila dopo un handoff (fino a `## Note` o alla fine del file; il segnaposto
+non conta). L'Inspector mostra gli esiti; per «Spiega il componente» e «Genera pseudocodice», in modalità
+modifica, «Usa come descrizione / pseudocodice» li applica come modifica manuale del blocco, con il suo tag
+e ripristinabile (§3) — nessuna scrittura implicita (§7). Un blocco eliminato si porta via le sue richieste
+(come le relazioni, V26); una task eliminata le toglie esplicitamente.
+
+## Revisione PHASE 32 (2026-10-08) — il Blueprint si carica per livello di dettaglio e per area (TD-61)
+
+`GET …/blueprint` restituiva l'intero grafo con tutti i testi (≈1,1 MB per 614 blocchi su questo
+repository). Ora accetta `detail=outline` — blocchi, relazioni, posizioni e metriche senza i testi che il
+canvas mostra solo da vicino: descrizioni e pseudocodice dei blocchi, etichette, descrizioni e punti del
+codice delle relazioni — e `within=x0,y0,x1,y1` — i blocchi la cui area tocca quel rettangolo del canvas e
+le relazioni fra loro. Posizioni, metriche e conteggi descrivono sempre l'intero Blueprint; la risposta dice
+`outline` e `partial`. Senza parametri resta quella di prima.
+
+La console carica il contorno; quando lo zoom arriva al livello in cui i testi si vedono (§14) chiede l'area
+in vista, con un margine, e li tiene finché la riga non cambia (`version`); scegliere una relazione di cui
+non ha ancora i testi chiede l'area dei suoi due blocchi. `BlueprintApiTest` (il contorno è più leggero
+almeno di quanto ha tolto, l'area contiene solo relazioni interne), `blueprintModel.test.ts`,
+`BlueprintView.test.tsx`.

@@ -73,6 +73,19 @@ class BlueprintSelfScanTest {
                 .extracting(Component::kind).containsExactly(NodeKind.COMPONENT);
     }
 
+    /** PHASE 32 (TD-62): a delete that only SecurityConfiguration guards reads as an admin's. */
+    @Test
+    void theRulesByPathOfTheSecurityConfigurationReachTheEndpoints() {
+        String delete = "endpoint:com.aicompany.backend.deletion.DeletionController#deleteTask:DELETE /api/tasks/{id}";
+        assertThat(result.components()).filteredOn(c -> c.key().equals(delete)).singleElement()
+                .satisfies(c -> assertThat(c.structure().authorization())
+                        .startsWith("hasRole('ADMIN') — regola per percorso DELETE /api/tasks/*")
+                        .contains("SecurityConfiguration.java:"));
+        String login = "endpoint:com.aicompany.backend.user.controller.AuthController#login:POST /api/auth/login";
+        assertThat(result.components()).filteredOn(c -> c.key().equals(login)).singleElement()
+                .satisfies(c -> assertThat(c.structure().authorization()).startsWith("permitAll()"));
+    }
+
     @Test
     void itIsFastAndResolvesAlmostEverything() {
         assertThat(result.files()).isGreaterThan(300);

@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -34,8 +35,8 @@ public class AuthController {
                                @NotBlank @Size(max = 200) String password) {
     }
 
-    public record UserResponse(Long id, String username, String displayName, Role role, boolean enabled,
-                               boolean mustChangePassword, Instant lastLoginAt, Instant passwordChangedAt,
+    public record UserResponse(Long id, String username, @Nullable String displayName, Role role, boolean enabled,
+                               boolean mustChangePassword, @Nullable Instant lastLoginAt, Instant passwordChangedAt,
                                long version) {
         public static UserResponse from(AppUser user) {
             return new UserResponse(user.getId(), user.getUsername(), user.getDisplayName(), user.getRole(),
@@ -47,7 +48,7 @@ public class AuthController {
     public record LoginResponse(String token, Instant expiresAt, UserResponse user) {
     }
 
-    public record MeResponse(String name, Role role, Caller.Kind kind, UserResponse user) {
+    public record MeResponse(String name, Role role, Caller.Kind kind, @Nullable UserResponse user) {
     }
 
     public record PasswordChange(@NotBlank @Size(max = 200) String currentPassword,

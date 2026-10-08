@@ -6,6 +6,7 @@ import com.aicompany.backend.binding.AgentConfigurationService;
 import com.aicompany.backend.agent.repository.AgentRepository;
 import com.aicompany.backend.agent.service.AgentService;
 import com.aicompany.backend.harness.exception.HarnessResourceNotFoundException;
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,10 +32,10 @@ import java.util.Optional;
 @Service
 public class AgentTemplates {
 
-    public record Template(String key, String name, String role, String specialization, String model, String domain,
-                           String systemPrompt, String responsibilities, String limits, String outputFormat,
+    public record Template(String key, String name, String role, String specialization, @Nullable String model, @Nullable String domain,
+                           @Nullable String systemPrompt, String responsibilities, @Nullable String limits, @Nullable String outputFormat,
                            List<String> directives, List<String> resources, List<String> software,
-                           List<Template> children, String executionTarget, String description,
+                           List<Template> children, @Nullable String executionTarget, @Nullable String description,
                            List<String> capabilities) {
         /**
          * A template without sub-agents, directives or resources has empty lists,
@@ -52,7 +53,7 @@ public class AgentTemplates {
 
     public enum Outcome { CREATED, EXISTING }
 
-    public record Installed(String name, Long agentId, Long parentId, Outcome outcome) {
+    public record Installed(String name, Long agentId, @Nullable Long parentId, Outcome outcome) {
     }
 
     /**
@@ -60,7 +61,7 @@ public class AgentTemplates {
      * agent of the template, with the parent it would get and whether it would be
      * created or found already there (by name, the rule {@link #install} applies).
      */
-    public record Planned(String templateKey, String name, String role, String parentName, Outcome outcome) {
+    public record Planned(String templateKey, String name, String role, @Nullable String parentName, Outcome outcome) {
     }
 
     private final List<Template> templates;

@@ -1,5 +1,6 @@
 package com.aicompany.backend.harness.hub;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -70,18 +71,18 @@ public class SkillMarketplaces {
      * connectors; {@code marketplace} the name an application's CLI knows a plugin
      * marketplace by; {@code targets} the applications its items install into.
      */
-    public record Provider(String key, String name, String description, String homepage, String searchUrl,
-                           Api api, String repo, boolean official, boolean community, String kind, String marketplace,
-                           List<String> targets) {
+    public record Provider(String key, String name, String description, String homepage, @Nullable String searchUrl,
+                           @Nullable Api api, @Nullable String repo, boolean official, boolean community, String kind, @Nullable String marketplace,
+                           @Nullable List<String> targets) {
         public String kindOrSkill() {
             return kind == null ? "SKILL" : kind;
         }
     }
 
     /** One item a catalog offers. {@code ref} is what preview and install take back. */
-    public record Result(String provider, String ref, String name, String description, String author, String source,
-                         Long installs, String version, String url, boolean suspicious, String kind,
-                         List<String> targets, Map<String, String> details) {
+    public record Result(String provider, String ref, String name, @Nullable String description, @Nullable String author, @Nullable String source,
+                         @Nullable Long installs, @Nullable String version, @Nullable String url, boolean suspicious, String kind,
+                         @Nullable List<String> targets, Map<String, String> details) {
         /** A skill: the first kind the Marketplace knew. */
         public Result(String provider, String ref, String name, String description, String author, String source,
                       Long installs, String version, String url, boolean suspicious) {
@@ -99,8 +100,8 @@ public class SkillMarketplaces {
     }
 
     /** What installing would bring, before anything is written. */
-    public record Preview(String provider, String ref, String name, String description, String version,
-                          String sourceUrl, List<PackageFile> files, String skillMd, String security,
+    public record Preview(String provider, String ref, String name, String description, @Nullable String version,
+                          String sourceUrl, List<PackageFile> files, String skillMd, @Nullable String security,
                           List<String> warnings) {
     }
 

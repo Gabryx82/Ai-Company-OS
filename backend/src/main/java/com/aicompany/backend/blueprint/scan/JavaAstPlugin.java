@@ -115,7 +115,85 @@ public final class JavaAstPlugin implements BlueprintLanguagePlugin {
         for (TypeDeclaration<?> type : cu.getTypes()) {
             new TypeReader(file, pkg, resolver, type, testFile, components, references).read();
         }
-        return new FileAnalysis(components, references);
+        return new FileAnalysis(components, references, testFile ? List.of() : accessRules(cu, file.path()));
+    }
+
+    /** What an endpoint's authorization says when nothing more specific than the global rule is known. */
+    public static final String GLOBAL_RULE = "autenticato (regola globale)";
+
+    private static final Set<String> MATCHERS = Set.of("requestMatchers", "antMatchers", "mvcMatchers", "regexMatchers",
+            "anyRequest");
+    private static final Set<String> DECISIONS = Set.of("permitAll", "authenticated", "fullyAuthenticated", "denyAll",
+            "anonymous", "hasRole", "hasAnyRole", "hasAuthority", "hasAnyAuthority", "access", "rememberMe");
+    private static final Set<String> HTTP_METHODS = Set.of("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS");
+
+    /**
+     * PHASE 32 (TD-62): the rules a Spring Security configuration declares by path --
+     * {@code requestMatchers(…).hasRole(…)}, {@code anyRequest().authenticated()} -- in
+     * the order they are written, since the first that matches decides. Patterns are
+     * string literals or constants of the same file ({@code ADMIN_ONLY}); a constant
+     * of another class is not read, and its rule matches nothing.
+     */
+    static List<AccessRule> accessRules(CompilationUnit cu, String path) {
+        List<MethodCallExpr> decisions = new ArrayList<>(cu.findAll(MethodCallExpr.class, call ->
+                DECISIONS.contains(call.getNameAsString()) && call.getScope().filter(Expression::isMethodCallExpr)
+                        .map(scope -> MATCHERS.contains(scope.asMethodCallExpr().getNameAsString())).orElse(false)));
+        // the name, not the call: a call in a chain begins where the whole chain begins
+        decisions.sort(java.util.Comparator.comparing(call -> call.getName().getBegin().orElse(new com.github.javaparser.Position(0, 0))));
+        String fileName = path.substring(path.lastIndexOf('/') + 1);
+        List<AccessRule> rules = new ArrayList<>();
+        for (MethodCallExpr decision : decisions) {
+            MethodCallExpr matcher = decision.getScope().get().asMethodCallExpr();
+            String method = null;
+            List<String> patterns = new ArrayList<>();
+            if (matcher.getNameAsString().equals("anyRequest")) {
+                patterns.add("/**");
+            }
+            for (Expression argument : matcher.getArguments()) {
+                if (argument.isFieldAccessExpr() && argument.asFieldAccessExpr().getScope().toString().endsWith("HttpMethod")) {
+                    method = argument.asFieldAccessExpr().getNameAsString();
+                } else if (argument.isStringLiteralExpr()) {
+                    patterns.add(argument.asStringLiteralExpr().asString());
+                } else if (argument.isNameExpr()) {
+                    List<String> constant = constant(cu, argument.asNameExpr().getNameAsString());
+                    if (constant.isEmpty() && HTTP_METHODS.contains(argument.asNameExpr().getNameAsString())) {
+                        method = argument.asNameExpr().getNameAsString();
+                    }
+                    patterns.addAll(constant);
+                }
+            }
+            if (patterns.isEmpty()) {
+                continue;
+            }
+            String arguments = String.join(", ", decision.getArguments().stream()
+                    .map(a -> a.isStringLiteralExpr() ? "'" + a.asStringLiteralExpr().asString() + "'" : a.toString())
+                    .toList());
+            rules.add(new AccessRule(method, List.copyOf(patterns), decision.getNameAsString() + "(" + arguments + ")",
+                    fileName + ":" + decision.getName().getBegin().map(p -> p.line).orElse(0)));
+        }
+        return rules;
+    }
+
+    /** The string values of a constant of this file: {@code String X = "…"} or {@code String[] X = {"…", …}}. */
+    private static List<String> constant(CompilationUnit cu, String name) {
+        for (VariableDeclarator variable : cu.findAll(VariableDeclarator.class, v -> v.getNameAsString().equals(name))) {
+            Optional<Expression> initializer = variable.getInitializer();
+            if (initializer.isEmpty()) {
+                continue;
+            }
+            Expression value = initializer.get();
+            if (value.isArrayCreationExpr() && value.asArrayCreationExpr().getInitializer().isPresent()) {
+                value = value.asArrayCreationExpr().getInitializer().get();
+            }
+            if (value.isStringLiteralExpr()) {
+                return List.of(value.asStringLiteralExpr().asString());
+            }
+            if (value.isArrayInitializerExpr()) {
+                return value.asArrayInitializerExpr().getValues().stream().filter(Expression::isStringLiteralExpr)
+                        .map(v -> v.asStringLiteralExpr().asString()).toList();
+            }
+        }
+        return List.of();
     }
 
     public static String keyOf(String qualifiedName) {
@@ -544,7 +622,7 @@ public final class JavaAstPlugin implements BlueprintLanguagePlugin {
             String authorization = annotationValue(m, "PreAuthorize", "value")
                     .or(() -> annotationValue(type, "PreAuthorize", "value"))
                     .or(() -> annotationValue(m, "Secured", "value"))
-                    .orElse("autenticato (regola globale)");
+                    .orElse(GLOBAL_RULE);
             CodeStructure structure = CodeStructure.builder()
                     .httpMethod(httpMethod).route(route).controller(name).requestDto(requestDto).responseDto(responseDto)
                     .service(services.isEmpty() ? null : String.join(", ", services)).authorization(authorization)

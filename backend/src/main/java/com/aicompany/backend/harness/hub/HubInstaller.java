@@ -5,6 +5,7 @@ import com.aicompany.backend.harness.hub.ExtensionMarketplaces.ConnectorInput;
 import com.aicompany.backend.harness.hub.ExtensionMarketplaces.PluginEntry;
 import com.aicompany.backend.harness.hub.HubCommands.Tool;
 import com.aicompany.backend.harness.hub.SkillMarketplaces.Provider;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,12 +67,12 @@ public class HubInstaller {
     public enum InstallStatus { INSTALLED, NEEDS_CONFIRMATION, MANUAL, FAILED }
 
     /** How an item would reach one application, shown before anything runs. */
-    public record InstallPlan(String app, String appName, boolean available, String method, String command, String note) {
+    public record InstallPlan(String app, String appName, boolean available, String method, @Nullable String command, @Nullable String note) {
     }
 
     /** {@code installName}: the name the applications will know it by (a connector's can be changed at install). */
     public record ExtensionPreview(String provider, String ref, String kind, String name, String installName, String description,
-                                   String version, String sourceUrl, Map<String, String> details, List<ConnectorInput> inputs, List<InstallPlan> targets,
+                                   @Nullable String version, @Nullable String sourceUrl, Map<String, String> details, List<ConnectorInput> inputs, List<InstallPlan> targets,
                               List<String> warnings) {
     }
 
@@ -80,8 +81,8 @@ public class HubInstaller {
      * operator confirms when a plugin's marketplace declares a command to run;
      * {@code software} the Software Hub key to open for a manual step.
      */
-    public record InstallOutcome(String target, InstallStatus status, String message, String command, String output,
-                          String confirmation, String software) {
+    public record InstallOutcome(String target, InstallStatus status, String message, @Nullable String command, @Nullable String output,
+                          @Nullable String confirmation, @Nullable String software) {
     }
 
     private final SkillMarketplaces markets;

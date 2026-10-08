@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
@@ -36,8 +37,10 @@ public class BlueprintNode {
     /** The fields of a detected block that an operator can override (ADR-033 §3). */
     public static final Set<String> OVERRIDABLE = Set.of("name", "kind", "description", "pseudocode");
 
+    // PHASE 32 (TD-60): ids in blocks of 50 from the column's own sequence, so a scan's inserts are batched.
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "blueprint_nodes_id")
+    @SequenceGenerator(name = "blueprint_nodes_id", sequenceName = "blueprint_nodes_seq", allocationSize = 50)
     private Long id;
 
     @Column(name = "project_id", nullable = false, updatable = false)

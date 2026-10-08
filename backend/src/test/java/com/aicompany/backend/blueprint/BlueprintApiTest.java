@@ -50,6 +50,9 @@ class BlueprintApiTest extends AbstractPostgresTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private com.aicompany.backend.support.ScriptedEngineClient engine;
+
     @TempDir
     Path folder;
 
@@ -597,6 +600,107 @@ class BlueprintApiTest extends AbstractPostgresTest {
                 .contains("È usato da: ").contains("TaskController (").contains("Non modificare il codice");
         mockMvc.perform(post(base + "/nodes/" + service + "/ai-actions").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"action\":\"DANCE\"}")).andExpect(status().isBadRequest());
+    }
+
+    /** PHASE 32 (TD-61): the canvas loads an outline first, then the texts of the area in view. */
+    @Test
+    void theBlueprintLoadsAsAnOutlineAndByAreaOfTheCanvas() throws Exception {
+        scan();
+        String fullText = mockMvc.perform(get(base)).andExpect(status().isOk()).andReturn().getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        String outlineText = mockMvc.perform(get(base).param("detail", "outline")).andExpect(status().isOk()).andReturn()
+                .getResponse().getContentAsString(StandardCharsets.UTF_8);
+        JsonNode full = json.readTree(fullText);
+        JsonNode outline = json.readTree(outlineText);
+
+        assertThat(outline.path("outline").asBoolean()).isTrue();
+        assertThat(outline.path("nodes").size()).isEqualTo(full.path("nodes").size());
+        assertThat(outline.path("edges").size()).isEqualTo(full.path("edges").size());
+        assertThat(outline.path("layout")).isEqualTo(full.path("layout"));
+        assertThat(outline.path("metrics")).isEqualTo(full.path("metrics"));
+        outline.path("nodes").forEach(n -> {
+            assertThat(n.path("description").isNull()).isTrue();
+            assertThat(n.path("pseudocodePreview").isNull()).isTrue();
+        });
+        outline.path("edges").forEach(e -> assertThat(e.path("code").isNull()).isTrue());
+        int[] texts = {0};
+        full.path("nodes").forEach(n -> texts[0] += n.path("description").asString().length()
+                + n.path("pseudocodePreview").asString().length());
+        full.path("edges").forEach(e -> texts[0] += e.path("code").path("excerpt").asString().length());
+        assertThat(texts[0]).isPositive();
+        assertThat(outlineText.length()).as("the outline is lighter by at least the texts it leaves out")
+                .isLessThanOrEqualTo(fullText.length() - texts[0]);
+
+        // One block's area: that block, with its texts, and only relations between blocks inside it.
+        long service = id("java:com.acme.task.TaskService");
+        JsonNode p = full.path("layout").path("positions").path(String.valueOf(service));
+        String box = p.path("x").asLong() + "," + p.path("y").asLong() + "," + p.path("x").asLong() + "," + p.path("y").asLong();
+        JsonNode area = body(mockMvc.perform(get(base).param("within", box)).andExpect(status().isOk()));
+        assertThat(area.path("partial").asBoolean()).isTrue();
+        assertThat(area.path("nodes").size()).isBetween(1, full.path("nodes").size() - 1);
+        java.util.List<Long> inside = new java.util.ArrayList<>();
+        area.path("nodes").forEach(n -> inside.add(n.path("id").asLong()));
+        assertThat(inside).contains(service);
+        area.path("edges").forEach(e -> assertThat(inside).contains(e.path("source").asLong(), e.path("target").asLong()));
+        assertThat(area.path("metrics")).as("the numbers still describe the whole Blueprint").isEqualTo(full.path("metrics"));
+
+        mockMvc.perform(get(base).param("within", "10,10,0,0")).andExpect(status().isBadRequest());
+        mockMvc.perform(get(base).param("detail", "everything")).andExpect(status().isBadRequest());
+    }
+
+    /** PHASE 32 (TD-63): what the action's task produced comes back to the block -- read, never applied. */
+    @Test
+    void theOutcomeOfAnAiActionComesBackToItsBlock() throws Exception {
+        scan();
+        long service = id("java:com.acme.task.TaskService");
+        long explain = body(mockMvc.perform(post(base + "/nodes/" + service + "/ai-actions").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"action\":\"EXPLAIN_COMPONENT\"}")).andExpect(status().isCreated())).path("taskId").asLong();
+        long documentation = body(mockMvc.perform(post(base + "/nodes/" + service + "/ai-actions").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"action\":\"GENERATE_DOCUMENTATION\"}")).andExpect(status().isCreated())).path("taskId").asLong();
+
+        JsonNode asked = body(mockMvc.perform(get(base + "/nodes/" + service + "/ai-actions")).andExpect(status().isOk()));
+        assertThat(asked).hasSize(2);
+        assertThat(asked.get(0).path("action").asString()).isEqualTo("GENERATE_DOCUMENTATION");
+        assertThat(asked.get(1).path("outcome").isNull()).as("nothing produced yet").isTrue();
+        assertThat(asked.get(1).path("appliesTo").asString()).isEqualTo("description");
+
+        // Through the AI Engine: the run's output is the outcome.
+        long agent = body(mockMvc.perform(post("/api/agents").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Explainer " + System.nanoTime() + "\",\"role\":\"Software Engineer\",\"specialization\":\"Spiegare\"}"))
+                .andExpect(status().isCreated())).path("id").asLong();
+        String tag = mockMvc.perform(get("/api/tasks/" + explain)).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+        mockMvc.perform(put("/api/tasks/" + explain + "/agent").header(HttpHeaders.IF_MATCH, tag)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"agentId\":" + agent + "}")).andExpect(status().isOk());
+        tag = mockMvc.perform(get("/api/tasks/" + explain)).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+        engine.answer("TaskService coordina la creazione e la ricerca delle task.");
+        mockMvc.perform(post("/api/tasks/" + explain + "/runs").header(HttpHeaders.IF_MATCH, tag)
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isAccepted());
+        JsonNode explained = null;
+        for (int i = 0; i < 100 && (explained == null || explained.path("outcome").isNull()); i++) {
+            Thread.sleep(50);
+            explained = body(mockMvc.perform(get(base + "/nodes/" + service + "/ai-actions"))).get(1);
+        }
+        assertThat(explained.path("outcome").asString()).isEqualTo("TaskService coordina la creazione e la ricerca delle task.");
+        assertThat(explained.path("outcomeSource").asString()).startsWith("esecuzione #");
+
+        // Through a handoff: the Esito an external agent wrote in the task's document.
+        write("tasks/TASK-" + documentation + ".md", "# TASK-" + documentation + "\n\n## Obiettivo\n\nDocumenta.\n\n"
+                + "## Esito\n\n## TaskService\n\nCrea e trova le task.\n\n## Note\n\nnessuna\n");
+        JsonNode documented = body(mockMvc.perform(get(base + "/nodes/" + service + "/ai-actions"))).get(0);
+        assertThat(documented.path("outcome").asString()).startsWith("## TaskService").contains("Crea e trova le task.")
+                .doesNotContain("nessuna");
+        assertThat(documented.path("outcomeSource").asString()).isEqualTo("sezione Esito di tasks/TASK-" + documentation + ".md");
+        assertThat(documented.path("appliesTo").isNull()).isTrue();
+
+        // The block itself is untouched until the operator applies an outcome.
+        assertThat(body(mockMvc.perform(get(base + "/nodes/" + service))).path("description").asString())
+                .doesNotContain("coordina");
+        mockMvc.perform(get(base + "/nodes/999999/ai-actions")).andExpect(status().isNotFound());
+
+        // The agent must not outlive the test: plan imports elsewhere route by role.
+        jdbc.update("DELETE FROM task_runs WHERE agent_id = ?", agent);
+        jdbc.update("UPDATE tasks SET agent_id = NULL WHERE agent_id = ?", agent);
+        jdbc.update("DELETE FROM agents WHERE id = ?", agent);
     }
 
     @Test

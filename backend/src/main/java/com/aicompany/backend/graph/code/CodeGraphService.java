@@ -5,6 +5,7 @@ import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.workspace.exception.WorkspaceNotConfiguredException;
 import com.aicompany.backend.workspace.exception.WorkspaceUnavailableException;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -41,7 +42,7 @@ public class CodeGraphService {
     public record Hotspot(String id, int importedBy) {
     }
 
-    public record TaskLink(Long taskId, String code, String title, String file) {
+    public record TaskLink(Long taskId, @Nullable String code, String title, String file) {
     }
 
     public record CodeGraph(Instant generatedAt, int files, boolean truncated, Map<String, Integer> languages,

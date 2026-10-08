@@ -3,6 +3,7 @@ package com.aicompany.backend.task.dto;
 import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Output contract for a task, so the JPA entity is not the public API shape.
@@ -31,15 +32,15 @@ import com.aicompany.backend.task.model.TaskStatus;
 public record TaskResponse(
         Long id,
         String title,
-        String description,
+        @Nullable String description,
         TaskStatus status,
         TaskPriority priority,
-        Long projectId,
-        Long agentId,
+        @Nullable Long projectId,
+        @Nullable Long agentId,
         // PHASE 10 (ADR-021): the plan. Additive; null for tasks outside a plan.
-        Long phaseId,
-        String code,
-        String documentPath,
+        @Nullable Long phaseId,
+        @Nullable String code,
+        @Nullable String documentPath,
         // PHASE 32 (TD-33): the row version, so a listing is enough to write each element
         // back with If-Match: "<version>" -- N writes no longer cost N reads first.
         long version

@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /** The wire shapes of the provider and model catalogs (ADR-018). */
 public final class LlmCatalogDtos {
@@ -20,9 +21,9 @@ public final class LlmCatalogDtos {
     private LlmCatalogDtos() {
     }
 
-    public record ProviderResponse(String key, String name, ProviderKind kind, String engineProvider,
-                                   Billing billing, ProviderStatus status, String baseUrl, String docsUrl,
-                                   String notes) {
+    public record ProviderResponse(String key, String name, ProviderKind kind, @Nullable String engineProvider,
+                                   Billing billing, ProviderStatus status, @Nullable String baseUrl, @Nullable String docsUrl,
+                                   @Nullable String notes) {
         public static ProviderResponse from(ModelProvider p) {
             return new ProviderResponse(p.getKey(), p.getName(), p.getKind(), p.getEngineProvider(), p.getBilling(),
                     p.getStatus(), p.getBaseUrl(), p.getDocsUrl(), p.getNotes());
@@ -30,16 +31,17 @@ public final class LlmCatalogDtos {
     }
 
     public record ModelResponse(String key, String providerKey, String displayName, ModelRole role,
-                                List<String> capabilities, Integer contextWindow, BigDecimal sizeGb,
-                                String parameters, ModelLifecycle lifecycle, String replacedBy, String notes,
-                                Boolean engineAvailable, String engineDetail, long version,
-                                BigDecimal inputPricePerMtok, BigDecimal outputPricePerMtok) {
+                                List<String> capabilities, @Nullable Integer contextWindow, @Nullable BigDecimal sizeGb,
+                                @Nullable String parameters, ModelLifecycle lifecycle, @Nullable String replacedBy, @Nullable String notes,
+                                @Nullable Boolean engineAvailable, @Nullable String engineDetail, long version,
+                                @Nullable BigDecimal inputPricePerMtok, @Nullable BigDecimal outputPricePerMtok,
+                                List<ModelRole> alsoServes) {
         public static ModelResponse from(LlmCatalogService.ModelView view) {
             LlmModel m = view.model();
             return new ModelResponse(m.getKey(), m.getProviderKey(), m.getDisplayName(), m.getRole(),
                     m.getCapabilities(), m.getContextWindow(), m.getSizeGb(), m.getParameters(), m.getLifecycle(),
                     m.getReplacedBy(), m.getNotes(), view.engineAvailable(), view.engineDetail(), m.getVersion(),
-                    m.getInputPricePerMtok(), m.getOutputPricePerMtok());
+                    m.getInputPricePerMtok(), m.getOutputPricePerMtok(), m.getAlsoServes());
         }
     }
 
@@ -47,7 +49,7 @@ public final class LlmCatalogDtos {
     }
 
     public record ModelCatalogResponse(List<ModelResponse> models, List<UncataloguedModel> uncatalogued,
-                                       boolean engineReachable, String engineDefault) {
+                                       boolean engineReachable, @Nullable String engineDefault) {
         public static ModelCatalogResponse from(LlmCatalogService.Catalog catalog) {
             return new ModelCatalogResponse(
                     catalog.models().stream().map(ModelResponse::from).toList(),
@@ -59,6 +61,8 @@ public final class LlmCatalogDtos {
     }
 
     public record ModelClassificationRequest(@NotNull ModelRole role, @NotNull ModelLifecycle lifecycle,
-                                             @Size(max = 200) String replacedBy, @Size(max = 2000) String notes) {
+                                             @Size(max = 200) String replacedBy, @Size(max = 2000) String notes,
+                                             /** PHASE 32 (TD-66): the other roles it serves; absent keeps them as they are. */
+                                             List<ModelRole> alsoServes) {
     }
 }

@@ -4,6 +4,7 @@ import com.aicompany.backend.hitl.AutonomyPolicy;
 import com.aicompany.backend.project.model.Project;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The human-readable face of {@code plan.json}: {@code IMPLEMENTATION_PLAN.md},
@@ -16,7 +17,7 @@ import java.util.List;
 public final class PlanMarkdown {
 
     /** What the importer decided for one task, rendered next to what the plan said. */
-    public record TaskRef(String code, String documentPath, String agentName, PlanDocument.TaskPlan plan) {
+    public record TaskRef(@Nullable String code, String documentPath, String agentName, PlanDocument.TaskPlan plan) {
     }
 
     public record PhaseRef(int number, String documentPath, PlanDocument.PhasePlan plan, List<TaskRef> tasks) {

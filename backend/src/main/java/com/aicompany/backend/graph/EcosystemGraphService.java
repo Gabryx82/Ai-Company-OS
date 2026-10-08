@@ -1,5 +1,6 @@
 package com.aicompany.backend.graph;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +23,7 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class EcosystemGraphService {
 
-    public record EcosystemNode(String id, String type, String label, String status, Map<String, Object> meta) {
+    public record EcosystemNode(String id, String type, String label, @Nullable String status, Map<String, Object> meta) {
     }
 
     public record EcosystemEdge(String source, String target, String kind) {

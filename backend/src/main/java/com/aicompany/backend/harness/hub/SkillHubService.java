@@ -10,6 +10,7 @@ import com.aicompany.backend.harness.library.SkillLibrary;
 import com.aicompany.backend.harness.model.HarnessResource;
 import com.aicompany.backend.harness.repository.HarnessResourceRepository;
 import com.aicompany.backend.software.service.SoftwareService;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,17 +62,17 @@ public class SkillHubService {
                                List<String> readers, int count) {
     }
 
-    public record AppView(String id, String name, String description, boolean detected, String software,
+    public record AppView(String id, String name, String description, boolean detected, @Nullable String software,
                           List<String> targets, List<AgentRef> agents, List<LocationView> locations, int count,
                           boolean installable) {
     }
 
-    public record ProvenanceView(String provider, String providerName, String reference, String sourceUrl,
-                                 String installedVersion, String latestVersion, Instant installedAt, Instant checkedAt,
-                                 boolean updateAvailable, boolean localChanges, String checkError) {
+    public record ProvenanceView(String provider, String providerName, String reference, @Nullable String sourceUrl,
+                                 @Nullable String installedVersion, @Nullable String latestVersion, Instant installedAt, @Nullable Instant checkedAt,
+                                 boolean updateAvailable, boolean localChanges, @Nullable String checkError) {
     }
 
-    public record CopyView(String app, String location, String skillId, String path, CopyStatus status, Instant deployedAt) {
+    public record CopyView(String app, String location, String skillId, String path, CopyStatus status, @Nullable Instant deployedAt) {
     }
 
     /**
@@ -82,10 +83,10 @@ public class SkillHubService {
      * @param copyStatus for a Hub copy: how it stands against the library
      */
     public record SkillView(String id, String app, String location, Scope scope, String kind, String name,
-                            String description, String category, String categoryLabel, String plugin,
-                            String pluginVersion, String marketplace, Boolean enabled, String version, String path,
-                            boolean writable, Instant modified, String libraryKey, CopyStatus copyStatus,
-                            ProvenanceView provenance, List<CopyView> copies, boolean updateAvailable,
+                            @Nullable String description, String category, String categoryLabel, @Nullable String plugin,
+                            @Nullable String pluginVersion, @Nullable String marketplace, @Nullable Boolean enabled, @Nullable String version, @Nullable String path,
+                            boolean writable, @Nullable Instant modified, @Nullable String libraryKey, @Nullable CopyStatus copyStatus,
+                            @Nullable ProvenanceView provenance, List<CopyView> copies, boolean updateAvailable,
                             Map<String, String> details) {
     }
 
@@ -117,10 +118,10 @@ public class SkillHubService {
     }
 
     public record CopyTarget(String app, String appName, boolean available, String path, String status,
-                             Instant deployedAt, String skillId) {
+                             @Nullable Instant deployedAt, @Nullable String skillId) {
     }
 
-    public record DeployResult(String app, String outcome, String path, String backup, String message) {
+    public record DeployResult(String app, String outcome, String path, @Nullable String backup, String message) {
     }
 
     public record InstallResult(String key, String name, String filePath, List<DeployResult> copies) {

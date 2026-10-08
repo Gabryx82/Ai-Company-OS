@@ -41,6 +41,7 @@ public abstract class AbstractPostgresTest {
     @BeforeEach
     void clearRunsAndTheScriptedEngine() {
         // PHASE 28: the Blueprint references projects and tasks that other tests delete.
+        baseJdbc.update("DELETE FROM blueprint_ai_actions");
         baseJdbc.update("DELETE FROM blueprint_change_proposals");
         baseJdbc.update("DELETE FROM blueprint_edges");
         baseJdbc.update("DELETE FROM blueprint_nodes");

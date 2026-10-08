@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -32,7 +33,7 @@ import java.util.Map;
 @RestController
 public class SkillHubController {
 
-    public record SkillHubInstalled(Instant scannedAt, Instant lastSync, long syncIntervalSeconds,
+    public record SkillHubInstalled(Instant scannedAt, @Nullable Instant lastSync, long syncIntervalSeconds,
                             List<SkillHubService.AppView> apps, List<SkillHubService.SkillView> skills,
                             List<SkillCategories.Category> categories, List<String> notes, SkillHubService.SkillHubSummary summary) {
     }

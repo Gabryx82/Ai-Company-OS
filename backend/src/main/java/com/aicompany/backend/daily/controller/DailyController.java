@@ -7,6 +7,7 @@ import com.aicompany.backend.daily.service.DailyService;
 import com.aicompany.backend.task.model.Task;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
+import org.jspecify.annotations.Nullable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -38,11 +39,11 @@ public class DailyController {
     }
 
     /** A referenced task travels with its own title, code, status and project -- read, not copied. */
-    public record TaskRef(Long id, String code, String title, String status, Long projectId, String projectName) {
+    public record TaskRef(Long id, @Nullable String code, String title, String status, @Nullable Long projectId, @Nullable String projectName) {
     }
 
-    public record DailyResponse(Long id, LocalDate day, String title, String notes, DailyItem.Status status,
-                                DailyItem.Priority priority, LocalTime dueTime, int position, TaskRef task,
+    public record DailyResponse(Long id, LocalDate day, String title, @Nullable String notes, DailyItem.Status status,
+                                DailyItem.Priority priority, @Nullable LocalTime dueTime, int position, @Nullable TaskRef task,
                                 long version) {
         public static DailyResponse from(DailyItem item) {
             Task t = item.getTask();

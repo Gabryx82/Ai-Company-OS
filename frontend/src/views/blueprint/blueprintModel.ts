@@ -114,3 +114,34 @@ export function freeSpot(positions: Record<string, { x: number; y: number }>): {
 export function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
+
+// --- PHASE 32 (TD-61): the texts of the canvas, loaded by area -------------------------
+
+/** The size of a block on the canvas, as the server counts it when it cuts an area. */
+export const BLOCK_SIZE = { width: 260, height: 160 };
+
+/** Blocks and relations whose texts were read, kept until their row changes (a new version). */
+export interface Texts { blocks: Map<number, BlueprintBlock>; edges: Map<number, BlueprintRelation> }
+
+/** The graph with the texts read so far laid over its outline. */
+export function overlayTexts(graph: BlueprintGraph, texts: Texts): BlueprintGraph {
+  return {
+    ...graph,
+    nodes: graph.nodes.map((n) => { const t = texts.blocks.get(n.id); return t && t.version === n.version ? t : n; }),
+    edges: graph.edges.map((e) => { const t = texts.edges.get(e.id); return t && t.version === e.version ? t : e; }),
+  };
+}
+
+/** The rectangle of the canvas in view -- [x0, y0, x1, y1] in canvas coordinates -- with a margin around it. */
+export function areaInView(transform: [number, number, number], width: number, height: number, margin = 300): number[] {
+  const [tx, ty, zoom] = transform;
+  return [-tx / zoom - margin, -ty / zoom - margin, (width - tx) / zoom + margin, (height - ty) / zoom + margin];
+}
+
+/** The blocks whose box touches the area: what the server returns for it. */
+export function blocksInArea(graph: BlueprintGraph, box: number[]): BlueprintBlock[] {
+  return graph.nodes.filter((n) => {
+    const p = graph.layout.positions[String(n.id)];
+    return !!p && p.x + BLOCK_SIZE.width >= box[0] && p.x <= box[2] && p.y + BLOCK_SIZE.height >= box[1] && p.y <= box[3];
+  });
+}

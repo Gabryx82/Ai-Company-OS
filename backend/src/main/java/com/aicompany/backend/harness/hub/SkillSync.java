@@ -1,6 +1,7 @@
 package com.aicompany.backend.harness.hub;
 
 import com.aicompany.backend.harness.library.SkillLibrary;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,7 +57,7 @@ public class SkillSync {
     public enum Change { ADDED, REMOVED, MODIFIED }
 
     public record Event(long id, Instant at, Change change, String app, String location, String name, String path,
-                        String detail) {
+                        @Nullable String detail) {
     }
 
     public record Report(Instant at, boolean firstRun, int total, int added, int removed, int modified,

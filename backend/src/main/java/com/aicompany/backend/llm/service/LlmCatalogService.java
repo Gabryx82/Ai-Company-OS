@@ -93,10 +93,13 @@ public class LlmCatalogService {
     }
 
     public LlmModel classify(String key, ModelRole role, ModelLifecycle lifecycle, String replacedBy, String notes,
-                             Precondition precondition) {
+                             java.util.List<ModelRole> alsoServes, Precondition precondition) {
         LlmModel model = models.findByKeyForUpdate(key).orElseThrow(() -> new ModelNotFoundException(key));
         precondition.requireSatisfiedBy(model.getVersion());
         model.classify(role, lifecycle, replacedBy, notes);
+        if (alsoServes != null) {
+            model.alsoServe(alsoServes);
+        }
         models.flush();
         return model;
     }

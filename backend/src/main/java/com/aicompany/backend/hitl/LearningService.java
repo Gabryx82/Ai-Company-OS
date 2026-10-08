@@ -6,6 +6,7 @@ import com.aicompany.backend.project.model.AutonomyLevel;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,7 +64,7 @@ public class LearningService {
      * not zero.
      */
     public record Learning(AutonomyLevel level, int reviewedTasks, int firstPassAccepted, int changesRequested,
-                           int operatorCompletions, Integer piecesOpen, List<Piece> pieces, boolean piecesTruncated,
+                           int operatorCompletions, @Nullable Integer piecesOpen, List<Piece> pieces, boolean piecesTruncated,
                            LevelSuggestion suggestion) {
     }
 

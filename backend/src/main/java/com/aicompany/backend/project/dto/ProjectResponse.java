@@ -7,6 +7,7 @@ import com.aicompany.backend.project.model.ProjectStatus;
 import com.aicompany.backend.project.model.ProjectType;
 
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Output contract for a project, so the JPA entity is not the public API shape.
@@ -14,14 +15,14 @@ import java.time.Instant;
 public record ProjectResponse(
         Long id,
         String name,
-        String description,
+        @Nullable String description,
         ProjectStatus status,
         Instant createdAt,
         Instant updatedAt,
         // PHASE 9 (ADR-020): the profile. Additive fields; nothing above changed.
-        ProjectType projectType,
-        String stack,
-        String workspacePath,
+        @Nullable ProjectType projectType,
+        @Nullable String stack,
+        @Nullable String workspacePath,
         AutonomyLevel autonomyLevel,
         PlanStatus planStatus,
         // PHASE 32 (TD-33): the row version, so a listing is enough to write each element

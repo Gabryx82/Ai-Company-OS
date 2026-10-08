@@ -60,7 +60,10 @@ export function Models() {
                 <td><strong>{m.displayName}</strong><div className="mono muted">{m.key}</div>
                   {m.notes && <div className="muted" style={{ fontSize: 12, maxWidth: 420 }}>{m.notes}</div>}
                   {m.replacedBy && <div style={{ fontSize: 12 }}>→ sostituto: <code>{m.replacedBy}</code></div>}</td>
-                <td>{ROLE_LABEL[m.role] ?? m.role}</td>
+                <td>{ROLE_LABEL[m.role] ?? m.role}
+                  {(m.alsoServes ?? []).length > 0 && (
+                    <div className="muted" style={{ fontSize: 12 }}>serve anche: {(m.alsoServes ?? []).map((r) => ROLE_LABEL[r] ?? r).join(", ")}</div>
+                  )}</td>
                 <td><span className={LIFECYCLE_TONE[m.lifecycle]}>{m.lifecycle}</span></td>
                 <td>{m.capabilities.map((c) => <span key={c} className="chip">{c}</span>)}</td>
                 <td className="muted">{m.sizeGb ? `${m.sizeGb} GB` : "—"}{m.parameters ? ` · ${m.parameters}` : ""}

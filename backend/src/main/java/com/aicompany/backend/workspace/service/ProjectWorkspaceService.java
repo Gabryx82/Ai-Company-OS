@@ -16,6 +16,7 @@ import com.aicompany.backend.workspace.exception.WorkspaceFileNotFoundException;
 import com.aicompany.backend.workspace.exception.WorkspaceNotConfiguredException;
 import com.aicompany.backend.workspace.exception.WorkspacePathRefusedException;
 import com.aicompany.backend.workspace.exception.WorkspaceUnavailableException;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -67,8 +68,8 @@ public class ProjectWorkspaceService implements ProjectFolders {
      * (PHASE 30) everything else there -- notes, PDFs, the README -- so that every
      * file of the folder is visible, and deletable, from the console.
      */
-    public record Documents(String workspacePath, boolean exists, Document masterPrompt, boolean masterPromptIsTemplate,
-                            Document agents, Document implementationPlan, Document planJson,
+    public record Documents(String workspacePath, boolean exists, @Nullable Document masterPrompt, boolean masterPromptIsTemplate,
+                            @Nullable Document agents, @Nullable Document implementationPlan, @Nullable Document planJson,
                             List<Document> phases, List<Document> tasks, List<Document> references,
                             List<Document> handoffs, List<Document> referenceFiles) {
     }

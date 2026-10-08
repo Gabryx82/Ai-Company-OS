@@ -10,6 +10,7 @@ import com.aicompany.backend.blueprint.model.NodeStatus;
 import com.aicompany.backend.blueprint.model.PathState;
 import com.aicompany.backend.blueprint.model.ProposalKind;
 import com.aicompany.backend.blueprint.model.RelationType;
+import com.aicompany.backend.blueprint.service.BlueprintAiOutcomes;
 import com.aicompany.backend.blueprint.service.BlueprintScanService;
 import com.aicompany.backend.blueprint.service.BlueprintService;
 import com.aicompany.backend.blueprint.service.BlueprintViews;
@@ -77,8 +78,11 @@ public class BlueprintController {
     private final BlueprintService blueprint;
     private final BlueprintScanService scanner;
     private final ChangeProposalService proposals;
+    private final BlueprintAiOutcomes aiOutcomes;
 
-    public BlueprintController(BlueprintService blueprint, BlueprintScanService scanner, ChangeProposalService proposals) {
+    public BlueprintController(BlueprintService blueprint, BlueprintScanService scanner, ChangeProposalService proposals,
+                               BlueprintAiOutcomes aiOutcomes) {
+        this.aiOutcomes = aiOutcomes;
         this.blueprint = blueprint;
         this.scanner = scanner;
         this.proposals = proposals;
@@ -91,9 +95,41 @@ public class BlueprintController {
         return blueprint.vocabulary();
     }
 
+    /**
+     * The Blueprint, whole or progressively (PHASE 32, TD-61): {@code detail=outline}
+     * leaves the texts out, {@code within=x0,y0,x1,y1} keeps one area of the canvas.
+     */
     @GetMapping(BASE)
-    public BlueprintViews.BlueprintGraph blueprintGraph(@PathVariable Long id) {
-        return blueprint.graph(id);
+    public BlueprintViews.BlueprintGraph blueprintGraph(@PathVariable Long id,
+                                                        @RequestParam(required = false) String detail,
+                                                        @RequestParam(required = false) String within) {
+        if (detail != null && !detail.equals("outline") && !detail.equals("full")) {
+            throw new com.aicompany.backend.api.RequestValidationException("detail", "must be outline or full");
+        }
+        return blueprint.graph(id, new BlueprintService.GraphQuery("outline".equals(detail), area(within)));
+    }
+
+    private static double[] area(String within) {
+        if (within == null || within.isBlank()) {
+            return null;
+        }
+        String[] parts = within.split(",");
+        try {
+            double[] box = new double[4];
+            if (parts.length != 4) {
+                throw new NumberFormatException();
+            }
+            for (int i = 0; i < 4; i++) {
+                box[i] = Double.parseDouble(parts[i].strip());
+            }
+            if (box[2] < box[0] || box[3] < box[1]) {
+                throw new NumberFormatException();
+            }
+            return box;
+        } catch (NumberFormatException wrong) {
+            throw new com.aicompany.backend.api.RequestValidationException("within",
+                    "must be x0,y0,x1,y1 with x0 <= x1 and y0 <= y1");
+        }
     }
 
     /** Reads the code into the Blueprint (ADR-033 §4). */
@@ -168,6 +204,15 @@ public class BlueprintController {
     public BlueprintViews.BlueprintSnippet blueprintSnippet(@PathVariable Long id, @PathVariable Long nodeId,
                                           @RequestParam(defaultValue = "false") boolean full) {
         return blueprint.snippet(id, nodeId, full);
+    }
+
+    /**
+     * The AI actions asked about a block, with what their tasks produced (PHASE 32,
+     * TD-63): the last successful run's output, or the Esito of the task document.
+     */
+    @GetMapping(BASE + "/nodes/{nodeId}/ai-actions")
+    public List<BlueprintAiOutcomes.BlueprintAiActionView> blueprintAiActions(@PathVariable Long id, @PathVariable Long nodeId) {
+        return aiOutcomes.of(id, nodeId);
     }
 
     /** An AI action becomes a task of the project (ADR-033 §8). */

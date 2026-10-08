@@ -4,6 +4,7 @@ import com.aicompany.backend.run.model.RunStatus;
 import com.aicompany.backend.run.model.TaskRun;
 
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Output contract for a run. Everything the record holds, prompts included: what
@@ -15,26 +16,26 @@ import java.time.Instant;
 public record RunResponse(
         Long id,
         Long taskId,
-        Long agentId,
+        @Nullable Long agentId,
         RunStatus status,
-        String requestedModel,
-        String servedModel,
+        @Nullable String requestedModel,
+        @Nullable String servedModel,
         String systemPrompt,
         String userPrompt,
-        String output,
-        String finishReason,
-        String failureType,
-        String failureDetail,
-        Integer inputTokens,
-        Integer outputTokens,
-        Long latencyMs,
+        @Nullable String output,
+        @Nullable String finishReason,
+        @Nullable String failureType,
+        @Nullable String failureDetail,
+        @Nullable Integer inputTokens,
+        @Nullable Integer outputTokens,
+        @Nullable Long latencyMs,
         String correlationId,
         String requestedBy,
         Instant createdAt,
-        Instant startedAt,
-        Instant finishedAt,
+        @Nullable Instant startedAt,
+        @Nullable Instant finishedAt,
         /** PHASE 30 (ADR-035): who did the run when that agent has since been deleted ({@code agentId} is then null). */
-        String deletedAgentName
+        @Nullable String deletedAgentName
 ) {
 
     public static RunResponse from(TaskRun run) {

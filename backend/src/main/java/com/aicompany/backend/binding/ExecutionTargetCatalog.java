@@ -1,5 +1,6 @@
 package com.aicompany.backend.binding;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.DeserializationFeature;
@@ -38,8 +39,8 @@ public class ExecutionTargetCatalog {
         MANUAL
     }
 
-    public record ExecutionTarget(String key, String name, String software, Delivery delivery, List<String> providers,
-                                  String contextFile, String howItWorks) {
+    public record ExecutionTarget(String key, String name, @Nullable String software, Delivery delivery, List<String> providers,
+                                  @Nullable String contextFile, String howItWorks) {
         public ExecutionTarget {
             providers = providers == null ? List.of() : List.copyOf(providers);
         }

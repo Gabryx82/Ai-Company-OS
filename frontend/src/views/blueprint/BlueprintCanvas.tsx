@@ -20,7 +20,7 @@ const edgeTypes: EdgeTypes = { relation: RelationEdge };
  * Flow needs to move things under the pointer; what is shown comes from the view.
  */
 export function BlueprintCanvas({ graph, blocks, relations, vocabulary, editMode, emphasis, onSelect, onConnectRequest,
-  onMoved, onPaneClick }: {
+  onMoved, onPaneClick, onMoveEnd }: {
   graph: BlueprintGraph;
   blocks: BlueprintBlock[];
   relations: BlueprintRelation[];
@@ -31,6 +31,8 @@ export function BlueprintCanvas({ graph, blocks, relations, vocabulary, editMode
   onConnectRequest: (source: number, target: number) => void;
   onMoved: (positions: Record<string, { x: number; y: number }>) => void;
   onPaneClick: () => void;
+  /** PHASE 32 (TD-61): the view settled after a pan or a zoom. */
+  onMoveEnd?: () => void;
 }) {
   const kindLabel = useMemo(() => new Map(vocabulary.kinds.map((k) => [k.kind, k.label])), [vocabulary]);
   const relationLabel = useMemo(() => new Map(vocabulary.relations.map((r) => [r.relation, r.label])), [vocabulary]);
@@ -80,7 +82,7 @@ export function BlueprintCanvas({ graph, blocks, relations, vocabulary, editMode
     <ReactFlow<BlockFlowNode, RelationFlowEdge>
       nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onSelectionChange={onSelectionChange}
-      onConnect={onConnect} onNodeDragStop={onNodeDragStop} onPaneClick={onPaneClick}
+      onConnect={onConnect} onNodeDragStop={onNodeDragStop} onPaneClick={onPaneClick} onMoveEnd={() => onMoveEnd?.()}
       onEdgeMouseEnter={(_, e) => emphasis.hover(Number(e.id))} onEdgeMouseLeave={() => emphasis.hover(null)}
       nodesConnectable={editMode} edgesFocusable elementsSelectable deleteKeyCode={null}
       selectionKeyCode="Shift" multiSelectionKeyCode={["Meta", "Control"]}

@@ -8,7 +8,7 @@ import { TaskDrawer } from "./TaskDrawer";
 
 const AGENT: Agent = {
   id: 1, name: "Code Architect", role: "Software Engineer", specialization: "Backend architecture",
-  model: "ollama:llama3.2:3b", active: true, status: "ACTIVE", createdAt: null, updatedAt: null, version: 0,
+  model: "ollama:llama3.2:3b", active: true, status: "ACTIVE", createdAt: "2026-09-23T09:00:00Z", updatedAt: "2026-09-23T09:00:00Z", version: 0,
 };
 const TASK = { id: 7, title: "Design the planner", description: "Three endpoints", status: "OPEN", priority: "HIGH",
   projectId: null, agentId: 1 };

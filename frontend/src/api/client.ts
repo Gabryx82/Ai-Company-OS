@@ -15,7 +15,7 @@ import type {
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
   ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, DeletionPreview, SubAgentsPolicy,
   InProgressPolicy, PlannedAgent, EcosystemServiceInfo, TerminalShell, TerminalTicket, TerminalSession, CodeGraph, CostSummary,
-  AiAction, BlueprintActionOutcome, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintCanvasLayout, BlueprintGraph, BlueprintPoint,
+  AiAction, BlueprintActionOutcome, BlueprintAiAction, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintCanvasLayout, BlueprintGraph, BlueprintPoint,
   BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
   BlueprintVocabulary, HubInstalled, HubFoundDetail, HubSyncReport, HubSyncEvent, HubMarketplace, HubSearchResults,
   HubResult, HubPreview, HubInstallResult, HubCopyTarget, HubDeployResult, HubUpdates, HubApplied,
@@ -592,8 +592,16 @@ export class ControlPlane {
     return this.plain("GET", "/api/blueprint/vocabulary");
   }
 
-  blueprint(projectId: number): Promise<BlueprintGraph> {
-    return this.plain("GET", `/api/projects/${projectId}/blueprint`);
+  /**
+   * PHASE 32 (TD-61): `outline` leaves the texts out; `within` keeps one area of the canvas
+   * ([x0, y0, x1, y1] in canvas coordinates) and the relations between its blocks.
+   */
+  blueprint(projectId: number, view: { outline?: boolean; within?: number[] } = {}): Promise<BlueprintGraph> {
+    const query = new URLSearchParams();
+    if (view.outline) query.set("detail", "outline");
+    if (view.within) query.set("within", view.within.map((v) => Math.round(v)).join(","));
+    const suffix = query.toString() ? `?${query}` : "";
+    return this.plain("GET", `/api/projects/${projectId}/blueprint${suffix}`);
   }
 
   scanBlueprint(projectId: number): Promise<BlueprintScanReport> {
@@ -631,6 +639,11 @@ export class ControlPlane {
 
   blueprintSnippet(projectId: number, nodeId: number, full = false): Promise<BlueprintSnippet> {
     return this.plain("GET", `/api/projects/${projectId}/blueprint/nodes/${nodeId}/snippet${full ? "?full=true" : ""}`);
+  }
+
+  /** PHASE 32 (TD-63): the AI actions asked about a block, with their outcomes; nothing is applied by reading them. */
+  blueprintAiActions(projectId: number, nodeId: number): Promise<BlueprintAiAction[]> {
+    return this.plain("GET", `/api/projects/${projectId}/blueprint/nodes/${nodeId}/ai-actions`);
   }
 
   blueprintAiAction(projectId: number, nodeId: number, action: AiAction): Promise<BlueprintActionOutcome> {

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { BlueprintBlock, BlueprintGraph, BlueprintRelation, BlueprintRelationInfo } from "../../api/types";
-import { chipsBySource, defaultFilters, detailFor, diffLines, neighbours, search, visibleBlocks, visibleRelations } from "./blueprintModel";
+import {
+  areaInView, blocksInArea, chipsBySource, defaultFilters, detailFor, diffLines, neighbours, overlayTexts, search, visibleBlocks,
+  visibleRelations,
+} from "./blueprintModel";
 
 function block(id: number, name: string, extra: Partial<BlueprintBlock> = {}): BlueprintBlock {
   return { id, key: `java:${name}`, kind: "SERVICE", layer: "BACKEND", family: "CLASSES", origin: "DETECTED", status: "IMPLEMENTED",
@@ -86,5 +89,27 @@ describe("the Blueprint view model", () => {
   it("reads a unified diff line by line", () => {
     expect(diffLines("--- a/X.java\n+++ b/X.java\n@@ -1,2 +1,3 @@\n class X {\n+    private final Y y;\n-    old\n").map((l) => l.kind))
       .toEqual(["meta", "meta", "hunk", "ctx", "add", "del"]);
+  });
+});
+
+describe("progressive loading (TD-61)", () => {
+  const placed: BlueprintGraph = { ...graph, layout: { positions: { 1: { x: 0, y: 0 }, 2: { x: 400, y: 0 }, 3: { x: 2000, y: 2000 } }, version: 1 } };
+
+  it("lays the texts read over the outline, until the row changes", () => {
+    const full = block(2, "TaskService", { description: "Regole delle task.", version: 0 });
+    const texts = { blocks: new Map([[2, full]]), edges: new Map([[11, relation(11, 2, 3, { label: "save()" })]]) };
+    const over = overlayTexts(graph, texts);
+    expect(over.nodes.find((n) => n.id === 2)!.description).toBe("Regole delle task.");
+    expect(over.edges.find((e) => e.id === 11)!.label).toBe("save()");
+    const changed = { ...graph, nodes: graph.nodes.map((n) => (n.id === 2 ? { ...n, version: 1 } : n)) };
+    expect(overlayTexts(changed, texts).nodes.find((n) => n.id === 2)!.description).toBeNull();
+  });
+
+  it("knows the area in view and the blocks in it", () => {
+    // zoom 0.5, panned by (100, 50), on a 800x600 pane: canvas x from -200 to 1400, y from -100 to 1100
+    expect(areaInView([100, 50, 0.5], 800, 600, 0)).toEqual([-200, -100, 1400, 1100]);
+    expect(blocksInArea(placed, [-200, -100, 1400, 1100]).map((b) => b.id)).toEqual([1, 2]);
+    expect(blocksInArea(placed, [2100, 2100, 2150, 2150]).map((b) => b.id)).toEqual([3]);
+    expect(blocksInArea(placed, [1900, 1900, 1950, 1950])).toEqual([]);
   });
 });

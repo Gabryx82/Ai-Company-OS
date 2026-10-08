@@ -10,6 +10,7 @@ import com.aicompany.backend.llm.repository.LlmModelRepository;
 import com.aicompany.backend.llm.repository.ModelProviderRepository;
 import com.aicompany.backend.software.detect.Availability;
 import com.aicompany.backend.software.service.SoftwareService;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,19 +32,19 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class AgentBindingService {
 
-    public record ModelRef(String key, String displayName, String role, String lifecycle, String replacedBy,
+    public record ModelRef(String key, String displayName, String role, String lifecycle, @Nullable String replacedBy,
                            boolean catalogued, boolean engineRunnable) {
     }
 
     public record ProviderRef(String key, String name, String kind, String billing, String status) {
     }
 
-    public record TargetRef(String key, String name, String delivery, String software, String availability,
-                            List<String> providers, String contextFile, String howItWorks) {
+    public record TargetRef(String key, String name, String delivery, @Nullable String software, @Nullable String availability,
+                            List<String> providers, @Nullable String contextFile, String howItWorks) {
     }
 
     /** The whole chain, with whether it holds and what to watch. */
-    public record Binding(ModelRef model, ProviderRef provider, TargetRef target, boolean valid,
+    public record Binding(@Nullable ModelRef model, @Nullable ProviderRef provider, TargetRef target, boolean valid,
                           List<String> problems, List<String> warnings, String summary) {
     }
 
