@@ -324,8 +324,9 @@ stato **rimosso** da TASK-020.
 ### Blueprint di un progetto (PHASE 28, ADR-033)
 
 I componenti del progetto (classi, servizi, endpoint, entità, tabelle, componenti React, test…) e le
-relazioni fra loro, **letti dal codice** (Java con AST, TypeScript/Python/SQL lessicali) e
-**modificabili**. Nessun endpoint scrive un file sorgente: ciò che toccherebbe il codice diventa una
+relazioni fra loro, **letti dal codice** (Java con AST; TypeScript/JavaScript con il compilatore di TypeScript
+sotto Node.js e Python con il suo `ast` quando ci sono — `AICOS_NODE`, `AICOS_TYPESCRIPT`, `AICOS_PYTHON` —
+altrimenti lessicali; SQL lessicale) e **modificabili**. Nessun endpoint scrive un file sorgente: ciò che toccherebbe il codice diventa una
 *Proposed Code Change*, e accettarla crea una task. Nella console: scheda **Blueprint** del progetto.
 
 | Endpoint | Descrizione |

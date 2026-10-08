@@ -242,3 +242,21 @@ interprocedurale, servito intero da `GET /api/projects/{id}/blueprint/call-graph
 blocchi dei due tipi) e mostrato nell'Inspector sotto ogni metodo («invokes»). Una struttura salvata prima ne è
 priva (lista vuota) finché non si riscansiona. Test: `BlueprintCallGraphTest` (rosso senza l'indice),
 `CodeGraphApiTest`, console `StructurePanel.test.tsx`.
+
+## Revisione PHASE 32 (2026-10-08) — TypeScript, JavaScript e Python con i loro parser (TD-57)
+
+I plugin di TypeScript/JavaScript e di Python leggono ora i file con i parser dei loro linguaggi, quando ci
+sono: il compilatore di TypeScript sotto Node.js (`ts.createSourceFile`) e l'`ast` di Python. Una volta per
+scansione, tutti i file di quel linguaggio passano su stdin a uno script fornito con AI Company OS
+(`blueprint/ts-ast.js`, `blueprint/py-ast.py`) che **analizza soltanto**: nulla del progetto viene eseguito. Ne
+tornano gli stessi fatti che i pattern ricavavano — esportazioni, classi, componenti React e loro props, hook,
+import (anche `import()` e `require`), route `/api/…` chiamate; per Python classi, funzioni, route
+FastAPI/Flask, prefissi `APIRouter`, import — ma senza scambiare per codice un commento, una stringa o una
+docstring. Blocchi e relazioni si costruiscono dagli stessi fatti, quindi la fedeltà cambia senza cambiare il
+modello: la scansione dichiara `ast` per quei linguaggi.
+
+Dove sono: `AICOS_NODE` (default `node` sul PATH), `AICOS_TYPESCRIPT` (la cartella del pacchetto `typescript`;
+default la copia della console, `frontend/node_modules/typescript`), `AICOS_PYTHON` (default `python`). Se un
+runtime manca, risponde con un errore, supera i 90 secondi o un file non si analizza, quel linguaggio — o quel
+file — si legge con i pattern, come prima, e la scansione dichiara `lexical`. Test: `ExternalAstTest` (rosso se
+i fatti del parser vengono ignorati; il ripiego senza runtime), `BlueprintScannerTest`.

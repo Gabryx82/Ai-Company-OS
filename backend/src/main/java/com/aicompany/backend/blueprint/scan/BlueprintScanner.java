@@ -155,7 +155,7 @@ public final class BlueprintScanner {
                 continue;
             }
             languages.merge(plugin.language(), 1, Integer::sum);
-            fidelity.put(plugin.language(), plugin.fidelity());
+            fidelity.put(plugin.language(), plugin.fidelity(prepared.get(plugin)));
             for (Component c : analysis.components()) {
                 components.merge(c.key(), c, BlueprintScanner::merge);
             }

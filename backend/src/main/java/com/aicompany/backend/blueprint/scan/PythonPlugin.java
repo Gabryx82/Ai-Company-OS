@@ -4,10 +4,13 @@ import com.aicompany.backend.blueprint.model.CodeStructure;
 import com.aicompany.backend.blueprint.model.NodeKind;
 import com.aicompany.backend.blueprint.model.RelationType;
 
+import tools.jackson.databind.JsonNode;
+
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,7 +19,9 @@ import java.util.regex.Pattern;
  * Python, read lexically (ADR-033 §5): one block per module, plus one block per
  * FastAPI/Flask-style route. Its classes, functions and imports are its
  * structure; imports resolved against the module's own ancestors are its
- * relations. An AST plugin (Python's own {@code ast}) can replace it.
+ * relations. PHASE 32 (TD-57): when a Python interpreter is on this machine the
+ * modules are parsed by its {@code ast} ({@code ast}), and only otherwise read with
+ * patterns ({@code lexical}).
  */
 public final class PythonPlugin implements BlueprintLanguagePlugin {
 
@@ -53,45 +58,66 @@ public final class PythonPlugin implements BlueprintLanguagePlugin {
 
     @Override
     public FileAnalysis analyze(SourceFile file) {
+        return analyze(file, null);
+    }
+
+    /**
+     * PHASE 32 (TD-57): every Python file of the project parsed at once by Python's own
+     * {@code ast}. Null when no interpreter answers: the files are then read lexically.
+     */
+    @Override
+    public Object prepare(List<SourceFile> files) {
+        return ExternalAst.run(List.of(ExternalAst.executable("AICOS_PYTHON", "python")), "py-ast.py", Map.of(), files)
+                .orElse(null);
+    }
+
+    @Override
+    public String fidelity(Object prepared) {
+        return prepared instanceof ExternalAst.Facts ? "ast" : fidelity();
+    }
+
+    /** A FastAPI/Flask route: its decorator's line, its function's. */
+    record Route(String method, String path, String handler, int line, int end) {
+    }
+
+    /** {@code from module import names}. */
+    record FromImport(String module, List<String> names, int line, String text) {
+    }
+
+    /** {@code import a, b}. */
+    record PlainImport(List<String> modules, int line, String text) {
+    }
+
+    /** What a module declares and imports -- from the parser, or from the patterns. */
+    record Facts(Set<String> classes, Set<String> bases, List<String> functions, String prefix, List<Route> routes,
+                 List<FromImport> froms, List<PlainImport> plains) {
+    }
+
+    @Override
+    public FileAnalysis analyze(SourceFile file, Object prepared) {
         String path = file.path();
         String text = file.text();
         String fileName = path.substring(path.lastIndexOf('/') + 1);
         String key = keyOf(path);
         List<Component> components = new ArrayList<>();
         List<Reference> references = new ArrayList<>();
+        JsonNode parsed = prepared instanceof ExternalAst.Facts facts ? facts.files().get(path) : null;
+        Facts f = parsed != null ? fromAst(parsed) : lexical(text);
+        Set<String> classes = f.classes();
+        Set<String> bases = f.bases();
+        List<String> functions = f.functions();
 
-        Set<String> classes = new LinkedHashSet<>();
-        Set<String> bases = new LinkedHashSet<>();
-        Matcher m = CLASS.matcher(text);
-        while (m.find()) {
-            classes.add(m.group(1));
-            if (m.group(2) != null) {
-                for (String b : m.group(2).split(",")) {
-                    if (!b.isBlank() && !b.contains("=")) bases.add(b.strip());
-                }
-            }
-        }
-        List<String> functions = new ArrayList<>();
-        m = DEF.matcher(text);
-        while (m.find()) functions.add(m.group(1) + "(" + m.group(2).replaceAll("\\s+", " ").strip() + ")");
-
-        String prefix = "";
-        Matcher pm = PREFIX.matcher(text);
-        if (pm.find()) prefix = pm.group(2);
         List<String> routes = new ArrayList<>();
-        m = ROUTE.matcher(text);
-        while (m.find()) {
-            String method = m.group(2).equals("route") ? "GET" : m.group(2).toUpperCase(Locale.ROOT);
-            String route = JavaAstPlugin.normalizeRoute(prefix + "/" + m.group(3));
-            String handler = m.group(4);
-            String endpointKey = "endpoint:" + path + "#" + handler + ":" + method + " " + route;
-            routes.add(method + " " + route + " → " + handler + "()");
-            components.add(new Component(endpointKey, NodeKind.ENDPOINT, method + " " + route, path, "python",
-                    "Gestito da " + handler + "() in " + fileName + ".", "", CodeStructure.builder().httpMethod(method)
-                    .route(route).controller(fileName).signature(handler + "(…)").authorization("—").build(),
-                    TypeScriptPlugin.lineOf(text, m.start()), TypeScriptPlugin.lineOf(text, m.end())));
-            references.add(new Reference(endpointKey, List.of(key), RelationType.BELONGS_TO, handler + "()", path,
-                    TypeScriptPlugin.lineOf(text, m.start()), null, false));
+        for (Route r : f.routes()) {
+            String route = JavaAstPlugin.normalizeRoute(f.prefix() + "/" + r.path());
+            String endpointKey = "endpoint:" + path + "#" + r.handler() + ":" + r.method() + " " + route;
+            routes.add(r.method() + " " + route + " → " + r.handler() + "()");
+            components.add(new Component(endpointKey, NodeKind.ENDPOINT, r.method() + " " + route, path, "python",
+                    "Gestito da " + r.handler() + "() in " + fileName + ".", "", CodeStructure.builder().httpMethod(r.method())
+                    .route(route).controller(fileName).signature(r.handler() + "(…)").authorization("—").build(),
+                    r.line(), r.end()));
+            references.add(new Reference(endpointKey, List.of(key), RelationType.BELONGS_TO, r.handler() + "()", path,
+                    r.line(), null, false));
         }
 
         String lower = path.toLowerCase(Locale.ROOT);
@@ -116,32 +142,27 @@ public final class PythonPlugin implements BlueprintLanguagePlugin {
 
         // --- imports, resolved against the module's own ancestors
         List<String> imports = new ArrayList<>();
-        m = FROM.matcher(text);
-        while (m.find()) {
-            String module = m.group(1);
+        for (FromImport from : f.froms()) {
+            String module = from.module();
             imports.add(module);
             List<String> candidates = new ArrayList<>(moduleCandidates(path, module));
             if (module.matches("\\.+")) {
                 // from . import util -> the sibling module util.py
-                for (String name : m.group(2).split(",")) {
-                    String n = name.strip().split("\\s+")[0];
+                for (String n : from.names()) {
                     candidates.addAll(moduleCandidates(path, module + n));
                 }
             }
             if (!candidates.isEmpty()) {
-                references.add(new Reference(key, candidates, RelationType.IMPORTS, module, path,
-                        TypeScriptPlugin.lineOf(text, m.start()), m.group().strip(), module.startsWith(".")));
+                references.add(new Reference(key, candidates, RelationType.IMPORTS, module, path, from.line(), from.text(),
+                        module.startsWith(".")));
             }
         }
-        m = IMPORT.matcher(text);
-        while (m.find()) {
-            for (String module : m.group(1).split(",")) {
-                String mod = module.strip();
+        for (PlainImport plain : f.plains()) {
+            for (String mod : plain.modules()) {
                 imports.add(mod);
                 List<String> candidates = moduleCandidates(path, mod);
                 if (!candidates.isEmpty()) {
-                    references.add(new Reference(key, candidates, RelationType.IMPORTS, mod, path,
-                            TypeScriptPlugin.lineOf(text, m.start()), m.group().strip(), false));
+                    references.add(new Reference(key, candidates, RelationType.IMPORTS, mod, path, plain.line(), plain.text(), false));
                 }
             }
         }
@@ -163,6 +184,84 @@ public final class PythonPlugin implements BlueprintLanguagePlugin {
                 routes.isEmpty() ? pseudocode(text) : String.join("\n", routes.stream().map(r -> "ON " + r).toList()),
                 structure, 1, (int) text.lines().count()));
         return new FileAnalysis(components, references);
+    }
+
+    /** PHASE 32 (TD-57): the facts Python's parser found. */
+    static Facts fromAst(JsonNode n) {
+        Set<String> classes = new LinkedHashSet<>();
+        Set<String> bases = new LinkedHashSet<>();
+        for (JsonNode c : n.path("classes")) {
+            classes.add(c.path("name").asString());
+            c.path("bases").forEach(b -> bases.add(b.asString()));
+        }
+        List<String> functions = new ArrayList<>();
+        n.path("functions").forEach(fn -> functions.add(fn.asString()));
+        List<Route> routes = new ArrayList<>();
+        for (JsonNode r : n.path("routes")) {
+            routes.add(new Route(r.path("method").asString(), r.path("path").asString(), r.path("handler").asString(),
+                    r.path("line").asInt(1), r.path("end").asInt(1)));
+        }
+        List<FromImport> froms = new ArrayList<>();
+        List<PlainImport> plains = new ArrayList<>();
+        for (JsonNode i : n.path("imports")) {
+            if (i.has("from")) {
+                List<String> names = new ArrayList<>();
+                i.path("names").forEach(x -> names.add(x.asString()));
+                froms.add(new FromImport(i.path("from").asString(), names, i.path("line").asInt(1), i.path("text").asString("")));
+            } else {
+                List<String> modules = new ArrayList<>();
+                i.path("modules").forEach(x -> modules.add(x.asString()));
+                plains.add(new PlainImport(modules, i.path("line").asInt(1), i.path("text").asString("")));
+            }
+        }
+        return new Facts(classes, bases, functions, n.path("prefix").asString(""), routes, froms, plains);
+    }
+
+    /** The facts read with patterns. */
+    static Facts lexical(String text) {
+        Set<String> classes = new LinkedHashSet<>();
+        Set<String> bases = new LinkedHashSet<>();
+        Matcher m = CLASS.matcher(text);
+        while (m.find()) {
+            classes.add(m.group(1));
+            if (m.group(2) != null) {
+                for (String b : m.group(2).split(",")) {
+                    if (!b.isBlank() && !b.contains("=")) bases.add(b.strip());
+                }
+            }
+        }
+        List<String> functions = new ArrayList<>();
+        m = DEF.matcher(text);
+        while (m.find()) functions.add(m.group(1) + "(" + m.group(2).replaceAll("\\s+", " ").strip() + ")");
+        String prefix = "";
+        Matcher pm = PREFIX.matcher(text);
+        if (pm.find()) prefix = pm.group(2);
+        List<Route> routes = new ArrayList<>();
+        m = ROUTE.matcher(text);
+        while (m.find()) {
+            String method = m.group(2).equals("route") ? "GET" : m.group(2).toUpperCase(Locale.ROOT);
+            routes.add(new Route(method, m.group(3), m.group(4), TypeScriptPlugin.lineOf(text, m.start()),
+                    TypeScriptPlugin.lineOf(text, m.end())));
+        }
+        List<FromImport> froms = new ArrayList<>();
+        m = FROM.matcher(text);
+        while (m.find()) {
+            List<String> names = new ArrayList<>();
+            for (String name : m.group(2).split(",")) {
+                names.add(name.strip().split("\\s+")[0]);
+            }
+            froms.add(new FromImport(m.group(1), names, TypeScriptPlugin.lineOf(text, m.start()), m.group().strip()));
+        }
+        List<PlainImport> plains = new ArrayList<>();
+        m = IMPORT.matcher(text);
+        while (m.find()) {
+            List<String> modules = new ArrayList<>();
+            for (String module : m.group(1).split(",")) {
+                modules.add(module.strip());
+            }
+            plains.add(new PlainImport(modules, TypeScriptPlugin.lineOf(text, m.start()), m.group().strip()));
+        }
+        return new Facts(classes, bases, functions, prefix, routes, froms, plains);
     }
 
     /**

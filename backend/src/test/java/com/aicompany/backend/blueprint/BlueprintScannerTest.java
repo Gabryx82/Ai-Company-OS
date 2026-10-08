@@ -476,8 +476,10 @@ class BlueprintScannerTest {
 
     @Test
     void theFidelityOfEachLanguageIsDeclared() {
-        assertThat(result.fidelity()).containsEntry("java", "ast").containsEntry("typescript", "lexical")
-                .containsEntry("python", "lexical").containsEntry("sql", "lexical");
+        assertThat(result.fidelity()).containsEntry("java", "ast").containsEntry("sql", "lexical");
+        // PHASE 32 (TD-57): parsed when Node.js + TypeScript and a Python interpreter are on the machine.
+        assertThat(result.fidelity().get("typescript")).isIn("ast", "lexical");
+        assertThat(result.fidelity().get("python")).isIn("ast", "lexical");
     }
 
     @Test

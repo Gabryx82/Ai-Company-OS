@@ -25,6 +25,11 @@ public interface BlueprintLanguagePlugin {
     /** {@code ast} or {@code lexical}. */
     String fidelity();
 
+    /** PHASE 32 (TD-57): how faithful this scan was, given what {@link #prepare} could do. */
+    default String fidelity(Object prepared) {
+        return fidelity();
+    }
+
     boolean supports(String relativePath);
 
     FileAnalysis analyze(SourceFile file);
