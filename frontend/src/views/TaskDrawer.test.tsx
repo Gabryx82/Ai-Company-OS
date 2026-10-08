@@ -108,6 +108,24 @@ describe("TaskDrawer", () => {
     expect(screen.queryByRole("button", { name: "Annulla" })).toBeNull();
   });
 
+  it("shows who moved the task, when and through what, and reads it again after a move (TD-38)", async () => {
+    let started = false;
+    const move = (id: number, transition: string, from: string, to: string, via: string) => ({
+      id, taskId: 7, transition, from, to, actor: "operator", via, at: "2026-10-08T09:00:00Z" });
+    renderDrawer({
+      "GET /api/tasks/7": () => ({ body: { ...TASK, status: started ? "IN_PROGRESS" : "OPEN" }, etag: started ? '"1"' : '"0"' }),
+      "GET /api/tasks/7/transitions": () => ({ body: started
+        ? [move(2, "START", "OPEN", "IN_PROGRESS", "API"), move(1, "STOP", "IN_PROGRESS", "OPEN", "RUN")]
+        : [move(1, "STOP", "IN_PROGRESS", "OPEN", "RUN")] }),
+      "POST /api/tasks/7/start": () => { started = true; return { body: { ...TASK, status: "IN_PROGRESS" }, etag: '"1"' }; },
+    });
+    const history = await screen.findByRole("list", { name: "Storia della task" });
+    expect(history.textContent).toContain("Fermata da operator lanciando un'esecuzione");
+    fireEvent.click(screen.getByRole("button", { name: "Avvia" }));
+    await waitFor(() => expect(screen.getByRole("list", { name: "Storia della task" }).textContent)
+      .toContain("Avviata da operator dalla console"));
+  });
+
   it("does not offer a run for a task nobody holds", async () => {
     renderDrawer({ "GET /api/tasks/7": () => ({ body: { ...TASK, agentId: null }, etag: '"0"' }) });
     await screen.findByText("Assegna prima un agente.");

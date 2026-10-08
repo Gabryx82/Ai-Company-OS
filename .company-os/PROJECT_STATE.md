@@ -59,8 +59,9 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   visto rosso per mutazione.
 - **Chiusi finora**: lo spazio dell'audit intero (TD-01, 02, 03, 05, 06, 09, 10, 14, 15, 16, 19, 20, 21,
   22 — `AuditDebtGuardTest`, `ApiShapeGuardTest`, `RouteCoverageTest`); vivi TD-26, TD-32, TD-33,
-  TD-34, TD-35, TD-39, TD-41, TD-43, TD-54, TD-59, TD-65, TD-68, TD-69, TD-70, TD-73. Dettagli in
-  `docs/DEBT_REGISTRY.md` e nelle revisioni di ADR-009, ADR-010, ADR-016, ADR-021, ADR-031, ADR-035.
+  TD-34, TD-35, TD-38, TD-39, TD-41, TD-43, TD-45, TD-54, TD-59, TD-65, TD-68, TD-69, TD-70, TD-73.
+  Dettagli in `docs/DEBT_REGISTRY.md` e nelle revisioni di ADR-009, ADR-010, ADR-014, ADR-016, ADR-021,
+  ADR-022, ADR-031, ADR-035.
 - **Note di metodo**: `RouteCoverageTest` usa un intercettore presente solo nei test
   (`support/RouteRecorder`, registrato via `AutoConfiguration.imports` dei test) e
   `junit-platform.properties` per girare per ultimo; con `-Dtest=…` si salta. Le entità prendono
@@ -68,7 +69,10 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Annullare**: una run (`POST /api/runs/{id}/cancel`) e una generazione del piano
   (`POST /api/plan-runs/{id}/cancel`) si fermano; il thread che attende l'engine è interrotto dopo il
   commit e l'AI Engine annulla la chiamata al provider quando il chiamante se ne va (`app/cancellation.py`).
-- **Suite**: Java **640** verdi (1 saltato preesistente), console **76**, engine **71**.
+- **Storia e apprendimento**: ogni transizione di una task è registrata (V31, `TaskTransitions` unico
+  punto); ogni review porta il livello di Human-in-the-Loop (V32) e `GET /api/projects/{id}/learning`
+  suggerisce il livello, senza mai applicarlo.
+- **Suite**: Java **653** verdi (1 saltato preesistente), console **78**, engine **71**.
 - **Prossimo passo**: i debiti vivi restanti, nell'ordine del registro; poi le proposte per quelli che
   richiedono una decisione dell'operatore.
 

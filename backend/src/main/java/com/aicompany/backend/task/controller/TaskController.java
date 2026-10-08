@@ -7,6 +7,7 @@ import com.aicompany.backend.task.dto.TaskAgentAssignmentRequest;
 import com.aicompany.backend.task.dto.TaskCreateRequest;
 import com.aicompany.backend.task.dto.TaskProjectAssignmentRequest;
 import com.aicompany.backend.task.dto.TaskResponse;
+import com.aicompany.backend.task.dto.TaskTransitionResponse;
 import com.aicompany.backend.task.dto.TaskUpdateRequest;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.model.TaskTransition;
@@ -14,6 +15,7 @@ import com.aicompany.backend.task.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -164,29 +166,39 @@ public class TaskController {
     @PostMapping("/{id}/start")
     public ResponseEntity<TaskResponse> startTask(
             @PathVariable Long id,
-            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
-        return ok(service.transition(id, TaskTransition.START, Precondition.fromHeader(ifMatch)));
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+            Authentication caller) {
+        return ok(service.transition(id, TaskTransition.START, Precondition.fromHeader(ifMatch), caller.getName()));
     }
 
     @PostMapping("/{id}/complete")
     public ResponseEntity<TaskResponse> complete(
             @PathVariable Long id,
-            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
-        return ok(service.transition(id, TaskTransition.COMPLETE, Precondition.fromHeader(ifMatch)));
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+            Authentication caller) {
+        return ok(service.transition(id, TaskTransition.COMPLETE, Precondition.fromHeader(ifMatch), caller.getName()));
     }
 
     @PostMapping("/{id}/stop")
     public ResponseEntity<TaskResponse> stop(
             @PathVariable Long id,
-            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
-        return ok(service.transition(id, TaskTransition.STOP, Precondition.fromHeader(ifMatch)));
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+            Authentication caller) {
+        return ok(service.transition(id, TaskTransition.STOP, Precondition.fromHeader(ifMatch), caller.getName()));
     }
 
     @PostMapping("/{id}/reopen")
     public ResponseEntity<TaskResponse> reopen(
             @PathVariable Long id,
-            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
-        return ok(service.transition(id, TaskTransition.REOPEN, Precondition.fromHeader(ifMatch)));
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+            Authentication caller) {
+        return ok(service.transition(id, TaskTransition.REOPEN, Precondition.fromHeader(ifMatch), caller.getName()));
+    }
+
+    /** Who moved the task, when and through what, the most recent first (PHASE 32, TD-38). */
+    @GetMapping("/{id}/transitions")
+    public List<TaskTransitionResponse> taskTransitions(@PathVariable Long id) {
+        return service.history(id).stream().map(TaskTransitionResponse::from).toList();
     }
 
     /**

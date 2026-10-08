@@ -20,7 +20,9 @@ import com.aicompany.backend.task.exception.TaskNotFoundException;
 import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.model.TaskTransition;
+import com.aicompany.backend.task.model.TaskTransitionRecord;
 import com.aicompany.backend.task.repository.TaskRepository;
+import com.aicompany.backend.task.service.TaskTransitions;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,11 +54,13 @@ public class RunService {
 
     private final com.aicompany.backend.binding.AgentBindingService binding;
     private final com.aicompany.backend.cost.CostService costs;
+    private final TaskTransitions transitions;
 
     public RunService(TaskRunRepository runs, TaskRepository tasks, ProjectRepository projects,
                       AgentRepository agents, ApplicationEventPublisher events, RunContext context,
                       com.aicompany.backend.binding.AgentBindingService binding,
-                      com.aicompany.backend.cost.CostService costs) {
+                      com.aicompany.backend.cost.CostService costs, TaskTransitions transitions) {
+        this.transitions = transitions;
         this.binding = binding;
         this.costs = costs;
         this.runs = runs;
@@ -113,7 +117,7 @@ public class RunService {
         }
 
         if (task.getStatus() == TaskStatus.OPEN) {
-            task.apply(TaskTransition.START, project, agent);
+            transitions.apply(task, TaskTransition.START, project, agent, requestedBy, TaskTransitionRecord.Via.RUN);
         }
 
         // The model: the one asked for, else the agent's, else the engine's default

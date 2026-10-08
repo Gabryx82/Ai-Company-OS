@@ -57,6 +57,7 @@ class HarnessApiTest extends AbstractPostgresTest {
 
     @BeforeEach
     void noAgents() {
+        jdbc.update("DELETE FROM task_transitions");
         jdbc.update("DELETE FROM task_reviews");
         jdbc.update("DELETE FROM task_handoffs");
         jdbc.update("DELETE FROM task_runs");

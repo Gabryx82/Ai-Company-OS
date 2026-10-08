@@ -2903,6 +2903,66 @@
         },
         "type" : "object"
       },
+      "Learning" : {
+        "properties" : {
+          "changesRequested" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "firstPassAccepted" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "level" : {
+            "enum" : [ "GUIDED", "SUPERVISED", "DELEGATED", "FINAL_REVIEW" ],
+            "type" : "string"
+          },
+          "operatorCompletions" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "pieces" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Piece"
+            },
+            "type" : "array"
+          },
+          "piecesOpen" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "piecesTruncated" : {
+            "type" : "boolean"
+          },
+          "reviewedTasks" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "suggestion" : {
+            "$ref" : "#/components/schemas/LevelSuggestion"
+          }
+        },
+        "type" : "object"
+      },
+      "LevelSuggestion" : {
+        "properties" : {
+          "direction" : {
+            "enum" : [ "UP", "DOWN", "STAY" ],
+            "type" : "string"
+          },
+          "level" : {
+            "enum" : [ "GUIDED", "SUPERVISED", "DELEGATED", "FINAL_REVIEW" ],
+            "type" : "string"
+          },
+          "reasons" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "LibraryInfo" : {
         "properties" : {
           "exists" : {
@@ -3464,6 +3524,21 @@
           "note" : {
             "maxLength" : 2000,
             "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Piece" : {
+        "properties" : {
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "text" : {
             "type" : "string"
           }
         },
@@ -4285,6 +4360,10 @@
       },
       "ReviewResponse" : {
         "properties" : {
+          "autonomyLevel" : {
+            "enum" : [ "GUIDED", "SUPERVISED", "DELEGATED", "FINAL_REVIEW" ],
+            "type" : "string"
+          },
           "createdAt" : {
             "format" : "date-time",
             "type" : "string"
@@ -5303,6 +5382,42 @@
           }
         },
         "required" : [ "verdict" ],
+        "type" : "object"
+      },
+      "TaskTransitionResponse" : {
+        "properties" : {
+          "actor" : {
+            "type" : "string"
+          },
+          "at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "from" : {
+            "enum" : [ "OPEN", "IN_PROGRESS", "DONE" ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "to" : {
+            "enum" : [ "OPEN", "IN_PROGRESS", "DONE" ],
+            "type" : "string"
+          },
+          "transition" : {
+            "enum" : [ "START", "COMPLETE", "STOP", "REOPEN" ],
+            "type" : "string"
+          },
+          "via" : {
+            "enum" : [ "API", "RUN", "HANDOFF", "REVIEW" ],
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "TaskUpdateRequest" : {
@@ -9048,6 +9163,33 @@
         "tags" : [ "project-workspace-controller" ]
       }
     },
+    "/api/projects/{id}/learning" : {
+      "get" : {
+        "operationId" : "projectLearning",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Learning"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "learning-controller" ]
+      }
+    },
     "/api/projects/{id}/plan" : {
       "get" : {
         "operationId" : "plan",
@@ -11324,6 +11466,36 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/TaskResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "task-controller" ]
+      }
+    },
+    "/api/tasks/{id}/transitions" : {
+      "get" : {
+        "operationId" : "taskTransitions",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TaskTransitionResponse"
+                  },
+                  "type" : "array"
                 }
               }
             },

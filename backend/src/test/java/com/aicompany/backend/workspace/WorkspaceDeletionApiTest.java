@@ -168,6 +168,7 @@ class WorkspaceDeletionApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:deletion-blocked"));
         assertThat(folder.resolve("tasks/TASK-001.md")).exists();
 
+        jdbc.update("DELETE FROM task_transitions WHERE task_id = ?", task);
         jdbc.update("DELETE FROM tasks WHERE id = ?", task);
         mockMvc.perform(get("/api/projects/" + projectId + "/files/deletion").param("path", "tasks/TASK-001.md"))
                 .andExpect(jsonPath("$.allowed").value(true))

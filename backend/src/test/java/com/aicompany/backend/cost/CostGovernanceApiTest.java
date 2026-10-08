@@ -258,6 +258,7 @@ class CostGovernanceApiTest extends AbstractPostgresTest {
         mockMvc.perform(get("/api/costs"))
                 .andExpect(jsonPath("$.agents[?(@.agentName == '" + name + "')].runs").value(1))
                 .andExpect(jsonPath("$.agents[?(@.agentName == '" + name + "')].agentId").value(org.hamcrest.Matchers.contains(org.hamcrest.Matchers.nullValue())));
+        jdbc.update("DELETE FROM task_transitions WHERE task_id = ?", t);
         jdbc.update("DELETE FROM task_runs WHERE task_id = ?", t);
         jdbc.update("DELETE FROM tasks WHERE id = ?", t);
     }

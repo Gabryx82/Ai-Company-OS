@@ -49,6 +49,7 @@ public abstract class AbstractPostgresTest {
         // PHASE 13: daily items reference tasks that other tests delete.
         baseJdbc.update("DELETE FROM daily_items");
         // PHASE 11: reviews and handoffs reference runs and tasks; they go first.
+        baseJdbc.update("DELETE FROM task_transitions");
         baseJdbc.update("DELETE FROM task_reviews");
         baseJdbc.update("DELETE FROM task_handoffs");
         baseJdbc.update("DELETE FROM task_runs");

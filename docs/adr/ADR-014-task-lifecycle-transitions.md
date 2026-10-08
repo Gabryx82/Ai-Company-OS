@@ -86,3 +86,25 @@ agente.
 Storia delle transizioni (chi ha mosso cosa e quando) → **TD-38**. Transizioni automatiche (una
 run che completa il task) → PHASE 6, dove saranno una decisione esplicita. Filtri per stato →
 TASK-016.
+
+## Revisione PHASE 32 (2026-10-08) — la storia delle transizioni (TD-38)
+
+Rivede §7: ogni arco preso da una task è registrato in `task_transitions` (V31, additiva): l'arco, i
+due stati, **chi** (il nome dell'utente autenticato), **quando** (`occurred_at`, dall'orologio del
+database a microsecondi) e **da dove** — `API` (le rotte del ciclo di vita), `RUN` (il lancio di
+un'esecuzione avvia una task aperta, ADR-016 §2), `HANDOFF` (ADR-021 §4), `REVIEW` (ADR-021 §5).
+
+- **Un solo passaggio.** `TaskTransitions.apply` applica le regole di `Task.apply` e scrive la riga
+  **nella stessa transazione**: una transizione rifiutata (412, 409) non lascia traccia, una registrata
+  è avvenuta. Nessun altro punto del codice chiama `Task.apply`; un test lo verifica sul sorgente, così
+  un percorso nuovo non può muovere una task senza storia. I lock restano quelli di §5: la riga di storia
+  è un inserimento, senza archi nuovi nel grafo dei lock.
+- **Lettura**: `GET /api/tasks/{id}/transitions`, la più recente per prima (come le run); task ignota
+  `404`. La console la mostra nella sezione «Storia» del pannello della task.
+- **Cancellazione**: la storia va con la task (`DeletionService`, esplicitamente: le chiavi esterne
+  restano senza `ON DELETE`), e l'anteprima lo dice.
+- **Sostituire un piano** (ADR-021 §2): «nessuna task uscita da `OPEN`» ora si sa davvero — una task
+  avviata e fermata è di nuovo `OPEN` ma la sua storia non è vuota, e la sostituzione è rifiutata
+  (`409 plan-locked`) invece di cancellarla.
+- La storia comincia con V31: le transizioni precedenti non sono state registrate e non vengono
+  ricostruite.

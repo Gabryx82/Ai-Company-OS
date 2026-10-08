@@ -99,7 +99,7 @@ class TaskLifecycleConcurrencyTest extends AbstractPostgresTest {
         Future<?> first = threads.submit(() -> {
             try {
                 newTransaction().execute(status -> {
-                    taskService.transition(taskId, TaskTransition.COMPLETE, bothRead);
+                    taskService.transition(taskId, TaskTransition.COMPLETE, bothRead, "operator");
                     firstIsInsideTheLock.countDown();
                     awaitAtMost(secondHasFinished);
                     return null;
@@ -113,7 +113,7 @@ class TaskLifecycleConcurrencyTest extends AbstractPostgresTest {
             awaitOrFail(firstIsInsideTheLock);
             try {
                 newTransaction().execute(status ->
-                        taskService.transition(taskId, TaskTransition.COMPLETE, bothRead));
+                        taskService.transition(taskId, TaskTransition.COMPLETE, bothRead, "operator"));
             } catch (Throwable failure) {
                 secondFailure.set(unwrap(failure));
             }

@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useApi } from "../context";
 import { CodeGraphView } from "./CodeGraphView";
 import type {
-  Agent, AutonomyLevel, ModelInfo, Phase, Plan, PlanRun, Project, ProjectTypeInfo, Resource, Software, WorkspaceDocuments,
+  Agent, AutonomyLevel, Learning, ModelInfo, Phase, Plan, PlanRun, Project, ProjectTypeInfo, Resource, Software, WorkspaceDocuments,
 } from "../api/types";
 import { PriorityBadge, ProblemNote, StatusBadge, when } from "../components/ui";
 import { AppIcon } from "../components/AppIcon";
@@ -175,6 +175,49 @@ function Overview({ project, plan, docs, onGo, onReload, setProblem }: {
           </select>
           <span className="hint">{AUTONOMY[autonomy].hint} Vale per l'AI Engine e per gli agenti esterni.</span>
         </div>
+        <LearningPanel key={project.autonomyLevel} projectId={project.id} onApply={saveAutonomy} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * PHASE 32 (TD-45; ADR-022 §5): what the reviews at this level, the tasks completed
+ * by hand and the TODO(operatore) pieces still open say. The suggestion is only
+ * that: changing the level is the operator's choice, made here with one click.
+ */
+function LearningPanel({ projectId, onApply }: { projectId: number; onApply: (level: AutonomyLevel) => void }) {
+  const api = useApi();
+  const [learning, setLearning] = useState<Learning | null>(null);
+  useEffect(() => {
+    api.learning(projectId).then(setLearning).catch(() => setLearning(null));
+  }, [api, projectId]);
+  if (!learning) return null;
+  const suggestion = learning.suggestion;
+  const target = suggestion?.level as AutonomyLevel | undefined;
+  return (
+    <div className="stack" style={{ gap: 6 }} aria-label="Apprendimento">
+      <div className="section-title">Apprendimento a questo livello</div>
+      <div className="muted" style={{ fontSize: 12.5 }}>
+        {learning.reviewedTasks} task riviste · {learning.firstPassAccepted} accettate alla prima review
+        · {learning.changesRequested} modifiche chieste · {learning.operatorCompletions} completate a mano
+        {learning.piecesOpen == null ? "" : ` · ${learning.piecesOpen} pezzi TODO(operatore) aperti`}
+      </div>
+      {(learning.pieces ?? []).length > 0 && (
+        <details><summary>Pezzi da scrivere</summary>
+          <ul className="history">{(learning.pieces ?? []).map((p) => (
+            <li key={`${p.path}:${p.line}`}><span className="mono">{p.path}:{p.line}</span> <span className="muted">{p.text}</span></li>
+          ))}</ul>
+        </details>
+      )}
+      <div className={suggestion?.direction === "STAY" ? "notice" : "notice notice-warn"}>
+        <div>{suggestion?.direction === "UP" ? `Suggerito: passare a ${target}`
+          : suggestion?.direction === "DOWN" ? `Suggerito: tornare a ${target}` : "Nessun cambio suggerito"}</div>
+        {(suggestion?.reasons ?? []).map((r) => <div key={r} className="muted" style={{ fontSize: 12.5 }}>{r}</div>)}
+        {suggestion?.direction !== "STAY" && target && (
+          <button className="btn btn-small" style={{ marginTop: 6 }} onClick={() => onApply(target)}>
+            {suggestion?.direction === "UP" ? "Passa a" : "Torna a"} {target}</button>
+        )}
       </div>
     </div>
   );

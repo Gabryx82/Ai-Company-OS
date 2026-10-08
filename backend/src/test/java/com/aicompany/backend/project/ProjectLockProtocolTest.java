@@ -10,7 +10,9 @@ import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
+import com.aicompany.backend.task.repository.TaskTransitionRepository;
 import com.aicompany.backend.task.service.TaskService;
+import com.aicompany.backend.task.service.TaskTransitions;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -48,7 +50,8 @@ class ProjectLockProtocolTest {
     private final ProjectRepository projectRepository = mock(ProjectRepository.class);
     private final AgentRepository agentRepository = mock(AgentRepository.class);
     private final TaskService taskService =
-            new TaskService(taskRepository, projectRepository, agentRepository);
+            new TaskService(taskRepository, projectRepository, agentRepository,
+                    new TaskTransitions(mock(TaskTransitionRepository.class)), mock(TaskTransitionRepository.class));
 
     /**
      * AC-13 and AC-20, rules L0, L4 and L5.

@@ -435,6 +435,31 @@ public class PlanningApiTest extends AbstractPostgresTest {
         mockMvc.perform(get("/api/tasks/" + taskId)).andExpect(jsonPath("$.status").value("IN_PROGRESS"));
     }
 
+    /** PHASE 32 (TD-38): started and stopped, the task is OPEN again -- and its work began all the same. */
+    @Test
+    void aDraftWhoseWorkBeganAndStoppedCannotBeReplacedEither() throws Exception {
+        writeMasterPrompt();
+        scriptPlan();
+        generateAndWait();
+        JsonNode phase = json.readTree(mockMvc.perform(get("/api/projects/" + projectId + "/plan"))
+                .andReturn().getResponse().getContentAsString()).path("phases").path(0);
+        mockMvc.perform(post("/api/phases/" + phase.path("id").asLong() + "/approve")
+                .header(HttpHeaders.IF_MATCH, "\"" + phase.path("version").asLong() + "\"")).andExpect(status().isOk());
+        long taskId = phase.path("tasks").path(0).path("id").asLong();
+        for (String edge : new String[] {"start", "stop"}) {
+            String tag = mockMvc.perform(get("/api/tasks/" + taskId)).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+            mockMvc.perform(post("/api/tasks/" + taskId + "/" + edge).header(HttpHeaders.IF_MATCH, tag))
+                    .andExpect(status().isOk());
+        }
+
+        scriptPlan();
+        JsonNode run = generateAndWait();
+
+        assertThat(run.path("status").asString()).isEqualTo("FAILED");
+        assertThat(run.path("failureDetail").asString()).startsWith("plan-locked");
+        mockMvc.perform(get("/api/tasks/" + taskId + "/transitions")).andExpect(jsonPath("$.length()").value(2));
+    }
+
     @Test
     void aTaskCreatedOutsideAPlanIsUntouchedByTheGate() throws Exception {
         String agentId = json.readTree(mockMvc.perform(get("/api/agents")).andReturn().getResponse()

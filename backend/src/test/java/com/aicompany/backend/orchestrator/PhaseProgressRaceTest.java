@@ -77,6 +77,7 @@ class PhaseProgressRaceTest extends AbstractPostgresTest {
                     .as("the approval committed meanwhile is kept, not overwritten").isEqualTo("APPROVED");
             assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, taskId)).isEqualTo("DONE");
         } finally {
+            jdbc.update("DELETE FROM task_transitions WHERE task_id = ?", taskId);
             jdbc.update("DELETE FROM task_reviews WHERE task_id = ?", taskId);
             jdbc.update("DELETE FROM tasks WHERE id = ?", taskId);
             jdbc.update("DELETE FROM project_phases WHERE id = ?", phaseId);

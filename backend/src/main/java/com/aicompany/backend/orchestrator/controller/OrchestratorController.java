@@ -49,10 +49,11 @@ public class OrchestratorController {
     }
 
     public record ReviewResponse(Long id, Long taskId, TaskReview.Verdict verdict, String note, Long runId,
-                                 Long handoffId, String reviewer, Instant createdAt) {
+                                 Long handoffId, String reviewer, Instant createdAt,
+                                 com.aicompany.backend.project.model.AutonomyLevel autonomyLevel) {
         public static ReviewResponse from(TaskReview r) {
             return new ReviewResponse(r.getId(), r.getTaskId(), r.getVerdict(), r.getNote(), r.getRunId(),
-                    r.getHandoffId(), r.getReviewer(), r.getCreatedAt());
+                    r.getHandoffId(), r.getReviewer(), r.getCreatedAt(), r.getAutonomyLevel());
         }
     }
 

@@ -4,7 +4,7 @@ import { DeleteDialog } from "../components/DeleteDialog";
 import { ApiProblem, type Versioned } from "../api/client";
 import {
   TASK_PRIORITIES, TRANSITIONS, type Agent, type AgentConfiguration, type ModelInfo, type Project, type Run,
-  type Suggestion, type Task, type TaskPriority, type Transition,
+  type Suggestion, type Task, type TaskMove, type TaskPriority, type Transition,
 } from "../api/types";
 import { Field, Modal, PriorityBadge, ProblemNote, StatusBadge, when } from "../components/ui";
 import { BindingChain } from "../components/BindingChain";
@@ -27,6 +27,7 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
   const api = useApi();
   const [version, setVersion] = useState<Versioned<Task> | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
+  const [moves, setMoves] = useState<TaskMove[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [bindings, setBindings] = useState<AgentConfiguration[]>([]);
@@ -40,6 +41,8 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
     setVersion(task);
     setRuns(taskRuns);
     setSuggestions(fits);
+    // The history is read on its own: a server without it (before PHASE 32) still shows the task.
+    api.taskTransitions(taskId).then(setMoves).catch(() => setMoves([]));
   }, [api, taskId]);
 
   useEffect(() => {
@@ -133,6 +136,8 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
             <DetailsSection key={version.etag} task={task} busy={busy}
                             onSave={(details) => act((etag) => api.updateTask(task.id, etag, details))} />
 
+            <HistorySection moves={moves} />
+
             <div className="section">
               <div className="section-title">Eliminazione</div>
               {isAdmin
@@ -153,6 +158,31 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
           </>
         )}
       </aside>
+    </div>
+  );
+}
+
+const MOVE_LABEL: Record<string, string> = { START: "Avviata", COMPLETE: "Completata", STOP: "Fermata", REOPEN: "Riaperta" };
+const VIA_LABEL: Record<string, string> = {
+  API: "dalla console", RUN: "lanciando un'esecuzione", HANDOFF: "con un handoff", REVIEW: "con una review",
+};
+
+/** PHASE 32 (TD-38): who moved the task, when and through what. */
+function HistorySection({ moves }: { moves: TaskMove[] }) {
+  return (
+    <div className="section">
+      <div className="section-title">Storia</div>
+      {moves.length === 0
+        ? <span className="muted" style={{ fontSize: 12.5 }}>Nessuna transizione registrata.</span>
+        : <ul className="history" aria-label="Storia della task">
+            {moves.map((move) => (
+              <li key={move.id}>
+                <strong>{MOVE_LABEL[move.transition ?? ""] ?? move.transition}</strong>
+                {" da "}{move.actor} {VIA_LABEL[move.via ?? ""] ?? move.via}
+                <span className="muted"> · {when(move.at)}</span>
+              </li>
+            ))}
+          </ul>}
     </div>
   );
 }

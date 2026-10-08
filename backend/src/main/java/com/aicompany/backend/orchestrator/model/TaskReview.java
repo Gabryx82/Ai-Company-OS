@@ -1,6 +1,7 @@
 package com.aicompany.backend.orchestrator.model;
 
 import com.aicompany.backend.persistence.DatabaseClock;
+import com.aicompany.backend.project.model.AutonomyLevel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -45,13 +46,20 @@ public class TaskReview {
     @Column(nullable = false, length = 120, updatable = false)
     private String reviewer;
 
+    /** PHASE 32 (TD-45): the project's level when the review was given; null outside a project. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "autonomy_level", length = 24, updatable = false)
+    private AutonomyLevel autonomyLevel;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = DatabaseClock.now();
 
     protected TaskReview() {
     }
 
-    public TaskReview(Long taskId, Verdict verdict, String note, Long runId, Long handoffId, String reviewer) {
+    public TaskReview(Long taskId, Verdict verdict, String note, Long runId, Long handoffId, String reviewer,
+                      AutonomyLevel autonomyLevel) {
+        this.autonomyLevel = autonomyLevel;
         this.taskId = taskId;
         this.verdict = verdict;
         this.note = note;
@@ -68,4 +76,5 @@ public class TaskReview {
     public Long getHandoffId() { return handoffId; }
     public String getReviewer() { return reviewer; }
     public Instant getCreatedAt() { return createdAt; }
+    public AutonomyLevel getAutonomyLevel() { return autonomyLevel; }
 }

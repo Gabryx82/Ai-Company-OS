@@ -17,6 +17,7 @@ import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.repository.TaskRepository;
+import com.aicompany.backend.task.repository.TaskTransitionRepository;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,13 +49,15 @@ public class PlanImporter {
     private final ProjectPhaseRepository phases;
     private final TaskRepository tasks;
     private final TaskRunRepository runs;
+    private final TaskTransitionRepository history;
     private final AgentRepository agents;
     private final AgentRouter router;
     private final ProjectWorkspaceService workspace;
 
     public PlanImporter(ProjectRepository projects, ProjectPhaseRepository phases, TaskRepository tasks,
                         TaskRunRepository runs, AgentRepository agents, AgentRouter router,
-                        ProjectWorkspaceService workspace) {
+                        ProjectWorkspaceService workspace, TaskTransitionRepository history) {
+        this.history = history;
         this.projects = projects;
         this.phases = phases;
         this.tasks = tasks;
@@ -125,7 +128,10 @@ public class PlanImporter {
                 .filter(task -> task.getPhase() != null)
                 .toList();
         for (Task task : planned) {
-            if (task.getStatus() != TaskStatus.OPEN || runs.existsByTaskId(task.getId())) {
+            // PHASE 32 (TD-38): "worked on" is in the history now -- a task started and
+            // stopped is OPEN again, and was worked on all the same.
+            if (task.getStatus() != TaskStatus.OPEN || runs.existsByTaskId(task.getId())
+                    || history.existsByTaskId(task.getId())) {
                 throw new PlanLockedException("Task " + task.getCode() + " of the current plan has already been "
                         + "worked on; the plan can no longer be replaced");
             }

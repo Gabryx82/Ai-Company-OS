@@ -1348,6 +1348,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/learning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["projectLearning"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/plan": {
         parameters: {
             query?: never;
@@ -2302,6 +2318,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["stop"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{id}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["taskTransitions"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3441,6 +3473,30 @@ export interface components {
             key?: string;
             workingDirectory?: string;
         };
+        Learning: {
+            /** Format: int32 */
+            changesRequested?: number;
+            /** Format: int32 */
+            firstPassAccepted?: number;
+            /** @enum {string} */
+            level?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
+            /** Format: int32 */
+            operatorCompletions?: number;
+            pieces?: components["schemas"]["Piece"][];
+            /** Format: int32 */
+            piecesOpen?: number;
+            piecesTruncated?: boolean;
+            /** Format: int32 */
+            reviewedTasks?: number;
+            suggestion?: components["schemas"]["LevelSuggestion"];
+        };
+        LevelSuggestion: {
+            /** @enum {string} */
+            direction?: "UP" | "DOWN" | "STAY";
+            /** @enum {string} */
+            level?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
+            reasons?: string[];
+        };
         LibraryInfo: {
             exists?: boolean;
             /** Format: int64 */
@@ -3637,6 +3693,12 @@ export interface components {
         };
         PhaseReviewRequest: {
             note?: string;
+        };
+        Piece: {
+            /** Format: int32 */
+            line?: number;
+            path?: string;
+            text?: string;
         };
         PlanResponse: {
             phases?: components["schemas"]["PhaseResponse"][];
@@ -3916,6 +3978,8 @@ export interface components {
             version?: string;
         };
         ReviewResponse: {
+            /** @enum {string} */
+            autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
             /** Format: date-time */
             createdAt?: string;
             /** Format: int64 */
@@ -4268,6 +4332,23 @@ export interface components {
             runId?: number;
             /** @enum {string} */
             verdict: "ACCEPTED" | "CHANGES_REQUESTED";
+        };
+        TaskTransitionResponse: {
+            actor?: string;
+            /** Format: date-time */
+            at?: string;
+            /** @enum {string} */
+            from?: "OPEN" | "IN_PROGRESS" | "DONE";
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            taskId?: number;
+            /** @enum {string} */
+            to?: "OPEN" | "IN_PROGRESS" | "DONE";
+            /** @enum {string} */
+            transition?: "START" | "COMPLETE" | "STOP" | "REOPEN";
+            /** @enum {string} */
+            via?: "API" | "RUN" | "HANDOFF" | "REVIEW";
         };
         TaskUpdateRequest: {
             description?: string;
@@ -6925,6 +7006,28 @@ export interface operations {
             };
         };
     };
+    projectLearning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Learning"];
+                };
+            };
+        };
+    };
     plan: {
         parameters: {
             query?: never;
@@ -8670,6 +8773,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TaskResponse"];
+                };
+            };
+        };
+    };
+    taskTransitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TaskTransitionResponse"][];
                 };
             };
         };

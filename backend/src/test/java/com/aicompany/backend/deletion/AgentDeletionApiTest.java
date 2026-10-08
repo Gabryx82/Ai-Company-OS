@@ -58,6 +58,7 @@ class AgentDeletionApiTest extends AbstractPostgresTest {
     void removeTheFixtures() {
         jdbc.update("DELETE FROM task_runs WHERE agent_name LIKE 'Del Agent %' OR agent_id IN "
                 + "(SELECT id FROM agents WHERE name LIKE 'Del Agent %')");
+        jdbc.update("DELETE FROM task_transitions WHERE task_id IN (SELECT id FROM tasks WHERE title LIKE 'Del Task %')");
         jdbc.update("DELETE FROM tasks WHERE title LIKE 'Del Task %'");
         jdbc.update("UPDATE agents SET parent_id = NULL WHERE name LIKE 'Del Agent %'");
         jdbc.update("DELETE FROM agents WHERE name LIKE 'Del Agent %'");
@@ -188,6 +189,8 @@ class AgentDeletionApiTest extends AbstractPostgresTest {
                 .containsOnlyNulls();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM projects WHERE id IN (?, ?)", Integer.class, project,
                 archivedProject)).isEqualTo(2);
+        jdbc.update("DELETE FROM task_transitions WHERE task_id IN (SELECT id FROM tasks WHERE project_id IN (?, ?))",
+                project, archivedProject);
         jdbc.update("DELETE FROM tasks WHERE project_id IN (?, ?)", project, archivedProject);
         jdbc.update("DELETE FROM projects WHERE id IN (?, ?)", project, archivedProject);
     }
@@ -368,6 +371,7 @@ class AgentDeletionApiTest extends AbstractPostgresTest {
                 .andExpect(status().isNoContent());
         assertThat(exists(a) || exists(b)).isFalse();
         assertThat(exists(c)).isTrue();
+        jdbc.update("DELETE FROM task_transitions WHERE task_id = ?", busy);
         jdbc.update("DELETE FROM tasks WHERE id = ?", busy);
     }
 

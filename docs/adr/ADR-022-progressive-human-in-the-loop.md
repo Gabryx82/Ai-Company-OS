@@ -49,3 +49,29 @@ che l'operatore «ha imparato».
 
 Metriche di apprendimento (domande risposte, pezzi scritti) e suggerimento automatico del livello:
 richiedono dati che oggi non esistono. Registrato come debito (TD-45).
+
+## Revisione PHASE 32 (2026-10-08) — metriche di apprendimento e livello suggerito (TD-45)
+
+Rivede §5: i dati che mancavano ora esistono.
+
+- **Il livello di ogni review** (V32, `task_reviews.autonomy_level`): quello del progetto quando la
+  review è stata data; nullo per le review precedenti e per le task fuori da un progetto, mai indovinato.
+- **Metriche** (`GET /api/projects/{id}/learning`), tutte al livello **corrente** del progetto:
+  task riviste; task accettate alla **prima** review a questo livello; modifiche chieste; task completate
+  a mano dall'operatore (la storia di TD-38, arco `COMPLETE` via `API`); pezzi `TODO(operatore)`
+  ancora aperti nel codice della cartella — il contratto di `GUIDED` (§4), contato solo nei file
+  sorgente (le regole in `AGENTS.md` e negli handoff lo citano senza essere un pezzo), con i limiti del
+  grafo del codice e senza dipendenze e build.
+- **La regola del suggerimento**, in un posto solo (`LearningService.suggest`):
+  - si sale quando almeno l'80% delle ultime *N* task riviste a questo livello è stato accettato alla
+    prima review — *N* = 5 da `GUIDED`, 8 da `SUPERVISED`, 10 da `DELEGATED` — e, da `GUIDED`, quando
+    non restano pezzi `TODO(operatore)` da scrivere;
+  - si scende di un livello quando 3 delle ultime 4 task riviste sono state rimandate alla prima review;
+    `GUIDED` è il pavimento, `FINAL_REVIEW` il tetto;
+  - altrimenti si resta, e il motivo dice che cosa manca.
+- **Mai applicato da solo** (§4 resta): la console mostra metriche, motivi e un pulsante «Passa a …» che
+  cambia il livello sul profilo del progetto con il suo `If-Match`, come la scelta manuale. Cambiato il
+  livello, il conteggio riparte: le review a un livello non dicono nulla di un altro.
+- Restano fuori le «domande risposte»: le risposte dell'operatore alle domande di verifica vivono nello
+  strumento in cui lavora (la chat di Claude Code, l'IDE), non passano dal control plane, e contarle
+  vorrebbe dire inventarle.

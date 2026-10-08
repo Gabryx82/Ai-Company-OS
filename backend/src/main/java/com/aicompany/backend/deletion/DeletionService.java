@@ -196,6 +196,7 @@ public class DeletionService {
                     + "version = d.version + 1, updated_at = now() FROM tasks t WHERE d.task_id = t.id AND t.id = ?", id);
             // A proposal accepted into this task keeps its record, without the task.
             jdbc.update("UPDATE blueprint_change_proposals SET task_id = NULL WHERE task_id = ?", id);
+            jdbc.update("DELETE FROM task_transitions WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_reviews WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_handoffs WHERE task_id = ?", id);
             jdbc.update("DELETE FROM task_runs WHERE task_id = ?", id);
@@ -216,6 +217,10 @@ public class DeletionService {
         if (daily > 0) {
             notes.add(daily + " voci del Daily Work restano, come voci personali con il titolo della task.");
         }
+        int moves = count("SELECT count(*) FROM task_transitions WHERE task_id = ?", id);
+        if (moves > 0) {
+            notes.add("La storia della task (" + moves + " transizioni) viene eliminata con lei.");
+        }
         return new Impact("TASK", id, task.getTitle(), 1, count("SELECT count(*) FROM task_runs WHERE task_id = ?", id),
                 count("SELECT count(*) FROM task_handoffs WHERE task_id = ?", id),
                 count("SELECT count(*) FROM task_reviews WHERE task_id = ?", id), daily, 0, 0, 0,
@@ -229,7 +234,7 @@ public class DeletionService {
         int taskCount = count("SELECT count(*) FROM tasks WHERE project_id = ?", id);
         List<String> notes = new ArrayList<>();
         notes.add(policy == TasksPolicy.DELETE
-                ? "Le " + taskCount + " task del progetto vengono eliminate, con esecuzioni, handoff e review."
+                ? "Le " + taskCount + " task del progetto vengono eliminate, con esecuzioni, handoff, review e storia."
                 : "Le " + taskCount + " task del progetto restano, senza progetto, senza fase e senza codice di piano.");
         if (project.getWorkspacePath() != null) {
             notes.add("La cartella " + project.getWorkspacePath() + " resta sul disco: eliminala tu, se vuoi.");

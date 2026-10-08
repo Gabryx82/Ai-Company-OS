@@ -10,7 +10,7 @@
 //    into an ApiProblem the views can branch on.
 import type {
   Agent, AgentProfile, AgentTemplate, AgentWrite, AutonomyLevel, DailyItem, InstalledAgent, Resource, Handoff, HandoffOutcome, LaunchResult, ModelCatalog, ModelList, Orchestration,
-  Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry,
+  Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry, TaskMove, Learning,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
   ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, DeletionPreview, SubAgentsPolicy,
@@ -397,6 +397,16 @@ export class ControlPlane {
 
   reviews(taskId: number): Promise<Review[]> {
     return this.plain("GET", `/api/tasks/${taskId}/reviews`);
+  }
+
+  /** PHASE 32 (TD-45): learning metrics and the suggested level; applying it is the operator's choice. */
+  learning(projectId: number): Promise<Learning> {
+    return this.plain("GET", `/api/projects/${projectId}/learning`);
+  }
+
+  /** PHASE 32 (TD-38): who moved the task, when and through what, the most recent first. */
+  taskTransitions(taskId: number): Promise<TaskMove[]> {
+    return this.plain("GET", `/api/tasks/${taskId}/transitions`);
   }
 
   // --- second brain (directive §17) ---------------------------------------------

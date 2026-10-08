@@ -15,7 +15,9 @@ import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.model.TaskPriority;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.model.TaskTransition;
+import com.aicompany.backend.task.model.TaskTransitionRecord;
 import com.aicompany.backend.task.repository.TaskRepository;
+import com.aicompany.backend.task.repository.TaskTransitionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,14 +46,20 @@ public class TaskService {
     private final TaskRepository repository;
     private final ProjectRepository projectRepository;
     private final AgentRepository agentRepository;
+    private final TaskTransitions transitions;
+    private final TaskTransitionRepository history;
 
     public TaskService(TaskRepository repository,
                        ProjectRepository projectRepository,
-                       AgentRepository agentRepository) {
+                       AgentRepository agentRepository,
+                       TaskTransitions transitions,
+                       TaskTransitionRepository history) {
 
         this.repository = repository;
         this.projectRepository = projectRepository;
         this.agentRepository = agentRepository;
+        this.transitions = transitions;
+        this.history = history;
     }
 
     /** Every task, or those in one state when {@code status} is given (TASK-016). */
@@ -389,7 +397,7 @@ public class TaskService {
      * gains no arc and stays acyclic.
      */
     public Versioned<TaskResponse> transition(Long taskId, TaskTransition transition,
-                                              Precondition precondition) {
+                                              Precondition precondition, String actor) {
 
         // L0.
         Task task = repository.findByIdForUpdate(taskId)
@@ -408,10 +416,22 @@ public class TaskService {
             lockedAgent = requireAgentForDecision(task.getAgentId());
         }
 
-        // Rules on the entity, not here.
-        task.apply(transition, lockedProject, lockedAgent);
+        // Rules on the entity, not here; the history in the same transaction (TD-38).
+        transitions.apply(task, transition, lockedProject, lockedAgent, actor, TaskTransitionRecord.Via.API);
 
         return versioned(repository.saveAndFlush(task));
+    }
+
+    /**
+     * Who moved the task, when and through what, the most recent first (PHASE 32,
+     * TD-38). An unknown task is a 404, not an empty history.
+     */
+    @Transactional(readOnly = true)
+    public List<TaskTransitionRecord> history(Long taskId) {
+        if (!repository.existsById(taskId)) {
+            throw new TaskNotFoundException(taskId);
+        }
+        return history.findAllByTaskIdOrderByIdDesc(taskId);
     }
 
     /** Unlocked lookup, for reads only (L6). */

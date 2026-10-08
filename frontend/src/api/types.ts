@@ -164,6 +164,10 @@ export type Orchestration = Deep<S["Orchestration"]>;
 export type HandoffOutcome = Deep<S["HandoffResult"]>;
 export type Handoff = Deep<S["HandoffResponse"]>;
 export type Review = Deep<S["ReviewResponse"]>;
+/** PHASE 32 (TD-38): one edge a task took -- who, when, through what. */
+export type TaskMove = Deep<S["TaskTransitionResponse"]>;
+/** PHASE 32 (TD-45): what the operator's work says about the level they could work at. */
+export type Learning = Deep<S["Learning"]>;
 export type AutonomyLevel = NonNullable<S["ProjectResponse"]["autonomyLevel"]>;
 export type ProjectType = NonNullable<S["ProjectResponse"]["projectType"]>;
 

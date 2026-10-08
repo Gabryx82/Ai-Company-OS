@@ -27,7 +27,9 @@ import com.aicompany.backend.task.exception.TaskNotFoundException;
 import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.model.TaskTransition;
+import com.aicompany.backend.task.model.TaskTransitionRecord;
 import com.aicompany.backend.task.repository.TaskRepository;
+import com.aicompany.backend.task.service.TaskTransitions;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -71,6 +73,7 @@ public class ExecutionService {
     private final AgentBindingService binding;
     private final HarnessService harness;
     private final SkillLibrary library;
+    private final TaskTransitions transitions;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -79,7 +82,9 @@ public class ExecutionService {
                             SoftwareRepository softwareCatalog, SoftwareService software,
                             ProjectWorkspaceService workspace, TaskHandoffRepository handoffs,
                             TaskReviewRepository reviews, ExecutionTargetCatalog targets,
-                            AgentBindingService binding, HarnessService harness, SkillLibrary library) {
+                            AgentBindingService binding, HarnessService harness, SkillLibrary library,
+                            TaskTransitions transitions) {
+        this.transitions = transitions;
         this.library = library;
         this.targets = targets;
         this.binding = binding;
@@ -161,7 +166,7 @@ public class ExecutionService {
         written.add(packagePath);
 
         if (task.getStatus() == TaskStatus.OPEN) {
-            task.apply(TaskTransition.START, project, agent);
+            transitions.apply(task, TaskTransition.START, project, agent, requestedBy, TaskTransitionRecord.Via.HANDOFF);
         }
         markPhaseStarted(task.getPhase());
 
@@ -222,12 +227,13 @@ public class ExecutionService {
             if (task.getStatus() != TaskStatus.IN_PROGRESS) {
                 throw new IllegalTaskStateTransitionException(task.getStatus(), TaskTransition.COMPLETE);
             }
-            task.apply(TaskTransition.COMPLETE, project, null);
+            transitions.apply(task, TaskTransition.COMPLETE, project, null, reviewer, TaskTransitionRecord.Via.REVIEW);
             markPhaseDoneIfComplete(task);
         } else if (task.getStatus() == TaskStatus.DONE) {
-            task.apply(TaskTransition.REOPEN, project, null);
+            transitions.apply(task, TaskTransition.REOPEN, project, null, reviewer, TaskTransitionRecord.Via.REVIEW);
         }
-        TaskReview review = reviews.save(new TaskReview(taskId, verdict, note, runId, handoffId, reviewer));
+        TaskReview review = reviews.save(new TaskReview(taskId, verdict, note, runId, handoffId, reviewer,
+                project == null ? null : project.getAutonomyLevel()));
         tasks.saveAndFlush(task);
         return new ReviewResult(review, task);
     }
