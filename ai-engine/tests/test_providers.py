@@ -114,6 +114,30 @@ def test_a_model_with_a_heavy_context_cache_keeps_a_smaller_window():
     assert [b["options"]["num_ctx"] for b in seen] == [4096, 16384]
 
 
+def test_a_model_the_integrated_gpu_slows_down_stays_on_the_cpu():
+    # PHASE 32 (TD-67): Ollama turns the iGPU on for every model; num_gpu 0 keeps one on the CPU.
+    seen = []
+
+    def handler(r):
+        seen.append(json.loads(r.content))
+        return httpx.Response(200, json={"message": {"content": "ok"}})
+
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(handler),
+                              num_gpu_by_model={"lfm2.5:8b": 0, "qwen3.5:9b": 99})
+    with app_with(provider) as client:
+        client.post("/v1/completions", json=completion(model="ollama:lfm2.5:8b"), headers=AUTH)
+        client.post("/v1/completions", json=completion(model="ollama:qwen3.5:9b"), headers=AUTH)
+        client.post("/v1/completions", json=completion(model="ollama:gemma4:e4b"), headers=AUTH)
+    assert [b["options"].get("num_gpu") for b in seen] == [0, 99, None]
+
+
+def test_the_per_model_gpu_layers_come_from_the_environment():
+    assert Settings.from_environment({}).ollama_num_gpu_by_model == {"lfm2.5:8b": 0}
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL": "qwen3.5:9b=99,lfm2.5:8b=0"}) \
+        .ollama_num_gpu_by_model == {"qwen3.5:9b": 99, "lfm2.5:8b": 0}
+    assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL": ""}).ollama_num_gpu_by_model == {}
+
+
 def test_the_per_model_windows_come_from_the_environment():
     assert Settings.from_environment({}).ollama_num_ctx_by_model == {"deepseek-coder-v2:16b": 4096, "llama3.2:3b": 4096}
     assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL": "x:1=8192"}).ollama_num_ctx_by_model \

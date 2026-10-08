@@ -88,3 +88,32 @@ describe("KnowledgeHub", () => {
     expect((put.body as { content: string }).content).toContain("Mai 200 per una creazione");
   });
 });
+
+/** PHASE 32 (TD-81): a knowledge of the library goes to the applications too, like a skill. */
+describe("KnowledgeHub — a knowledge's copies", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("shows where a knowledge can be copied", async () => {
+    const knowledge = { id: 2, key: "regole-codex", kind: "KNOWLEDGE", name: "Regole", description: null, tags: [],
+      sourceUrl: null, searchUrl: null, configuration: null, origin: "FILE", fileBacked: true,
+      filePath: "knowledge/regole-codex.md", version: 1 };
+    const { fetcher } = fakeFetch({
+      "GET /api/resources": () => ({ body: [knowledge] }),
+      "GET /api/library": () => ({ body: { root: "C:/lib", exists: true, skills: 0, knowledge: 1, layout: "" } }),
+      "GET /api/agent-templates": () => ({ body: [] }),
+      "GET /api/agent-profiles": () => ({ body: [] }),
+      "GET /api/projects": () => ({ body: [] }),
+      "GET /api/resources/regole-codex/file": () => ({ etag: '"1"', body: { key: "regole-codex", relativePath: "knowledge/regole-codex.md",
+        absolutePath: "C:/lib/knowledge/regole-codex.md", exists: true, content: "---\nkey: regole-codex\n---\n", modified: null, version: 1 } }),
+      "GET /api/skill-hub/library/regole-codex/copies": () => ({ body: [
+        { app: "claude-code", appName: "Claude Code", available: true, path: "C:/u/.claude/skills/regole-codex", status: "NONE",
+          deployedAt: null, skillId: null }] }),
+    });
+    render(<ApiContext.Provider value={new ControlPlane({ baseUrl: "http://localhost:8081", token: "t0123456789abcdef" }, fetcher)}>
+      <KnowledgeHub /></ApiContext.Provider>);
+    fireEvent.click(await screen.findByRole("tab", { name: "Libreria e catalogo" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Regole/ }));
+    expect(await screen.findByText("Nelle app")).toBeTruthy();
+    expect(await screen.findByText("Claude Code")).toBeTruthy();
+  });
+});

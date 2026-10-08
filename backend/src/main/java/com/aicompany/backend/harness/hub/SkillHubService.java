@@ -466,8 +466,7 @@ public class SkillHubService {
                 ? HubProblemException.readOnly("Claude Desktop riceve le skill dal tuo account: scarica il pacchetto .zip "
                 + "e caricalo da Impostazioni → Capacità → Skill")
                 : HubProblemException.readOnly("«" + appId + "» non è su questo computer o non ha una cartella di skill personali"));
-        Path source = library.skillFolder(entry.getKey());
-        Map<String, byte[]> libraryFiles = readFolder(source);
+        Map<String, byte[]> libraryFiles = libraryFiles(entry);
         String libraryPrint = Fingerprints.of(libraryFiles);
         Map<String, byte[]> rendered = renderForApp(entry, libraryFiles);
         String copyPrint = Fingerprints.of(rendered);
@@ -522,7 +521,7 @@ public class SkillHubService {
     @Transactional(readOnly = true)
     public byte[] zip(String key) {
         HarnessResource entry = librarySkill(key);
-        Map<String, byte[]> rendered = renderForApp(entry, readFolder(library.skillFolder(entry.getKey())));
+        Map<String, byte[]> rendered = renderForApp(entry, libraryFiles(entry));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(out)) {
             for (Map.Entry<String, byte[]> file : rendered.entrySet()) {
@@ -545,6 +544,9 @@ public class SkillHubService {
             throw HubProblemException.notFound("This skill is not a Hub copy");
         }
         HarnessResource entry = librarySkill(copy.marker().key());
+        if (entry.getKind() == HarnessResource.Kind.KNOWLEDGE) {
+            return pullKnowledge(entry, copy, overwrite);
+        }
         Path folder = library.skillFolder(entry.getKey());
         Map<String, byte[]> current = readFolder(folder);
         if (!Fingerprints.of(current).equals(copy.marker().library()) && !overwrite) {
@@ -604,7 +606,7 @@ public class SkillHubService {
         SkillInstallation provenance = installations.findByResourceId(entry.getId())
                 .orElseThrow(() -> HubProblemException.notFound("«" + key + "» non è stata installata dal Knowledge Hub"));
         if (entry.getKind() == HarnessResource.Kind.KNOWLEDGE) {
-            throw HubProblemException.readOnly("Una knowledge importata si aggiorna reimportandola");
+            return updateKnowledge(entry, provenance, overwrite);
         }
         Path folder = library.skillFolder(key);
         String localNow = Fingerprints.of(readFolder(folder));
@@ -869,8 +871,15 @@ public class SkillHubService {
     private HarnessResource librarySkill(String key) {
         HarnessResource entry = resources.findByKey(key)
                 .orElseThrow(() -> new HarnessResourceNotFoundException("No resource '" + key + "' in the catalog"));
+        if (entry.getKind() == HarnessResource.Kind.KNOWLEDGE) {
+            // PHASE 32 (TD-81): a knowledge goes to the applications as a skill made of its one file.
+            if (library.existingFile(entry).isEmpty()) {
+                throw HubProblemException.notFound("«" + key + "» non ha ancora un file: crealo dal Knowledge Hub");
+            }
+            return entry;
+        }
         if (entry.getKind() != HarnessResource.Kind.SKILL) {
-            throw HubProblemException.readOnly("Solo le skill si copiano nelle app: «" + key + "» è " + entry.getKind());
+            throw HubProblemException.readOnly("Solo le skill e le knowledge si copiano nelle app: «" + key + "» è " + entry.getKind());
         }
         if (!Files.isRegularFile(library.skillFolder(key).resolve("SKILL.md"))) {
             throw HubProblemException.notFound("«" + key + "» non ha ancora un file: crealo dal Knowledge Hub");
@@ -886,6 +895,10 @@ public class SkillHubService {
     }
 
     private String libraryFingerprintOrNull(String key) {
+        Optional<HarnessResource> knowledge = resources.findByKey(key).filter(r -> r.getKind() == HarnessResource.Kind.KNOWLEDGE);
+        if (knowledge.isPresent()) {
+            return library.existingFile(knowledge.get()).isPresent() ? Fingerprints.of(libraryFiles(knowledge.get())) : null;
+        }
         Path folder;
         try {
             folder = library.skillFolder(key);
@@ -893,6 +906,76 @@ public class SkillHubService {
             return null;
         }
         return Files.isRegularFile(folder.resolve("SKILL.md")) && resources.existsByKey(key) ? Fingerprints.content(folder) : null;
+    }
+
+    /**
+     * The files a library entry is copied from: a skill's folder; a knowledge's one
+     * file as the SKILL.md of a skill (PHASE 32, TD-81) -- the shape every application
+     * that reads skills loads on demand, by its description.
+     */
+    private Map<String, byte[]> libraryFiles(HarnessResource entry) {
+        if (entry.getKind() != HarnessResource.Kind.KNOWLEDGE) {
+            return readFolder(library.skillFolder(entry.getKey()));
+        }
+        String file = library.existingFile(entry)
+                .orElseThrow(() -> HubProblemException.notFound("«" + entry.getKey() + "» non ha ancora un file"));
+        return Map.of("SKILL.md", bytes(library.root().resolve(file)));
+    }
+
+    /** PHASE 32 (TD-81): a knowledge imported from an application, read again from it. */
+    private String updateKnowledge(HarnessResource entry, SkillInstallation provenance, boolean overwrite) {
+        if (!SkillInstallation.APP.equals(provenance.getProvider())) {
+            throw HubProblemException.readOnly("Una knowledge si aggiorna dall'app da cui è stata importata");
+        }
+        String current = library.view(entry.getKey()).content();
+        if (!Fingerprints.sha256(current).equals(provenance.getLocalFingerprint()) && !overwrite) {
+            throw HubProblemException.conflict("«" + entry.getName() + "» è stata modificata nella libreria dopo l'importazione: "
+                    + "conferma per sovrascriverla (resterà un backup)");
+        }
+        FoundSkill source = sourceOf(provenance, scanner.scan())
+                .orElseThrow(() -> HubProblemException.notFound("Il file da cui «" + entry.getKey() + "» è stata importata non c'è più"));
+        String text = read(source.file());
+        String body = Frontmatter.body(text).strip();
+        String content = new SkillDocument(entry.getKey(), entry.getName(), HarnessResource.Kind.KNOWLEDGE, entry.getDescription(),
+                entry.getTags(), entry.getSourceUrl(), body.isEmpty() ? text : body).render();
+        replaceKnowledge(entry, current, content);
+        provenance.reinstalled(null, Fingerprints.of(Map.of(source.file().getFileName().toString(), bytes(source.file()))),
+                Fingerprints.sha256(content));
+        int followed = propagate(entry.getKey(), null);
+        return "«" + entry.getName() + "» aggiornata da " + locations.app(source.app()).name()
+                + (followed > 0 ? "; aggiornate anche " + followed + " copie nelle app" : "");
+    }
+
+    /** PHASE 32 (TD-81): a knowledge's copy changed inside an application, brought into its one file. */
+    private String pullKnowledge(HarnessResource entry, FoundSkill copy, boolean overwrite) {
+        Map<String, byte[]> current = libraryFiles(entry);
+        if (!Fingerprints.of(current).equals(copy.marker().library()) && !overwrite) {
+            throw HubProblemException.conflict("Anche la libreria è cambiata da quando la copia è stata scritta: "
+                    + "conferma per sovrascriverla (resterà un backup)");
+        }
+        String before = new String(current.get("SKILL.md"), StandardCharsets.UTF_8);
+        String content = new String(mergeIntoLibrary(entry, current, Map.of("SKILL.md",
+                readFolder(copy.folder()).getOrDefault("SKILL.md", new byte[0]))).get("SKILL.md"), StandardCharsets.UTF_8);
+        replaceKnowledge(entry, before, content);
+        installations.findByResourceId(entry.getId()).ifPresent(p -> p.adoptedLocally(Fingerprints.sha256(content)));
+        rewriteMarker(copy.folder(), entry.getKey(), Fingerprints.of(libraryFiles(entry)));
+        int followed = propagate(entry.getKey(), copy.id());
+        return "«" + entry.getName() + "» aggiornata nella libreria da " + locations.app(copy.app()).name()
+                + (followed > 0 ? "; aggiornate anche " + followed + " altre copie" : "");
+    }
+
+    /** The knowledge's file rewritten, the previous text kept in the backups first. */
+    private void replaceKnowledge(HarnessResource entry, String before, String content) {
+        try {
+            Path backup = files.backups().resolve("libreria-" + entry.getKey() + "-"
+                    + java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").format(java.time.LocalDateTime.now())
+                    + "-" + java.util.UUID.randomUUID().toString().substring(0, 8) + ".md");
+            Files.createDirectories(backup.getParent());
+            Files.writeString(backup, before, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw HubProblemException.conflict("Il backup di «" + entry.getKey() + "» non si può scrivere: " + e.getMessage());
+        }
+        library.save(entry.getKey(), content, com.aicompany.backend.api.Precondition.fromHeader("\"" + entry.getVersion() + "\""));
     }
 
     private FoundSkill found(String id) {

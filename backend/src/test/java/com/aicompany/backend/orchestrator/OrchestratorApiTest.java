@@ -63,6 +63,7 @@ class OrchestratorApiTest extends AbstractPostgresTest {
 
     @BeforeEach
     void aPlannedProject() throws Exception {
+        jdbc.update("DELETE FROM agent_resources WHERE agent_id IN (SELECT id FROM agents WHERE name = 'Backend Bot')");
         tasks.deleteAll();
         projects.deleteAll();
         agents.findAll().stream().filter(a -> a.getName().equals("Backend Bot")).forEach(agents::delete);
@@ -172,6 +173,34 @@ class OrchestratorApiTest extends AbstractPostgresTest {
         assertThat(planPhase(0).path("status").asString()).isEqualTo("IN_PROGRESS");
         mockMvc.perform(get("/api/tasks/" + task(0) + "/handoffs"))
                 .andExpect(jsonPath("$[0].target").value("claude-code"));
+    }
+
+    /**
+     * PHASE 32 (TD-48): the agent's MCP servers go into the project file Claude Code reads, next to the
+     * operator's own, which stay; one the catalog cannot start with a command is said to be configured by hand.
+     */
+    @Test
+    void aHandoffConfiguresTheAgentsMcpServersInTheProjectAndSaysWhichAreLeftToTheOperator() throws Exception {
+        approvePhase1();
+        long agent = agents.findAll().stream().filter(a -> a.getName().equals("Backend Bot")).findFirst().orElseThrow().getId();
+        mockMvc.perform(put("/api/agents/" + agent + "/resources/mcp-filesystem")).andExpect(status().isNoContent());
+        mockMvc.perform(put("/api/agents/" + agent + "/resources/mcp-github")).andExpect(status().isNoContent());
+        Files.writeString(folder.resolve(".mcp.json"), "{\"mcpServers\": {\"mine\": {\"command\": \"uvx\", \"args\": [\"kept\"]}}}");
+
+        mockMvc.perform(post("/api/tasks/" + task(0) + "/handoffs").header(HttpHeaders.IF_MATCH, tag(task(0)))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"claude-code\"}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.written").value(hasItem(".mcp.json")));
+
+        JsonNode servers = json.readTree(Files.readString(folder.resolve(".mcp.json"))).path("mcpServers");
+        assertThat(servers.path("mine").path("args").toString()).isEqualTo("[\"kept\"]");
+        assertThat(servers.path("mcp-filesystem").path("command").asString()).isEqualTo("npx");
+        assertThat(servers.path("mcp-filesystem").path("args").toString()).contains("@modelcontextprotocol/server-filesystem")
+                .contains(folder.toString().replace("\\", "\\\\"));
+        assertThat(servers.has("mcp-github")).isFalse();
+        assertThat(Files.readString(folder.resolve(".aicos/handoffs/TASK-001-claude-code.md")))
+                .contains("Server MCP del progetto, in `.mcp.json`: mcp-filesystem")
+                .contains("Da configurare a mano in Claude Code (CLI): GitHub MCP");
     }
 
     @Test

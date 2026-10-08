@@ -62,10 +62,10 @@ final class HandoffPackager {
     static Package build(Task task, Project project, Agent agent, List<HarnessResource> harness,
                          AgentBindingService.Binding binding, ExecutionTarget target, Path folder,
                          String taskDocument, String taskDocumentText, String packagePath,
-                         java.util.Map<String, String> skillFiles) {
+                         java.util.Map<String, String> skillFiles, String mcpNote) {
         AutonomyLevel level = project == null ? AutonomyLevel.GUIDED : project.getAutonomyLevel();
         String role = role(agent);
-        String skills = skills(harness, skillFiles);
+        String skills = skills(harness, skillFiles) + mcpNote;
         String context = context(task, project, taskDocument);
         String compact = "Leggi " + packagePath + " ed esegui la task che descrive.";
 

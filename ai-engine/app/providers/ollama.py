@@ -23,7 +23,8 @@ class OllamaProvider:
 
     def __init__(self, base_url: str, timeout_seconds: float, transport: httpx.AsyncBaseTransport | None = None,
                  fallbacks: dict[str, str] | None = None, num_ctx: int | None = None,
-                 think: bool | None = False, num_ctx_by_model: dict[str, int] | None = None):
+                 think: bool | None = False, num_ctx_by_model: dict[str, int] | None = None,
+                 num_gpu_by_model: dict[str, int] | None = None):
         self._client = httpx.AsyncClient(base_url=base_url.rstrip("/"),
                                          timeout=httpx.Timeout(timeout_seconds, connect=3.0),
                                          transport=transport)
@@ -32,6 +33,8 @@ class OllamaProvider:
         self._fallbacks = dict(fallbacks or {})
         self._num_ctx = num_ctx
         self._num_ctx_by_model = dict(num_ctx_by_model or {})
+        # PHASE 32 (TD-67): layers on the GPU, per model; a model not listed is Ollama's call.
+        self._num_gpu_by_model = dict(num_gpu_by_model or {})
         # Thinking for text answers: False, True, or None for the model's own default.
         self._think = think
 
@@ -86,6 +89,9 @@ class OllamaProvider:
                 # The window has to hold the prompt and the answer; a model whose
                 # context cache is heavy keeps a smaller one.
                 body["options"]["num_ctx"] = num_ctx
+            if model in self._num_gpu_by_model:
+                # With the integrated GPU on for every model, a model it slows down stays on the CPU.
+                body["options"]["num_gpu"] = self._num_gpu_by_model[model]
             if request.response_schema is not None:
                 body["format"] = request.response_schema
                 body["think"] = False

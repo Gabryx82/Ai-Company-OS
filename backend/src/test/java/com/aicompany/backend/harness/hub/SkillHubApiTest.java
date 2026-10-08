@@ -333,6 +333,53 @@ class SkillHubApiTest extends AbstractPostgresTest {
                 .andExpect(status().isCreated());
     }
 
+    /**
+     * PHASE 32 (TD-81): a knowledge imported from an application follows its source like a skill does, and goes
+     * to the applications as a skill made of its one file -- kept in step, never overwritten silently.
+     */
+    @Test
+    void aKnowledgeFollowsItsSourceAndIsCopiedIntoTheApplicationsAsASkill() throws Exception {
+        Path agentsMd = home.resolve(".codex/AGENTS.md");
+        write(agentsMd, "# Regole\n\nRispondi in italiano.\n");
+        Files.createDirectories(home.resolve(".claude"));
+        JsonNode found = null;
+        for (JsonNode s : getJson("/api/skill-hub/installed?rescan=true").path("skills")) {
+            if ("codex".equals(s.path("app").asString()) && "KNOWLEDGE".equals(s.path("kind").asString())) {
+                found = s;
+            }
+        }
+        assertThat(found).isNotNull();
+        mockMvc.perform(post("/api/skill-hub/installed/" + found.path("id").asString() + "/import")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"key\": \"regole-codex\"}"))
+                .andExpect(status().isCreated());
+        Path libraryFile = library.root().resolve("knowledge/regole-codex.md");
+        assertThat(Files.readString(libraryFile)).contains("Rispondi in italiano.");
+
+        // Into Claude Code, as a skill.
+        deploy("regole-codex", "claude-code", false).andExpect(jsonPath("$.outcome").value("CREATED"));
+        Path copy = home.resolve(".claude/skills/regole-codex/SKILL.md");
+        assertThat(Frontmatter.read(Files.readString(copy))).containsEntry("name", "regole-codex");
+        assertThat(Files.readString(copy)).contains("Rispondi in italiano.");
+        assertThat(copyStatus("regole-codex", "claude-code")).isEqualTo("IN_SYNC");
+
+        // The source changes: an update, and the untouched copy follows.
+        write(agentsMd, "# Regole\n\nRispondi in italiano.\nCita sempre il file.\n");
+        assertThat(ids(postJson("/api/skill-hub/updates/check", null))).contains("src:regole-codex");
+        apply(List.of("src:regole-codex"), false).andExpect(jsonPath("$.results[0].outcome").value("UPDATED"));
+        assertThat(Files.readString(libraryFile)).contains("Cita sempre il file.").contains("kind: KNOWLEDGE");
+        assertThat(Files.readString(copy)).contains("Cita sempre il file.");
+
+        // The library is edited, the source moves again: the update waits for a decision, and keeps a backup.
+        write(libraryFile, Files.readString(libraryFile) + "\nLa mia nota.\n");
+        write(agentsMd, "# Regole\n\nRispondi in inglese.\n");
+        postJson("/api/skill-hub/updates/check", null);
+        apply(List.of("src:regole-codex"), false).andExpect(jsonPath("$.results[0].outcome").value("CONFLICT"));
+        assertThat(Files.readString(libraryFile)).contains("La mia nota.");
+        apply(List.of("src:regole-codex"), true).andExpect(jsonPath("$.results[0].outcome").value("UPDATED"));
+        assertThat(Files.readString(libraryFile)).contains("Rispondi in inglese.").doesNotContain("La mia nota.");
+        assertThat(backups()).anyMatch(name -> name.startsWith("libreria-regole-codex"));
+    }
+
     private static List<JsonNode> named(JsonNode installed, String name) {
         List<JsonNode> out = new java.util.ArrayList<>();
         installed.path("skills").forEach(s -> {

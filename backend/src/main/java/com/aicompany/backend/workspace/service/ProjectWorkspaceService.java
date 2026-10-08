@@ -431,6 +431,27 @@ public class ProjectWorkspaceService implements ProjectFolders {
         return root.resolve("_inbox").resolve("task-" + taskId);
     }
 
+    /**
+     * PHASE 32 (TD-48): the project file where a tool reads its MCP servers, and only
+     * those names -- not a document: the console's document API cannot write them.
+     */
+    @Transactional(readOnly = true)
+    public void writeToolConfig(Path folder, String relative, String content) {
+        if (!TOOL_CONFIGS.contains(relative)) {
+            throw new WorkspacePathRefusedException("'" + relative + "' is not a tool configuration this service writes");
+        }
+        Path path = WorkspacePaths.inside(folder, relative);
+        try {
+            Files.writeString(path, content, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+        } catch (IOException e) {
+            throw new WorkspaceUnavailableException("'" + relative + "' could not be written: " + e.getMessage());
+        }
+    }
+
+    /** PHASE 32 (TD-48): Claude Code's and OpenCode's project files for MCP servers. */
+    static final List<String> TOOL_CONFIGS = List.of(".mcp.json", "opencode.json");
+
     /** Writes a document inside a folder this service handed out (a project's or an inbox), under W2/W3. */
     @Transactional(readOnly = true)
     public void writeIn(Path folder, String relative, String content) {

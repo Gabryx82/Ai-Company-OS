@@ -394,3 +394,19 @@ modifiche dell'operatore — resta comunque un backup. Da lì gli aggiornamenti 
 dall'app. Console: nel dettaglio di una skill della libreria, «Fonte» con «Collega a una fonte online» (o
 «Cambia fonte»), che cerca il nome della skill nei marketplace e propone i pacchetti. Test: `SkillHubApiTest`
 (allineata, poi aggiornata dal marketplace; diversa, aggiornata solo con conferma), console `SourceLink.test.tsx`.
+
+## Revisione PHASE 32 (2026-10-08) — le knowledge seguono la fonte e vanno nelle app (TD-81)
+
+Una knowledge importata da un'app (`CLAUDE.md`, `AGENTS.md`, un knowledge item di Antigravity) si aggiorna
+come una skill: quando la fonte cambia, «Aggiornamenti» propone `src:<chiave>`, che rilegge il file e
+riscrive la voce della libreria; se la libreria è stata modificata dopo l'importazione chiede conferma, e il
+testo precedente resta in `<aicos.home>/backups/skills/`. Non serve più reimportarla.
+
+Una knowledge della libreria si copia nelle app **come una skill** fatta del suo solo file: il `SKILL.md`
+con `name` = la chiave e la descrizione della voce, nelle stesse cartelle personali delle skill, con il
+marcatore del Hub. È la forma che ogni app che legge skill carica quando serve, dalla descrizione; scrivere
+nei file di istruzioni globali dell'operatore (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`) resta escluso,
+perché sono suoi. Da lì valgono le regole delle copie: allineata, da aggiornare, modificata nell'app (si
+riporta nella libreria nel suo unico file), mai sovrascritta in silenzio. Console: «Nelle app» compare anche
+nel dettaglio di una knowledge. Test: `SkillHubApiTest` (rosso con l'aggiornamento delle knowledge
+rifiutato), console `KnowledgeHub.test.tsx`.

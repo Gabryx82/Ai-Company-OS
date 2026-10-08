@@ -38,7 +38,8 @@ def default_providers(settings: Settings) -> list[Provider]:
         providers.append(OllamaProvider(settings.ollama_url, settings.ollama_timeout_seconds,
                                         fallbacks=settings.ollama_fallbacks, num_ctx=settings.ollama_num_ctx,
                                         think=settings.ollama_think,
-                                        num_ctx_by_model=settings.ollama_num_ctx_by_model))
+                                        num_ctx_by_model=settings.ollama_num_ctx_by_model,
+                                        num_gpu_by_model=settings.ollama_num_gpu_by_model))
     from app.providers.anthropic_provider import AnthropicProvider
     providers.append(AnthropicProvider(settings))
     # PHASE 8: OpenRouter, the optional router to cloud models. Off without a key.

@@ -160,9 +160,10 @@ public class ExecutionService {
                 skillFiles.put(r.getKey(), library.root().resolve(SkillLibrary.relativePath(r.getKind(), r.getKey())).toString());
             }
         }
+        String mcpNote = configureMcp(target, folder, equipped, written);
         HandoffPackager.Package pkg = HandoffPackager.build(task, project, agent, equipped,
                 binding.describe(agent), target, folder, taskDocument,
-                workspace.readIn(folder, taskDocument).orElse(null), packagePath, skillFiles);
+                workspace.readIn(folder, taskDocument).orElse(null), packagePath, skillFiles, mcpNote);
         workspace.writeIn(folder, packagePath, pkg.document());
         written.add(packagePath);
 
@@ -196,6 +197,35 @@ public class ExecutionService {
         return new HandoffResult(handoff, task, pkg.compactPrompt(), pkg.fullPrompt(), target.delivery().name(),
                 folder.toString(), openUrl, List.copyOf(written),
                 target.delivery() != ExecutionTargetCatalog.Delivery.CLI_PROMPT);
+    }
+
+    /**
+     * PHASE 32 (TD-48): the agent's MCP servers, in the project file of the tool that
+     * takes the handoff; what the Hub cannot configure is said in the package.
+     */
+    private String configureMcp(ExecutionTarget target, Path folder,
+                                List<com.aicompany.backend.harness.model.HarnessResource> equipped, List<String> written) {
+        HandoffMcp.Plan plan = HandoffMcp.plan(target.key(), folder, equipped);
+        StringBuilder note = new StringBuilder();
+        if (plan.file() != null && !plan.servers().isEmpty()) {
+            List<String> added = new ArrayList<>();
+            String merged = HandoffMcp.merge(plan.file(), workspace.readIn(folder, plan.file()), plan.servers(), added);
+            if (merged != null) {
+                workspace.writeToolConfig(folder, plan.file(), merged);
+                written.add(plan.file());
+            }
+            note.append("\n\nServer MCP del progetto, in `").append(plan.file()).append("`: ")
+                    .append(String.join(", ", plan.servers().stream().map(HandoffMcp.Server::key).toList()))
+                    .append(added.size() < plan.servers().size() ? " (quelli già presenti restano come erano)" : "")
+                    .append(". Avvialo dalla cartella del progetto perché li carichi.");
+        }
+        if (!plan.manual().isEmpty()) {
+            note.append("\n\nDa configurare a mano in ").append(target.name()).append(": ")
+                    .append(String.join(", ", plan.manual())).append(plan.file() == null
+                            ? " (AI Company OS non scrive la configurazione MCP di questo strumento)."
+                            : " (la voce non dice come avviarli con un solo comando).");
+        }
+        return note.toString();
     }
 
     /** Writes a generated file, unless the operator wrote their own there. */

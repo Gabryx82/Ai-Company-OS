@@ -406,7 +406,8 @@ export function ResourceDetail({ resourceKey, onClose, onChanged, onDeleted, ext
             )}
           </>
         )}
-        {resource.kind === "SKILL" && file?.body.exists && <CopiesSection skillKey={resource.key} onChanged={onChanged} />}
+        {(resource.kind === "SKILL" || resource.kind === "KNOWLEDGE") && file?.body.exists
+          && <CopiesSection skillKey={resource.key} onChanged={onChanged} />}
         {!resource.fileBacked && resource.configuration && (
           <div><div className="section-title">Configurazione</div><pre className="doc">{resource.configuration}</pre></div>
         )}

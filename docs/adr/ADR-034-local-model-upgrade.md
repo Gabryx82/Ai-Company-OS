@@ -292,3 +292,13 @@ V27. L'orchestratore cerca prima un modello del ruolo, poi uno che lo serve anch
 attivo che serve anche il ruolo CODER richiesto dalla task (ruolo proprio: PLANNER)»; il ripiego su PLANNER
 resta solo quando nessuno serve il ruolo. La pagina Modelli mostra «serve anche: Codice».
 `ModelRoleRoutingApiTest`, `Models.test.tsx`.
+
+## Revisione PHASE 32 (2026-10-08) — la GPU integrata, modello per modello (TD-67)
+
+Ollama accende l'iGPU Intel Arc 140V (Vulkan, `OLLAMA_IGPU_ENABLE=1`) per tutti i modelli insieme. Misurato:
+Qwen 3.5 e Gemma 4 elaborano il prompt 2–3,7× più in fretta, LFM2.5 genera a metà velocità. L'engine ora
+sceglie per modello quanti layer possono andare sulla GPU — l'opzione `num_gpu` di ogni richiesta, da
+`AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL` — e di default tiene `lfm2.5:8b` sulla CPU (`0`); gli altri modelli
+sono lasciati a Ollama. Con l'iGPU spenta, come oggi, non cambia nulla: `0` è ciò che succede comunque.
+Accendere l'iGPU è una configurazione del servizio Ollama dell'operatore, non di AI Company OS: resta una sua
+decisione (`docs/PHASE32_DECISIONS.md`). Test: `test_providers.py` (rosso se `num_gpu` non parte).

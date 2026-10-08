@@ -103,3 +103,16 @@ prompt completo per le app, web non lanciato, engine non consegnabile), `DevSeed
 (seed marcati, modelli, nessuna modifica), `OrchestratorApiTest`; console: `TaskDrawer.test`
 (assegnazione con la frase COSA → A CHI → CON → ATTRAVERSO), `OrchestratorPanel.test` (conferma prima
 dell'apertura, pannello anche fuori piano).
+
+## Revisione PHASE 32 (2026-10-08) — gli MCP dell'agente nello strumento (TD-48)
+
+Rivede il §5: un MCP registrato su un agente non è più solo un metadato. All'handoff, gli MCP dell'agente
+la cui voce dice come avviarli — una sola riga, un launcher noto (`npx`, `uvx`, `node`, `python`,
+`docker`…), argomenti semplici, nessun segnaposto se non la cartella del progetto (`<cartella>`) — vengono
+scritti nel file di progetto che lo strumento legge: `.mcp.json` per Claude Code, `opencode.json` per
+OpenCode. Solo le voci mancanti si aggiungono; quelle già presenti sono dell'operatore e restano come sono;
+un file che non è un oggetto JSON non si tocca. Gli altri MCP (un token da chiedere, un server configurato a
+mano su questa macchina, uno strumento di cui AI Company OS non scrive la configurazione) sono elencati nel
+pacchetto come «da configurare a mano». La scrittura passa da `writeToolConfig`, che accetta solo quei due
+nomi: l'API dei documenti non può scriverli. Test: `HandoffMcpTest` (payload inerti rifiutati: `&rem`,
+`>NUL`, `|more`, `$HOME`, segnaposto, più righe), `OrchestratorApiTest` (rosso senza la configurazione).

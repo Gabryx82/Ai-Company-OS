@@ -33,6 +33,14 @@ DEFAULT_OLLAMA_NUM_CTX_BY_MODEL = {
     "deepseek-coder-v2:16b": 4096,
     "llama3.2:3b": 4096,
 }
+# PHASE 32 (TD-67): how many layers a model may put on the GPU (Ollama's num_gpu).
+# Ollama turns the integrated GPU on for every model at once (OLLAMA_IGPU_ENABLE=1);
+# measured on the Arc 140V, it speeds Qwen 3.5 and Gemma 4 up 2-3.7x on the prompt
+# but halves LFM2.5's generation, which therefore stays on the CPU (0 layers). With
+# the iGPU off -- the default -- 0 is what happens anyway.
+DEFAULT_OLLAMA_NUM_GPU_BY_MODEL = {
+    "lfm2.5:8b": 0,
+}
 
 
 def local_secrets(path: Path | None = None) -> dict[str, str]:
@@ -107,6 +115,9 @@ class Settings:
     # (measured: done_reason "length", content ""). None leaves Ollama's default.
     ollama_num_ctx: int | None = DEFAULT_OLLAMA_NUM_CTX
     ollama_num_ctx_by_model: dict[str, int] = field(default_factory=lambda: dict(DEFAULT_OLLAMA_NUM_CTX_BY_MODEL))
+    # PHASE 32 (TD-67): per model, the layers Ollama may offload to the GPU; a model not
+    # listed is left to Ollama.
+    ollama_num_gpu_by_model: dict[str, int] = field(default_factory=lambda: dict(DEFAULT_OLLAMA_NUM_GPU_BY_MODEL))
     # PHASE 29: whether a text answer thinks first. False by default: on this CPU a
     # thinking qwen3.5 spent its whole budget reasoning and answered nothing, while
     # without thinking it answered correctly. None leaves the model's own default.
@@ -171,6 +182,9 @@ class Settings:
             ollama_num_ctx_by_model={model: int(size) for model, size in
                                      _pairs(env["AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL"]).items()}
             if "AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL" in env else dict(DEFAULT_OLLAMA_NUM_CTX_BY_MODEL),
+            ollama_num_gpu_by_model={model: int(layers) for model, layers in
+                                     _pairs(env["AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL"]).items()}
+            if "AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL" in env else dict(DEFAULT_OLLAMA_NUM_GPU_BY_MODEL),
             ollama_think=_think(env.get("AICOS_ENGINE_OLLAMA_THINK", "false")),
             anthropic_api_key=env.get("ANTHROPIC_API_KEY") or None,
             anthropic_models=_csv(env.get("AICOS_ENGINE_ANTHROPIC_MODELS")) or ("claude-opus-5",),
