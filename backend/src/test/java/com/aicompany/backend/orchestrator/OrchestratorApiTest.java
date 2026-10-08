@@ -203,6 +203,64 @@ class OrchestratorApiTest extends AbstractPostgresTest {
                 .contains("Da configurare a mano in Claude Code (CLI): GitHub MCP");
     }
 
+    /**
+     * PHASE 32 (TD-49): a handoff to OpenCode opens its TUI with the local API on a port AI Company OS chose,
+     * and the console follows the session there -- the latest one, not a sub-agent's.
+     */
+    @Test
+    void aHandoffToOpenCodeIsFollowedThroughItsLocalApi() throws Exception {
+        approvePhase1();
+        JsonNode result = json.readTree(mockMvc.perform(post("/api/tasks/" + task(0) + "/handoffs")
+                        .header(HttpHeaders.IF_MATCH, tag(task(0)))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"opencode\"}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.handoff.followable").value(true))
+                .andReturn().getResponse().getContentAsString());
+        long handoff = result.path("handoff").path("id").asLong();
+        java.util.List<String> command = host.launches().getLast().command();
+        int port = Integer.parseInt(command.get(command.indexOf("--port") + 1));
+        assertThat(command.subList(command.indexOf("--port"), command.size()))
+                .containsExactly("--port", String.valueOf(port), "--prompt",
+                        "Leggi .aicos/handoffs/TASK-001-opencode.md ed esegui la task che descrive.");
+
+        mockMvc.perform(get("/api/handoffs/" + handoff + "/session")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UNREACHABLE"));
+
+        com.sun.net.httpserver.HttpServer openCode = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress(java.net.InetAddress.getLoopbackAddress(), port), 0);
+        java.util.Map<String, String> answers = java.util.Map.of(
+                "/session", "[{\"id\": \"ses_old\", \"title\": \"Prima\", \"time\": {\"updated\": 1}},"
+                        + "{\"id\": \"ses_task\", \"title\": \"TASK-001\", \"time\": {\"updated\": 1791470405601},"
+                        + " \"summary\": {\"additions\": 12, \"deletions\": 3, \"files\": 2}},"
+                        + "{\"id\": \"ses_sub\", \"parentID\": \"ses_task\", \"time\": {\"updated\": 1791470409999}}]",
+                "/session/status", "{\"ses_task\": {\"type\": \"busy\"}}",
+                "/session/ses_task/message", "[{\"info\": {\"role\": \"user\"}, \"parts\": [{\"type\": \"text\", \"text\": \"Leggi\"}]},"
+                        + "{\"info\": {\"role\": \"assistant\"}, \"parts\": [{\"type\": \"reasoning\", \"text\": \"penso\"},"
+                        + " {\"type\": \"text\", \"text\": \"Ho aggiunto i test.\"}]}]");
+        openCode.createContext("/", exchange -> {
+            String body = answers.get(exchange.getRequestURI().getPath());
+            byte[] bytes = (body == null ? "{}" : body).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(body == null ? 404 : 200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        openCode.start();
+        try {
+            mockMvc.perform(get("/api/handoffs/" + handoff + "/session")).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("BUSY"))
+                    .andExpect(jsonPath("$.sessionId").value("ses_task"))
+                    .andExpect(jsonPath("$.title").value("TASK-001"))
+                    .andExpect(jsonPath("$.files").value(2))
+                    .andExpect(jsonPath("$.additions").value(12))
+                    .andExpect(jsonPath("$.deletions").value(3))
+                    .andExpect(jsonPath("$.lastAnswer").value("Ho aggiunto i test."));
+        } finally {
+            openCode.stop(0);
+        }
+        mockMvc.perform(get("/api/handoffs/999999/session")).andExpect(status().isNotFound());
+    }
+
     @Test
     void aHandoffToADesktopAgentOpensTheAppAndHandsThePromptToTheClipboard() throws Exception {
         approvePhase1();

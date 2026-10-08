@@ -2687,6 +2687,9 @@
           "documentPath" : {
             "type" : "string"
           },
+          "followable" : {
+            "type" : "boolean"
+          },
           "id" : {
             "format" : "int64",
             "type" : "integer"
@@ -2705,7 +2708,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "command", "createdAt", "documentPath", "id", "prompt", "requestedBy", "target", "taskId" ],
+        "required" : [ "command", "createdAt", "documentPath", "followable", "id", "prompt", "requestedBy", "target", "taskId" ],
         "type" : "object"
       },
       "HandoffResult" : {
@@ -3520,6 +3523,41 @@
           }
         },
         "required" : [ "initialPassword", "role", "username" ],
+        "type" : "object"
+      },
+      "OpenCodeSession" : {
+        "properties" : {
+          "additions" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "deletions" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "files" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "lastAnswer" : {
+            "type" : [ "string", "null" ]
+          },
+          "sessionId" : {
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "NOT_FOLLOWED", "UNREACHABLE", "WAITING", "BUSY", "IDLE", "RETRY" ],
+            "type" : "string"
+          },
+          "title" : {
+            "type" : [ "string", "null" ]
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "additions", "deletions", "files", "lastAnswer", "sessionId", "status", "title", "updatedAt" ],
         "type" : "object"
       },
       "Opened" : {
@@ -7973,6 +8011,33 @@
           }
         },
         "tags" : [ "ecosystem-graph-controller" ]
+      }
+    },
+    "/api/handoffs/{handoffId}/session" : {
+      "get" : {
+        "operationId" : "handoffSession",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "handoffId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OpenCodeSession"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "orchestrator-controller" ]
       }
     },
     "/api/library" : {

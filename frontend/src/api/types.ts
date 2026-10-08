@@ -159,6 +159,8 @@ export type Plan = { project: Project; phases: Phase[]; runs: PlanRun[] };
 export type Orchestration = S["Orchestration"];
 export type HandoffOutcome = S["HandoffResult"];
 export type Handoff = S["HandoffResponse"];
+/** PHASE 32 (TD-49): what the OpenCode session a handoff opened is doing. */
+export type OpenCodeSession = S["OpenCodeSession"];
 export type Review = S["ReviewResponse"];
 /** PHASE 32 (TD-38): one edge a task took -- who, when, through what. */
 export type TaskMove = S["TaskTransitionResponse"];

@@ -370,6 +370,7 @@ dipende da ciò che si elimina e non si può scollegare, con le stesse frasi del
 | `GET /api/agent-templates/plan[?key=]` | tutti | che cosa un'installazione creerebbe e che cosa è già presente: non duplica mai |
 | `DELETE /api/projects/{id}/references?path=references/…` | operatore | un file di `references/`; `404` se non c'è; `400` fuori da `references/` |
 | `POST /api/projects/{id}/references/bulk-delete` `{paths:[…]}` | operatore | una selezione, tutta o niente; i file già spariti si saltano |
+| `GET /api/handoffs/{id}/session` | tutti | la sessione OpenCode aperta da un handoff, dalla sua API locale su `127.0.0.1` (TD-49): stato, file cambiati, ultima risposta |
 | `GET /api/projects/{id}/files/deletion?path=` · `DELETE /api/projects/{id}/files?path=` | operatore | un documento di `docs/`, `tasks/`, `.aicos/handoffs/` che nessun record usa |
 | `GET /api/resources/{key}/deletion` · `DELETE /api/resources/{key}` | admin | skill e knowledge creati o importati, con il file; **`If-Match`**; le voci del catalogo spedito no |
 | `GET /api/projects/{id}/blueprint/deletion` · `DELETE /api/projects/{id}/blueprint?confirm=<nome>` | admin | l'intero Blueprint, mai il codice; **`If-Match`** della disposizione |

@@ -79,12 +79,15 @@ public class ExecutionService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    private final OpenCodeSessions sessions;
+
     public ExecutionService(TaskRepository tasks, ProjectRepository projects, AgentRepository agents,
                             SoftwareRepository softwareCatalog, SoftwareService software,
                             ProjectWorkspaceService workspace, TaskHandoffRepository handoffs,
                             TaskReviewRepository reviews, ExecutionTargetCatalog targets,
                             AgentBindingService binding, HarnessService harness, SkillLibrary library,
-                            TaskTransitions transitions) {
+                            TaskTransitions transitions, OpenCodeSessions sessions) {
+        this.sessions = sessions;
         this.transitions = transitions;
         this.library = library;
         this.targets = targets;
@@ -174,11 +177,14 @@ public class ExecutionService {
 
         String command = null;
         String openUrl = null;
+        Integer followPort = null;
         switch (target.delivery()) {
             case CLI_PROMPT -> {
                 Software cli = softwareOf(target);
+                // PHASE 32 (TD-49): OpenCode's TUI serves its API on a port chosen here, to follow the session.
+                followPort = "opencode".equals(cliCommand(cli)) ? OpenCodeSessions.freePort() : null;
                 command = String.join(" ", software.launchIn(cli.getKey(), folder,
-                        cliArguments(cli, pkg.compactPrompt())).command());
+                        cliArguments(cli, pkg.compactPrompt(), followPort)).command());
             }
             case IDE_FOLDER, APP_PASTE -> command = String.join(" ",
                     software.launchIn(softwareOf(target).getKey(), folder, List.of()).command());
@@ -192,7 +198,7 @@ public class ExecutionService {
         }
         String recorded = project != null ? packagePath : folder.resolve(packagePath).toString();
         TaskHandoff handoff = handoffs.save(new TaskHandoff(taskId, target.key(), recorded, pkg.compactPrompt(),
-                command, requestedBy));
+                command, requestedBy).followedOn(followPort));
         tasks.saveAndFlush(task);
         return new HandoffResult(handoff, task, pkg.compactPrompt(), pkg.fullPrompt(), target.delivery().name(),
                 folder.toString(), openUrl, List.copyOf(written),
@@ -282,12 +288,24 @@ public class ExecutionService {
     // --- helpers -------------------------------------------------------------------
 
     /** How each CLI takes an initial prompt. The prompt is the control plane's own text (ADR-019 I3). */
-    static List<String> cliArguments(Software target, String prompt) {
-        String command = target.getCliCommand().strip().split("\\s+")[0];
-        return switch (command) {
-            case "opencode" -> List.of("--prompt", prompt);
+    static List<String> cliArguments(Software target, String prompt, @org.jspecify.annotations.Nullable Integer followPort) {
+        return switch (cliCommand(target)) {
+            case "opencode" -> followPort == null ? List.of("--prompt", prompt)
+                    : List.of("--port", String.valueOf(followPort), "--prompt", prompt);
             default -> List.of(prompt);
         };
+    }
+
+    private static String cliCommand(Software target) {
+        return target.getCliCommand() == null ? "" : target.getCliCommand().strip().split("\\s+")[0];
+    }
+
+    /** PHASE 32 (TD-49): what the OpenCode session a handoff opened is doing; read-only. */
+    @Transactional(readOnly = true)
+    public OpenCodeSessions.OpenCodeSession followHandoff(Long handoffId) {
+        TaskHandoff handoff = handoffs.findById(handoffId)
+                .orElseThrow(() -> new HandoffNotFoundException(handoffId));
+        return sessions.follow(handoff.getFollowPort());
     }
 
     private void markPhaseStarted(ProjectPhase phase) {

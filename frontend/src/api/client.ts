@@ -9,7 +9,7 @@
 //  - every error is a problem detail with a stable `type` (ADR-007), turned
 //    into an ApiProblem the views can branch on.
 import type {
-  Agent, AgentProfile, AgentTemplate, AgentWrite, AutonomyLevel, DailyItem, InstalledAgent, Resource, Handoff, HandoffOutcome, LaunchResult, ModelCatalog, ModelList, Orchestration,
+  Agent, AgentProfile, AgentTemplate, AgentWrite, AutonomyLevel, DailyItem, InstalledAgent, Resource, Handoff, HandoffOutcome, OpenCodeSession, LaunchResult, ModelCatalog, ModelList, Orchestration,
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry, TaskMove, TaskOutcome, Learning,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
@@ -388,6 +388,11 @@ export class ControlPlane {
 
   handoffs(taskId: number): Promise<Handoff[]> {
     return this.plain("GET", `/api/tasks/${taskId}/handoffs`);
+  }
+
+  /** PHASE 32 (TD-49): the OpenCode session a handoff opened, read from its local API. */
+  handoffSession(handoffId: number): Promise<OpenCodeSession> {
+    return this.plain("GET", `/api/handoffs/${handoffId}/session`);
   }
 
   review(taskId: number, etag: string, verdict: "ACCEPTED" | "CHANGES_REQUESTED", note?: string,

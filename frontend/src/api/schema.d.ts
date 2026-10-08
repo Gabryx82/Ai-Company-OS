@@ -820,6 +820,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/handoffs/{handoffId}/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["handoffSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/library": {
         parameters: {
             query?: never;
@@ -3462,6 +3478,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             documentPath: string;
+            followable: boolean;
             /** Format: int64 */
             id: number;
             prompt: string;
@@ -3743,6 +3760,21 @@ export interface components {
             /** @enum {string} */
             role: "ADMIN" | "OPERATOR";
             username: string;
+        };
+        OpenCodeSession: {
+            /** Format: int32 */
+            additions: number;
+            /** Format: int32 */
+            deletions: number;
+            /** Format: int32 */
+            files: number;
+            lastAnswer: string | null;
+            sessionId: string | null;
+            /** @enum {string} */
+            status: "NOT_FOLLOWED" | "UNREACHABLE" | "WAITING" | "BUSY" | "IDLE" | "RETRY";
+            title: string | null;
+            /** Format: date-time */
+            updatedAt: string | null;
         };
         Opened: {
             command: string[];
@@ -6096,6 +6128,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Graph"];
+                };
+            };
+        };
+    };
+    handoffSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                handoffId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenCodeSession"];
                 };
             };
         };

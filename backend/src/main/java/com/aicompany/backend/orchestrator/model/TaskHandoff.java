@@ -43,6 +43,10 @@ public class TaskHandoff {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = DatabaseClock.now();
 
+    /** PHASE 32 (TD-49): the port of the local API of the OpenCode this handoff opened. */
+    @Column(name = "follow_port", updatable = false)
+    private Integer followPort;
+
     protected TaskHandoff() {
     }
 
@@ -64,4 +68,14 @@ public class TaskHandoff {
     public String getCommand() { return command; }
     public String getRequestedBy() { return requestedBy; }
     public Instant getCreatedAt() { return createdAt; }
+
+    public Integer getFollowPort() {
+        return followPort;
+    }
+
+    /** Before it is saved: the handoff opened OpenCode with its API on this port. */
+    public TaskHandoff followedOn(Integer port) {
+        this.followPort = port;
+        return this;
+    }
 }

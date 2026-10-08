@@ -116,3 +116,17 @@ mano su questa macchina, uno strumento di cui AI Company OS non scrive la config
 pacchetto come «da configurare a mano». La scrittura passa da `writeToolConfig`, che accetta solo quei due
 nomi: l'API dei documenti non può scriverli. Test: `HandoffMcpTest` (payload inerti rifiutati: `&rem`,
 `>NUL`, `|more`, `$HOME`, segnaposto, più righe), `OrchestratorApiTest` (rosso senza la configurazione).
+
+## Revisione PHASE 32 (2026-10-08) — l'handoff a OpenCode si segue dalla sua API locale (TD-49)
+
+Rivede il §5 per OpenCode: la TUI che l'handoff apre serve anche l'API locale di OpenCode (`--port`), su una
+porta libera del loopback che AI Company OS sceglie e registra con l'handoff (`task_handoffs.follow_port`,
+V38). `GET /api/handoffs/{id}/session` legge da `127.0.0.1:<porta>` — mai altrove — la sessione più
+recente (non quelle dei sotto-agenti): al lavoro, in attesa o in riprova, i file cambiati (+/−), l'ultima
+risposta (tagliata a 4000 caratteri). Solo lettura: nulla viene inviato alla sessione, e la review resta
+dell'operatore. Senza risposta sulla porta lo dice («OpenCode non risponde»: la finestra è stata chiusa); un
+handoff verso un altro strumento non si segue (`NOT_FOLLOWED`). Nella console, il pannello del Master
+Orchestrator mostra la sessione dell'ultimo handoff seguibile e la rilegge ogni 5 secondi mentre è aperto.
+API verificata su OpenCode 1.18.18 (`/session`, `/session/status`, `/session/{id}/message`). Test:
+`OrchestratorApiTest` (un OpenCode finto in HTTP sulla porta scelta; rosso se si segue un sotto-agente),
+console `OrchestratorPanel.test.tsx` (rosso se si segue un handoff non seguibile).

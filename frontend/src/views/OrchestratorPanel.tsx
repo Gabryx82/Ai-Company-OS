@@ -4,6 +4,7 @@ import type { Binding, Handoff, HandoffOutcome, Orchestration, Review, Task } fr
 import { Modal, ProblemNote, when } from "../components/ui";
 import { Icon } from "../components/icons";
 import { BindingChain } from "../components/BindingChain";
+import { OpenCodeFollow } from "./OpenCodeFollow";
 
 const AVAILABILITY_TONE: Record<string, string> = {
   INSTALLED: "badge badge-ok", RUNNING: "badge badge-ok", WEB: "badge badge-ok", STOPPED: "badge badge-warn",
@@ -192,6 +193,8 @@ export function OrchestratorPanel({ task, busy, act }: {
           </div>
         </div>
       )}
+
+      {handoffs[0]?.followable && <OpenCodeFollow handoffId={handoffs[0].id} />}
 
       {(handoffs.length > 0 || reviews.length > 0) && (
         <details>

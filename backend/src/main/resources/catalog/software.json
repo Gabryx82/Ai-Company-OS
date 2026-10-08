@@ -130,7 +130,7 @@
     "capabilities": ["agent-execution", "code-editing", "local-llm", "multi-provider"],
     "projectTypes": ["WEB_APP", "BACKEND", "FULL_STACK", "API", "AUTOMATION", "OTHER"],
     "launchKind": "CLI", "cliCommand": "opencode", "executionTarget": true,
-    "configuration": "Handoff: opencode --prompt \"<prompt compatto>\" nella cartella del progetto. 'opencode serve' espone un'API locale (fase successiva)."
+    "configuration": "Handoff: opencode --port <porta> --prompt \"<prompt compatto>\" nella cartella del progetto; la console segue la sessione dall'API locale di OpenCode su quella porta."
   },
   {
     "key": "chatgpt-classic", "name": "ChatGPT Classic", "category": "AI_CLOUD",

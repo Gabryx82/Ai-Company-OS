@@ -37,11 +37,12 @@ public class OrchestratorController {
                                 Long runId, Long handoffId) {
     }
 
+    /** {@code followable}: PHASE 32 (TD-49), the session it opened can be followed ({@code GET /api/handoffs/{id}/session}). */
     public record HandoffResponse(Long id, Long taskId, String target, String documentPath, String prompt,
-                                  @Nullable String command, String requestedBy, Instant createdAt) {
+                                  @Nullable String command, String requestedBy, Instant createdAt, boolean followable) {
         public static HandoffResponse from(TaskHandoff h) {
             return new HandoffResponse(h.getId(), h.getTaskId(), h.getTarget(), h.getDocumentPath(), h.getPrompt(),
-                    h.getCommand(), h.getRequestedBy(), h.getCreatedAt());
+                    h.getCommand(), h.getRequestedBy(), h.getCreatedAt(), h.getFollowPort() != null);
         }
     }
 
@@ -99,6 +100,12 @@ public class OrchestratorController {
                 .body(new HandoffResult(HandoffResponse.from(result.handoff()), TaskResponse.from(result.task()),
                         result.prompt(), result.fullPrompt(), result.delivery(), result.folder(), result.openUrl(),
                         result.written(), result.promptToClipboard()));
+    }
+
+    /** PHASE 32 (TD-49): what the OpenCode session a handoff opened is doing, from its local API. */
+    @GetMapping("/api/handoffs/{handoffId}/session")
+    public com.aicompany.backend.orchestrator.service.OpenCodeSessions.OpenCodeSession handoffSession(@PathVariable Long handoffId) {
+        return execution.followHandoff(handoffId);
     }
 
     @GetMapping("/api/tasks/{id}/handoffs")

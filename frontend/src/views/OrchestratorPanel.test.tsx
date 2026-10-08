@@ -111,3 +111,31 @@ describe("OrchestratorPanel", () => {
     expect((screen.getByRole("button", { name: /Claude Code CLI/ }) as HTMLButtonElement).disabled).toBe(false);
   });
 });
+
+/** PHASE 32 (TD-49): a handoff to OpenCode is followed from its local API while the drawer is open. */
+describe("OrchestratorPanel — following OpenCode", () => {
+  it("shows what the OpenCode session of the last handoff is doing", async () => {
+    renderPlanned({
+      "GET /api/tasks/9/orchestration": () => ({ body: decision() }),
+      "GET /api/tasks/9/handoffs": () => ({ body: [{ id: 7, taskId: 9, target: "opencode", documentPath: ".aicos/handoffs/TASK-001-opencode.md",
+        prompt: "Leggi", command: "opencode --port 4310", requestedBy: "operator", createdAt: "2026-10-08T10:00:00Z", followable: true }] }),
+      "GET /api/handoffs/7/session": () => ({ body: { status: "BUSY", sessionId: "ses_task", title: "TASK-001", files: 2,
+        additions: 12, deletions: 3, lastAnswer: "Ho aggiunto i test.", updatedAt: "2026-10-08T10:05:00Z" } }),
+    });
+    const panel = await screen.findByLabelText("Sessione OpenCode");
+    expect(panel.textContent).toContain("al lavoro");
+    expect(panel.textContent).toContain("2 file cambiati · +12 −3");
+    expect(panel.textContent).toContain("Ho aggiunto i test.");
+  });
+
+  it("does not follow a handoff that cannot be followed", async () => {
+    const calls = renderPlanned({
+      "GET /api/tasks/9/orchestration": () => ({ body: decision() }),
+      "GET /api/tasks/9/handoffs": () => ({ body: [{ id: 8, taskId: 9, target: "claude-code", documentPath: "x", prompt: "Leggi",
+        command: null, requestedBy: "operator", createdAt: "2026-10-08T10:00:00Z", followable: false }] }),
+    });
+    await screen.findByText(/Storia: 1 consegne/);
+    await waitFor(() => expect(calls.some((c) => c.path.startsWith("/api/handoffs/"))).toBe(false));
+    expect(screen.queryByLabelText("Sessione OpenCode")).toBeNull();
+  });
+});
