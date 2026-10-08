@@ -469,7 +469,10 @@ class TaskProjectAssociationApiTest extends AbstractPostgresTest {
                 // 7 -> 10 by decision in PHASE 10 (ADR-021): phaseId, code and
                 // documentPath place a task in its project's plan. Additive, and
                 // null for a task created outside a plan, like this one.
-                .andExpect(jsonPath("$[0].*", org.hamcrest.Matchers.hasSize(10)))
+                // 10 -> 11 by decision in PHASE 32 (TD-33): version, so a listing is
+                // enough to write a task back with If-Match.
+                .andExpect(jsonPath("$[0].*", org.hamcrest.Matchers.hasSize(11)))
+                .andExpect(jsonPath("$[0].version").isNumber())
                 .andExpect(jsonPath("$[0].phaseId").doesNotExist())
                 .andExpect(jsonPath("$[0].code").doesNotExist())
                 .andExpect(jsonPath("$[0].id").exists())

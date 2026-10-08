@@ -2,12 +2,14 @@ package com.aicompany.backend.ecosystem;
 
 import com.aicompany.backend.api.ETags;
 import com.aicompany.backend.api.Precondition;
+import com.aicompany.backend.deletion.DeletionPreview;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,7 +46,7 @@ public class EcosystemController {
     }
 
     @PostMapping("/api/ecosystem/services/{key}/start")
-    public EcosystemService.ServiceView start(@PathVariable String key, Authentication caller) {
+    public EcosystemService.ServiceView startEcosystemService(@PathVariable String key, Authentication caller) {
         return ecosystem.start(key, caller.getName());
     }
 
@@ -54,7 +56,7 @@ public class EcosystemController {
     }
 
     @PutMapping("/api/admin/ecosystem/services/{key}")
-    public ResponseEntity<EcosystemService.ServiceView> configure(@PathVariable String key,
+    public ResponseEntity<EcosystemService.ServiceView> configureEcosystemService(@PathVariable String key,
                                                                   @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                                                   @Valid @RequestBody Autostart body) {
         EcosystemService.ServiceView view = ecosystem.configure(key, body.autostart(), body.position(),
@@ -65,5 +67,20 @@ public class EcosystemController {
     @PostMapping("/api/admin/ecosystem/services")
     public EcosystemService.ServiceView add(@Valid @RequestBody NewService body) {
         return ecosystem.add(body.key());
+    }
+
+    /** PHASE 32 (TD-69): what taking a service out of the start would do, or why a default one stays. */
+    @GetMapping("/api/admin/ecosystem/services/{key}/deletion")
+    public DeletionPreview removal(@PathVariable String key) {
+        return ecosystem.removal(key);
+    }
+
+    /** Takes a service an admin added out of the coordinated start, under its tag. */
+    @DeleteMapping("/api/admin/ecosystem/services/{key}")
+    public ResponseEntity<Void> removeEcosystemService(@PathVariable String key,
+                                       @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+                                       Authentication caller) {
+        ecosystem.remove(key, Precondition.fromHeader(ifMatch), caller.getName());
+        return ResponseEntity.noContent().build();
     }
 }

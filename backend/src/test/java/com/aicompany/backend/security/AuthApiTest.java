@@ -220,6 +220,44 @@ class AuthApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$[?(@.type == 'ACCESS_DENIED')]").exists());
     }
 
+    /**
+     * PHASE 32 (TD-09): a forgotten password. The admin sets a temporary one, under the
+     * user's tag and the password rules; the old one and every session of the user stop
+     * working, the new one must be changed at the first sign-in, and the log says who did it.
+     */
+    @Test
+    void anAdminResetsAPasswordToATemporaryOneThatMustBeChanged() throws Exception {
+        String admin = tokenOf("admin", ADMIN_PASSWORD);
+        long bruno = createUser(admin, "bruno", "OPERATOR", "the-first-secret-of-b");
+        String brunoSession = tokenOf("bruno", "the-first-secret-of-b");
+        long version = jdbc.queryForObject("SELECT version FROM app_users WHERE id = ?", Long.class, bruno);
+
+        mockMvc.perform(put("/api/admin/users/" + bruno + "/password").header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"temporaryPassword\":\"a-temporary-secret-1\"}"))
+                .andExpect(status().isPreconditionRequired());
+        mockMvc.perform(put("/api/admin/users/" + bruno + "/password").header(HttpHeaders.AUTHORIZATION, bearer(brunoSession))
+                        .header(HttpHeaders.IF_MATCH, "\"" + version + "\"")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"temporaryPassword\":\"a-temporary-secret-1\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/admin/users/" + bruno + "/password").header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                        .header(HttpHeaders.IF_MATCH, "\"" + version + "\"")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"temporaryPassword\":\"short\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(put("/api/admin/users/" + bruno + "/password").header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                        .header(HttpHeaders.IF_MATCH, "\"" + version + "\"")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"temporaryPassword\":\"a-temporary-secret-1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mustChangePassword").value(true));
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(brunoSession)))
+                .andExpect(status().isUnauthorized());
+        login("bruno", "the-first-secret-of-b").andExpect(status().isUnauthorized());
+        login("bruno", "a-temporary-secret-1").andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.mustChangePassword").value(true));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM security_events WHERE type = 'PASSWORD_RESET' "
+                + "AND principal = 'admin' AND detail = 'for bruno'", Integer.class)).isEqualTo(1);
+    }
+
     @Test
     void theLastAdminCannotBeDisabledOrDemotedAndADisabledUserLosesTheirSessions() throws Exception {
         String admin = tokenOf("admin", ADMIN_PASSWORD);

@@ -23,7 +23,7 @@ public class EngineController {
     }
 
     @GetMapping("/api/engine/models")
-    public EngineClient.ModelList models() {
+    public EngineClient.ModelList engineModels() {
         try {
             return engine.models();
         } catch (EngineFailure failure) {

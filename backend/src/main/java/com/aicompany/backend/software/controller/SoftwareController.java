@@ -3,17 +3,21 @@ package com.aicompany.backend.software.controller;
 import com.aicompany.backend.api.ETags;
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.api.RequestValidationException;
+import com.aicompany.backend.deletion.DeletionPreview;
 import com.aicompany.backend.software.dto.LaunchRequest;
 import com.aicompany.backend.software.dto.LaunchResponse;
 import com.aicompany.backend.software.dto.SoftwareRequest;
 import com.aicompany.backend.software.dto.SoftwareResponse;
 import com.aicompany.backend.software.launch.LaunchPlan;
+import com.aicompany.backend.software.service.SoftwareDeletionService;
 import com.aicompany.backend.software.service.SoftwareService;
 import jakarta.validation.Valid;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,13 +37,30 @@ import java.util.List;
 public class SoftwareController {
 
     private final SoftwareService service;
+    private final SoftwareDeletionService deletions;
 
-    public SoftwareController(SoftwareService service) {
+    public SoftwareController(SoftwareService service, SoftwareDeletionService deletions) {
         this.service = service;
+        this.deletions = deletions;
+    }
+
+    /** PHASE 32 (TD-68): what deleting an entry would do, or why an entry of the shipped catalog stays. */
+    @GetMapping("/{key}/deletion")
+    public DeletionPreview deletion(@PathVariable String key) {
+        return deletions.preview(key);
+    }
+
+    /** Deletes an entry added through the API, under its tag. Admin-only (SecurityConfiguration). */
+    @DeleteMapping("/{key}")
+    public ResponseEntity<Void> deleteSoftware(@PathVariable String key,
+                                       @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+                                       Authentication caller) {
+        deletions.delete(key, Precondition.fromHeader(ifMatch), caller.getName());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping
-    public List<SoftwareResponse> list() {
+    public List<SoftwareResponse> listSoftware() {
         return service.findAll().stream().map(d -> SoftwareResponse.from(d.software(), d.detection())).toList();
     }
 
@@ -49,7 +70,7 @@ public class SoftwareController {
     }
 
     @PostMapping
-    public ResponseEntity<SoftwareResponse> create(@Valid @RequestBody SoftwareRequest request) {
+    public ResponseEntity<SoftwareResponse> createSoftware(@Valid @RequestBody SoftwareRequest request) {
         SoftwareService.Detected created = service.create(request.key(), request.definition());
         return ResponseEntity.created(URI.create("/api/software/" + created.software().getKey()))
                 .eTag(ETags.of(created.software().getVersion()))
@@ -57,7 +78,7 @@ public class SoftwareController {
     }
 
     @PutMapping("/{key}")
-    public ResponseEntity<SoftwareResponse> update(
+    public ResponseEntity<SoftwareResponse> updateSoftware(
             @PathVariable String key,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
             @Valid @RequestBody SoftwareRequest request) {
@@ -73,7 +94,7 @@ public class SoftwareController {
      * line comes from the caller (ADR-019 I1, I2).
      */
     @PostMapping("/{key}/launch")
-    public ResponseEntity<LaunchResponse> launch(@PathVariable String key,
+    public ResponseEntity<LaunchResponse> launchSoftware(@PathVariable String key,
                                                  @RequestBody(required = false) LaunchRequest request) {
         LaunchPlan plan = service.launch(key, request == null ? null : request.projectId());
         return ResponseEntity.accepted().body(new LaunchResponse(key, plan.command(),

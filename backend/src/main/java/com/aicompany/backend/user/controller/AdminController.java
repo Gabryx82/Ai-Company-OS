@@ -65,14 +65,14 @@ public class AdminController {
     }
 
     @PostMapping("/api/admin/users")
-    public ResponseEntity<UserResponse> create(@AuthenticationPrincipal Caller caller, @Valid @RequestBody NewUser r) {
+    public ResponseEntity<UserResponse> createUser(@AuthenticationPrincipal Caller caller, @Valid @RequestBody NewUser r) {
         AppUser user = auth.create(caller, r.username(), r.displayName(), r.role(), r.initialPassword());
         return ResponseEntity.created(URI.create("/api/admin/users/" + user.getId()))
                 .eTag(ETags.of(user.getVersion())).body(UserResponse.from(user));
     }
 
     @PutMapping("/api/admin/users/{id}")
-    public ResponseEntity<UserResponse> update(@AuthenticationPrincipal Caller caller, @PathVariable Long id,
+    public ResponseEntity<UserResponse> updateUser(@AuthenticationPrincipal Caller caller, @PathVariable Long id,
                                                @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                                @Valid @RequestBody UserUpdate r) {
         AppUser user = auth.update(caller, id, r.displayName(), r.role(), r.enabled(), Precondition.fromHeader(ifMatch));

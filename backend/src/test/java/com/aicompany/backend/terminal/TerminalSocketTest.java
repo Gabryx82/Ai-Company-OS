@@ -315,5 +315,19 @@ class TerminalSocketTest {
         String operator = "Bearer test-operator-token-0123456789";
         assertThat(send("POST", "/api/terminal/tickets", operator, "{\"shell\":\"test\"}")).startsWith("403 ");
         assertThat(send("GET", "/api/terminal/sessions", operator, null)).startsWith("403 ");
+        assertThat(send("GET", "/api/terminal/shells", operator, null)).startsWith("403 ");
+    }
+
+    /** PHASE 32 (TD-09): the shells an admin may open, each said available or not and why. */
+    @Test
+    void anAdminSeesWhichShellsCanBeOpened() throws Exception {
+        String answer = send("GET", "/api/terminal/shells", adminBearer(), null);
+        assertThat(answer).startsWith("200 ");
+        JsonNode shells = json.readTree(answer.substring(4));
+        java.util.Map<String, JsonNode> byKey = new java.util.HashMap<>();
+        shells.forEach(s -> byKey.put(s.path("key").asString(), s));
+        assertThat(byKey).containsKeys("powershell", "claude-code", "opencode", "test");
+        assertThat(byKey.get("test").path("available").asBoolean()).isTrue();
+        byKey.values().forEach(s -> assertThat(s.path("name").asString()).isNotBlank());
     }
 }

@@ -32,7 +32,7 @@ public class PlanController {
     public record GenerateRequest(@Size(max = 200) String model) {
     }
 
-    public record ReviewRequest(@Size(max = 2000) String note) {
+    public record PhaseReviewRequest(@Size(max = 2000) String note) {
     }
 
     public record PlanRunResponse(Long id, Long projectId, PlanRun.Source source, PlanRun.Status status,
@@ -92,12 +92,12 @@ public class PlanController {
 
     /** The planning request as an external agent reads it (the text of the handoff). */
     @GetMapping(value = "/api/projects/{id}/plan/handoff", produces = MediaType.TEXT_PLAIN_VALUE)
-    public String handoff(@PathVariable Long id) {
+    public String planHandoff(@PathVariable Long id) {
         return service.handoffText(id);
     }
 
     @GetMapping("/api/plan-runs/{runId}")
-    public PlanRunResponse run(@PathVariable Long runId) {
+    public PlanRunResponse getPlanRun(@PathVariable Long runId) {
         return PlanRunResponse.from(service.run(runId));
     }
 
@@ -114,7 +114,7 @@ public class PlanController {
     public ResponseEntity<PhaseResponse> approvePhase(
             @PathVariable Long phaseId,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
-            @Valid @RequestBody(required = false) ReviewRequest request) {
+            @Valid @RequestBody(required = false) PhaseReviewRequest request) {
         return phase(service.reviewPhase(phaseId, true, request == null ? null : request.note(),
                 Precondition.fromHeader(ifMatch)));
     }
@@ -123,7 +123,7 @@ public class PlanController {
     public ResponseEntity<PhaseResponse> requestChanges(
             @PathVariable Long phaseId,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
-            @Valid @RequestBody(required = false) ReviewRequest request) {
+            @Valid @RequestBody(required = false) PhaseReviewRequest request) {
         return phase(service.reviewPhase(phaseId, false, request == null ? null : request.note(),
                 Precondition.fromHeader(ifMatch)));
     }

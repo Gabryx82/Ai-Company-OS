@@ -583,6 +583,19 @@ class SkillHubApiTest extends AbstractPostgresTest {
 
     // --- marketplaces and updates -----------------------------------------------------------
 
+    /** PHASE 32 (TD-09): the marketplaces the console offers, each with how it is searched and where it installs. */
+    @Test
+    void theMarketplacesAreListedWithTheirKindAndWhereTheyInstall() throws Exception {
+        JsonNode providers = getJson("/api/skill-hub/marketplaces");
+        List<String> keys = new ArrayList<>();
+        providers.forEach(p -> keys.add(p.path("key").asString()));
+        assertThat(keys).contains("skills-sh", "clawhub", "anthropic-skills", "openai-skills");
+        providers.forEach(p -> {
+            assertThat(p.path("name").asString()).as(p.toString()).isNotBlank();
+            assertThat(p.path("homepage").asString()).as(p.toString()).startsWith("https://");
+        });
+    }
+
     @Test
     void aSearchAsksEveryMarketplaceAndOneThatIsDownHidesNothing() throws Exception {
         web.answer("https://skills.sh/api/search?q=pdf&limit=30", "{\"skills\": ["

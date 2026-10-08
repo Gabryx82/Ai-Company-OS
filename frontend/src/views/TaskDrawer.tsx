@@ -121,6 +121,7 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
             <AssignSection task={task} agent={agent} binding={binding} bindings={bindings} project={project}
                            projects={projects} suggestions={suggestions} busy={busy}
                            onAgent={(id) => act((etag) => api.assignAgent(task.id, etag, id))}
+                           onUnassign={() => act((etag) => api.unassignAgent(task.id, etag))}
                            onProject={(id) => act((etag) => api.assignProject(task.id, etag, id))} />
 
             <OrchestratorPanel task={task} busy={busy} act={act} />
@@ -231,10 +232,10 @@ function RunCard({ run }: { run: Run }) {
  * Directive §1: what is assigned, to whom, with which model, through which
  * software -- visible before and after any change, never an anonymous id.
  */
-function AssignSection({ task, agent, binding, bindings, project, projects, suggestions, busy, onAgent, onProject }: {
+function AssignSection({ task, agent, binding, bindings, project, projects, suggestions, busy, onAgent, onUnassign, onProject }: {
   task: Task; agent: Agent | undefined; binding: AgentConfiguration | undefined; bindings: AgentConfiguration[];
   project: Project | undefined; projects: Project[]; suggestions: Suggestion[]; busy: boolean;
-  onAgent: (id: number) => void; onProject: (id: number) => void;
+  onAgent: (id: number) => void; onUnassign: () => void; onProject: (id: number) => void;
 }) {
   const [choosing, setChoosing] = useState(false);
   const [moving, setMoving] = useState(false);
@@ -258,6 +259,10 @@ function AssignSection({ task, agent, binding, bindings, project, projects, sugg
       )}
       <div className="row">
         <button className="btn" disabled={busy} onClick={() => setChoosing(true)}>{agent ? "Cambia agente" : "Assegna agente"}</button>
+        {task.agentId != null && (
+          <button className="btn" disabled={busy} onClick={onUnassign} title="La task torna senza agente; l'agente resta">
+            Togli agente</button>
+        )}
         <button className="btn" disabled={busy} onClick={() => setMoving(true)}>{project ? "Cambia progetto" : "Associa a un progetto"}</button>
       </div>
       {choosing && (

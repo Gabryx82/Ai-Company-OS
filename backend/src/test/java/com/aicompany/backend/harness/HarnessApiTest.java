@@ -42,6 +42,9 @@ class HarnessApiTest extends AbstractPostgresTest {
     private JdbcTemplate jdbc;
 
     @Autowired
+    private com.aicompany.backend.catalog.CatalogBootstrap catalogBootstrap;
+
+    @Autowired
     private ScriptedEngineClient engine;
 
     private final JsonMapper json = JsonMapper.builder().build();
@@ -167,9 +170,56 @@ class HarnessApiTest extends AbstractPostgresTest {
         mockMvc.perform(delete("/api/agents/" + id + "/resources/tdd-workflow")).andExpect(status().isNoContent());
         mockMvc.perform(get("/api/agents/" + id + "/profile")).andExpect(jsonPath("$.resources.length()").value(0));
 
+        // PHASE 32 (TD-09): the software, taken away the same way.
+        mockMvc.perform(delete("/api/agents/" + id + "/software/intellij-junie")).andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/agents/" + id + "/software/intellij-junie")).andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/agents/" + id + "/profile")).andExpect(jsonPath("$.software.length()").value(0));
+
         mockMvc.perform(put("/api/agents/" + id + "/resources/nope"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:harness-resource-not-found"));
+    }
+
+    /** PHASE 32 (TD-73, TD-09): an entry a person adds is theirs, and one recorded before as the catalog's is relabelled. */
+    @Test
+    void anEntryAPersonAddsIsTheirsNotTheShippedCatalogs() throws Exception {
+        String key = "person-" + Long.toHexString(System.nanoTime());
+        try {
+            mockMvc.perform(post("/api/resources").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"key\":\"" + key + "\",\"kind\":\"SKILL\",\"name\":\"Mine\",\"tags\":[\"own\"]}"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.origin").value("USER"));
+            mockMvc.perform(post("/api/resources").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"key\":\"" + key + "\",\"kind\":\"SKILL\",\"name\":\"Again\"}"))
+                    .andExpect(status().isConflict());
+            mockMvc.perform(post("/api/resources").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"key\":\"Not A Key\",\"kind\":\"SKILL\",\"name\":\"Bad\"}"))
+                    .andExpect(status().isBadRequest());
+
+            // An entry created before the fix still says CATALOG: the next start relabels it,
+            // and leaves the shipped ones alone.
+            jdbc.update("UPDATE harness_resources SET origin = 'CATALOG' WHERE key = ?", key);
+            catalogBootstrap.run(null);
+            assertThat(jdbc.queryForObject("SELECT origin FROM harness_resources WHERE key = ?", String.class, key)).isEqualTo("USER");
+            assertThat(jdbc.queryForObject("SELECT origin FROM harness_resources WHERE key = 'tdd-workflow'", String.class)).isEqualTo("CATALOG");
+        } finally {
+            jdbc.update("DELETE FROM harness_resources WHERE key = ?", key);
+        }
+    }
+
+    /** PHASE 32 (TD-09): every template at once, and again without overwriting. */
+    @Test
+    void installAllInstallsEveryTemplateOnceAndThenFindsThemThere() throws Exception {
+        MvcResult first = mockMvc.perform(post("/api/agent-templates/install-all")).andExpect(status().isOk()).andReturn();
+        JsonNode installed = json.readTree(first.getResponse().getContentAsString());
+        assertThat(installed.size()).isGreaterThan(12);
+        java.util.List<String> outcomes = new java.util.ArrayList<>();
+        installed.forEach(entry -> outcomes.add(entry.path("outcome").asString()));
+        assertThat(outcomes).contains("CREATED");
+
+        mockMvc.perform(post("/api/agent-templates/install-all"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].outcome", org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("EXISTING"))));
     }
 
     @Test

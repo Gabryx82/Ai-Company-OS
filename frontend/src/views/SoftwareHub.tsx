@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useApi } from "../context";
+import { useApi, useIsAdmin } from "../context";
 import type { Availability, Project, Software, SoftwareCategory } from "../api/types";
 import { ProblemNote } from "../components/ui";
 import { AppIcon } from "../components/AppIcon";
 import { Icon } from "../components/icons";
+import { ConfirmDeletion, DeleteButton } from "../components/Deletion";
 
 export const CATEGORY_LABEL: Record<SoftwareCategory, string> = {
   AGENTIC_IDE: "Agentic IDE", IDE: "IDE", EDITOR: "Editor", TERMINAL: "Terminale", AI_CLOUD: "AI Cloud",
@@ -55,6 +56,8 @@ export function SoftwareHub({ selected, navigate }: { selected: string | null; n
   const [problem, setProblem] = useState<unknown>(null);
   const { launch, outcome } = useLauncher();
   const [projectId, setProjectId] = useState<number | "">("");
+  const isAdmin = useIsAdmin();
+  const [deleting, setDeleting] = useState<Software | null>(null);
 
   const load = useCallback(() => {
     api.software().then(setAll).catch(setProblem);
@@ -121,6 +124,7 @@ export function SoftwareHub({ selected, navigate }: { selected: string | null; n
               <AppIcon software={current} size={40} />
               <div><h2>{current.name}</h2><span className="muted" style={{ fontSize: 12 }}>{current.role}</span></div>
               <span className="spacer" />
+              {isAdmin && !current.catalog && <DeleteButton label={`Elimina ${current.name}`} onClick={() => setDeleting(current)} />}
               <button className="btn btn-small" onClick={() => navigate("software")} aria-label="Chiudi"><Icon name="close" size={14} /></button>
             </div>
             <div className="card-body stack">
@@ -176,6 +180,17 @@ export function SoftwareHub({ selected, navigate }: { selected: string | null; n
           </div>
         )}
       </div>
+      {deleting && (
+        <ConfirmDeletion title="Elimina dal Software Hub" subject={deleting.name}
+                         loadPreview={() => api.softwareDeletionPreview(deleting.key)}
+                         onClose={() => setDeleting(null)}
+                         onConfirm={async () => {
+                           await api.deleteSoftware(deleting.key, deleting.version);
+                           setDeleting(null);
+                           navigate("software");
+                           load();
+                         }} />
+      )}
     </div>
   );
 }

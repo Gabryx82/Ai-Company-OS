@@ -3,6 +3,7 @@ import { useApi, useIsAdmin } from "../context";
 import type { EcosystemServiceInfo } from "../api/types";
 import { Field, Modal, ProblemNote, when } from "./ui";
 import { Icon } from "./icons";
+import { ConfirmDeletion, DeleteButton } from "./Deletion";
 
 const STATUS: Record<string, { label: string; tone: string }> = {
   NEVER: { label: "mai avviato", tone: "badge" },
@@ -28,6 +29,7 @@ export function EcosystemPanel({ manage }: { manage?: boolean }) {
   const [services, setServices] = useState<EcosystemServiceInfo[] | null>(null);
   const [problem, setProblem] = useState<unknown>(null);
   const [editing, setEditing] = useState<EcosystemServiceInfo | null>(null);
+  const [removing, setRemoving] = useState<EcosystemServiceInfo | null>(null);
 
   const load = useCallback(() => api.ecosystemServices().then(setServices).catch(setProblem), [api]);
   useEffect(() => { load(); }, [load]);
@@ -68,10 +70,23 @@ export function EcosystemPanel({ manage }: { manage?: boolean }) {
           <button className="btn btn-small" disabled={s.availability === "RUNNING" || s.lastStatus === "STARTING"}
                   onClick={() => act(() => api.startEcosystemService(s.key))}>Avvia</button>
           {manage && isAdmin && <button className="btn btn-small" onClick={() => setEditing(s)}>Configura</button>}
+          {manage && isAdmin && s.removable && (
+            <DeleteButton label={`Togli ${s.name} dall'avvio`} onClick={() => setRemoving(s)} />
+          )}
         </div>
       ))}
       {services?.length === 0 && <div className="muted">Nessun servizio configurato.</div>}
       {editing && <ConfigureService service={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+      {removing && (
+        <ConfirmDeletion title="Togli dall'avvio" subject={removing.name} confirmLabel="Togli"
+                         loadPreview={() => api.ecosystemServiceRemovalPreview(removing.key)}
+                         onClose={() => setRemoving(null)}
+                         onConfirm={async () => {
+                           await api.removeEcosystemService(removing.key, removing.version);
+                           setRemoving(null);
+                           await load();
+                         }} />
+      )}
     </div>
   );
 }

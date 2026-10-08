@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ControlPlane } from "../api/client";
-import { ApiContext } from "../context";
+import { ApiContext, SessionContext } from "../context";
 import { fakeFetch } from "../test/fakeServer";
 import { EcosystemPanel } from "./EcosystemPanel";
 
@@ -31,5 +31,37 @@ describe("EcosystemPanel (ADR-028)", () => {
 
     fireEvent.click(buttons[1]);
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/api/ecosystem/services/omniverse-3d/start")).toBe(true));
+  });
+
+  it("lets an admin take an added service out of the start, after its preview, and not a default one (TD-69)", async () => {
+    let removed = false;
+    const { fetcher, calls } = fakeFetch({
+      "GET /api/ecosystem/services": () => ({ body: [
+        service("ollama", "Ollama", { removable: false }),
+        ...(removed ? [] : [service("postman", "Postman", { removable: true, version: 2, autostart: false })]),
+      ] }),
+      "GET /api/admin/ecosystem/services/postman/deletion": () => ({ body: { kind: "ECOSYSTEM_SERVICE",
+        subjects: [{ id: "postman", name: "Postman" }], deletes: ["«Postman» esce dall'avvio coordinato e da questo elenco."],
+        detaches: [], keeps: ["Il programma resta installato e nel Software Hub."], files: [], blockers: [], allowed: true } }),
+      "DELETE /api/admin/ecosystem/services/postman": () => { removed = true; return { status: 204 }; },
+    });
+    const api = new ControlPlane({ baseUrl: "http://localhost:8081", token: "t0123456789abcdef",
+      user: { id: 1, username: "admin", displayName: "Admin", role: "ADMIN", enabled: true, mustChangePassword: false,
+        lastLoginAt: null, passwordChangedAt: null, version: 0 } }, fetcher);
+    render(
+      <SessionContext.Provider value={{ baseUrl: "http://localhost:8081", token: "t0123456789abcdef",
+        user: { id: 1, username: "admin", displayName: "Admin", role: "ADMIN", enabled: true, mustChangePassword: false,
+          lastLoginAt: null, passwordChangedAt: null, version: 0 } }}>
+        <ApiContext.Provider value={api}><EcosystemPanel manage /></ApiContext.Provider>
+      </SessionContext.Provider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Togli Postman dall'avvio" }));
+    expect(screen.queryByRole("button", { name: "Togli Ollama dall'avvio" })).toBeNull();
+    expect(await screen.findByText(/resta installato/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Togli" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
+    expect(calls.find((c) => c.method === "DELETE")!.headers["If-Match"]).toBe('"2"');
+    await waitFor(() => expect(screen.queryByText("Postman")).toBeNull());
   });
 });

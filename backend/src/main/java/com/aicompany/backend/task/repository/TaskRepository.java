@@ -76,6 +76,12 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             + "WHERE t.status = :status ORDER BY t.id ASC")
     List<Task> findAllByStatusWithAssociations(@Param("status") TaskStatus status);
 
+    /** PHASE 32 (TD-34): the tasks whose agent is in one state, oldest first, associations resolved. */
+    @Query("SELECT t FROM Task t LEFT JOIN FETCH t.project JOIN FETCH t.agent a "
+            + "WHERE a.status = :agentStatus ORDER BY t.id ASC")
+    List<Task> findAllByAgentStatusWithAssociations(
+            @Param("agentStatus") com.aicompany.backend.agent.model.AgentStatus agentStatus);
+
     /**
      * One task with both associations resolved, for the single read.
      *

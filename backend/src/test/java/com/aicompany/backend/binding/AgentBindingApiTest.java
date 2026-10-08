@@ -81,6 +81,26 @@ class AgentBindingApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$[?(@.key == 'codex')].providers[0]").value(hasItems("chatgpt-subscription")));
     }
 
+    /** PHASE 32 (TD-09): the preview the console shows before saving a binding -- same verdicts, nothing saved. */
+    @Test
+    void aBindingIsPreviewedBeforeItIsSaved() throws Exception {
+        mockMvc.perform(get("/api/execution-targets/engine/check").param("model", "ollama:qwen3.5:9b"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.provider.key").value("ollama"))
+                .andExpect(jsonPath("$.target.key").value("engine"));
+        mockMvc.perform(get("/api/execution-targets/engine/check").param("model", "claude-subscription:default"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.problems.length()").value(org.hamcrest.Matchers.greaterThan(0)));
+        mockMvc.perform(get("/api/execution-targets/claude-code/check").param("model", "claude-subscription:default"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true));
+        mockMvc.perform(get("/api/execution-targets/no-such-target/check"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:target-not-found"));
+    }
+
     @Test
     void aModelGoesOnlyWhereItCanRunAndTheChainIsShownWithItsProvider() throws Exception {
         long id = agent("Binding Backend");

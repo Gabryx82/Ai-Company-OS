@@ -43,7 +43,7 @@ public class ProjectController {
     }
 
     @GetMapping
-    public List<ProjectResponse> list(@RequestParam(required = false) ProjectStatus status) {
+    public List<ProjectResponse> listProjects(@RequestParam(required = false) ProjectStatus status) {
         return service.findAll(status)
                 .stream()
                 .map(ProjectResponse::from)
@@ -56,7 +56,7 @@ public class ProjectController {
     }
 
     @PostMapping
-    public ResponseEntity<ProjectResponse> create(@Valid @RequestBody ProjectCreateRequest request) {
+    public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody ProjectCreateRequest request) {
 
         Project created = service.create(request.name(), request.description());
 
@@ -67,7 +67,7 @@ public class ProjectController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProjectResponse> update(
+    public ResponseEntity<ProjectResponse> updateProject(
             @PathVariable Long id,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
             @Valid @RequestBody ProjectUpdateRequest request) {

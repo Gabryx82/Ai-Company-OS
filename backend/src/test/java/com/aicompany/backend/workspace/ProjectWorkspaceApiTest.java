@@ -63,6 +63,21 @@ class ProjectWorkspaceApiTest extends AbstractPostgresTest {
                 .andExpect(status().isOk());
     }
 
+    /** PHASE 32 (TD-09): the folder the console proposes for a name -- a slug under the workspace root, never outside it. */
+    @Test
+    void theDefaultFolderIsASlugOfTheNameUnderTheRoot() throws Exception {
+        String folder = json(mockMvc.perform(get("/api/workspace/default-folder").param("name", "Città Più Bella!"))
+                .andExpect(status().isOk())).path("path").asString();
+        assertThat(Path.of(folder).getFileName().toString()).isEqualTo("citta-piu-bella");
+        String escape = json(mockMvc.perform(get("/api/workspace/default-folder").param("name", "../../Windows"))
+                .andExpect(status().isOk())).path("path").asString();
+        assertThat(Path.of(escape).getFileName().toString()).isEqualTo("windows");
+        assertThat(Path.of(escape).getParent()).isEqualTo(Path.of(folder).getParent());
+        String empty = json(mockMvc.perform(get("/api/workspace/default-folder").param("name", "***"))
+                .andExpect(status().isOk())).path("path").asString();
+        assertThat(Path.of(empty).getFileName().toString()).isEqualTo("project");
+    }
+
     @Test
     void aNewProjectStartsGuidedWithNoPlanAndNoType() throws Exception {
         long id = createProject("Demo");
@@ -223,6 +238,11 @@ class ProjectWorkspaceApiTest extends AbstractPostgresTest {
 
     private static String json(Path path) {
         return "\"" + path.toString().replace("\\", "\\\\") + "\"";
+    }
+
+    private static tools.jackson.databind.JsonNode json(org.springframework.test.web.servlet.ResultActions result) throws Exception {
+        return tools.jackson.databind.json.JsonMapper.builder().build()
+                .readTree(result.andReturn().getResponse().getContentAsString());
     }
 
     @SuppressWarnings("unused")

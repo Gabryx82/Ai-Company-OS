@@ -19,12 +19,14 @@ export function TaskBoard() {
   const [problem, setProblem] = useState<unknown>(null);
   const [openTask, setOpenTask] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
+  // PHASE 32 (TD-34): only the tasks waiting on an agent that is switched off.
+  const [onInactive, setOnInactive] = useState(false);
 
   const reload = useCallback(() => {
-    Promise.all([api.tasks(), api.agents(), api.projects()])
+    Promise.all([api.tasks(undefined, onInactive ? "INACTIVE" : undefined), api.agents(), api.projects()])
       .then(([t, a, p]) => { setTasks(t); setAgents(a); setProjects(p); })
       .catch(setProblem);
-  }, [api]);
+  }, [api, onInactive]);
 
   useEffect(reload, [reload]);
 
@@ -38,9 +40,17 @@ export function TaskBoard() {
           <h1>Task</h1>
           <p>Apri una card per assegnarla, orchestrarla, eseguirla e portarla lungo il suo ciclo di vita.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreating(true)}>Nuova task</button>
+        <div className="row">
+          <label className="row" style={{ gap: 6, fontSize: 13 }}>
+            <input type="checkbox" style={{ width: "auto" }} checked={onInactive} onChange={(e) => setOnInactive(e.target.checked)} />
+            Solo su agenti disattivati</label>
+          <button className="btn btn-primary" onClick={() => setCreating(true)}>Nuova task</button>
+        </div>
       </div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
+      {onInactive && tasks?.length === 0 && (
+        <div className="notice">Nessuna task aspetta un agente disattivato.</div>
+      )}
       <div className="board">
         {TASK_STATUSES.map((status) => {
           const column = tasks?.filter((t) => t.status === status) ?? [];

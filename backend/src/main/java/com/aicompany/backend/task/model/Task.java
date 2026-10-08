@@ -279,6 +279,20 @@ public class Task {
     }
 
     /**
+     * PHASE 32 (TD-35): the task goes back to nobody. The one rule is the freezing
+     * rule -- a task of an archived project is read-only in every field -- and, as for
+     * {@link #assignTo(Agent, Project)}, nothing depends on the agent it leaves
+     * (ADR-010 D3). Already unassigned is not an error: the state asked for is there.
+     */
+    public void unassignAgent(Project projectItLivesIn) {
+        if (agent == null) {
+            return;
+        }
+        requireNotFrozen(projectItLivesIn);
+        this.agent = null;
+    }
+
+    /**
      * Replaces the details of this task: title, description, priority (TASK-016).
      *
      * <p>Not the status, and not the associations -- each has its own path with

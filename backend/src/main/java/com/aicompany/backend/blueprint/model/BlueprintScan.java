@@ -1,5 +1,6 @@
 package com.aicompany.backend.blueprint.model;
 
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -68,7 +69,7 @@ public class BlueprintScan {
 
     public void finish(int files, boolean truncated, int nodesDetected, int edgesDetected, int nodesAdded,
                        int nodesMissing, int unresolved, String languages) {
-        this.finishedAt = Instant.now();
+        this.finishedAt = DatabaseClock.now();
         this.files = files;
         this.truncated = truncated;
         this.nodesDetected = nodesDetected;

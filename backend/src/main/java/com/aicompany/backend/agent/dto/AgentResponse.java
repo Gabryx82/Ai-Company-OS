@@ -33,7 +33,10 @@ public record AgentResponse(
         boolean active,
         String status,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        // PHASE 32 (TD-33): the row version, so a listing is enough to write each element
+        // back with If-Match: "<version>" -- N writes no longer cost N reads first.
+        long version
 ) {
 
     public static AgentResponse from(Agent agent) {
@@ -46,7 +49,8 @@ public record AgentResponse(
                 agent.isActive(),
                 agent.getStatus().name(),
                 agent.getCreatedAt(),
-                agent.getUpdatedAt()
+                agent.getUpdatedAt(),
+                agent.getVersion()
         );
     }
 }

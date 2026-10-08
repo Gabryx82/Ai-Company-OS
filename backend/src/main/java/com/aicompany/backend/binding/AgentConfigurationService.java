@@ -50,11 +50,11 @@ public class AgentConfigurationService {
     public record ResourceRef(String key, String name, String kind, String description, String configuration) {
     }
 
-    public record SoftwareRef(String key, String name) {
+    public record BindingSoftwareRef(String key, String name) {
     }
 
     public record Configuration(Agent agent, Ref parent, List<Ref> children,
-                                Map<String, List<ResourceRef>> resources, List<SoftwareRef> software,
+                                Map<String, List<ResourceRef>> resources, List<BindingSoftwareRef> software,
                                 AgentBindingService.Binding binding, Map<String, Object> defaults,
                                 List<String> modified) {
     }
@@ -166,7 +166,7 @@ public class AgentConfigurationService {
             resources.get(r.getKind().name()).add(new ResourceRef(r.getKey(), r.getName(), r.getKind().name(),
                     r.getDescription(), r.getConfiguration()));
         }
-        List<SoftwareRef> software = h.software().stream().map(s -> new SoftwareRef(s.getKey(), s.getName())).toList();
+        List<BindingSoftwareRef> software = h.software().stream().map(s -> new BindingSoftwareRef(s.getKey(), s.getName())).toList();
 
         Map<String, Object> defaults = null;
         List<String> modified = List.of();

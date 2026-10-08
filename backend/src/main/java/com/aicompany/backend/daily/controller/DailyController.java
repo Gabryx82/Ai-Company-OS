@@ -67,14 +67,14 @@ public class DailyController {
     }
 
     @PostMapping("/api/daily")
-    public ResponseEntity<DailyResponse> create(@Valid @RequestBody DailyRequest request) {
+    public ResponseEntity<DailyResponse> createDailyItem(@Valid @RequestBody DailyRequest request) {
         DailyItem item = service.create(request.draft());
         return ResponseEntity.created(URI.create("/api/daily/" + item.getId())).eTag(ETags.of(item.getVersion()))
                 .body(DailyResponse.from(item));
     }
 
     @PutMapping("/api/daily/{id}")
-    public ResponseEntity<DailyResponse> update(@PathVariable Long id,
+    public ResponseEntity<DailyResponse> updateDailyItem(@PathVariable Long id,
                                                 @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                                 @Valid @RequestBody DailyRequest request) {
         DailyItem item = service.update(id, request.draft(), Precondition.fromHeader(ifMatch));
@@ -82,7 +82,7 @@ public class DailyController {
     }
 
     @DeleteMapping("/api/daily/{id}")
-    public ResponseEntity<Void> remove(@PathVariable Long id,
+    public ResponseEntity<Void> deleteDailyItem(@PathVariable Long id,
                                        @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
         service.remove(id, Precondition.fromHeader(ifMatch));
         return ResponseEntity.noContent().build();

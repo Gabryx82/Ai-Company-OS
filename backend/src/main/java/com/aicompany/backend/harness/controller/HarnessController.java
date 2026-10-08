@@ -55,20 +55,20 @@ public class HarnessController {
             @Size(max = 4000) String configuration) {
     }
 
-    public record ProfileRequest(Long parentId, @Size(max = 120) String domain, @Size(max = 8000) String systemPrompt,
+    public record AgentProfileRequest(Long parentId, @Size(max = 120) String domain, @Size(max = 8000) String systemPrompt,
                                  @Size(max = 4000) String responsibilities, @Size(max = 4000) String limits,
                                  @Size(max = 2000) String outputFormat, @Size(max = 8000) String directives,
                                  @Size(max = 2000) String contextPolicy) {
     }
 
-    public record SoftwareRef(String key, String name) {
+    public record AgentSoftwareRef(String key, String name) {
     }
 
     public record AgentProfileResponse(Long agentId, String name, String role, String specialization, String model,
                                        boolean active, Long parentId, String domain, String systemPrompt,
                                        String responsibilities, String limits, String outputFormat,
                                        List<String> directives, String contextPolicy, List<ResourceResponse> resources,
-                                       List<SoftwareRef> software, long version) {
+                                       List<AgentSoftwareRef> software, long version) {
         public static AgentProfileResponse from(HarnessService.AgentHarness h) {
             Agent a = h.agent();
             return new AgentProfileResponse(a.getId(), a.getName(), a.getRole(), a.getSpecialization(), a.getModel(),
@@ -77,7 +77,7 @@ public class HarnessController {
                     a.getDirectives() == null ? List.of()
                             : Arrays.stream(a.getDirectives().split("\n")).map(String::strip).filter(d -> !d.isEmpty()).toList(),
                     a.getContextPolicy(), h.resources().stream().map(ResourceResponse::from).toList(),
-                    h.software().stream().map((Software s) -> new SoftwareRef(s.getKey(), s.getName())).toList(),
+                    h.software().stream().map((Software s) -> new AgentSoftwareRef(s.getKey(), s.getName())).toList(),
                     a.getVersion());
         }
     }
@@ -127,7 +127,7 @@ public class HarnessController {
     }
 
     @PostMapping("/api/resources")
-    public ResponseEntity<ResourceResponse> create(@Valid @RequestBody ResourceRequest r) {
+    public ResponseEntity<ResourceResponse> createResource(@Valid @RequestBody ResourceRequest r) {
         HarnessResource created = service.create(new HarnessResource(r.key(), r.kind(), r.name(), r.description(),
                 r.tags(), r.sourceUrl(), r.searchUrl(), r.configuration()));
         return ResponseEntity.created(URI.create("/api/resources/" + created.getKey())).body(ResourceResponse.from(created));
@@ -162,9 +162,9 @@ public class HarnessController {
 
     /** Prompt engineering and hierarchy. Takes the agent's tag (ADR-009). */
     @PutMapping("/api/agents/{id}/profile")
-    public ResponseEntity<AgentProfileResponse> configure(@PathVariable Long id,
+    public ResponseEntity<AgentProfileResponse> configureAgentProfile(@PathVariable Long id,
                                                           @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
-                                                          @Valid @RequestBody ProfileRequest r) {
+                                                          @Valid @RequestBody AgentProfileRequest r) {
         service.configure(id, new HarnessService.Profile(r.parentId(), r.domain(), r.systemPrompt(),
                 r.responsibilities(), r.limits(), r.outputFormat(), r.directives(), r.contextPolicy()),
                 Precondition.fromHeader(ifMatch));

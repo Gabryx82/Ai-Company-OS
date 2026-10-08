@@ -2,6 +2,7 @@ package com.aicompany.backend.task.service;
 
 import com.aicompany.backend.agent.exception.AgentNotFoundException;
 import com.aicompany.backend.agent.model.Agent;
+import com.aicompany.backend.agent.model.AgentStatus;
 import com.aicompany.backend.agent.repository.AgentRepository;
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.api.Versioned;
@@ -56,9 +57,25 @@ public class TaskService {
     /** Every task, or those in one state when {@code status} is given (TASK-016). */
     @Transactional(readOnly = true)
     public List<TaskResponse> findAll(TaskStatus status) {
-        return toResponses(status == null
-                ? repository.findAllWithAssociations()
-                : repository.findAllByStatusWithAssociations(status));
+        return findAll(status, null);
+    }
+
+    /**
+     * PHASE 32 (TD-34): also by the state of the assigned agent -- {@code INACTIVE}
+     * answers "which tasks wait on an agent that is switched off", in one call
+     * instead of two lists crossed by the client. Tasks with no agent are not in a
+     * listing filtered by agent state.
+     */
+    @Transactional(readOnly = true)
+    public List<TaskResponse> findAll(TaskStatus status, AgentStatus agentStatus) {
+        if (agentStatus == null) {
+            return toResponses(status == null
+                    ? repository.findAllWithAssociations()
+                    : repository.findAllByStatusWithAssociations(status));
+        }
+        return toResponses(repository.findAllByAgentStatusWithAssociations(agentStatus).stream()
+                .filter(task -> status == null || task.getStatus() == status)
+                .toList());
     }
 
     /**
@@ -307,6 +324,21 @@ public class TaskService {
         // Rules on the entity, not here.
         task.assignTo(target, lockedProject);
 
+        return versioned(repository.saveAndFlush(task));
+    }
+
+    /**
+     * PHASE 32 (TD-35): the inverse of {@link #assignToAgent}. Same order: L0 on the
+     * task, P1, L2 on its project (the freezing rule reads it); no agent row is read,
+     * because no rule depends on the agent being left.
+     */
+    public Versioned<TaskResponse> unassignAgent(Long taskId, Precondition precondition) {
+        Task task = repository.findByIdForUpdate(taskId)
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
+        precondition.requireSatisfiedBy(task.getVersion());
+        Long projectId = task.getProjectId();
+        Project lockedProject = projectId == null ? null : requireProjectForDecision(projectId);
+        task.unassignAgent(lockedProject);
         return versioned(repository.saveAndFlush(task));
     }
 

@@ -275,6 +275,32 @@ public class PlanningApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
     }
 
+    /** PHASE 32 (TD-09): the other answer of a review -- changes requested, with the note, and the tasks still held. */
+    @Test
+    void aPhaseSentBackForChangesKeepsItsTasksFromStarting() throws Exception {
+        writeMasterPrompt();
+        scriptPlan();
+        generateAndWait();
+        JsonNode phase = json.readTree(mockMvc.perform(get("/api/projects/" + projectId + "/plan"))
+                .andReturn().getResponse().getContentAsString()).path("phases").path(0);
+        long taskId = phase.path("tasks").path(0).path("id").asLong();
+
+        mockMvc.perform(post("/api/phases/" + phase.path("id").asLong() + "/request-changes")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"split the second task\"}"))
+                .andExpect(status().isPreconditionRequired());
+        mockMvc.perform(post("/api/phases/" + phase.path("id").asLong() + "/request-changes")
+                        .header(HttpHeaders.IF_MATCH, "\"" + phase.path("version").asLong() + "\"")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"split the second task\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.approval").value("CHANGES_REQUESTED"))
+                .andExpect(jsonPath("$.approvalNote").value("split the second task"));
+
+        String taskTag = mockMvc.perform(get("/api/tasks/" + taskId)).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+        mockMvc.perform(post("/api/tasks/" + taskId + "/start").header(HttpHeaders.IF_MATCH, taskTag))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:phase-not-approved"));
+    }
+
     @Test
     void anUntouchedDraftIsReplaceableAndAnApprovedPlanIsLocked() throws Exception {
         writeMasterPrompt();

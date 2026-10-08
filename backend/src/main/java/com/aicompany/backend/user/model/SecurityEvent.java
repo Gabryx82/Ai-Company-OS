@@ -1,5 +1,6 @@
 package com.aicompany.backend.user.model;
 
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -37,7 +38,7 @@ public class SecurityEvent {
     }
 
     public SecurityEvent(String type, String principal, String source, String detail) {
-        this.occurredAt = Instant.now();
+        this.occurredAt = DatabaseClock.now();
         this.type = type;
         this.principal = principal;
         this.source = source;

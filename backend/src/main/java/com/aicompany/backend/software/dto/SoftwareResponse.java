@@ -5,6 +5,7 @@ import com.aicompany.backend.software.detect.Detection;
 import com.aicompany.backend.software.model.LaunchKind;
 import com.aicompany.backend.software.model.Software;
 import com.aicompany.backend.software.model.SoftwareCategory;
+import com.aicompany.backend.software.service.SoftwareDeletionService;
 
 import java.time.Instant;
 import java.util.List;
@@ -44,7 +45,9 @@ public record SoftwareResponse(
         boolean launchable,
         long version,
         Instant createdAt,
-        Instant updatedAt) {
+        Instant updatedAt,
+        // PHASE 32 (TD-68): an entry of the shipped catalog -- disabled, never deleted.
+        boolean catalog) {
 
     public static SoftwareResponse from(Software s, Detection d) {
         boolean launchable = s.isEnabled() && switch (s.getLaunchKind()) {
@@ -59,6 +62,7 @@ public record SoftwareResponse(
                 s.getHealthUrl(), s.isEmbeddable(), s.getEmbedNote(), s.isExecutionTarget(), s.getRequirements(),
                 s.getConfiguration(), s.getIconUrl(), s.getIncompatibleReason(), s.isEnabled(),
                 d.availability(), d.detail(), d.executable() == null ? null : d.executable().toString(),
-                launchable, s.getVersion(), s.getCreatedAt(), s.getUpdatedAt());
+                launchable, s.getVersion(), s.getCreatedAt(), s.getUpdatedAt(),
+                SoftwareDeletionService.shipped(s.getKey()));
     }
 }

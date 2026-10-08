@@ -6,6 +6,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
@@ -14,7 +15,11 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * Deletes files AI Company OS manages, and nothing else (PHASE 30, ADR-035 §5).
@@ -39,6 +44,8 @@ import java.util.UUID;
  *
  * <p>What remains possible is a crash between the commit and the removal: the
  * row is gone and a hidden staged file stays on disk, invisible to every listing.
+ * {@link #sweep} removes those, and the control plane runs it at every start
+ * (PHASE 32, TD-70); a file staged by a transaction still open is never swept.
  * The reverse -- a file gone while its row stays -- needs the database to fail
  * the commit after the rename, and then the rollback puts the file back.
  */
@@ -51,6 +58,13 @@ public final class ManagedFiles {
 
     private record Staged(Path original, Path hidden) {
     }
+
+    /** A staged name: {@code .<name>.aicos-deleting-<uuid>}. */
+    private static final Pattern STAGED_NAME = Pattern.compile(
+            "^\\..+\\.aicos-deleting-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
+
+    /** Staged by a transaction that has not finished: it may still need them back. */
+    private static final Set<Path> IN_FLIGHT = ConcurrentHashMap.newKeySet();
 
     private ManagedFiles() {
     }
@@ -89,13 +103,16 @@ public final class ManagedFiles {
         List<Path> deleted = new ArrayList<>();
         for (Path target : present) {
             Path hidden = target.resolveSibling("." + target.getFileName() + STAGED_MARK + UUID.randomUUID());
+            IN_FLIGHT.add(hidden);
             try {
                 Files.move(target, hidden, StandardCopyOption.ATOMIC_MOVE);
                 staged.add(new Staged(target, hidden));
                 deleted.add(target);
             } catch (NoSuchFileException gone) {
                 // Removed by somebody else between the check and the move: already the end state.
+                IN_FLIGHT.remove(hidden);
             } catch (IOException e) {
+                IN_FLIGHT.remove(hidden);
                 restore(staged);
                 throw new DeletionBlockedException("'" + target.getFileName() + "' cannot be removed: it may be open "
                         + "in another program. Close it and try again.");
@@ -147,8 +164,41 @@ public final class ManagedFiles {
                 Files.deleteIfExists(s.hidden());
             } catch (IOException e) {
                 LOG.warn("Deleted {} but could not remove its staged copy {}: {}", s.original(), s.hidden(), e.getMessage());
+            } finally {
+                IN_FLIGHT.remove(s.hidden());
             }
         }
+    }
+
+    /**
+     * Removes the staged files left under {@code root} by a crash between a commit
+     * and the removal, or by a removal that failed because a program held the file.
+     * Only names this class gives ({@code .<name>.aicos-deleting-<uuid>}), only
+     * regular files, never one a transaction still open has staged. Returns what it
+     * removed; a folder that does not exist has nothing to sweep.
+     */
+    public static List<Path> sweep(Path root) {
+        List<Path> removed = new ArrayList<>();
+        if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
+            return removed;
+        }
+        try (Stream<Path> files = Files.walk(root, 16)) {
+            for (Path file : files.filter(f -> STAGED_NAME.matcher(f.getFileName().toString()).matches()).toList()) {
+                if (IN_FLIGHT.contains(file) || IN_FLIGHT.contains(file.toAbsolutePath().normalize())
+                        || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
+                    continue;
+                }
+                try {
+                    Files.deleteIfExists(file);
+                    removed.add(file);
+                } catch (IOException e) {
+                    LOG.warn("Could not sweep the staged file {}: {}", file, e.getMessage());
+                }
+            }
+        } catch (IOException | UncheckedIOException e) {
+            LOG.warn("Could not sweep {}: {}", root, e.getMessage());
+        }
+        return removed;
     }
 
     private static void restore(List<Staged> staged) {
@@ -158,6 +208,8 @@ public final class ManagedFiles {
             } catch (IOException e) {
                 LOG.error("Could not put back {} (staged as {}) after a failed delete: {}", s.original(), s.hidden(),
                         e.getMessage());
+            } finally {
+                IN_FLIGHT.remove(s.hidden());
             }
         }
     }

@@ -8,7 +8,7 @@ import { TaskDrawer } from "./TaskDrawer";
 
 const AGENT: Agent = {
   id: 1, name: "Code Architect", role: "Software Engineer", specialization: "Backend architecture",
-  model: "ollama:llama3.2:3b", active: true, status: "ACTIVE", createdAt: null, updatedAt: null,
+  model: "ollama:llama3.2:3b", active: true, status: "ACTIVE", createdAt: null, updatedAt: null, version: 0,
 };
 const TASK = { id: 7, title: "Design the planner", description: "Three endpoints", status: "OPEN", priority: "HIGH",
   projectId: null, agentId: 1 };
@@ -48,6 +48,20 @@ describe("TaskDrawer", () => {
     const start = calls.find((c) => c.method === "POST")!;
     expect(start.path).toBe("/api/tasks/7/start");
     expect(start.headers["If-Match"]).toBe('"0"');
+  });
+
+  it("takes the agent off a task with the tag it was read at, and offers it only when there is one (TD-35)", async () => {
+    let unassigned = false;
+    const calls = renderDrawer({
+      "GET /api/tasks/7": () => (unassigned ? { body: { ...TASK, agentId: null }, etag: '"4.cd34"' } : { body: TASK, etag: '"3.ab12"' }),
+      "DELETE /api/tasks/7/agent": () => { unassigned = true; return { body: { ...TASK, agentId: null }, etag: '"4.cd34"' }; },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Togli agente" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
+    const unassign = calls.find((c) => c.method === "DELETE")!;
+    expect(unassign.path).toBe("/api/tasks/7/agent");
+    expect(unassign.headers["If-Match"]).toBe('"3.ab12"');
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Togli agente" })).toBeNull());
   });
 
   it("says so, and re-reads, when somebody else wrote first -- it does not retry with the new tag", async () => {

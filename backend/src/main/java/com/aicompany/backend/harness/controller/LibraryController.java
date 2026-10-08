@@ -79,7 +79,7 @@ public class LibraryController {
     }
 
     @PostMapping("/api/library/entries")
-    public ResponseEntity<ResourceResponse> create(@Valid @RequestBody Content body) {
+    public ResponseEntity<ResourceResponse> createLibraryEntry(@Valid @RequestBody Content body) {
         HarnessResource created = library.create(body.content(), HarnessResource.Origin.USER);
         return ResponseEntity.created(URI.create("/api/resources/" + created.getKey() + "/file"))
                 .body(ResourceResponse.from(created));

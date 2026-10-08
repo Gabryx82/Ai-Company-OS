@@ -1,5 +1,6 @@
 package com.aicompany.backend.task.controller;
 
+import com.aicompany.backend.agent.model.AgentStatus;
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.api.Versioned;
 import com.aicompany.backend.task.dto.TaskAgentAssignmentRequest;
@@ -13,6 +14,7 @@ import com.aicompany.backend.task.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,10 +45,12 @@ public class TaskController {
      * and the cost of that round trip is TD-33.
      */
     @GetMapping
-    public List<TaskResponse> getTasks(@RequestParam(required = false) TaskStatus status) {
+    public List<TaskResponse> getTasks(@RequestParam(required = false) TaskStatus status,
+                                       @RequestParam(required = false) AgentStatus agentStatus) {
         // An unknown value does not convert, and the advice answers invalid-parameter:
         // "no such state" and "no task in that state" are different answers.
-        return service.findAll(status);
+        // PHASE 32 (TD-34): agentStatus=INACTIVE -- the tasks waiting on a switched-off agent.
+        return service.findAll(status, agentStatus);
     }
 
     /**
@@ -137,6 +141,18 @@ public class TaskController {
         return ok(service.assignToAgent(id, request.agentId(), Precondition.fromHeader(ifMatch)));
     }
 
+    /**
+     * PHASE 32 (TD-35): the task goes back to nobody, under the task's tag. Not a
+     * deletion of anything: the agent stays, the task stays, only the link goes.
+     */
+    @DeleteMapping("/{id}/agent")
+    public ResponseEntity<TaskResponse> unassignAgent(
+            @PathVariable Long id,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+
+        return ok(service.unassignAgent(id, Precondition.fromHeader(ifMatch)));
+    }
+
     // --- the lifecycle (ADR-014) ---------------------------------------------
     //
     // One route per edge, the shape the project and agent lifecycles already use
@@ -146,7 +162,7 @@ public class TaskController {
     // then OPEN -> DONE is a request away.
 
     @PostMapping("/{id}/start")
-    public ResponseEntity<TaskResponse> start(
+    public ResponseEntity<TaskResponse> startTask(
             @PathVariable Long id,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
         return ok(service.transition(id, TaskTransition.START, Precondition.fromHeader(ifMatch)));

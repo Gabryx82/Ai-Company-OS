@@ -238,6 +238,14 @@ class BlueprintApiTest extends AbstractPostgresTest {
                 + ",\"relation\":\"SERVICE_TO_REPOSITORY\"");
         assertThat(Files.readString(folder.resolve(".aicos/BLUEPRINT.md"))).contains("TaskService")
                 .contains("service → repository TaskRepository");
+
+        // PHASE 32 (TD-09): the history of scans, newest first.
+        JsonNode second = scan();
+        JsonNode scans = body(mockMvc.perform(get(base + "/scans")).andExpect(status().isOk()));
+        assertThat(scans.size()).isEqualTo(2);
+        assertThat(scans.path(0).path("id").asLong()).isEqualTo(second.path("id").asLong());
+        assertThat(scans.path(1).path("id").asLong()).isEqualTo(scan.path("id").asLong());
+        assertThat(scans.path(1).path("files").asInt()).isEqualTo(6);
     }
 
     @Test
@@ -245,7 +253,7 @@ class BlueprintApiTest extends AbstractPostgresTest {
         scan();
         long service = id("java:com.acme.task.TaskService");
         JsonNode detail = body(mockMvc.perform(get(base + "/nodes/" + service)).andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.ETAG, "\"0\"")));
+                .andExpect(header().string(HttpHeaders.ETAG, org.hamcrest.Matchers.startsWith("\"0."))));
         assertThat(detail.path("kind").asString()).isEqualTo("SERVICE");
         assertThat(detail.path("origin").asString()).isEqualTo("DETECTED");
         assertThat(detail.path("pathState").asString()).isEqualTo("LINKED");

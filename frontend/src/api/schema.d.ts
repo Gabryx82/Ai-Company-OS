@@ -60,7 +60,23 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["configure_3"];
+        put: operations["configureEcosystemService"];
+        post?: never;
+        delete: operations["removeEcosystemService"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/ecosystem/services/{key}/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["removal"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -93,7 +109,7 @@ export interface paths {
         };
         get: operations["users"];
         put?: never;
-        post: operations["create_5"];
+        post: operations["createUser"];
         delete?: never;
         options?: never;
         head?: never;
@@ -108,7 +124,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["update_3"];
+        put: operations["updateUser"];
         post?: never;
         delete?: never;
         options?: never;
@@ -286,7 +302,7 @@ export interface paths {
         get: operations["getAgent"];
         put: operations["updateAgent"];
         post?: never;
-        delete: operations["delete"];
+        delete: operations["deleteAgent"];
         options?: never;
         head?: never;
         patch?: never;
@@ -316,7 +332,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["configuration"];
-        put: operations["configure_2"];
+        put: operations["configureAgentBinding"];
         post?: never;
         delete?: never;
         options?: never;
@@ -380,7 +396,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["profile"];
-        put: operations["configure_1"];
+        put: operations["configureAgentProfile"];
         post?: never;
         delete?: never;
         options?: never;
@@ -523,7 +539,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["models"];
+        get: operations["catalogModels"];
         put: operations["classify"];
         post?: never;
         delete?: never;
@@ -589,7 +605,7 @@ export interface paths {
         };
         get: operations["between"];
         put?: never;
-        post: operations["create_4"];
+        post: operations["createDailyItem"];
         delete?: never;
         options?: never;
         head?: never;
@@ -620,9 +636,9 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["update_2"];
+        put: operations["updateDailyItem"];
         post?: never;
-        delete: operations["remove"];
+        delete: operations["deleteDailyItem"];
         options?: never;
         head?: never;
         patch?: never;
@@ -669,7 +685,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["start_1"];
+        post: operations["startEcosystemService"];
         delete?: never;
         options?: never;
         head?: never;
@@ -699,7 +715,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["models_1"];
+        get: operations["engineModels"];
         put?: never;
         post?: never;
         delete?: never;
@@ -781,7 +797,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["create_3"];
+        post: operations["createLibraryEntry"];
         delete?: never;
         options?: never;
         head?: never;
@@ -859,7 +875,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["run_1"];
+        get: operations["getPlanRun"];
         put?: never;
         post?: never;
         delete?: never;
@@ -875,9 +891,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_1"];
+        get: operations["listProjects"];
         put?: never;
-        post: operations["create_2"];
+        post: operations["createProject"];
         delete?: never;
         options?: never;
         head?: never;
@@ -892,7 +908,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getById"];
-        put: operations["update_1"];
+        put: operations["updateProject"];
         post?: never;
         delete: operations["deleteProject"];
         options?: never;
@@ -1371,7 +1387,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["handoff_1"];
+        get: operations["planHandoff"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1404,7 +1420,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["configure"];
+        put: operations["configureProjectProfile"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1533,7 +1549,7 @@ export interface paths {
         };
         get: operations["search"];
         put?: never;
-        post: operations["create_1"];
+        post: operations["createResource"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1627,7 +1643,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["run"];
+        get: operations["getRun"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1963,9 +1979,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list"];
+        get: operations["listSoftware"];
         put?: never;
-        post: operations["create"];
+        post: operations["createSoftware"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1996,7 +2012,23 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get"];
-        put: operations["update"];
+        put: operations["updateSoftware"];
+        post?: never;
+        delete: operations["deleteSoftware"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/software/{key}/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["deletion"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -2029,7 +2061,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["launch_1"];
+        post: operations["launchSoftware"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2078,7 +2110,7 @@ export interface paths {
         get?: never;
         put: operations["assignToAgent"];
         post?: never;
-        delete?: never;
+        delete: operations["unassignAgent"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2141,7 +2173,7 @@ export interface paths {
         };
         get: operations["handoffs"];
         put?: never;
-        post: operations["handoff"];
+        post: operations["handoffTask"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2221,7 +2253,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["start"];
+        post: operations["startTask"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2253,7 +2285,7 @@ export interface paths {
         };
         get: operations["runsOfTask"];
         put?: never;
-        post: operations["launch"];
+        post: operations["launchRun"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2391,6 +2423,17 @@ export interface components {
             role: string;
             specialization: string;
         };
+        AgentProfileRequest: {
+            contextPolicy?: string;
+            directives?: string;
+            domain?: string;
+            limits?: string;
+            outputFormat?: string;
+            /** Format: int64 */
+            parentId?: number;
+            responsibilities?: string;
+            systemPrompt?: string;
+        };
         AgentProfileResponse: {
             active?: boolean;
             /** Format: int64 */
@@ -2407,7 +2450,7 @@ export interface components {
             resources?: components["schemas"]["ResourceResponse"][];
             responsibilities?: string;
             role?: string;
-            software?: components["schemas"]["SoftwareRef"][];
+            software?: components["schemas"]["AgentSoftwareRef"][];
             specialization?: string;
             systemPrompt?: string;
             /** Format: int64 */
@@ -2432,6 +2475,12 @@ export interface components {
             status?: string;
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        AgentSoftwareRef: {
+            key?: string;
+            name?: string;
         };
         AgentSpend: {
             /** Format: int64 */
@@ -2495,6 +2544,10 @@ export interface components {
             target?: components["schemas"]["TargetRef"];
             valid?: boolean;
             warnings?: string[];
+        };
+        BindingSoftwareRef: {
+            key?: string;
+            name?: string;
         };
         BlueprintActionInfo: {
             /** @enum {string} */
@@ -2866,7 +2919,7 @@ export interface components {
         };
         CodeGraph: {
             cycles?: string[][];
-            edges?: components["schemas"]["Edge"][];
+            edges?: components["schemas"]["CodeGraphEdge"][];
             /** Format: int32 */
             externals?: number;
             /** Format: int32 */
@@ -2877,9 +2930,23 @@ export interface components {
                 [key: string]: number;
             };
             mostImported?: components["schemas"]["Hotspot"][];
-            nodes?: components["schemas"]["Node"][];
+            nodes?: components["schemas"]["CodeGraphNode"][];
             taskLinks?: components["schemas"]["TaskLink"][];
             truncated?: boolean;
+        };
+        CodeGraphEdge: {
+            kind?: string;
+            source?: string;
+            target?: string;
+        };
+        CodeGraphNode: {
+            directory?: string;
+            id?: string;
+            kind?: string;
+            label?: string;
+            language?: string;
+            /** Format: int32 */
+            lines?: number;
         };
         CodeMember: {
             annotations?: string[];
@@ -2983,7 +3050,7 @@ export interface components {
             };
             responsibilities?: string;
             role?: string;
-            software?: components["schemas"]["SoftwareRef"][];
+            software?: components["schemas"]["BindingSoftwareRef"][];
             specialization?: string;
             status?: string;
             systemPrompt?: string;
@@ -3118,10 +3185,19 @@ export interface components {
             tasks?: components["schemas"]["Document"][];
             workspacePath?: string;
         };
-        Edge: {
+        EcosystemEdge: {
             kind?: string;
             source?: string;
             target?: string;
+        };
+        EcosystemNode: {
+            id?: string;
+            label?: string;
+            meta?: {
+                [key: string]: unknown;
+            };
+            status?: string;
+            type?: string;
         };
         Event: {
             app?: string;
@@ -3195,8 +3271,8 @@ export interface components {
             model?: string;
         };
         Graph: {
-            edges?: components["schemas"]["Edge"][];
-            nodes?: components["schemas"]["Node"][];
+            edges?: components["schemas"]["EcosystemEdge"][];
+            nodes?: components["schemas"]["EcosystemNode"][];
         };
         HandoffRequest: {
             target: string;
@@ -3462,15 +3538,6 @@ export interface components {
             role: "ADMIN" | "OPERATOR";
             username: string;
         };
-        Node: {
-            directory?: string;
-            id?: string;
-            kind?: string;
-            label?: string;
-            language?: string;
-            /** Format: int32 */
-            lines?: number;
-        };
         Opened: {
             command?: string[];
             folder?: string;
@@ -3535,6 +3602,9 @@ export interface components {
             title?: string;
             /** Format: int64 */
             version?: number;
+        };
+        PhaseReviewRequest: {
+            note?: string;
         };
         PlanResponse: {
             phases?: components["schemas"]["PhaseResponse"][];
@@ -3609,17 +3679,17 @@ export interface components {
         ProfileChange: {
             displayName?: string;
         };
-        ProfileRequest: {
+        ProjectCreateRequest: {
+            description?: string;
+            name: string;
+        };
+        ProjectProfileRequest: {
             /** @enum {string} */
             autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
             /** @enum {string} */
             projectType?: "WEB_APP" | "BACKEND" | "MOBILE" | "DESKTOP" | "AI_ML" | "GAME" | "THREE_D" | "DATA" | "AUTOMATION" | "API" | "FULL_STACK" | "OTHER";
             stack?: string;
             workspacePath?: string;
-        };
-        ProjectCreateRequest: {
-            description?: string;
-            name: string;
         };
         ProjectResponse: {
             /** @enum {string} */
@@ -3639,6 +3709,8 @@ export interface components {
             status?: "ACTIVE" | "ARCHIVED";
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            version?: number;
             workspacePath?: string;
         };
         ProjectTypeInfo: {
@@ -3811,15 +3883,6 @@ export interface components {
             url?: string;
             version?: string;
         };
-        ReviewRequest: {
-            /** Format: int64 */
-            handoffId?: number;
-            note?: string;
-            /** Format: int64 */
-            runId?: number;
-            /** @enum {string} */
-            verdict: "ACCEPTED" | "CHANGES_REQUESTED";
-        };
         ReviewResponse: {
             /** Format: date-time */
             createdAt?: string;
@@ -3902,6 +3965,7 @@ export interface components {
             name?: string;
             /** Format: int32 */
             position?: number;
+            removable?: boolean;
             /** Format: int32 */
             timeoutSeconds?: number;
             url?: string;
@@ -3989,10 +4053,6 @@ export interface components {
             name?: string;
             reason?: string;
         };
-        SoftwareRef: {
-            key?: string;
-            name?: string;
-        };
         SoftwareRequest: {
             appId?: string;
             capabilities?: string[];
@@ -4026,6 +4086,7 @@ export interface components {
             availability?: "INSTALLED" | "NOT_INSTALLED" | "WEB" | "RUNNING" | "STOPPED" | "INCOMPATIBLE_HARDWARE" | "UNKNOWN";
             availabilityDetail?: string;
             capabilities?: string[];
+            catalog?: boolean;
             /** @enum {string} */
             category?: "AGENTIC_IDE" | "IDE" | "EDITOR" | "TERMINAL" | "AI_CLOUD" | "AI_LOCAL" | "DATABASE" | "API" | "INFRASTRUCTURE" | "DIAGRAM" | "DESIGN" | "THREE_D" | "VCS" | "HOSTING" | "PRODUCTIVITY";
             cliCommand?: string;
@@ -4164,6 +4225,17 @@ export interface components {
             /** @enum {string} */
             status?: "OPEN" | "IN_PROGRESS" | "DONE";
             title?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        TaskReviewRequest: {
+            /** Format: int64 */
+            handoffId?: number;
+            note?: string;
+            /** Format: int64 */
+            runId?: number;
+            /** @enum {string} */
+            verdict: "ACCEPTED" | "CHANGES_REQUESTED";
         };
         TaskUpdateRequest: {
             description?: string;
@@ -4383,7 +4455,7 @@ export interface operations {
             };
         };
     };
-    configure_3: {
+    configureEcosystemService: {
         parameters: {
             query?: never;
             header?: {
@@ -4407,6 +4479,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ServiceView"];
+                };
+            };
+        };
+    };
+    removeEcosystemService: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeletionPreview"];
                 };
             };
         };
@@ -4453,7 +4569,7 @@ export interface operations {
             };
         };
     };
-    create_5: {
+    createUser: {
         parameters: {
             query?: never;
             header?: never;
@@ -4477,7 +4593,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    updateUser: {
         parameters: {
             query?: never;
             header?: {
@@ -4801,7 +4917,7 @@ export interface operations {
             };
         };
     };
-    delete: {
+    deleteAgent: {
         parameters: {
             query?: {
                 subagents?: "DETACH" | "DELETE";
@@ -4872,7 +4988,7 @@ export interface operations {
             };
         };
     };
-    configure_2: {
+    configureAgentBinding: {
         parameters: {
             query?: never;
             header?: {
@@ -4995,7 +5111,7 @@ export interface operations {
             };
         };
     };
-    configure_1: {
+    configureAgentProfile: {
         parameters: {
             query?: never;
             header?: {
@@ -5008,7 +5124,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ProfileRequest"];
+                "application/json": components["schemas"]["AgentProfileRequest"];
             };
         };
         responses: {
@@ -5235,7 +5351,7 @@ export interface operations {
             };
         };
     };
-    models: {
+    catalogModels: {
         parameters: {
             query?: never;
             header?: never;
@@ -5369,7 +5485,7 @@ export interface operations {
             };
         };
     };
-    create_4: {
+    createDailyItem: {
         parameters: {
             query?: never;
             header?: never;
@@ -5416,7 +5532,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    updateDailyItem: {
         parameters: {
             query?: never;
             header?: {
@@ -5444,7 +5560,7 @@ export interface operations {
             };
         };
     };
-    remove: {
+    deleteDailyItem: {
         parameters: {
             query?: never;
             header?: {
@@ -5506,7 +5622,7 @@ export interface operations {
             };
         };
     };
-    start_1: {
+    startEcosystemService: {
         parameters: {
             query?: never;
             header?: never;
@@ -5548,7 +5664,7 @@ export interface operations {
             };
         };
     };
-    models_1: {
+    engineModels: {
         parameters: {
             query?: never;
             header?: never;
@@ -5652,7 +5768,7 @@ export interface operations {
             };
         };
     };
-    create_3: {
+    createLibraryEntry: {
         parameters: {
             query?: never;
             header?: never;
@@ -5733,7 +5849,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["ReviewRequest"];
+                "application/json": components["schemas"]["PhaseReviewRequest"];
             };
         };
         responses: {
@@ -5761,7 +5877,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["ReviewRequest"];
+                "application/json": components["schemas"]["PhaseReviewRequest"];
             };
         };
         responses: {
@@ -5776,7 +5892,7 @@ export interface operations {
             };
         };
     };
-    run_1: {
+    getPlanRun: {
         parameters: {
             query?: never;
             header?: never;
@@ -5798,7 +5914,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    listProjects: {
         parameters: {
             query?: {
                 status?: "ACTIVE" | "ARCHIVED";
@@ -5820,7 +5936,7 @@ export interface operations {
             };
         };
     };
-    create_2: {
+    createProject: {
         parameters: {
             query?: never;
             header?: never;
@@ -5866,7 +5982,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    updateProject: {
         parameters: {
             query?: never;
             header?: {
@@ -6829,7 +6945,7 @@ export interface operations {
             };
         };
     };
-    handoff_1: {
+    planHandoff: {
         parameters: {
             query?: never;
             header?: never;
@@ -6873,7 +6989,7 @@ export interface operations {
             };
         };
     };
-    configure: {
+    configureProjectProfile: {
         parameters: {
             query?: never;
             header?: {
@@ -6886,7 +7002,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ProfileRequest"];
+                "application/json": components["schemas"]["ProjectProfileRequest"];
             };
         };
         responses: {
@@ -7127,7 +7243,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    createResource: {
         parameters: {
             query?: never;
             header?: never;
@@ -7313,7 +7429,7 @@ export interface operations {
             };
         };
     };
-    run: {
+    getRun: {
         parameters: {
             query?: never;
             header?: never;
@@ -7813,7 +7929,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    listSoftware: {
         parameters: {
             query?: never;
             header?: never;
@@ -7833,7 +7949,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    createSoftware: {
         parameters: {
             query?: never;
             header?: never;
@@ -7897,7 +8013,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    updateSoftware: {
         parameters: {
             query?: never;
             header?: {
@@ -7925,6 +8041,50 @@ export interface operations {
             };
         };
     };
+    deleteSoftware: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeletionPreview"];
+                };
+            };
+        };
+    };
     icon: {
         parameters: {
             query?: never;
@@ -7947,7 +8107,7 @@ export interface operations {
             };
         };
     };
-    launch_1: {
+    launchSoftware: {
         parameters: {
             query?: never;
             header?: never;
@@ -7977,6 +8137,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "OPEN" | "IN_PROGRESS" | "DONE";
+                agentStatus?: "ACTIVE" | "INACTIVE";
             };
             header?: never;
             path?: never;
@@ -8123,6 +8284,30 @@ export interface operations {
             };
         };
     };
+    unassignAgent: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TaskResponse"];
+                };
+            };
+        };
+    };
     suggestionsFor: {
         parameters: {
             query?: never;
@@ -8213,7 +8398,7 @@ export interface operations {
             };
         };
     };
-    handoff: {
+    handoffTask: {
         parameters: {
             query?: never;
             header?: {
@@ -8350,7 +8535,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReviewRequest"];
+                "application/json": components["schemas"]["TaskReviewRequest"];
             };
         };
         responses: {
@@ -8365,7 +8550,7 @@ export interface operations {
             };
         };
     };
-    start: {
+    startTask: {
         parameters: {
             query?: never;
             header?: {
@@ -8435,7 +8620,7 @@ export interface operations {
             };
         };
     };
-    launch: {
+    launchRun: {
         parameters: {
             query?: never;
             header?: {

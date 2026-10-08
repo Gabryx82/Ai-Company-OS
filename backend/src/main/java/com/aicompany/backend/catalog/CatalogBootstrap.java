@@ -123,12 +123,26 @@ public class CatalogBootstrap implements ApplicationRunner {
                     added++;
                 }
             }
+            java.util.Set<String> shippedResources = new java.util.HashSet<>();
             for (ResourceEntry r : read("catalog/resources.json", ResourceEntry[].class)) {
+                shippedResources.add(r.key());
                 if (!resources.existsByKey(r.key())) {
                     resources.save(new HarnessResource(r.key(), r.kind(), r.name(), r.description(), r.tags(),
                             r.sourceUrl(), r.searchUrl(), r.configuration()));
                     added++;
                 }
+            }
+            // PHASE 32 (TD-73): POST /api/resources used to record a person's entry as CATALOG.
+            // An entry labelled CATALOG that the shipped catalog does not have is one of those.
+            int relabelled = 0;
+            for (HarnessResource r : resources.findAll()) {
+                if (r.getOrigin() == HarnessResource.Origin.CATALOG && !shippedResources.contains(r.getKey())) {
+                    r.createdByAPerson();
+                    relabelled++;
+                }
+            }
+            if (relabelled > 0) {
+                log.info("Catalog bootstrap: {} entries created by a person relabelled USER", relabelled);
             }
             if (added > 0) {
                 log.info("Catalog bootstrap: {} new reference entries", added);

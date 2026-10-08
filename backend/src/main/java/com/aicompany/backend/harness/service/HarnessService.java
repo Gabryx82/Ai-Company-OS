@@ -134,6 +134,7 @@ public class HarnessService {
     }
 
     public HarnessResource create(HarnessResource resource) {
+        resource.createdByAPerson();
         if (resources.existsByKey(resource.getKey())) {
             throw new HarnessResourceKeyConflictException("The catalog already has a resource '" + resource.getKey() + "'");
         }

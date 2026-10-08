@@ -17,6 +17,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItems;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -157,6 +158,67 @@ class EcosystemApiTest extends AbstractPostgresTest {
         }
         assertThat(outcome).isEqualTo("FAILED");
         assertThat(service("omniverse-3d").path("lastMessage").asString()).contains("non risponde dopo 5 s");
+    }
+
+    /** PHASE 32 (TD-09): an admin adds a service from the catalog; it joins last, switched off, and once. */
+    @Test
+    void anAdminAddsACatalogServiceToTheStartLast() throws Exception {
+        mockMvc.perform(post("/api/admin/ecosystem/services").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"key\":\"postman\"}")).andExpect(status().isForbidden());
+
+        String admin = AdminSession.bearer(mockMvc);
+        int last = 0;
+        for (JsonNode s : json.readTree(mockMvc.perform(get("/api/ecosystem/services")).andReturn().getResponse().getContentAsString())) {
+            last = Math.max(last, s.path("position").asInt());
+        }
+        mockMvc.perform(post("/api/admin/ecosystem/services").header(HttpHeaders.AUTHORIZATION, admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"key\":\"postman\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.key").value("postman"))
+                .andExpect(jsonPath("$.autostart").value(false))
+                .andExpect(jsonPath("$.position").value(last + 1));
+        mockMvc.perform(post("/api/admin/ecosystem/services").header(HttpHeaders.AUTHORIZATION, admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"key\":\"postman\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.position").value(last + 1));
+        mockMvc.perform(post("/api/admin/ecosystem/services").header(HttpHeaders.AUTHORIZATION, admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"key\":\"no-such-software\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    /** PHASE 32 (TD-69): a service an admin added is taken out of the start again; one of the defaults is not. */
+    @Test
+    void anAddedServiceIsRemovedAndADefaultOneIsSwitchedOffInstead() throws Exception {
+        String admin = AdminSession.bearer(mockMvc);
+        mockMvc.perform(post("/api/admin/ecosystem/services").header(HttpHeaders.AUTHORIZATION, admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"key\":\"postman\"}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.removable").value(true));
+        assertThat(service("ollama").path("removable").asBoolean()).isFalse();
+
+        mockMvc.perform(get("/api/admin/ecosystem/services/postman/deletion").header(HttpHeaders.AUTHORIZATION, admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowed").value(true))
+                .andExpect(jsonPath("$.keeps[0]").value(org.hamcrest.Matchers.containsString("resta installato")));
+        long version = service("postman").path("version").asLong();
+        mockMvc.perform(delete("/api/admin/ecosystem/services/postman").header(HttpHeaders.IF_MATCH, "\"" + version + "\""))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/admin/ecosystem/services/postman").header(HttpHeaders.AUTHORIZATION, admin))
+                .andExpect(status().isPreconditionRequired());
+        mockMvc.perform(delete("/api/admin/ecosystem/services/postman").header(HttpHeaders.AUTHORIZATION, admin)
+                        .header(HttpHeaders.IF_MATCH, "\"" + version + "\""))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/ecosystem/services")).andExpect(jsonPath("$[?(@.key == 'postman')]").isEmpty());
+        mockMvc.perform(get("/api/software/postman")).andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/admin/ecosystem/services/ollama/deletion").header(HttpHeaders.AUTHORIZATION, admin))
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.blockers[0]").value(org.hamcrest.Matchers.containsString("avvio automatico")));
+        mockMvc.perform(delete("/api/admin/ecosystem/services/ollama").header(HttpHeaders.AUTHORIZATION, admin)
+                        .header(HttpHeaders.IF_MATCH, "\"" + service("ollama").path("version").asLong() + "\""))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:deletion-blocked"));
+        mockMvc.perform(get("/api/admin/ecosystem/services/no-such/deletion").header(HttpHeaders.AUTHORIZATION, admin))
+                .andExpect(status().isNotFound());
     }
 
     @Test

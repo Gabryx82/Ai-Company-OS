@@ -62,7 +62,9 @@ public class SecurityConfiguration {
             // PHASE 30 (ADR-035): agents, catalog entries of the library, a project's whole Blueprint.
             "/api/agents/*", "/api/resources/*", "/api/projects/*/blueprint",
             // PHASE 31 (ADR-036): a Knowledge Hub copy taken out of an application (kept as a backup).
-            "/api/skill-hub/library/*/copies/*"};
+            "/api/skill-hub/library/*/copies/*",
+            // PHASE 32 (TD-68): a software entry added through the API.
+            "/api/software/*"};
 
     /** The same decision for a selection: deleting several agents at once (PHASE 30). */
     public static final String[] ADMIN_ONLY_BULK_DELETES = {"/api/agents/bulk-delete"};

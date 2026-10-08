@@ -181,8 +181,12 @@ export class ControlPlane {
 
   // --- tasks ------------------------------------------------------------------
 
-  tasks(status?: TaskStatus): Promise<Task[]> {
-    return this.plain("GET", status ? `/api/tasks?status=${status}` : "/api/tasks");
+  /** `agentStatus: "INACTIVE"` -- the tasks waiting on a switched-off agent (PHASE 32, TD-34). */
+  tasks(status?: TaskStatus, agentStatus?: "ACTIVE" | "INACTIVE"): Promise<Task[]> {
+    const query = new URLSearchParams();
+    if (status) query.set("status", status);
+    if (agentStatus) query.set("agentStatus", agentStatus);
+    return this.plain("GET", query.size ? `/api/tasks?${query}` : "/api/tasks");
   }
 
   task(id: number): Promise<Versioned<Task>> {
@@ -199,6 +203,11 @@ export class ControlPlane {
 
   transition(id: number, step: Transition, etag: string): Promise<Versioned<Task>> {
     return this.versioned("POST", `/api/tasks/${id}/${step}`, { ifMatch: etag });
+  }
+
+  /** PHASE 32 (TD-35): the task goes back to nobody; the agent stays. */
+  unassignAgent(id: number, etag: string): Promise<Versioned<Task>> {
+    return this.versioned("DELETE", `/api/tasks/${id}/agent`, { ifMatch: etag });
   }
 
   assignAgent(id: number, etag: string, agentId: number): Promise<Versioned<Task>> {
@@ -691,6 +700,24 @@ export class ControlPlane {
   configureEcosystemService(key: string, version: number, body: { autostart: boolean; position: number; timeoutSeconds: number }):
     Promise<EcosystemServiceInfo> {
     return this.plain("PUT", `/api/admin/ecosystem/services/${encodeURIComponent(key)}`, { body, ifMatch: `"${version}"` });
+  }
+
+  /** PHASE 32 (TD-69): taking a service an admin added out of the start; a default one is refused. */
+  ecosystemServiceRemovalPreview(key: string): Promise<DeletionPreview> {
+    return this.plain("GET", `/api/admin/ecosystem/services/${encodeURIComponent(key)}/deletion`);
+  }
+
+  async removeEcosystemService(key: string, version: number): Promise<void> {
+    await this.request("DELETE", `/api/admin/ecosystem/services/${encodeURIComponent(key)}`, { ifMatch: `"${version}"` });
+  }
+
+  /** PHASE 32 (TD-68): deleting a software entry added through the API; a catalog entry is refused. */
+  softwareDeletionPreview(key: string): Promise<DeletionPreview> {
+    return this.plain("GET", `/api/software/${encodeURIComponent(key)}/deletion`);
+  }
+
+  async deleteSoftware(key: string, version: number): Promise<void> {
+    await this.request("DELETE", `/api/software/${encodeURIComponent(key)}`, { ifMatch: `"${version}"` });
   }
 
   // --- deleting for real (ADR-027) ---------------------------------------------

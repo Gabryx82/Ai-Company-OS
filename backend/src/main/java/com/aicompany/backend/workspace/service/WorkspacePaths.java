@@ -109,7 +109,7 @@ public final class WorkspacePaths {
         return path;
     }
 
-    static final List<String> DELETABLE_DOCUMENT_ROOTS = List.of("docs/", "tasks/", ".aicos/handoffs/");
+    public static final List<String> DELETABLE_DOCUMENT_ROOTS = List.of("docs/", "tasks/", ".aicos/handoffs/");
 
     private static void requireDeletableFile(Path path, String relative) {
         if (Files.isSymbolicLink(path) || Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {

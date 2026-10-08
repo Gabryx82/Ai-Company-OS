@@ -1,6 +1,7 @@
 package com.aicompany.backend.harness.model;
 
 import com.aicompany.backend.catalog.Tags;
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -98,14 +99,14 @@ public class HarnessResource {
 
     @PrePersist
     void onCreate() {
-        Instant now = Instant.now();
+        Instant now = DatabaseClock.now();
         this.createdAt = now;
         this.updatedAt = now;
     }
 
     @PreUpdate
     void onUpdate() {
-        this.updatedAt = Instant.now();
+        this.updatedAt = DatabaseClock.now();
     }
 
     /** What the file says the entry is: its frontmatter wins over the index (ADR-026 §2). */
@@ -118,9 +119,14 @@ public class HarnessResource {
         }
     }
 
+    /** PHASE 32 (TD-73): an entry a person added through the API is theirs, not the shipped catalog's. */
+    public void createdByAPerson() {
+        this.origin = Origin.USER;
+    }
+
     public void linkFile(String relativePath, Origin origin) {
         this.filePath = relativePath;
-        this.fileSyncedAt = Instant.now();
+        this.fileSyncedAt = DatabaseClock.now();
         if (origin != null) {
             this.origin = origin;
         }

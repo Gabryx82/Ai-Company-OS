@@ -77,9 +77,9 @@ public final class Precondition {
         Set<Long> versions = new LinkedHashSet<>();
 
         // Splitting on the comma is safe for the tags this API issues -- they hold
-        // digits only. A tag that did contain one would fail the check below and be
-        // reported as unreadable, which is the right answer for a value this API
-        // cannot have produced.
+        // digits, a dot and hex digits only. A tag that did contain one would fail the
+        // check below and be reported as unreadable, which is the right answer for a
+        // value this API cannot have produced.
         for (String candidate : value.split(",")) {
 
             String tag = candidate.trim();
@@ -111,7 +111,18 @@ public final class Precondition {
         }
     }
 
-    private static long parseVersion(String digits, String originalTag) {
+    /**
+     * {@code <version>} or {@code <version>.<digest>} ({@link ETags}): the state is
+     * the version, and that is what is compared -- a tag read from an older shape of
+     * the same state still describes the state the caller saw (TD-32).
+     */
+    private static long parseVersion(String opaque, String originalTag) {
+        int dot = opaque.indexOf('.');
+        String digits = dot < 0 ? opaque : opaque.substring(0, dot);
+        if (dot >= 0 && !opaque.substring(dot + 1).matches("[0-9a-f]{1,64}")) {
+            throw new InvalidPreconditionException(
+                    "'" + originalTag + "' is not an entity-tag this API can evaluate");
+        }
         try {
             return Long.parseLong(digits);
         } catch (NumberFormatException e) {

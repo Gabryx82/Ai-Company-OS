@@ -66,7 +66,7 @@ public class AgentDeletionController {
     }
 
     @DeleteMapping("/api/agents/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id,
+    public ResponseEntity<Void> deleteAgent(@PathVariable Long id,
                                        @RequestParam(defaultValue = "DETACH") AgentDeletionService.SubAgents subagents,
                                        @RequestParam(defaultValue = "BLOCK") AgentDeletionService.InProgress inProgress,
                                        @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,

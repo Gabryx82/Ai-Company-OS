@@ -1,5 +1,6 @@
 package com.aicompany.backend.plan.model;
 
+import com.aicompany.backend.persistence.DatabaseClock;
 import com.aicompany.backend.project.model.Project;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -92,7 +93,7 @@ public class ProjectPhase {
     public void approve(String note) {
         this.approval = Approval.APPROVED;
         this.approvalNote = note;
-        this.approvedAt = Instant.now();
+        this.approvedAt = DatabaseClock.now();
     }
 
     /** The operator asks for changes: the phase's tasks may not start until approved again. */
@@ -112,14 +113,14 @@ public class ProjectPhase {
 
     @PrePersist
     void onCreate() {
-        Instant now = Instant.now();
+        Instant now = DatabaseClock.now();
         this.createdAt = now;
         this.updatedAt = now;
     }
 
     @PreUpdate
     void onUpdate() {
-        this.updatedAt = Instant.now();
+        this.updatedAt = DatabaseClock.now();
     }
 
     public Long getId() { return id; }

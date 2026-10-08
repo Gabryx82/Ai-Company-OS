@@ -1,5 +1,6 @@
 package com.aicompany.backend.blueprint.model;
 
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -44,7 +45,7 @@ public class BlueprintLayout {
     @PrePersist
     @PreUpdate
     void touch() {
-        this.updatedAt = Instant.now();
+        this.updatedAt = DatabaseClock.now();
     }
 
     public Long getProjectId() { return projectId; }

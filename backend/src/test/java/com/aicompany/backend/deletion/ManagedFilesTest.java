@@ -76,6 +76,45 @@ class ManagedFilesTest {
         }
     }
 
+    /**
+     * PHASE 32 (TD-70): what a crash between the commit and the removal leaves -- a staged
+     * file -- is swept; a file a transaction still open has staged is not, because a
+     * rollback still needs it; names that only look alike, and ordinary hidden files, stay.
+     */
+    @Test
+    void theSweepRemovesWhatACrashLeftAndNeverWhatATransactionStillNeeds() throws IOException {
+        Path leftByACrash = file("references/.photo.png.aicos-deleting-" + java.util.UUID.randomUUID());
+        Path ordinaryHidden = file("references/.keep");
+        Path lookAlike = file("references/.notes.md.aicos-deleting-not-a-uuid");
+        Path kept = file("references/notes.md");
+        Path inUse = file("references/sketch.png");
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            ManagedFiles.delete(root, inUse);
+            Path staged;
+            try (var listing = Files.list(root.resolve("references"))) {
+                staged = listing.filter(p -> p.getFileName().toString().startsWith(".sketch.png.aicos-deleting-"))
+                        .findFirst().orElseThrow();
+            }
+
+            assertThat(ManagedFiles.sweep(root)).containsExactly(leftByACrash);
+            assertThat(leftByACrash).doesNotExist();
+            assertThat(staged).as("a rollback could still need it").exists();
+            assertThat(ordinaryHidden).exists();
+            assertThat(lookAlike).exists();
+            assertThat(kept).exists();
+
+            // The transaction rolls back: the file is back where it was, nothing was lost.
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+            assertThat(inUse).exists();
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+        assertThat(ManagedFiles.sweep(root.resolve("no-such-folder"))).isEmpty();
+    }
+
     @Test
     void nothingOutsideTheRootNoFolderAndNoLinkIsTouched() throws IOException {
         Path outside = Files.createTempFile("managed-outside", ".png");

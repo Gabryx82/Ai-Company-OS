@@ -49,6 +49,9 @@ class LibraryApiTest extends AbstractPostgresTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private com.aicompany.backend.support.FakeHost host;
+
     private final JsonMapper json = JsonMapper.builder().build();
 
     @BeforeEach
@@ -129,6 +132,24 @@ class LibraryApiTest extends AbstractPostgresTest {
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(json.createObjectNode().put("content", renamed))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:skill-document-invalid"));
+    }
+
+    /** PHASE 32 (TD-09): where the library is, and an entry opened in the editor -- its folder, never one from the request. */
+    @Test
+    void theLibrarySaysWhereItIsAndOpensAnEntrysFolderInTheEditor() throws Exception {
+        mockMvc.perform(get("/api/library")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.root").value(library.root().toString()))
+                .andExpect(jsonPath("$.skills").value(org.hamcrest.Matchers.greaterThan(0)))
+                .andExpect(jsonPath("$.layout").value(org.hamcrest.Matchers.containsString("SKILL.md")));
+
+        host.reset();
+        mockMvc.perform(post("/api/resources/clean-code-java/open")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.folder").value(library.root().resolve("skills/clean-code-java").toString()));
+        assertThat(library.root().resolve("skills/clean-code-java/SKILL.md")).exists();
+        assertThat(host.launches()).singleElement()
+                .satisfies(plan -> assertThat(plan.workingDirectory()).isEqualTo(library.root().resolve("skills/clean-code-java")));
+
+        mockMvc.perform(post("/api/resources/no-such-entry/open")).andExpect(status().isNotFound());
     }
 
     @Test

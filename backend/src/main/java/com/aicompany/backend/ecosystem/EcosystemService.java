@@ -2,6 +2,7 @@ package com.aicompany.backend.ecosystem;
 
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.api.RequestValidationException;
+import com.aicompany.backend.deletion.DeletionPreview;
 import com.aicompany.backend.software.detect.Availability;
 import com.aicompany.backend.software.exception.SoftwareNotFoundException;
 import com.aicompany.backend.software.launch.LaunchPlan;
@@ -56,9 +57,11 @@ public class EcosystemService {
 
     public enum Status { NEVER, ALREADY_RUNNING, STARTING, RUNNING, FAILED }
 
+    /** {@code removable}: added by an admin, not one of the {@link #DEFAULTS} a start would insert again (TD-69). */
     public record ServiceView(String key, String name, String url, String healthUrl, String command,
                               String availability, boolean autostart, int position, int timeoutSeconds,
-                              Status lastStatus, String lastMessage, Instant lastAttemptAt, long version) {
+                              Status lastStatus, String lastMessage, Instant lastAttemptAt, long version,
+                              boolean removable) {
     }
 
     private final JdbcTemplate jdbc;
@@ -240,6 +243,46 @@ public class EcosystemService {
         return new ServiceView(key, name, url, health, command, availability, (Boolean) row.get("autostart"),
                 ((Number) row.get("position")).intValue(), ((Number) row.get("startup_timeout_seconds")).intValue(),
                 Status.valueOf((String) row.get("last_status")), (String) row.get("last_message"),
-                at == null ? null : at.toInstant(), ((Number) row.get("version")).longValue());
+                at == null ? null : at.toInstant(), ((Number) row.get("version")).longValue(), !isDefault(key));
+    }
+
+    private static boolean isDefault(String key) {
+        return DEFAULTS.stream().anyMatch(d -> d.key().equals(key));
+    }
+
+    // --- PHASE 32 (TD-69): a service an admin added is removed by an admin ----------------------
+
+    /** What removing a service from the start would do, or why it cannot be removed. */
+    @Transactional(readOnly = true)
+    public DeletionPreview removal(String key) {
+        lockless(key);
+        return removalOf(key);
+    }
+
+    /** Takes the service out of the coordinated start, under its tag. The program itself is not touched. */
+    @Transactional
+    public void remove(String key, Precondition precondition, String by) {
+        Map<String, Object> row = lock(key);
+        precondition.requireSatisfiedBy(((Number) row.get("version")).longValue());
+        removalOf(key).requireAllowed();
+        jdbc.update("DELETE FROM ecosystem_autostart WHERE software_key = ?", key);
+        log.record(SecurityLog.DATA_DELETED, by, null, "ecosystem service " + key);
+    }
+
+    private DeletionPreview removalOf(String key) {
+        String name = key;
+        try {
+            name = software.findByKey(key).software().getName();
+        } catch (SoftwareNotFoundException gone) {
+            // its catalog entry went first: the row is still removable
+        }
+        DeletionPreview.Builder preview = DeletionPreview.of("ECOSYSTEM_SERVICE").subject(key, name)
+                .deletes("«" + name + "» esce dall'avvio coordinato e da questo elenco.")
+                .keeps("Il programma resta installato e nel Software Hub; lo si può aggiungere di nuovo.");
+        if (isDefault(key)) {
+            preview.blocker("«" + name + "» è uno dei servizi di serie: tornerebbe al prossimo avvio. "
+                    + "Spegni il suo avvio automatico, invece.");
+        }
+        return preview.build();
     }
 }

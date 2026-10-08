@@ -39,7 +39,10 @@ public record TaskResponse(
         // PHASE 10 (ADR-021): the plan. Additive; null for tasks outside a plan.
         Long phaseId,
         String code,
-        String documentPath
+        String documentPath,
+        // PHASE 32 (TD-33): the row version, so a listing is enough to write each element
+        // back with If-Match: "<version>" -- N writes no longer cost N reads first.
+        long version
 ) {
 
     public static TaskResponse from(Task task) {
@@ -53,7 +56,8 @@ public record TaskResponse(
                 task.getAgentId(),
                 task.getPhaseId(),
                 task.getCode(),
-                task.getDocumentPath()
+                task.getDocumentPath(),
+                task.getVersion()
         );
     }
 }

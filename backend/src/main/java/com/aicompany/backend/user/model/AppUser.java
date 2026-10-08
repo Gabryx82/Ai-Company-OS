@@ -1,5 +1,6 @@
 package com.aicompany.backend.user.model;
 
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -77,19 +78,19 @@ public class AppUser {
         this.passwordHash = passwordHash;
         this.role = role;
         this.mustChangePassword = mustChangePassword;
-        this.passwordChangedAt = Instant.now();
+        this.passwordChangedAt = DatabaseClock.now();
     }
 
     @PrePersist
     void onCreate() {
-        Instant now = Instant.now();
+        Instant now = DatabaseClock.now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
     void onUpdate() {
-        updatedAt = Instant.now();
+        updatedAt = DatabaseClock.now();
     }
 
     public boolean isLocked(Instant now) {
@@ -116,7 +117,7 @@ public class AppUser {
     public void changePassword(String newHash, boolean mustChangeAgain) {
         this.passwordHash = newHash;
         this.mustChangePassword = mustChangeAgain;
-        this.passwordChangedAt = Instant.now();
+        this.passwordChangedAt = DatabaseClock.now();
         this.failedAttempts = 0;
         this.lockedUntil = null;
     }

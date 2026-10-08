@@ -1,5 +1,6 @@
 package com.aicompany.backend.blueprint.model;
 
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -101,20 +102,20 @@ public class ChangeProposal {
     public void decide(ProposalStatus outcome, String by, Long taskId) {
         this.status = outcome;
         this.decidedBy = by;
-        this.decidedAt = Instant.now();
+        this.decidedAt = DatabaseClock.now();
         this.taskId = taskId;
     }
 
     @PrePersist
     void onCreate() {
-        Instant now = Instant.now();
+        Instant now = DatabaseClock.now();
         this.createdAt = now;
         this.updatedAt = now;
     }
 
     @PreUpdate
     void onUpdate() {
-        this.updatedAt = Instant.now();
+        this.updatedAt = DatabaseClock.now();
     }
 
     public Long getId() { return id; }

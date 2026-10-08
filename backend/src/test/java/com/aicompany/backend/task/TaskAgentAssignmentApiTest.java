@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -247,6 +248,80 @@ class TaskAgentAssignmentApiTest extends AbstractPostgresTest {
     // ------------------------------------------------------------------
     // D2 -- a frozen task is frozen for this too. I-2, AC-3
     // ------------------------------------------------------------------
+
+    /** PHASE 32 (TD-35): back to nobody, under the task's tag, idempotent; the agent and the task stay. */
+    @Test
+    void aTaskIsUnassignedUnderItsTagAndTheAgentStays() throws Exception {
+        Long agentId = activeAgent("Backend");
+        Long taskId = task("Wire the planner");
+        mockMvc.perform(assign(taskId, agentId, etagOfTask(taskId))).andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/tasks/{id}/agent", taskId)).andExpect(status().isPreconditionRequired());
+        String before = etagOfTask(taskId);
+        mockMvc.perform(delete("/api/tasks/{id}/agent", taskId).header(HttpHeaders.IF_MATCH, before))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(HttpHeaders.ETAG))
+                .andExpect(jsonPath("$.agentId").doesNotExist());
+        assertThat(agentIdOf(taskId)).isNull();
+        mockMvc.perform(get("/api/agents/{id}", agentId)).andExpect(status().isOk());
+
+        // The tag it was unassigned from is stale; with the new one, nothing to do and no error.
+        mockMvc.perform(delete("/api/tasks/{id}/agent", taskId).header(HttpHeaders.IF_MATCH, before))
+                .andExpect(status().isPreconditionFailed());
+        mockMvc.perform(delete("/api/tasks/{id}/agent", taskId).header(HttpHeaders.IF_MATCH, etagOfTask(taskId)))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/api/tasks/{id}/agent", 999_999L).header(HttpHeaders.IF_MATCH, "\"0\""))
+                .andExpect(status().isNotFound());
+    }
+
+    /** PHASE 32 (TD-35): the freezing rule holds for unassigning too. */
+    @Test
+    void aTaskInAnArchivedProjectIsNotUnassignedEither() throws Exception {
+        Long projectId = project("Company OS");
+        Long agentId = activeAgent("Backend");
+        Long taskId = task("Wire the planner");
+        mockMvc.perform(put("/api/tasks/{id}/project", taskId).header(HttpHeaders.IF_MATCH, etagOfTask(taskId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"projectId\":%d}".formatted(projectId))).andExpect(status().isOk());
+        mockMvc.perform(assign(taskId, agentId, etagOfTask(taskId))).andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/{id}/archive", projectId).header(HttpHeaders.IF_MATCH, etagOfProject(projectId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/tasks/{id}/agent", taskId).header(HttpHeaders.IF_MATCH, etagOfTask(taskId)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value(FROZEN_TASK));
+        assertThat(agentIdOf(taskId)).isEqualTo(agentId);
+    }
+
+    /** PHASE 32 (TD-34): the tasks waiting on a switched-off agent, in one call. */
+    @Test
+    void theTasksWaitingOnAnInactiveAgentAreListedInOneCall() throws Exception {
+        Long active = activeAgent("Backend");
+        Long switchedOff = activeAgent("Frontend");
+        Long onActive = task("On the active one");
+        Long waiting = task("Waiting on the inactive one");
+        Long doneOnInactive = task("Done before the switch-off");
+        Long nobody = task("Nobody's");
+        mockMvc.perform(assign(onActive, active, etagOfTask(onActive))).andExpect(status().isOk());
+        mockMvc.perform(assign(waiting, switchedOff, etagOfTask(waiting))).andExpect(status().isOk());
+        mockMvc.perform(assign(doneOnInactive, switchedOff, etagOfTask(doneOnInactive))).andExpect(status().isOk());
+        for (String step : java.util.List.of("start", "complete")) {
+            mockMvc.perform(post("/api/tasks/{id}/" + step, doneOnInactive).header(HttpHeaders.IF_MATCH, etagOfTask(doneOnInactive)))
+                    .andExpect(status().isOk());
+        }
+        mockMvc.perform(post("/api/agents/{id}/deactivate", switchedOff).header(HttpHeaders.IF_MATCH, etagOfAgent(switchedOff)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/tasks").param("agentStatus", "INACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", org.hamcrest.Matchers.containsInAnyOrder(waiting.intValue(), doneOnInactive.intValue())));
+        mockMvc.perform(get("/api/tasks").param("agentStatus", "INACTIVE").param("status", "OPEN"))
+                .andExpect(jsonPath("$[*].id", org.hamcrest.Matchers.contains(waiting.intValue())));
+        mockMvc.perform(get("/api/tasks").param("agentStatus", "ACTIVE"))
+                .andExpect(jsonPath("$[*].id", org.hamcrest.Matchers.contains(onActive.intValue())));
+        mockMvc.perform(get("/api/tasks").param("agentStatus", "SLEEPING"))
+                .andExpect(status().isBadRequest());
+        assertThat(nobody).isNotNull();
+    }
 
     @Test
     void aTaskInAnArchivedProjectDoesNotChangeAgent() throws Exception {

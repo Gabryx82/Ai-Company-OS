@@ -23,7 +23,10 @@ public record ProjectResponse(
         String stack,
         String workspacePath,
         AutonomyLevel autonomyLevel,
-        PlanStatus planStatus
+        PlanStatus planStatus,
+        // PHASE 32 (TD-33): the row version, so a listing is enough to write each element
+        // back with If-Match: "<version>" -- N writes no longer cost N reads first.
+        long version
 ) {
 
     public static ProjectResponse from(Project project) {
@@ -38,7 +41,8 @@ public record ProjectResponse(
                 project.getStack(),
                 project.getWorkspacePath(),
                 project.getAutonomyLevel(),
-                project.getPlanStatus()
+                project.getPlanStatus(),
+                project.getVersion()
         );
     }
 }

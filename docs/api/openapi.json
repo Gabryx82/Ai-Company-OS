@@ -52,6 +52,50 @@
         "required" : [ "name", "role", "specialization" ],
         "type" : "object"
       },
+      "AgentProfileRequest" : {
+        "properties" : {
+          "contextPolicy" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "directives" : {
+            "maxLength" : 8000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "domain" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "limits" : {
+            "maxLength" : 4000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "outputFormat" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "parentId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "responsibilities" : {
+            "maxLength" : 4000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "systemPrompt" : {
+            "maxLength" : 8000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "AgentProfileResponse" : {
         "properties" : {
           "active" : {
@@ -103,7 +147,7 @@
           },
           "software" : {
             "items" : {
-              "$ref" : "#/components/schemas/SoftwareRef"
+              "$ref" : "#/components/schemas/AgentSoftwareRef"
             },
             "type" : "array"
           },
@@ -165,6 +209,21 @@
           },
           "updatedAt" : {
             "format" : "date-time",
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "AgentSoftwareRef" : {
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
             "type" : "string"
           }
         },
@@ -369,6 +428,17 @@
               "type" : "string"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "BindingSoftwareRef" : {
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -1301,7 +1371,7 @@
           },
           "edges" : {
             "items" : {
-              "$ref" : "#/components/schemas/Edge"
+              "$ref" : "#/components/schemas/CodeGraphEdge"
             },
             "type" : "array"
           },
@@ -1332,7 +1402,7 @@
           },
           "nodes" : {
             "items" : {
-              "$ref" : "#/components/schemas/Node"
+              "$ref" : "#/components/schemas/CodeGraphNode"
             },
             "type" : "array"
           },
@@ -1344,6 +1414,44 @@
           },
           "truncated" : {
             "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "CodeGraphEdge" : {
+        "properties" : {
+          "kind" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          },
+          "target" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CodeGraphNode" : {
+        "properties" : {
+          "directory" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "language" : {
+            "type" : "string"
+          },
+          "lines" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -1743,7 +1851,7 @@
           },
           "software" : {
             "items" : {
-              "$ref" : "#/components/schemas/SoftwareRef"
+              "$ref" : "#/components/schemas/BindingSoftwareRef"
             },
             "type" : "array"
           },
@@ -2153,7 +2261,7 @@
         },
         "type" : "object"
       },
-      "Edge" : {
+      "EcosystemEdge" : {
         "properties" : {
           "kind" : {
             "type" : "string"
@@ -2162,6 +2270,27 @@
             "type" : "string"
           },
           "target" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "EcosystemNode" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "meta" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "type" : {
             "type" : "string"
           }
         },
@@ -2375,13 +2504,13 @@
         "properties" : {
           "edges" : {
             "items" : {
-              "$ref" : "#/components/schemas/Edge"
+              "$ref" : "#/components/schemas/EcosystemEdge"
             },
             "type" : "array"
           },
           "nodes" : {
             "items" : {
-              "$ref" : "#/components/schemas/Node"
+              "$ref" : "#/components/schemas/EcosystemNode"
             },
             "type" : "array"
           }
@@ -3143,30 +3272,6 @@
         "required" : [ "initialPassword", "role", "username" ],
         "type" : "object"
       },
-      "Node" : {
-        "properties" : {
-          "directory" : {
-            "type" : "string"
-          },
-          "id" : {
-            "type" : "string"
-          },
-          "kind" : {
-            "type" : "string"
-          },
-          "label" : {
-            "type" : "string"
-          },
-          "language" : {
-            "type" : "string"
-          },
-          "lines" : {
-            "format" : "int32",
-            "type" : "integer"
-          }
-        },
-        "type" : "object"
-      },
       "Opened" : {
         "properties" : {
           "command" : {
@@ -3350,6 +3455,16 @@
           "version" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PhaseReviewRequest" : {
+        "properties" : {
+          "note" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -3564,7 +3679,23 @@
         },
         "type" : "object"
       },
-      "ProfileRequest" : {
+      "ProjectCreateRequest" : {
+        "properties" : {
+          "description" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
+      "ProjectProfileRequest" : {
         "properties" : {
           "autonomyLevel" : {
             "enum" : [ "GUIDED", "SUPERVISED", "DELEGATED", "FINAL_REVIEW" ],
@@ -3585,22 +3716,6 @@
             "type" : "string"
           }
         },
-        "type" : "object"
-      },
-      "ProjectCreateRequest" : {
-        "properties" : {
-          "description" : {
-            "maxLength" : 2000,
-            "minLength" : 0,
-            "type" : "string"
-          },
-          "name" : {
-            "maxLength" : 120,
-            "minLength" : 0,
-            "type" : "string"
-          }
-        },
-        "required" : [ "name" ],
         "type" : "object"
       },
       "ProjectResponse" : {
@@ -3641,6 +3756,10 @@
           "updatedAt" : {
             "format" : "date-time",
             "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
           },
           "workspacePath" : {
             "type" : "string"
@@ -4164,29 +4283,6 @@
         },
         "type" : "object"
       },
-      "ReviewRequest" : {
-        "properties" : {
-          "handoffId" : {
-            "format" : "int64",
-            "type" : "integer"
-          },
-          "note" : {
-            "maxLength" : 4000,
-            "minLength" : 0,
-            "type" : "string"
-          },
-          "runId" : {
-            "format" : "int64",
-            "type" : "integer"
-          },
-          "verdict" : {
-            "enum" : [ "ACCEPTED", "CHANGES_REQUESTED" ],
-            "type" : "string"
-          }
-        },
-        "required" : [ "verdict" ],
-        "type" : "object"
-      },
       "ReviewResponse" : {
         "properties" : {
           "createdAt" : {
@@ -4396,6 +4492,9 @@
           "position" : {
             "format" : "int32",
             "type" : "integer"
+          },
+          "removable" : {
+            "type" : "boolean"
           },
           "timeoutSeconds" : {
             "format" : "int32",
@@ -4628,17 +4727,6 @@
         },
         "type" : "object"
       },
-      "SoftwareRef" : {
-        "properties" : {
-          "key" : {
-            "type" : "string"
-          },
-          "name" : {
-            "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
       "SoftwareRequest" : {
         "properties" : {
           "appId" : {
@@ -4783,6 +4871,9 @@
               "type" : "string"
             },
             "type" : "array"
+          },
+          "catalog" : {
+            "type" : "boolean"
           },
           "category" : {
             "enum" : [ "AGENTIC_IDE", "IDE", "EDITOR", "TERMINAL", "AI_CLOUD", "AI_LOCAL", "DATABASE", "API", "INFRASTRUCTURE", "DIAGRAM", "DESIGN", "THREE_D", "VCS", "HOSTING", "PRODUCTIVITY" ],
@@ -5183,8 +5274,35 @@
           },
           "title" : {
             "type" : "string"
+          },
+          "version" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
+        "type" : "object"
+      },
+      "TaskReviewRequest" : {
+        "properties" : {
+          "handoffId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "note" : {
+            "maxLength" : 4000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "runId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "verdict" : {
+            "enum" : [ "ACCEPTED", "CHANGES_REQUESTED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "verdict" ],
         "type" : "object"
       },
       "TaskUpdateRequest" : {
@@ -5644,8 +5762,32 @@
       }
     },
     "/api/admin/ecosystem/services/{key}" : {
+      "delete" : {
+        "operationId" : "removeEcosystemService",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ecosystem-controller" ]
+      },
       "put" : {
-        "operationId" : "configure_3",
+        "operationId" : "configureEcosystemService",
         "parameters" : [ {
           "in" : "path",
           "name" : "key",
@@ -5677,6 +5819,32 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ServiceView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ecosystem-controller" ]
+      }
+    },
+    "/api/admin/ecosystem/services/{key}/deletion" : {
+      "get" : {
+        "operationId" : "removal",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionPreview"
                 }
               }
             },
@@ -5738,7 +5906,7 @@
         "tags" : [ "admin-controller" ]
       },
       "post" : {
-        "operationId" : "create_5",
+        "operationId" : "createUser",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -5766,7 +5934,7 @@
     },
     "/api/admin/users/{id}" : {
       "put" : {
-        "operationId" : "update_3",
+        "operationId" : "updateUser",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -6129,7 +6297,7 @@
     },
     "/api/agents/{id}" : {
       "delete" : {
-        "operationId" : "delete",
+        "operationId" : "deleteAgent",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -6300,7 +6468,7 @@
         "tags" : [ "agent-configuration-controller" ]
       },
       "put" : {
-        "operationId" : "configure_2",
+        "operationId" : "configureAgentBinding",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -6482,7 +6650,7 @@
         "tags" : [ "harness-controller" ]
       },
       "put" : {
-        "operationId" : "configure_1",
+        "operationId" : "configureAgentProfile",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -6503,7 +6671,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/ProfileRequest"
+                "$ref" : "#/components/schemas/AgentProfileRequest"
               }
             }
           },
@@ -6754,7 +6922,7 @@
     },
     "/api/catalog/models" : {
       "get" : {
-        "operationId" : "models",
+        "operationId" : "catalogModels",
         "responses" : {
           "200" : {
             "content" : {
@@ -6926,7 +7094,7 @@
         "tags" : [ "daily-controller" ]
       },
       "post" : {
-        "operationId" : "create_4",
+        "operationId" : "createDailyItem",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -6992,7 +7160,7 @@
     },
     "/api/daily/{id}" : {
       "delete" : {
-        "operationId" : "remove",
+        "operationId" : "deleteDailyItem",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -7017,7 +7185,7 @@
         "tags" : [ "daily-controller" ]
       },
       "put" : {
-        "operationId" : "update_2",
+        "operationId" : "updateDailyItem",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -7103,7 +7271,7 @@
     },
     "/api/ecosystem/services/{key}/start" : {
       "post" : {
-        "operationId" : "start_1",
+        "operationId" : "startEcosystemService",
         "parameters" : [ {
           "in" : "path",
           "name" : "key",
@@ -7150,7 +7318,7 @@
     },
     "/api/engine/models" : {
       "get" : {
-        "operationId" : "models_1",
+        "operationId" : "engineModels",
         "responses" : {
           "200" : {
             "content" : {
@@ -7258,7 +7426,7 @@
     },
     "/api/library/entries" : {
       "post" : {
-        "operationId" : "create_3",
+        "operationId" : "createLibraryEntry",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -7353,7 +7521,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/ReviewRequest"
+                "$ref" : "#/components/schemas/PhaseReviewRequest"
               }
             }
           }
@@ -7396,7 +7564,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/ReviewRequest"
+                "$ref" : "#/components/schemas/PhaseReviewRequest"
               }
             }
           }
@@ -7418,7 +7586,7 @@
     },
     "/api/plan-runs/{runId}" : {
       "get" : {
-        "operationId" : "run_1",
+        "operationId" : "getPlanRun",
         "parameters" : [ {
           "in" : "path",
           "name" : "runId",
@@ -7445,7 +7613,7 @@
     },
     "/api/projects" : {
       "get" : {
-        "operationId" : "list_1",
+        "operationId" : "listProjects",
         "parameters" : [ {
           "in" : "query",
           "name" : "status",
@@ -7473,7 +7641,7 @@
         "tags" : [ "project-controller" ]
       },
       "post" : {
-        "operationId" : "create_2",
+        "operationId" : "createProject",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -7573,7 +7741,7 @@
         "tags" : [ "project-controller" ]
       },
       "put" : {
-        "operationId" : "update_1",
+        "operationId" : "updateProject",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -8960,7 +9128,7 @@
     },
     "/api/projects/{id}/plan/handoff" : {
       "get" : {
-        "operationId" : "handoff_1",
+        "operationId" : "planHandoff",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -9014,7 +9182,7 @@
     },
     "/api/projects/{id}/profile" : {
       "put" : {
-        "operationId" : "configure",
+        "operationId" : "configureProjectProfile",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -9035,7 +9203,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/ProfileRequest"
+                "$ref" : "#/components/schemas/ProjectProfileRequest"
               }
             }
           },
@@ -9366,7 +9534,7 @@
         "tags" : [ "harness-controller" ]
       },
       "post" : {
-        "operationId" : "create_1",
+        "operationId" : "createResource",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -9594,7 +9762,7 @@
     },
     "/api/runs/{runId}" : {
       "get" : {
-        "operationId" : "run",
+        "operationId" : "getRun",
         "parameters" : [ {
           "in" : "path",
           "name" : "runId",
@@ -10220,7 +10388,7 @@
     },
     "/api/software" : {
       "get" : {
-        "operationId" : "list",
+        "operationId" : "listSoftware",
         "responses" : {
           "200" : {
             "content" : {
@@ -10239,7 +10407,7 @@
         "tags" : [ "software-controller" ]
       },
       "post" : {
-        "operationId" : "create",
+        "operationId" : "createSoftware",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -10277,6 +10445,30 @@
       }
     },
     "/api/software/{key}" : {
+      "delete" : {
+        "operationId" : "deleteSoftware",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "software-controller" ]
+      },
       "get" : {
         "operationId" : "get",
         "parameters" : [ {
@@ -10302,7 +10494,7 @@
         "tags" : [ "software-controller" ]
       },
       "put" : {
-        "operationId" : "update",
+        "operationId" : "updateSoftware",
         "parameters" : [ {
           "in" : "path",
           "name" : "key",
@@ -10343,6 +10535,32 @@
         "tags" : [ "software-controller" ]
       }
     },
+    "/api/software/{key}/deletion" : {
+      "get" : {
+        "operationId" : "deletion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionPreview"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "software-controller" ]
+      }
+    },
     "/api/software/{key}/icon" : {
       "get" : {
         "operationId" : "icon",
@@ -10372,7 +10590,7 @@
     },
     "/api/software/{key}/launch" : {
       "post" : {
-        "operationId" : "launch_1",
+        "operationId" : "launchSoftware",
         "parameters" : [ {
           "in" : "path",
           "name" : "key",
@@ -10414,6 +10632,14 @@
           "required" : false,
           "schema" : {
             "enum" : [ "OPEN", "IN_PROGRESS", "DONE" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "agentStatus",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "ACTIVE", "INACTIVE" ],
             "type" : "string"
           }
         } ],
@@ -10570,6 +10796,38 @@
       }
     },
     "/api/tasks/{id}/agent" : {
+      "delete" : {
+        "operationId" : "unassignAgent",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TaskResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "task-controller" ]
+      },
       "put" : {
         "operationId" : "assignToAgent",
         "parameters" : [ {
@@ -10734,7 +10992,7 @@
         "tags" : [ "orchestrator-controller" ]
       },
       "post" : {
-        "operationId" : "handoff",
+        "operationId" : "handoffTask",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -10932,7 +11190,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/ReviewRequest"
+                "$ref" : "#/components/schemas/TaskReviewRequest"
               }
             }
           },
@@ -10955,7 +11213,7 @@
     },
     "/api/tasks/{id}/start" : {
       "post" : {
-        "operationId" : "start",
+        "operationId" : "startTask",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -11051,7 +11309,7 @@
         "tags" : [ "run-controller" ]
       },
       "post" : {
-        "operationId" : "launch",
+        "operationId" : "launchRun",
         "parameters" : [ {
           "in" : "path",
           "name" : "taskId",

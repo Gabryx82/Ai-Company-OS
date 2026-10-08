@@ -96,6 +96,8 @@ export type Software = Wire<S["SoftwareResponse"]> & {
   availability: NonNullable<S["SoftwareResponse"]["availability"]>;
   launchable: boolean;
   version: number;
+  /** PHASE 32 (TD-68): shipped with AI Company OS -- disabled, never deleted. */
+  catalog: boolean;
 };
 export type SoftwareCategory = Software["category"];
 export type Availability = Software["availability"];
@@ -272,6 +274,8 @@ export interface EcosystemServiceInfo {
   key: string; name: string; url: string | null; healthUrl: string | null; command: string | null; availability: string;
   autostart: boolean; position: number; timeoutSeconds: number; lastStatus: EcosystemStatus; lastMessage: string | null;
   lastAttemptAt: string | null; version: number;
+  /** PHASE 32 (TD-69): added by an admin, so it can be taken out again; the defaults cannot. */
+  removable: boolean;
 }
 
 // --- PHASE 22: the integrated terminal (ADR-029) --------------------------------------

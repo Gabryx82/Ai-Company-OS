@@ -1,5 +1,6 @@
 package com.aicompany.backend.orchestrator.model;
 
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -40,7 +41,7 @@ public class TaskHandoff {
     private String requestedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt = DatabaseClock.now();
 
     protected TaskHandoff() {
     }

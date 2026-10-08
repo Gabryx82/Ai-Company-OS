@@ -13,12 +13,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItems;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -41,6 +43,9 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
     @Autowired
     private CatalogBootstrap bootstrap;
 
+    @Autowired
+    private JdbcTemplate jdbc;
+
     private static final String CUSTOM = """
             {"key":"my-tool","name":"My Tool","category":"EDITOR","role":"Editor","launchKind":"DESKTOP",
              "executable":"%ProgramFiles%\\\\MyTool\\\\tool.exe","capabilities":["Text-Editing"," logs ","logs"]}""";
@@ -52,6 +57,24 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
     void removeCustomEntries() throws Exception {
         repository.findByKey("my-tool").ifPresent(repository::delete);
         admin = com.aicompany.backend.support.AdminSession.bearer(mockMvc);
+    }
+
+    /** PHASE 32 (TD-09): the icon read from the program, as a private cached PNG; nothing when there is none. */
+    @Test
+    void anEntrysIconIsAPngWhenTheProgramHasOneAndNoContentOtherwise() throws Exception {
+        host.reset();
+        mockMvc.perform(get("/api/software/postman/icon")).andExpect(status().isNoContent());
+
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
+        host.scriptIcon("postman", png);
+        mockMvc.perform(get("/api/software/postman/icon"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, org.hamcrest.Matchers.containsString("private")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().bytes(png));
+        host.reset();
+
+        mockMvc.perform(get("/api/software/no-such-software/icon")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -82,7 +105,7 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
 
         mockMvc.perform(get("/api/software/postman"))
                 .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.ETAG, "\"0\""))
+                .andExpect(header().string(HttpHeaders.ETAG, org.hamcrest.Matchers.startsWith("\"0.")))
                 .andExpect(jsonPath("$.availability").value("NOT_INSTALLED"))
                 .andExpect(jsonPath("$.launchable").value(false));
 
@@ -167,10 +190,58 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
                         .contentType(MediaType.APPLICATION_JSON).content(edited))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("My Tool 2"))
-                .andExpect(header().string(HttpHeaders.ETAG, "\"1\""));
+                .andExpect(header().string(HttpHeaders.ETAG, org.hamcrest.Matchers.startsWith("\"1.")));
         mockMvc.perform(put("/api/software/my-tool").header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, "\"0\"")
                         .contentType(MediaType.APPLICATION_JSON).content(edited))
                 .andExpect(status().isPreconditionFailed());
+    }
+
+    /**
+     * PHASE 32 (TD-68): an entry added through the API is deleted -- by an admin, under its tag, after
+     * a preview that says what it takes with it -- and an entry of the shipped catalog is refused.
+     */
+    @Test
+    void anEntryAddedThroughTheApiIsDeletedWithItsLinksAndACatalogEntryIsNot() throws Exception {
+        mockMvc.perform(post("/api/software").header(HttpHeaders.AUTHORIZATION, admin).contentType(MediaType.APPLICATION_JSON).content(CUSTOM))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.catalog").value(false));
+        mockMvc.perform(get("/api/software/postman")).andExpect(jsonPath("$.catalog").value(true));
+
+        long agent = tools.jackson.databind.json.JsonMapper.builder().build().readTree(mockMvc.perform(post("/api/agents")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Uses My Tool\",\"role\":\"Editor\",\"specialization\":\"x\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).path("id").asLong();
+        try {
+            mockMvc.perform(put("/api/agents/" + agent + "/software/my-tool")).andExpect(status().isNoContent());
+            mockMvc.perform(post("/api/admin/ecosystem/services").header(HttpHeaders.AUTHORIZATION, admin)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"key\":\"my-tool\"}")).andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/software/my-tool/deletion"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.allowed").value(true))
+                    .andExpect(jsonPath("$.detaches[0]").value(org.hamcrest.Matchers.containsString("Uses My Tool")))
+                    .andExpect(jsonPath("$.detaches[1]").value(org.hamcrest.Matchers.containsString("avvio coordinato")))
+                    .andExpect(jsonPath("$.keeps[0]").value(org.hamcrest.Matchers.containsString("non è toccato")));
+
+            mockMvc.perform(delete("/api/software/my-tool").header(HttpHeaders.IF_MATCH, "\"0\"")).andExpect(status().isForbidden());
+            mockMvc.perform(delete("/api/software/my-tool").header(HttpHeaders.AUTHORIZATION, admin)).andExpect(status().isPreconditionRequired());
+            mockMvc.perform(delete("/api/software/my-tool").header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, "\"0\""))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/software/my-tool")).andExpect(status().isNotFound());
+            mockMvc.perform(get("/api/agents/" + agent + "/profile")).andExpect(jsonPath("$.software.length()").value(0));
+            mockMvc.perform(get("/api/ecosystem/services")).andExpect(jsonPath("$[?(@.key == 'my-tool')]").isEmpty());
+        } finally {
+            jdbc.update("DELETE FROM agent_software WHERE agent_id = ?", agent);
+            jdbc.update("DELETE FROM agents WHERE id = ?", agent);
+        }
+
+        mockMvc.perform(get("/api/software/postman/deletion"))
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.blockers[0]").value(org.hamcrest.Matchers.containsString("Disabilitalo")));
+        String postmanTag = mockMvc.perform(get("/api/software/postman")).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
+        mockMvc.perform(delete("/api/software/postman").header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, postmanTag))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:deletion-blocked"));
     }
 
     @Test

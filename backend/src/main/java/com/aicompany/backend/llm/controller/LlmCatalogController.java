@@ -42,7 +42,7 @@ public class LlmCatalogController {
     }
 
     @GetMapping("/models")
-    public ModelCatalogResponse models() {
+    public ModelCatalogResponse catalogModels() {
         return ModelCatalogResponse.from(service.catalog());
     }
 

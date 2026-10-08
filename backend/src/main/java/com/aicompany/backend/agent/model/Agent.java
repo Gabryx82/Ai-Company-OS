@@ -2,6 +2,7 @@ package com.aicompany.backend.agent.model;
 
 import com.aicompany.backend.agent.exception.IllegalAgentStateTransitionException;
 import com.aicompany.backend.agent.exception.InactiveAgentIsImmutableException;
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -238,7 +239,7 @@ public class Agent {
 
     /** Records who last changed a SEED or TEMPLATE agent, and when. */
     public void markCustomized(String by) {
-        this.customizedAt = Instant.now();
+        this.customizedAt = DatabaseClock.now();
         this.customizedBy = by;
     }
 
@@ -328,14 +329,14 @@ public class Agent {
 
     @PrePersist
     void onCreate() {
-        Instant now = Instant.now();
+        Instant now = DatabaseClock.now();
         this.createdAt = now;
         this.updatedAt = now;
     }
 
     @PreUpdate
     void onUpdate() {
-        this.updatedAt = Instant.now();
+        this.updatedAt = DatabaseClock.now();
     }
 
     public Long getId() {

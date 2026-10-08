@@ -62,7 +62,7 @@ public class AgentConfigurationController {
             String domain, String systemPrompt, String responsibilities, String limits, String outputFormat,
             List<String> directives, String contextPolicy,
             Map<String, List<AgentConfigurationService.ResourceRef>> resources,
-            List<AgentConfigurationService.SoftwareRef> software,
+            List<AgentConfigurationService.BindingSoftwareRef> software,
             String model, String executionTarget, AgentBindingService.Binding binding,
             String origin, Map<String, Object> defaults, List<String> modified,
             Instant customizedAt, String customizedBy, long version) {
@@ -87,7 +87,7 @@ public class AgentConfigurationController {
 
     /** Everything at once, under the agent's tag (ADR-009). Harness links keep their own set-membership routes. */
     @PutMapping("/api/agents/{id}/configuration")
-    public ResponseEntity<ConfigurationResponse> configure(@PathVariable Long id,
+    public ResponseEntity<ConfigurationResponse> configureAgentBinding(@PathVariable Long id,
                                                            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                                            @Valid @RequestBody ConfigurationRequest r,
                                                            Authentication caller) {

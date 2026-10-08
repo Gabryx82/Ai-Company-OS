@@ -45,7 +45,7 @@ public class CodeGraphService {
     }
 
     public record CodeGraph(Instant generatedAt, int files, boolean truncated, Map<String, Integer> languages,
-                            List<CodeGraphScanner.Node> nodes, List<CodeGraphScanner.Edge> edges,
+                            List<CodeGraphScanner.CodeGraphNode> nodes, List<CodeGraphScanner.CodeGraphEdge> edges,
                             List<List<String>> cycles, List<Hotspot> mostImported, int externals,
                             List<TaskLink> taskLinks) {
     }
@@ -130,7 +130,7 @@ public class CodeGraphService {
             md.append('\n');
         }
         List<String> externals = g.nodes().stream().filter(n -> n.kind().equals("EXTERNAL"))
-                .sorted(Comparator.comparing(CodeGraphScanner.Node::language).thenComparing(CodeGraphScanner.Node::label))
+                .sorted(Comparator.comparing(CodeGraphScanner.CodeGraphNode::language).thenComparing(CodeGraphScanner.CodeGraphNode::label))
                 .map(n -> n.label() + " (" + n.language() + ")").toList();
         if (!externals.isEmpty()) {
             md.append("## Dipendenze esterne\n\n").append(String.join(", ", externals)).append("\n\n");

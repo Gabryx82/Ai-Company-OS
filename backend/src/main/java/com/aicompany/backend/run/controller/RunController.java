@@ -36,7 +36,7 @@ public class RunController {
     }
 
     @PostMapping("/api/tasks/{taskId}/runs")
-    public ResponseEntity<RunResponse> launch(
+    public ResponseEntity<RunResponse> launchRun(
             @PathVariable Long taskId,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
             @Valid @RequestBody(required = false) RunCreateRequest request,
@@ -54,7 +54,7 @@ public class RunController {
     }
 
     @GetMapping("/api/runs/{runId}")
-    public RunResponse run(@PathVariable Long runId) {
+    public RunResponse getRun(@PathVariable Long runId) {
         return service.findById(runId);
     }
 }

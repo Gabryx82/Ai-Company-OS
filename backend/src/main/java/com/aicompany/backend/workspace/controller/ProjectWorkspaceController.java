@@ -31,7 +31,7 @@ import java.util.Map;
 @RestController
 public class ProjectWorkspaceController {
 
-    public record ProfileRequest(ProjectType projectType,
+    public record ProjectProfileRequest(ProjectType projectType,
                                  @Size(max = 2000) String stack,
                                  @Size(max = 1000) String workspacePath,
                                  AutonomyLevel autonomyLevel) {
@@ -60,10 +60,10 @@ public class ProjectWorkspaceController {
     }
 
     @PutMapping("/api/projects/{id}/profile")
-    public ResponseEntity<ProjectResponse> configure(
+    public ResponseEntity<ProjectResponse> configureProjectProfile(
             @PathVariable Long id,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
-            @Valid @RequestBody ProfileRequest request) {
+            @Valid @RequestBody ProjectProfileRequest request) {
         Project project = service.configure(id, new ProjectWorkspaceService.Profile(request.projectType(),
                 request.stack(), request.workspacePath(), request.autonomyLevel()), Precondition.fromHeader(ifMatch));
         return ResponseEntity.ok().eTag(ETags.of(project.getVersion())).body(ProjectResponse.from(project));

@@ -29,6 +29,9 @@ import com.aicompany.backend.task.model.TaskStatus;
 import com.aicompany.backend.task.model.TaskTransition;
 import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,6 +71,9 @@ public class ExecutionService {
     private final AgentBindingService binding;
     private final HarnessService harness;
     private final SkillLibrary library;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public ExecutionService(TaskRepository tasks, ProjectRepository projects, AgentRepository agents,
                             SoftwareRepository softwareCatalog, SoftwareService software,
@@ -247,10 +253,22 @@ public class ExecutionService {
         };
     }
 
-    private static void markPhaseStarted(ProjectPhase phase) {
-        if (phase != null && phase.getStatus() == ProjectPhase.Status.PLANNED) {
+    private void markPhaseStarted(ProjectPhase phase) {
+        if (phase != null && lockedForProgress(phase).getStatus() == ProjectPhase.Status.PLANNED) {
             phase.moveTo(ProjectPhase.Status.IN_PROGRESS);
         }
+    }
+
+    /**
+     * PHASE 32 (TD-41): the phase is read again under an exclusive lock before its
+     * progress is written. It was loaded unlocked with the task, so an approval that
+     * committed meanwhile left this copy one version behind, and the flush failed
+     * with an optimistic-lock conflict -- a 500. Re-read under the lock it waits for
+     * that approval, sees its version, and writes on top of it (ADR-009 §2.2).
+     */
+    private ProjectPhase lockedForProgress(ProjectPhase phase) {
+        entityManager.refresh(phase, LockModeType.PESSIMISTIC_WRITE);
+        return phase;
     }
 
     private void markPhaseDoneIfComplete(Task completed) {
@@ -258,6 +276,7 @@ public class ExecutionService {
         if (phase == null) {
             return;
         }
+        lockedForProgress(phase);
         boolean allDone = tasks.findAllByProjectId(completed.getProjectId()).stream()
                 .filter(t -> phase.getId().equals(t.getPhaseId()))
                 .allMatch(t -> t.getId().equals(completed.getId()) || t.getStatus() == TaskStatus.DONE);

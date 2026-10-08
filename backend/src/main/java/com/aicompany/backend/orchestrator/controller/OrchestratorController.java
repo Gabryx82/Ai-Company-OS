@@ -31,7 +31,7 @@ public class OrchestratorController {
     public record HandoffRequest(@NotBlank @Size(max = 64) String target) {
     }
 
-    public record ReviewRequest(@NotNull TaskReview.Verdict verdict, @Size(max = 4000) String note,
+    public record TaskReviewRequest(@NotNull TaskReview.Verdict verdict, @Size(max = 4000) String note,
                                 Long runId, Long handoffId) {
     }
 
@@ -75,7 +75,7 @@ public class OrchestratorController {
 
     /** Hands the task to an external agent. Takes the task's tag: it may start the task. */
     @PostMapping("/api/tasks/{id}/handoffs")
-    public ResponseEntity<HandoffResult> handoff(@PathVariable Long id,
+    public ResponseEntity<HandoffResult> handoffTask(@PathVariable Long id,
                                                  @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                                  @Valid @RequestBody HandoffRequest request, Authentication caller) {
         ExecutionService.HandoffResult result = execution.handoff(id, request.target(), caller.getName(),
@@ -95,7 +95,7 @@ public class OrchestratorController {
     @PostMapping("/api/tasks/{id}/reviews")
     public ResponseEntity<ReviewResult> review(@PathVariable Long id,
                                                @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
-                                               @Valid @RequestBody ReviewRequest request, Authentication caller) {
+                                               @Valid @RequestBody TaskReviewRequest request, Authentication caller) {
         ExecutionService.ReviewResult result = execution.review(id, request.verdict(), request.note(),
                 request.runId(), request.handoffId(), caller.getName(), Precondition.fromHeader(ifMatch));
         return ResponseEntity.ok().eTag(ETags.of(result.task().getVersion()))

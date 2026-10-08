@@ -176,7 +176,8 @@ class PreconditionCoverageTest {
                         "assignToProject:Precondition",
                         "assignToAgent:Precondition",
                         "transition:Precondition",       // ADR-014: every edge, one path
-                        "update:Precondition");          // TASK-016: the details
+                        "update:Precondition",           // TASK-016: the details
+                        "unassignAgent:Precondition");   // PHASE 32 (TD-35): back to nobody
 
         assertThat(writePaths(ProjectService.class))
                 .containsExactlyInAnyOrder(

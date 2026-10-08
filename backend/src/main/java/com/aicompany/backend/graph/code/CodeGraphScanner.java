@@ -48,13 +48,13 @@ public final class CodeGraphScanner {
     private static final Pattern POM_DEPENDENCY = Pattern.compile(
             "<dependency>\\s*<groupId>([^<]+)</groupId>\\s*<artifactId>([^<]+)</artifactId>", Pattern.DOTALL);
 
-    public record Node(String id, String label, String kind, String language, String directory, int lines) {
+    public record CodeGraphNode(String id, String label, String kind, String language, String directory, int lines) {
     }
 
-    public record Edge(String source, String target, String kind) {
+    public record CodeGraphEdge(String source, String target, String kind) {
     }
 
-    public record Graph(List<Node> nodes, List<Edge> edges, List<List<String>> cycles, Map<String, Integer> languages,
+    public record Graph(List<CodeGraphNode> nodes, List<CodeGraphEdge> edges, List<List<String>> cycles, Map<String, Integer> languages,
                         int files, boolean truncated) {
     }
 
@@ -98,7 +98,7 @@ public final class CodeGraphScanner {
             }
         });
 
-        Map<String, Node> nodes = new LinkedHashMap<>();
+        Map<String, CodeGraphNode> nodes = new LinkedHashMap<>();
         Map<String, String> texts = new HashMap<>();
         Map<String, String> javaClassToFile = new HashMap<>();
         Map<String, String> pythonModuleToFile = new HashMap<>();
@@ -110,7 +110,7 @@ public final class CodeGraphScanner {
             texts.put(rel, text);
             languages.merge(lang, 1, Integer::sum);
             String dir = rel.contains("/") ? rel.substring(0, rel.lastIndexOf('/')) : ".";
-            nodes.put(rel, new Node(rel, file.getFileName().toString(), "FILE", lang, dir, (int) text.lines().count()));
+            nodes.put(rel, new CodeGraphNode(rel, file.getFileName().toString(), "FILE", lang, dir, (int) text.lines().count()));
             if (lang.equals("java")) {
                 Matcher m = JAVA_PACKAGE.matcher(text);
                 String pkg = m.find() ? m.group(1) + "." : "";
@@ -127,7 +127,7 @@ public final class CodeGraphScanner {
             }
         }
 
-        Set<Edge> edges = new LinkedHashSet<>();
+        Set<CodeGraphEdge> edges = new LinkedHashSet<>();
         for (Map.Entry<String, String> entry : texts.entrySet()) {
             String rel = entry.getKey();
             String text = entry.getValue();
@@ -138,9 +138,9 @@ public final class CodeGraphScanner {
                     while (m.find()) {
                         String spec = m.group(1);
                         if (spec.startsWith(".")) {
-                            resolveRelative(rel, spec, nodes.keySet()).ifPresent(t -> edges.add(new Edge(rel, t, "IMPORT")));
+                            resolveRelative(rel, spec, nodes.keySet()).ifPresent(t -> edges.add(new CodeGraphEdge(rel, t, "IMPORT")));
                         } else {
-                            edges.add(new Edge(rel, external(nodes, packageName(spec), "npm"), "USES"));
+                            edges.add(new CodeGraphEdge(rel, external(nodes, packageName(spec), "npm"), "USES"));
                         }
                     }
                 }
@@ -154,12 +154,12 @@ public final class CodeGraphScanner {
                         }
                         if (target != null) {
                             if (!target.equals(rel)) {
-                                edges.add(new Edge(rel, target, "IMPORT"));
+                                edges.add(new CodeGraphEdge(rel, target, "IMPORT"));
                             }
                         } else if (!imported.startsWith("java.") && !imported.startsWith("javax.")) {
                             String[] parts = imported.split("\\.");
                             String group = parts.length >= 2 ? parts[0] + "." + parts[1] : imported;
-                            edges.add(new Edge(rel, external(nodes, group, "java"), "USES"));
+                            edges.add(new CodeGraphEdge(rel, external(nodes, group, "java"), "USES"));
                         }
                     }
                 }
@@ -181,7 +181,7 @@ public final class CodeGraphScanner {
                             String name = module.replaceFirst("^\\.+", "");
                             String absolute = (base.isEmpty() ? "" : base + (name.isEmpty() ? "" : ".")) + name;
                             Optional.ofNullable(pythonModuleToFile.get(absolute))
-                                    .filter(t -> !t.equals(rel)).ifPresent(t -> edges.add(new Edge(rel, t, "IMPORT")));
+                                    .filter(t -> !t.equals(rel)).ifPresent(t -> edges.add(new CodeGraphEdge(rel, t, "IMPORT")));
                             continue;
                         }
                         String target = pythonModuleToFile.get(module);
@@ -190,10 +190,10 @@ public final class CodeGraphScanner {
                         }
                         if (target != null) {
                             if (!target.equals(rel)) {
-                                edges.add(new Edge(rel, target, "IMPORT"));
+                                edges.add(new CodeGraphEdge(rel, target, "IMPORT"));
                             }
                         } else if (!module.isEmpty() && !PYTHON_STDLIB.contains(module.split("\\.")[0])) {
-                            edges.add(new Edge(rel, external(nodes, module.split("\\.")[0], "pypi"), "USES"));
+                            edges.add(new CodeGraphEdge(rel, external(nodes, module.split("\\.")[0], "pypi"), "USES"));
                         }
                     }
                 }
@@ -206,26 +206,26 @@ public final class CodeGraphScanner {
             String rel = relative(root, manifest);
             String text = Files.readString(manifest, StandardCharsets.UTF_8);
             String dir = rel.contains("/") ? rel.substring(0, rel.lastIndexOf('/')) : ".";
-            nodes.put(rel, new Node(rel, manifest.getFileName().toString(), "MANIFEST", "manifest", dir, (int) text.lines().count()));
+            nodes.put(rel, new CodeGraphNode(rel, manifest.getFileName().toString(), "MANIFEST", "manifest", dir, (int) text.lines().count()));
             String name = manifest.getFileName().toString();
             if (name.equals("package.json")) {
                 Matcher deps = Pattern.compile("\"(dependencies|devDependencies)\"\\s*:\\s*\\{([^}]*)}", Pattern.DOTALL).matcher(text);
                 while (deps.find()) {
                     Matcher key = Pattern.compile("\"([^\"]+)\"\\s*:").matcher(deps.group(2));
                     while (key.find()) {
-                        edges.add(new Edge(rel, external(nodes, key.group(1), "npm"), "DECLARES"));
+                        edges.add(new CodeGraphEdge(rel, external(nodes, key.group(1), "npm"), "DECLARES"));
                     }
                 }
             } else if (name.equals("pom.xml")) {
                 Matcher dep = POM_DEPENDENCY.matcher(text);
                 while (dep.find()) {
-                    edges.add(new Edge(rel, external(nodes, dep.group(1).strip(), "java"), "DECLARES"));
+                    edges.add(new CodeGraphEdge(rel, external(nodes, dep.group(1).strip(), "java"), "DECLARES"));
                 }
             } else {
                 for (String line : text.lines().toList()) {
                     String pkg = line.strip().split("[=<>~!\\[; ]")[0];
                     if (!pkg.isEmpty() && !pkg.startsWith("#") && !pkg.startsWith("-")) {
-                        edges.add(new Edge(rel, external(nodes, pkg.toLowerCase(Locale.ROOT), "pypi"), "DECLARES"));
+                        edges.add(new CodeGraphEdge(rel, external(nodes, pkg.toLowerCase(Locale.ROOT), "pypi"), "DECLARES"));
                     }
                 }
             }
@@ -236,9 +236,9 @@ public final class CodeGraphScanner {
     }
 
     /** Strongly connected components of the IMPORT edges with more than one file: the import cycles. */
-    static List<List<String>> cycles(Set<String> ids, Set<Edge> edges) {
+    static List<List<String>> cycles(Set<String> ids, Set<CodeGraphEdge> edges) {
         Map<String, List<String>> out = new HashMap<>();
-        for (Edge e : edges) {
+        for (CodeGraphEdge e : edges) {
             if (e.kind().equals("IMPORT")) {
                 out.computeIfAbsent(e.source(), k -> new ArrayList<>()).add(e.target());
             }
@@ -288,9 +288,9 @@ public final class CodeGraphScanner {
         }
     }
 
-    private static String external(Map<String, Node> nodes, String name, String ecosystem) {
+    private static String external(Map<String, CodeGraphNode> nodes, String name, String ecosystem) {
         String id = "ext:" + ecosystem + ":" + name;
-        nodes.putIfAbsent(id, new Node(id, name, "EXTERNAL", ecosystem, ecosystem, 0));
+        nodes.putIfAbsent(id, new CodeGraphNode(id, name, "EXTERNAL", ecosystem, ecosystem, 0));
         return id;
     }
 

@@ -51,11 +51,13 @@ public class FakeHost {
     public static final Path FAKE_EXECUTABLE = Path.of("C:\\Fake\\program.exe");
 
     private final Map<String, Detection> scripted = new ConcurrentHashMap<>();
+    private final Map<String, byte[]> icons = new ConcurrentHashMap<>();
     private final List<LaunchPlan> launches = new ArrayList<>();
     private volatile int refreshes;
 
     public synchronized void reset() {
         scripted.clear();
+        icons.clear();
         launches.clear();
         refreshes = 0;
     }
@@ -98,7 +100,12 @@ public class FakeHost {
         launches.add(plan);
     }
 
+    /** PHASE 32: the icon a software entry shows, scripted; none unless a test sets one. */
+    public void scriptIcon(String key, byte[] png) {
+        icons.put(key, png);
+    }
+
     public Optional<byte[]> icon(Software software, Detection detection) {
-        return Optional.empty();
+        return Optional.ofNullable(icons.get(software.getKey()));
     }
 }

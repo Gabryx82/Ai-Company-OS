@@ -1,5 +1,6 @@
 package com.aicompany.backend.run.model;
 
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -125,7 +126,7 @@ public class TaskRun {
 
     @PrePersist
     void onCreate() {
-        this.createdAt = Instant.now();
+        this.createdAt = DatabaseClock.now();
     }
 
     /** {@code QUEUED → RUNNING}. Returns false, and changes nothing, from any other state. */
@@ -134,7 +135,7 @@ public class TaskRun {
             return false;
         }
         this.status = RunStatus.RUNNING;
-        this.startedAt = Instant.now();
+        this.startedAt = DatabaseClock.now();
         return true;
     }
 
@@ -151,7 +152,7 @@ public class TaskRun {
         this.inputTokens = inputTokens;
         this.outputTokens = outputTokens;
         this.latencyMs = latencyMs;
-        this.finishedAt = Instant.now();
+        this.finishedAt = DatabaseClock.now();
         return true;
     }
 
@@ -164,7 +165,7 @@ public class TaskRun {
         this.failureType = failureType;
         this.failureDetail = failureDetail == null ? null
                 : failureDetail.length() > 2000 ? failureDetail.substring(0, 2000) : failureDetail;
-        this.finishedAt = Instant.now();
+        this.finishedAt = DatabaseClock.now();
         return true;
     }
 

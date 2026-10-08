@@ -8,7 +8,7 @@ import { TaskDrawer } from "./TaskDrawer";
 
 const AGENT: Agent = {
   id: 1, name: "Backend Bot", role: "Backend Engineer", specialization: "APIs",
-  model: null, active: true, status: "ACTIVE", createdAt: null, updatedAt: null,
+  model: null, active: true, status: "ACTIVE", createdAt: null, updatedAt: null, version: 0,
 };
 const PLANNED = { id: 9, title: "Creare lo scheletro", description: null, status: "OPEN", priority: "HIGH",
   projectId: 3, agentId: 1, phaseId: 5, code: "TASK-001", documentPath: "tasks/TASK-001.md" };

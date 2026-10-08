@@ -1,5 +1,6 @@
 package com.aicompany.backend.plan.model;
 
+import com.aicompany.backend.persistence.DatabaseClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -69,7 +70,7 @@ public class PlanRun {
     private String requestedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt = DatabaseClock.now();
 
     @Column(name = "finished_at")
     private Instant finishedAt;
@@ -97,7 +98,7 @@ public class PlanRun {
         this.servedModel = servedModel;
         this.inputTokens = inputTokens;
         this.outputTokens = outputTokens;
-        this.finishedAt = Instant.now();
+        this.finishedAt = DatabaseClock.now();
     }
 
     public void fail(String detail, String output, String servedModel) {
@@ -105,7 +106,7 @@ public class PlanRun {
         this.failureDetail = detail.length() > 4000 ? detail.substring(0, 4000) : detail;
         this.output = output;
         this.servedModel = servedModel;
-        this.finishedAt = Instant.now();
+        this.finishedAt = DatabaseClock.now();
     }
 
     public Long getId() { return id; }
