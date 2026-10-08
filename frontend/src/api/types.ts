@@ -168,6 +168,8 @@ export type TaskOutcome = S["TaskOutcome"];
 export type Learning = S["Learning"];
 /** PHASE 32 (TD-63): an AI action asked about a Blueprint block, with what its task produced. */
 export type BlueprintAiAction = S["BlueprintAiActionView"];
+/** PHASE 32 (TD-71): an entry of the shipped catalog an admin retired. */
+export type CatalogRetirement = S["Retirement"];
 export type AutonomyLevel = NonNullable<S["ProjectResponse"]["autonomyLevel"]>;
 export type ProjectType = NonNullable<S["ProjectResponse"]["projectType"]>;
 
@@ -375,7 +377,7 @@ export type BlueprintProposalWrite = S["BlueprintProposalRequest"];
 
 // --- PHASE 31: the Knowledge Hub across applications and marketplaces (ADR-036) ---------------
 
-export type HubScope = "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
+export type HubScope = "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE" | "PROJECT";
 export type HubKind = "SKILL" | "PLUGIN" | "CONNECTOR" | "KNOWLEDGE";
 export type CopyStatus = "IN_SYNC" | "OUTDATED" | "MODIFIED" | "CONFLICT" | "ORPHAN";
 export interface HubCategory { key: string; label: string }
@@ -401,6 +403,8 @@ export interface HubSkill {
   copies: HubCopy[] | null; updateAvailable: boolean;
   /** PHASE 31 review: a plugin's components, a connector's transport and providers -- label by label, never a secret. */
   details: Record<string, string> | null;
+  /** PHASE 32 (TD-76): the category is the operator's, not the heuristic's. */
+  categoryChosen?: boolean;
 }
 export interface HubSummary {
   total: number; apps: number; libraryEntries: number; updates: number; copies: number;

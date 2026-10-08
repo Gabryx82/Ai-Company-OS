@@ -35,6 +35,8 @@ public class SecurityLog {
     public static final String USER_UPDATED = "USER_UPDATED";
     public static final String ACCESS_DENIED = "ACCESS_DENIED";
     public static final String DATA_DELETED = "DATA_DELETED";
+    /** PHASE 32 (TD-71): a retired entry of the shipped catalog put back. */
+    public static final String DATA_RESTORED = "DATA_RESTORED";
     public static final String PROCESS_STARTED = "PROCESS_STARTED";
 
     private static final Logger LOG = LoggerFactory.getLogger("aicos.security");

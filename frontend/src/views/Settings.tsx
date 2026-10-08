@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ApiProblem, type Session } from "../api/client";
-import type { Role, SecurityEventInfo, UserInfo } from "../api/types";
+import type { CatalogRetirement, Role, SecurityEventInfo, UserInfo } from "../api/types";
 import { useApi } from "../context";
 import { displayName, setDisplayName } from "../preferences";
 import { Field, Modal, ProblemNote, when } from "../components/ui";
@@ -11,7 +11,7 @@ const EVENT_LABELS: Record<string, string> = {
   LOGIN_SUCCEEDED: "Accesso riuscito", LOGIN_FAILED: "Accesso fallito", ACCOUNT_LOCKED: "Account bloccato",
   LOGIN_THROTTLED: "Troppi tentativi", LOGOUT: "Uscita", PASSWORD_CHANGED: "Password cambiata",
   PASSWORD_RESET: "Password reimpostata", ADMIN_BOOTSTRAPPED: "Admin creato all'avvio", USER_CREATED: "Utente creato",
-  USER_UPDATED: "Utente modificato", ACCESS_DENIED: "Accesso negato", DATA_DELETED: "Dati eliminati",
+  USER_UPDATED: "Utente modificato", ACCESS_DENIED: "Accesso negato", DATA_DELETED: "Dati eliminati", DATA_RESTORED: "Dati ripristinati",
   PROCESS_STARTED: "Processo avviato",
 };
 
@@ -40,6 +40,7 @@ export function Settings({ session, onSessionChanged }: { session: Session; onSe
       )}
       <EcosystemPanel manage />
       {isAdmin && <UsersCard self={session.user!} />}
+      {isAdmin && <RetiredEntriesCard />}
       {isAdmin && <SecurityLogCard />}
     </div>
   );
@@ -297,6 +298,53 @@ function ResetModal({ user, onClose, onDone }: { user: UserInfo; onClose: () => 
           <button className="btn btn-primary" type="submit">Reimposta</button></div>
       </form>
     </Modal>
+  );
+}
+
+const CATALOG_LABELS: Record<CatalogRetirement["catalog"], string> = {
+  SOFTWARE: "Software Hub", RESOURCE: "Knowledge Hub", MODEL: "Modelli LLM",
+};
+
+/**
+ * PHASE 32 (TD-71): the entries of the shipped catalog an admin retired. The next
+ * start does not bring them back; Ripristina puts one back as the catalog ships it.
+ */
+function RetiredEntriesCard() {
+  const api = useApi();
+  const [entries, setEntries] = useState<CatalogRetirement[] | null>(null);
+  const [problem, setProblem] = useState<unknown>(null);
+  const load = useCallback(() => api.catalogRetirements().then(setEntries).catch(setProblem), [api]);
+  useEffect(() => { load(); }, [load]);
+  async function restore(entry: CatalogRetirement) {
+    setProblem(null);
+    try {
+      await api.restoreCatalogEntry(entry.catalog, entry.key);
+    } catch (error) {
+      setProblem(error);
+    }
+    load();
+  }
+  return (
+    <div className="card card-body stack" id="retired">
+      <div className="section-title" style={{ margin: 0 }}>Voci congedate</div>
+      <p className="muted" style={{ margin: 0 }}>Voci del catalogo di AI Company OS tolte da un admin: il prossimo avvio non le reinserisce.</p>
+      <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
+      {entries && entries.length === 0 && <div className="muted">Nessuna voce congedata.</div>}
+      {entries && entries.length > 0 && (
+        <table className="table">
+          <thead><tr><th>Catalogo</th><th>Voce</th><th>Da</th><th>Quando</th><th aria-label="Azioni" /></tr></thead>
+          <tbody>
+            {entries.map((e) => (
+              <tr key={`${e.catalog}:${e.key}`}>
+                <td>{CATALOG_LABELS[e.catalog]}</td><td className="mono">{e.key}</td><td>{e.retiredBy}</td>
+                <td className="muted">{when(e.retiredAt)}</td>
+                <td><button className="btn btn-small" onClick={() => restore(e)}>Ripristina</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
 }
 

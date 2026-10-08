@@ -83,3 +83,18 @@ describe("hubModel", () => {
     expect(slug("Accessibilità dei form!")).toBe("accessibilita-dei-form");
   });
 });
+
+/** PHASE 32 (TD-78): the skills a project's repository carries are a group of their own, named after the project. */
+describe("hubModel — skills of a project", () => {
+  it("groups a repository's skills under the project's folder", () => {
+    const claude = { ...app("claude-code", "Claude Code"), locations: [{ id: "claude-code.project-7", label: "Skill del progetto «Shop» (.claude/skills)",
+      scope: "PROJECT" as const, path: "C:/work/shop/.claude/skills", exists: true, writable: false, readers: ["claude-code"], count: 1 }] };
+    const out = sections([claude], [
+      skill({ id: "p1", location: "claude-code.project-7", scope: "PROJECT", name: "shop-review", writable: false }),
+      skill({ id: "p2", name: "commit-helper" }),
+    ]);
+    const groups = out[0].groups.map((g) => [g.title, g.subtitle, g.skills.map((s) => s.name)]);
+    expect(groups).toContainEqual(["Skill del progetto «Shop» (.claude/skills)", "C:/work/shop/.claude/skills", ["shop-review"]]);
+    expect(groups).toContainEqual(["Skill personali", null, ["commit-helper"]]);
+  });
+});

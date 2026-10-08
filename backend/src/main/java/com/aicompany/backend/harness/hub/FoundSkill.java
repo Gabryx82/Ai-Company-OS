@@ -30,6 +30,14 @@ public record FoundSkill(String id, String app, String location, SkillLocations.
     public static final String CONNECTOR = "CONNECTOR";
     public static final String KNOWLEDGE = "KNOWLEDGE";
 
+    /** PHASE 32 (TD-84): the relative path of a plugin built into Claude Code, which has no folder of its own. */
+    public static final String BUILTIN = "builtin:";
+
+    /** A plugin built into its application: no folder, no manifest, nothing on disk to show or open. */
+    public boolean builtin() {
+        return relativePath != null && relativePath.startsWith(BUILTIN);
+    }
+
     public static String idOf(String location, String relativePath) {
         return Fingerprints.sha256(location + "|" + relativePath).substring(0, 24);
     }

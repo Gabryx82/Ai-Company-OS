@@ -64,7 +64,9 @@ public class SecurityConfiguration {
             // PHASE 31 (ADR-036): a Knowledge Hub copy taken out of an application (kept as a backup).
             "/api/skill-hub/library/*/copies/*",
             // PHASE 32 (TD-68): a software entry added through the API.
-            "/api/software/*"};
+            "/api/software/*",
+            // PHASE 32 (TD-71): a model of the catalog.
+            "/api/catalog/models"};
 
     /** The same decision for a selection: deleting several agents at once (PHASE 30). */
     public static final String[] ADMIN_ONLY_BULK_DELETES = {"/api/agents/bulk-delete"};

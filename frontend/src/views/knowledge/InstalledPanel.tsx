@@ -6,6 +6,8 @@ import {
   SCOPE_HINT, SCOPE_LABEL, SCOPE_ORDER, sections, type Filters, type StatusFilter,
 } from "./hubModel";
 import { FoundSkillDetail } from "./FoundSkillDetail";
+import { CategoryPicker } from "./CategoryPicker";
+import { SourceLink } from "./SourceLink";
 
 const PAGE = 12;
 
@@ -19,7 +21,8 @@ const PAGE = 12;
 export function InstalledPanel({ installed, onChanged, renderLibraryDetail }: {
   installed: HubInstalled;
   onChanged: (message: string) => void;
-  renderLibraryDetail: (key: string, close: () => void) => React.ReactNode;
+  /** {@code extra}: what the Hub adds to a library entry's detail -- its category (TD-76). */
+  renderLibraryDetail: (key: string, close: () => void, extra?: React.ReactNode) => React.ReactNode;
 }) {
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [selected, setSelected] = useState<HubSkill | null>(null);
@@ -155,8 +158,14 @@ export function InstalledPanel({ installed, onChanged, renderLibraryDetail }: {
             )}
           </div>
           {selected && (selected.app === "aicos" && selected.libraryKey
-            ? renderLibraryDetail(selected.libraryKey, () => setSelected(null))
-            : <FoundSkillDetail key={selected.id} skill={selected} apps={apps} onClose={() => setSelected(null)}
+            ? renderLibraryDetail(selected.libraryKey, () => setSelected(null),
+                <>
+                  <div className="row" style={{ fontSize: 12 }}><span className="muted">Categoria</span>
+                    <CategoryPicker key={selected.id} skill={selected} categories={installed.categories ?? []} onChanged={onChanged} /></div>
+                  {selected.kind === "SKILL" && <SourceLink key={`source:${selected.id}`} skill={selected} onChanged={onChanged} />}
+                </>)
+            : <FoundSkillDetail key={selected.id} skill={selected} apps={apps} categories={installed.categories ?? []}
+                                onClose={() => setSelected(null)}
                                 onChanged={(message) => { onChanged(message); }} />)}
         </div>
       </div>

@@ -127,7 +127,13 @@ class PreconditionCoverageTest {
             "checkProvenance",
             // PHASE 32 (TD-39): cancelling a run asks for an end state -- not running -- that nothing the caller
             // saw can make wrong: a run already finished is answered as it is. No tag to be stale about.
-            "cancel");
+            "cancel",
+            // PHASE 32 (TD-76): a skill's category is a label over a heuristic, set whole by an idempotent PUT
+            // and taken back by an empty one -- like one's own display name, last write wins by design.
+            "categorize",
+            // PHASE 32 (TD-80): tying a library skill to its source replaces the Hub's bookkeeping of where it comes
+            // from, never the skill: the files change only through update, guarded by content as above.
+            "linkSource");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {

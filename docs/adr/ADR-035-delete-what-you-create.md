@@ -214,3 +214,28 @@ mostrava come errore. È lo stato che l'operatore chiedeva: ora la console lo di
 `POST /api/resources` registra ora `origin = USER`; all'avvio le voci etichettate `CATALOG` che il
 catalogo spedito non contiene sono rietichettate `USER`. La console mostra «Elimina» nel Software Hub
 e «Togli dall'avvio» nel pannello dell'ecosistema solo per ciò che si può eliminare.
+
+## Revisione PHASE 32 (2026-10-08) — TD-71 chiuso: le voci del catalogo spedito si congedano
+
+Cambia la regola del §7 e quella della revisione precedente («il catalogo spedito resta `409`»).
+Una voce del catalogo spedito — software (`catalog/software.json`), voce della libreria
+(`catalog/resources.json`), modello (`catalog/models.json`) — **si elimina**, e l'eliminazione dura:
+
+- la tabella `catalog_retirements` (V36: catalogo, chiave, chi, quando) tiene le voci congedate, e
+  `CatalogBootstrap` non inserisce ciò che vi trova. Il congedo è scritto nella stessa transazione
+  dell'eliminazione;
+- l'anteprima lo dice («la voce viene congedata e il prossimo avvio non la reinserisce») invece di
+  rifiutare: `allowed` è vero, i vincoli restano quelli di sempre (admin, `If-Match`, scollegamenti);
+- i modelli entrano nel pattern: `GET /api/catalog/models/deletion?key=` e
+  `DELETE /api/catalog/models?key=` (admin). Esce la voce, non il modello: niente è rimosso da Ollama
+  né dal provider, e gli agenti che lo usano lo tengono fuori catalogo;
+- il ritorno è esplicito: `GET /api/admin/catalog/retirements` elenca le voci congedate e
+  `DELETE /api/admin/catalog/retirements/{catalogo}/{chiave}` ne ripristina una **com'è nel
+  catalogo** (non com'era prima del congedo), registrando `DATA_RESTORED`. Nella console: «Congeda»
+  nel Software Hub e in Modelli LLM (nel Knowledge Hub il gesto resta «Elimina» e l'anteprima dice
+  del congedo); Impostazioni › Voci congedate › «Ripristina».
+
+Disabilitare (software) e scollegare (libreria) restano i gesti reversibili senza congedo. Il criterio
+di «spedita» resta la presenza della chiave nel file del catalogo, non il campo `origin`.
+Test: `CatalogRetirementApiTest` (rosso con un `CatalogBootstrap` che ignora i congedi),
+`ResourceDeletionApiTest`, `SoftwareHubApiTest`; console `Models.test.tsx`, `Settings.test.tsx`.

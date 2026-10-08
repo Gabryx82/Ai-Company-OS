@@ -53,6 +53,11 @@ public class SkillSync {
      */
     static final String BASELINE = "baseline";
     static final String BASELINE_PREFIX = "baseline:";
+    /**
+     * PHASE 32 (TD-84): a reader a location gained -- Claude Code's built-in plugins,
+     * read from its configuration -- is photographed once, like a new location.
+     */
+    static final String BUILTIN_READING = "#builtin";
 
     public enum Change { ADDED, REMOVED, MODIFIED }
 
@@ -171,10 +176,14 @@ public class SkillSync {
         Instant now = scan.at();
         Timestamp at = Timestamp.from(now);
         for (SkillLocations.Location location : locations.locations()) {
-            if (!known.contains(location.id())) {
-                jdbc.update("INSERT INTO skill_snapshot (id, app, location, relative_path, name, fingerprint, plugin_version, "
-                        + "first_seen_at, last_changed_at) VALUES (?, 'aicos', ?, '', 'baseline', '', NULL, ?, ?)",
-                        BASELINE_PREFIX + location.id(), cut(location.id(), 48), at, at);
+            List<String> readings = location.layout() == SkillLocations.Layout.CLAUDE_CODE_PLUGINS
+                    ? List.of(location.id(), location.id() + BUILTIN_READING) : List.of(location.id());
+            for (String reading : readings) {
+                if (!known.contains(reading)) {
+                    jdbc.update("INSERT INTO skill_snapshot (id, app, location, relative_path, name, fingerprint, plugin_version, "
+                            + "first_seen_at, last_changed_at) VALUES (?, 'aicos', ?, '', 'baseline', '', NULL, ?, ?)",
+                            BASELINE_PREFIX + reading, cut(reading, 48), at, at);
+                }
             }
         }
         List<Event> events = new ArrayList<>();
@@ -191,7 +200,7 @@ public class SkillSync {
                                 + "first_seen_at, last_changed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         skill.id(), skill.app(), skill.location(), path, name, skill.fingerprint(),
                         cut(skill.pluginVersion(), 120), at, at);
-                if (known.contains(skill.location())) {
+                if (known.contains(skill.builtin() ? skill.location() + BUILTIN_READING : skill.location())) {
                     events.add(event(now, Change.ADDED, skill, skill.plugin() == null || FoundSkill.PLUGIN.equals(skill.kind())
                             ? (skill.pluginVersion() == null ? null : "Versione " + skill.pluginVersion())
                             : "Plugin " + skill.plugin() + (skill.pluginVersion() == null ? "" : " " + skill.pluginVersion())));

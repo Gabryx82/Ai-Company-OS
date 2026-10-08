@@ -3171,7 +3171,7 @@
             "type" : "array"
           },
           "scope" : {
-            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "ACCOUNT", "INSTRUCTIONS", "KNOWLEDGE" ],
+            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "ACCOUNT", "INSTRUCTIONS", "KNOWLEDGE", "PROJECT" ],
             "type" : "string"
           },
           "writable" : {
@@ -4575,6 +4575,26 @@
         "required" : [ "author", "description", "details", "installs", "kind", "name", "provider", "ref", "source", "suspicious", "targets", "url", "version" ],
         "type" : "object"
       },
+      "Retirement" : {
+        "properties" : {
+          "catalog" : {
+            "enum" : [ "SOFTWARE", "RESOURCE", "MODEL" ],
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "retiredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "retiredBy" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "catalog", "key", "retiredAt", "retiredBy" ],
+        "type" : "object"
+      },
       "ReviewResponse" : {
         "properties" : {
           "autonomyLevel" : {
@@ -4830,6 +4850,22 @@
         "required" : [ "available", "detail", "key", "name" ],
         "type" : "object"
       },
+      "SkillCategoryRequest" : {
+        "properties" : {
+          "category" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
       "SkillFolderOpened" : {
         "properties" : {
           "folder" : {
@@ -4934,6 +4970,9 @@
           "category" : {
             "type" : "string"
           },
+          "categoryChosen" : {
+            "type" : "boolean"
+          },
           "categoryLabel" : {
             "type" : "string"
           },
@@ -4998,7 +5037,7 @@
             } ]
           },
           "scope" : {
-            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "ACCOUNT", "INSTRUCTIONS", "KNOWLEDGE" ],
+            "enum" : [ "LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "ACCOUNT", "INSTRUCTIONS", "KNOWLEDGE", "PROJECT" ],
             "type" : "string"
           },
           "updateAvailable" : {
@@ -5011,7 +5050,7 @@
             "type" : "boolean"
           }
         },
-        "required" : [ "app", "category", "categoryLabel", "copies", "copyStatus", "description", "details", "enabled", "id", "kind", "libraryKey", "location", "marketplace", "modified", "name", "path", "plugin", "pluginVersion", "provenance", "scope", "updateAvailable", "version", "writable" ],
+        "required" : [ "app", "category", "categoryChosen", "categoryLabel", "copies", "copyStatus", "description", "details", "enabled", "id", "kind", "libraryKey", "location", "marketplace", "modified", "name", "path", "plugin", "pluginVersion", "provenance", "scope", "updateAvailable", "version", "writable" ],
         "type" : "object"
       },
       "SoftwareChoice" : {
@@ -5282,6 +5321,46 @@
           }
         },
         "required" : [ "appId", "availability", "availabilityDetail", "capabilities", "catalog", "category", "cliCommand", "configuration", "createdAt", "embedNote", "embeddable", "enabled", "executable", "executableArgs", "executionTarget", "healthUrl", "iconUrl", "id", "incompatibleReason", "key", "launchKind", "launchable", "name", "openFolder", "projectTypes", "purpose", "requirements", "resolvedExecutable", "role", "updatedAt", "url", "version" ],
+        "type" : "object"
+      },
+      "SourceLinked" : {
+        "properties" : {
+          "inStep" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "reference" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "inStep", "key", "message", "provider", "reference", "version" ],
+        "type" : "object"
+      },
+      "SourceRequest" : {
+        "properties" : {
+          "provider" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "ref" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "provider", "ref" ],
         "type" : "object"
       },
       "Subject" : {
@@ -6015,6 +6094,54 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/admin/catalog/retirements" : {
+      "get" : {
+        "operationId" : "catalogRetirements",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Retirement"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalog-retirement-controller" ]
+      }
+    },
+    "/api/admin/catalog/retirements/{catalog}/{key}" : {
+      "delete" : {
+        "operationId" : "restoreCatalogEntry",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "catalog",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "SOFTWARE", "RESOURCE", "MODEL" ],
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalog-retirement-controller" ]
+      }
+    },
     "/api/admin/costs/budgets/{provider}" : {
       "delete" : {
         "operationId" : "removeBudget",
@@ -7313,6 +7440,30 @@
       }
     },
     "/api/catalog/models" : {
+      "delete" : {
+        "operationId" : "deleteModel",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "llm-catalog-controller" ]
+      },
       "get" : {
         "operationId" : "catalogModels",
         "responses" : {
@@ -7362,6 +7513,32 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "llm-catalog-controller" ]
+      }
+    },
+    "/api/catalog/models/deletion" : {
+      "get" : {
+        "operationId" : "modelDeletion",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionPreview"
                 }
               }
             },
@@ -10310,6 +10487,27 @@
         "tags" : [ "run-controller" ]
       }
     },
+    "/api/skill-hub/categories" : {
+      "put" : {
+        "operationId" : "setSkillCategory",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SkillCategoryRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
     "/api/skill-hub/connectors/install" : {
       "post" : {
         "operationId" : "installMarketplaceConnector",
@@ -10631,6 +10829,42 @@
                 "schema" : {
                   "format" : "byte",
                   "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      }
+    },
+    "/api/skill-hub/library/{key}/source" : {
+      "put" : {
+        "operationId" : "linkSkillSource",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SourceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SourceLinked"
                 }
               }
             },

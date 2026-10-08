@@ -4,6 +4,38 @@
  */
 
 export interface paths {
+    "/api/admin/catalog/retirements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalogRetirements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/catalog/retirements/{catalog}/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["restoreCatalogEntry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/costs/budgets/{provider}": {
         parameters: {
             query?: never;
@@ -541,6 +573,22 @@ export interface paths {
         };
         get: operations["catalogModels"];
         put: operations["classify"];
+        post?: never;
+        delete: operations["deleteModel"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/models/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["modelDeletion"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1700,6 +1748,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/skill-hub/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["setSkillCategory"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/skill-hub/connectors/install": {
         parameters: {
             query?: never;
@@ -1853,6 +1917,22 @@ export interface paths {
         };
         get: operations["skillPackageZip"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/library/{key}/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["linkSkillSource"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3551,7 +3631,7 @@ export interface components {
             path: string;
             readers: string[];
             /** @enum {string} */
-            scope: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
+            scope: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE" | "PROJECT";
             writable: boolean;
         };
         LoginRequest: {
@@ -4015,6 +4095,14 @@ export interface components {
             url: string | null;
             version: string | null;
         };
+        Retirement: {
+            /** @enum {string} */
+            catalog: "SOFTWARE" | "RESOURCE" | "MODEL";
+            key: string;
+            /** Format: date-time */
+            retiredAt: string;
+            retiredBy: string;
+        };
         ReviewResponse: {
             /** @enum {string|null} */
             autonomyLevel: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW" | null;
@@ -4112,6 +4200,10 @@ export interface components {
             key: string;
             name: string;
         };
+        SkillCategoryRequest: {
+            category?: string;
+            name: string;
+        };
         SkillFolderOpened: {
             folder: string;
         };
@@ -4151,6 +4243,7 @@ export interface components {
         SkillView: {
             app: string;
             category: string;
+            categoryChosen: boolean;
             categoryLabel: string;
             copies: components["schemas"]["CopyView"][];
             /** @enum {string|null} */
@@ -4173,7 +4266,7 @@ export interface components {
             pluginVersion: string | null;
             provenance: components["schemas"]["ProvenanceView"] | null;
             /** @enum {string} */
-            scope: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE";
+            scope: "LIBRARY" | "PERSONAL" | "PLUGIN" | "SYSTEM" | "ACCOUNT" | "INSTRUCTIONS" | "KNOWLEDGE" | "PROJECT";
             updateAvailable: boolean;
             version: string | null;
             writable: boolean;
@@ -4254,6 +4347,18 @@ export interface components {
             url: string | null;
             /** Format: int64 */
             version: number;
+        };
+        SourceLinked: {
+            inStep: boolean;
+            key: string;
+            message: string;
+            provider: string;
+            reference: string;
+            version: string | null;
+        };
+        SourceRequest: {
+            provider: string;
+            ref: string;
         };
         Subject: {
             id: string;
@@ -4515,6 +4620,47 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    catalogRetirements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Retirement"][];
+                };
+            };
+        };
+    };
+    restoreCatalogEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                catalog: "SOFTWARE" | "RESOURCE" | "MODEL";
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     budget: {
         parameters: {
             query?: never;
@@ -5557,6 +5703,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ModelResponse"];
+                };
+            };
+        };
+    };
+    deleteModel: {
+        parameters: {
+            query: {
+                key: string;
+            };
+            header?: {
+                "If-Match"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    modelDeletion: {
+        parameters: {
+            query: {
+                key: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeletionPreview"];
                 };
             };
         };
@@ -7705,6 +7895,28 @@ export interface operations {
             };
         };
     };
+    setSkillCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     installMarketplaceConnector: {
         parameters: {
             query?: never;
@@ -7957,6 +8169,32 @@ export interface operations {
                 };
                 content: {
                     "application/zip": string;
+                };
+            };
+        };
+    };
+    linkSkillSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourceLinked"];
                 };
             };
         };

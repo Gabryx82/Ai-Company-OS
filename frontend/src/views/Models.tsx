@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useApi, useIsAdmin } from "../context";
 import type { CatalogModel, ModelCatalog, Provider } from "../api/types";
 import { Field, Modal, ProblemNote } from "../components/ui";
+import { ConfirmDeletion, DeleteButton } from "../components/Deletion";
 
 const ROLE_LABEL: Record<string, string> = {
   FAST: "Veloce", GENERAL: "Generale", CODER: "Codice", PLANNER: "Pianificazione", VISION: "Visione",
@@ -24,6 +25,7 @@ export function Models() {
   const [catalog, setCatalog] = useState<ModelCatalog | null>(null);
   const [problem, setProblem] = useState<unknown>(null);
   const [pricing, setPricing] = useState<CatalogModel | null>(null);
+  const [retiring, setRetiring] = useState<CatalogModel | null>(null);
   const isAdmin = useIsAdmin();
 
   const load = () => {
@@ -53,7 +55,7 @@ export function Models() {
       <div className="card">
         <div className="card-head"><h2>Modelli</h2></div>
         <table>
-          <thead><tr><th>Modello</th><th>Ruolo</th><th>Ciclo di vita</th><th>Capability</th><th>Dimensione</th><th>Prezzo /M token</th><th>Ora</th></tr></thead>
+          <thead><tr><th>Modello</th><th>Ruolo</th><th>Ciclo di vita</th><th>Capability</th><th>Dimensione</th><th>Prezzo /M token</th><th>Ora</th>{isAdmin && <th aria-label="Azioni" />}</tr></thead>
           <tbody>
             {catalog?.models.map((m) => (
               <tr key={m.key}>
@@ -76,12 +78,24 @@ export function Models() {
                 <td>{m.engineAvailable === null ? <span className="badge">?</span>
                   : m.engineAvailable ? <span className="badge badge-ok">pronto</span>
                   : <span className="badge" title={m.engineDetail ?? ""}>non servito</span>}</td>
+                {isAdmin && <td><DeleteButton label={`Congeda ${m.displayName}`} onClick={() => setRetiring(m)} /></td>}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
+      {retiring && (
+        <ConfirmDeletion title="Togli dal catalogo dei modelli" subject={retiring.displayName} confirmLabel="Congeda"
+                         intro={<>Stai per togliere <strong>«{retiring.displayName}»</strong> dal catalogo dei modelli.</>}
+                         loadPreview={() => api.modelDeletionPreview(retiring.key)}
+                         onClose={() => setRetiring(null)}
+                         onConfirm={async () => {
+                           await api.deleteModel(retiring.key, retiring.version);
+                           setRetiring(null);
+                           load();
+                         }} />
+      )}
       {pricing && <PriceModal model={pricing} onClose={() => setPricing(null)} onSaved={() => { setPricing(null); load(); }} />}
       {served.length > 0 && (
         <div className="card">

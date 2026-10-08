@@ -134,16 +134,12 @@ class ResourceDeletionApiTest extends AbstractPostgresTest {
     }
 
     @Test
-    void anEntryOfTheShippedCatalogIsRefusedWithTheReason() throws Exception {
+    void anEntryOfTheShippedCatalogSaysItIsRetiredAndAnUnknownOneIsA404() throws Exception {
         admin = AdminSession.bearer(mockMvc);
+        // PHASE 32 (TD-71): no longer refused -- retired; CatalogRetirementApiTest follows it to the restart and back.
         mockMvc.perform(get("/api/resources/clean-code-java/deletion"))
-                .andExpect(jsonPath("$.allowed").value(false))
-                .andExpect(jsonPath("$.blockers[0]").value(org.hamcrest.Matchers.containsString("prossimo avvio")));
-        mockMvc.perform(delete("/api/resources/clean-code-java").header(HttpHeaders.AUTHORIZATION, admin)
-                        .header(HttpHeaders.IF_MATCH, tagOf("clean-code-java")))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:deletion-blocked"));
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM harness_resources WHERE key = 'clean-code-java'", Integer.class)).isOne();
+                .andExpect(jsonPath("$.allowed").value(true))
+                .andExpect(jsonPath("$.deletes").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("congedata"))));
 
         mockMvc.perform(delete("/api/resources/no-such-entry").header(HttpHeaders.AUTHORIZATION, admin)
                         .header(HttpHeaders.IF_MATCH, "\"0\""))

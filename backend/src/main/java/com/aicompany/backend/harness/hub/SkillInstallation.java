@@ -28,10 +28,10 @@ public class SkillInstallation {
     @Column(name = "resource_id", nullable = false, updatable = false)
     private Long resourceId;
 
-    @Column(nullable = false, length = 32, updatable = false)
+    @Column(nullable = false, length = 32)
     private String provider;
 
-    @Column(nullable = false, length = 500, updatable = false)
+    @Column(nullable = false, length = 500)
     private String reference;
 
     @Column(name = "source_url", length = 500)
@@ -89,6 +89,22 @@ public class SkillInstallation {
         this.latestVersion = version;
         this.latestFingerprint = fingerprint;
         this.checkError = null;
+    }
+
+    /**
+     * PHASE 32 (TD-80): the entry is tied to another source -- a marketplace, where it
+     * was an application's skill. {@code installedFingerprint} null when which upstream
+     * state the library holds is unknown: the latest is then an update.
+     */
+    public void linkedTo(String provider, String reference, String sourceUrl, String installedVersion,
+                         String installedFingerprint, String localFingerprint) {
+        this.provider = provider;
+        this.reference = reference;
+        this.sourceUrl = sourceUrl;
+        this.installedVersion = installedVersion;
+        this.installedFingerprint = installedFingerprint;
+        this.localFingerprint = localFingerprint;
+        this.installedAt = Instant.now();
     }
 
     /** The operator brought a change of an application's copy into the library: that is the library's state now. */

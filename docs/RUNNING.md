@@ -395,6 +395,10 @@ Plugin e connettori del Marketplace si installano con le CLI delle app: `claude`
 `npx` parte con `cmd /c`. Il file di Claude Desktop che il Hub modifica si salva prima in
 `<aicos.home>/backups/app-config/`.
 
+L'API di GitHub, anonima, concede 60 richieste l'ora: un token (`AICOS_GITHUB_TOKEN` in
+`%USERPROFILE%.aicoslocal.env`, di sola lettura, nessuno scope per i repository pubblici; proprietà
+`aicos.hub.github-token`) le porta a 5000. Va solo a `api.github.com` e non si scrive da nessuna parte (TD-79).
+
 | Endpoint | Chi | Note |
 |---|---|---|
 | `GET /api/skill-hub/installed[?rescan=true]` | tutti | libreria + ogni app: app, cartelle, agenti che lavorano lì, skill con tipologia, categoria, plugin, stato delle copie, provenienza |
@@ -410,6 +414,8 @@ Plugin e connettori del Marketplace si installano con le CLI delle app: `claude`
 | `POST /api/skill-hub/plugins/install {provider, ref, target, confirmation?}` | operatore | con la CLI dell'app; `NEEDS_CONFIRMATION` + sha256 se il marketplace dichiara un comando |
 | `POST /api/skill-hub/connectors/install {provider, ref, targets[], name?, values, replace?}` | operatore | un esito per app; i `values` (chiavi) vanno all'app e non si salvano né si restituiscono |
 | `GET /api/skill-hub/updates` · `POST …/updates/check` · `POST …/updates/apply {ids[], overwrite}` | operatore | aggiornamenti noti; verifica online; applica uno per uno (`UPDATED`, `CONFLICT`, `FAILED`) |
+| `PUT /api/skill-hub/library/{key}/source {provider, ref}` | operatore | collega una skill della libreria alla sua fonte online (TD-80): `inStep`, o l'ultima versione diventa un aggiornamento da confermare |
+| `PUT /api/skill-hub/categories {name, category}` | operatore | categoria scelta a mano per nome (TD-76); `category` vuota torna all'euristica; `204` |
 
 ### Errori
 

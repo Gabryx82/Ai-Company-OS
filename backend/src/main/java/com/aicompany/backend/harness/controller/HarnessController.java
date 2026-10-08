@@ -143,8 +143,9 @@ public class HarnessController {
     /** Deletes an entry the operator created or imported, with its file. Admin-only; takes the entry's tag. */
     @DeleteMapping("/api/resources/{key}")
     public ResponseEntity<Void> deleteResource(@PathVariable String key,
-                                               @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
-        service.deleteResource(key, Precondition.fromHeader(ifMatch));
+                                               @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+                                               org.springframework.security.core.Authentication caller) {
+        service.deleteResource(key, Precondition.fromHeader(ifMatch), caller.getName());
         return ResponseEntity.noContent().build();
     }
 

@@ -530,7 +530,11 @@ public class SkillMarketplaces {
             String when = reset == null ? "" : " (di nuovo disponibile alle "
                     + java.time.format.DateTimeFormatter.ofPattern("HH:mm").withZone(java.time.ZoneId.systemDefault())
                     .format(Instant.ofEpochSecond(Long.parseLong(reset.strip()))) + ")";
-            throw HubProblemException.marketplace("GitHub ha raggiunto il limite di richieste anonime" + when);
+            // PHASE 32 (TD-79): anonymous, the API allows 60 requests an hour; with the operator's token, 5000.
+            throw HubProblemException.marketplace(web.githubAuthenticated()
+                    ? "GitHub ha raggiunto il limite di richieste del token" + when
+                    : "GitHub ha raggiunto il limite di richieste anonime" + when
+                    + ". Con un token GitHub in AICOS_GITHUB_TOKEN (file local.env) il limite sale da 60 a 5000 richieste l'ora");
         }
         if (response.status() == 404) {
             throw HubProblemException.notFound("github.com/" + key + " does not exist or is private");

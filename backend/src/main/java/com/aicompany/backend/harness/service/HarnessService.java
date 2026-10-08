@@ -56,10 +56,19 @@ public class HarnessService {
     private final ProjectRepository projects;
     private final JdbcTemplate jdbc;
     private final SkillLibrary library;
+    private final com.aicompany.backend.catalog.CatalogRetirements retirements;
+    private final com.aicompany.backend.harness.hub.SkillScanner scanner;
+    private final com.aicompany.backend.harness.hub.SkillLocations locations;
     private final Set<String> shipped = CatalogBootstrap.shippedKeys("catalog/resources.json");
 
     public HarnessService(AgentRepository agents, HarnessResourceRepository resources, SoftwareRepository software,
-                          ProjectRepository projects, JdbcTemplate jdbc, SkillLibrary library) {
+                          ProjectRepository projects, JdbcTemplate jdbc, SkillLibrary library,
+                          com.aicompany.backend.catalog.CatalogRetirements retirements,
+                          com.aicompany.backend.harness.hub.SkillScanner scanner,
+                          com.aicompany.backend.harness.hub.SkillLocations locations) {
+        this.retirements = retirements;
+        this.scanner = scanner;
+        this.locations = locations;
         this.agents = agents;
         this.resources = resources;
         this.software = software;
@@ -82,7 +91,7 @@ public class HarnessService {
     }
 
     /** Deletes the entry, its links and its file, all in this transaction. Under the entry's tag (ADR-009). */
-    public void deleteResource(String key, Precondition precondition) {
+    public void deleteResource(String key, Precondition precondition, String by) {
         HarnessResource resource = resources.findByKeyForUpdate(key)
                 .orElseThrow(() -> new HarnessResourceNotFoundException("No resource '" + key + "' in the catalog"));
         precondition.requireSatisfiedBy(resource.getVersion());
@@ -91,6 +100,10 @@ public class HarnessService {
         jdbc.update("DELETE FROM project_resources WHERE resource_id = ?", resource.getId());
         resources.delete(resource);
         resources.flush();
+        // PHASE 32 (TD-71): a shipped entry is retired, so that the next start does not bring it back.
+        if (shipped.contains(key)) {
+            retirements.retire(com.aicompany.backend.catalog.CatalogRetirements.Catalog.RESOURCE, key, by);
+        }
         // After the row: a refusal of the database leaves the file where it is.
         library.deleteFile(resource);
     }
@@ -99,8 +112,8 @@ public class HarnessService {
         DeletionPreview.Builder preview = DeletionPreview.of("RESOURCE").subject(resource.getKey(), resource.getName())
                 .deletes("La voce «" + resource.getName() + "» (" + resource.getKind() + ") esce dal catalogo.");
         if (shipped.contains(resource.getKey())) {
-            preview.blocker("«" + resource.getName() + "» è una voce del catalogo di AI Company OS: tornerebbe al "
-                    + "prossimo avvio. Scollegala dagli agenti e dai progetti, invece.");
+            preview.deletes("È nel catalogo di AI Company OS: la voce viene congedata e il prossimo avvio non la reinserisce. "
+                    + "Si ripristina, com'è nel catalogo, da Impostazioni › Voci congedate.");
         }
         List<String> linkedAgents = jdbc.queryForList("SELECT a.name FROM agent_resources l JOIN agents a "
                 + "ON a.id = l.agent_id WHERE l.resource_id = ? ORDER BY a.name", String.class, resource.getId());
@@ -114,10 +127,35 @@ public class HarnessService {
         }
         library.existingFile(resource).ifPresent(file -> {
             preview.file(file);
-            preview.deletes("Il file " + file + " viene eliminato dalla libreria" + (resource.getKind() == HarnessResource.Kind.SKILL
-                    ? "; gli altri file della sua cartella restano." : "."));
+            preview.deletes("Il file " + file + " viene eliminato dalla libreria.");
+            // PHASE 32 (TD-77): what an installed package keeps next to SKILL.md stays, and is named.
+            if (resource.getKind() == HarnessResource.Kind.SKILL) {
+                java.nio.file.Path skillFile = library.root().resolve(file);
+                java.nio.file.Path folder = skillFile.getParent();
+                List<String> others = com.aicompany.backend.harness.hub.Fingerprints.files(folder).stream()
+                        .filter(p -> !p.equals(skillFile))
+                        .map(p -> folder.relativize(p).toString().replace('\\', '/')).toList();
+                if (!others.isEmpty()) {
+                    preview.keeps("Gli altri " + others.size() + " file della sua cartella restano, nella libreria: "
+                            + String.join(", ", others.subList(0, Math.min(5, others.size())))
+                            + (others.size() > 5 ? ", …" : "") + ".");
+                }
+            }
         });
+        // PHASE 32 (TD-77): the copies the Hub wrote into applications are theirs: they stay, as orphans.
+        List<String> copies = scanner.scan().skills().stream()
+                .filter(s -> s.marker() != null && s.marker().key().equals(resource.getKey()))
+                .map(s -> appName(s.app()) + " (" + s.folder() + ")").sorted().toList();
+        if (!copies.isEmpty()) {
+            preview.keeps("Le sue copie nelle app restano, segnate «non più in libreria»: " + String.join(", ", copies)
+                    + ". Si tolgono dal Knowledge Hub, dal dettaglio di ciascuna copia.");
+        }
         return preview.build();
+    }
+
+    private String appName(String app) {
+        return locations.apps().stream().filter(a -> a.id().equals(app)).map(com.aicompany.backend.harness.hub.SkillLocations.App::name)
+                .findFirst().orElse(app);
     }
 
     // --- the catalog ------------------------------------------------------------

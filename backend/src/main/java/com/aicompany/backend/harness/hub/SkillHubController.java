@@ -11,10 +11,12 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,11 +43,19 @@ public class SkillHubController {
     public record ImportRequest(@Size(max = 64) String key) {
     }
 
+    /** PHASE 32 (TD-76): {@code category} one of the Hub's keys; empty gives the skill back to the heuristic. */
+    public record SkillCategoryRequest(@NotBlank @Size(max = 200) String name, @Nullable @Size(max = 40) String category) {
+    }
+
     public record InstallRequest(@NotBlank @Size(max = 40) String provider, @NotBlank @Size(max = 500) String ref,
                                  @Size(max = 64) String key, @Size(max = 12) List<@Size(max = 40) String> targets) {
     }
 
     public record DeployRequest(boolean replace) {
+    }
+
+    /** PHASE 32 (TD-80): a marketplace and the reference of the package there. */
+    public record SourceRequest(@NotBlank @Size(max = 40) String provider, @NotBlank @Size(max = 500) String ref) {
     }
 
     public record ApplyRequest(@NotEmpty @Size(max = 200) List<@NotBlank @Size(max = 120) String> ids, boolean overwrite) {
@@ -114,6 +124,13 @@ public class SkillHubController {
         HarnessResource created = hub.importFound(id, body == null ? null : body.key());
         return ResponseEntity.created(URI.create("/api/resources/" + created.getKey() + "/file"))
                 .body(ResourceResponse.from(created));
+    }
+
+    /** PHASE 32 (TD-76): the operator's category for a skill, by name, over the keyword heuristic. */
+    @PutMapping("/api/skill-hub/categories")
+    public ResponseEntity<Void> setSkillCategory(@Valid @RequestBody SkillCategoryRequest body, Authentication caller) {
+        hub.categorize(body.name(), body.category(), caller.getName());
+        return ResponseEntity.noContent().build();
     }
 
     // --- synchronisation -----------------------------------------------------------------
@@ -196,6 +213,12 @@ public class SkillHubController {
     }
 
     /** Takes a Hub copy out of an application; the folder is kept as a backup. Admin-only, like every removal. */
+    /** PHASE 32 (TD-80): ties a library skill to its source online; its updates are proposed from there. */
+    @PutMapping("/api/skill-hub/library/{key}/source")
+    public SkillHubService.SourceLinked linkSkillSource(@PathVariable String key, @Valid @RequestBody SourceRequest body) {
+        return hub.linkSource(key, body.provider(), body.ref());
+    }
+
     @DeleteMapping("/api/skill-hub/library/{key}/copies/{app}")
     public SkillHubService.DeployResult removeSkillCopy(@PathVariable String key, @PathVariable String app) {
         return hub.undeploy(key, app);

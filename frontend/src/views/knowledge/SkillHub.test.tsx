@@ -318,3 +318,52 @@ describe("Knowledge Hub across applications", () => {
     confirm.mockRestore();
   });
 });
+
+/** PHASE 32 (TD-76): the heuristic chose the category; the operator corrects it, by name. */
+describe("Knowledge Hub — a skill's category by hand", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("chooses another category and gives it back to the heuristic", async () => {
+    const calls = mount({
+      "GET /api/skill-hub/installed/c1": () => ({ body: { skill: INSTALLED.skills[1], content: "# Commit",
+        truncated: false, files: [], folder: "C:/x" } }),
+      "PUT /api/skill-hub/categories": () => ({ status: 204 }),
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /commit-helper/ }));
+    const picker = await screen.findByLabelText("Categoria di commit-helper") as HTMLSelectElement;
+    expect(picker.value).toBe("");
+    expect(within(picker).getByText("Automatica (Sviluppo software)")).toBeTruthy();
+
+    fireEvent.change(picker, { target: { value: "browser" } });
+    await waitFor(() => expect(calls.filter((c) => c.method === "PUT")).toHaveLength(1));
+    expect(calls.find((c) => c.method === "PUT")!.body).toEqual({ name: "commit-helper", category: "browser" });
+    expect(await screen.findByText(/commit-helper: categoria «Browser e automazione»/)).toBeTruthy();
+
+    fireEvent.change(picker, { target: { value: "" } });
+    await waitFor(() => expect(calls.filter((c) => c.method === "PUT")).toHaveLength(2));
+    expect(calls.filter((c) => c.method === "PUT")[1].body).toEqual({ name: "commit-helper", category: null });
+  });
+});
+
+/** PHASE 32 (TD-84): a plugin built into Claude Code is listed, without a folder to open. */
+describe("Knowledge Hub — Claude Code's built-in plugins", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("shows a built-in plugin and offers no folder", async () => {
+    const builtin = skill({ id: "b1", location: "claude-code.plugins", scope: "PLUGIN", kind: "PLUGIN", name: "agents-md",
+      plugin: "agents-md", marketplace: "builtin", writable: false, path: null,
+      details: { Tipo: "interno di Claude Code (@builtin)", Usato: "3 volte" } });
+    const { fetcher } = fakeFetch({
+      "GET /api/skill-hub/installed": () => ({ body: { ...INSTALLED, skills: [...INSTALLED.skills, builtin] } }),
+      "GET /api/skill-hub/marketplaces": () => ({ body: [] }),
+      "GET /api/skill-hub/installed/b1": () => ({ body: { skill: builtin, content: "agents-md", truncated: false, files: [], folder: "" } }),
+    });
+    const api = new ControlPlane({ baseUrl: "http://localhost:8081", token: "t0123456789abcdef" }, fetcher);
+    render(<ApiContext.Provider value={api}><KnowledgeHub /></ApiContext.Provider>);
+
+    fireEvent.click(await screen.findByRole("button", { name: /agents-md/ }));
+    expect(await screen.findByText(/Un plugin interno arriva con Claude Code/)).toBeTruthy();
+    expect(screen.getByText("interno di Claude Code (@builtin)")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Apri cartella/ })).toBeNull();
+  });
+});

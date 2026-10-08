@@ -1,6 +1,8 @@
 package com.aicompany.backend.harness.hub;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -51,7 +53,9 @@ public class SkillLocations {
         /** A global instructions file: CLAUDE.md, AGENTS.md, GEMINI.md. */
         INSTRUCTIONS,
         /** A knowledge item or a memory the application keeps. */
-        KNOWLEDGE
+        KNOWLEDGE,
+        /** PHASE 32 (TD-78): carried by a project's repository, for the tools that work in it. */
+        PROJECT
     }
 
     /** How a location is laid out on disk. */
@@ -94,10 +98,13 @@ public class SkillLocations {
     private final Path home;
     private final Path appData;
     private final Path localAppData;
+    private final ObjectProvider<JdbcTemplate> jdbc;
 
     public SkillLocations(@Value("${aicos.hub.home:${user.home}}") String home,
                           @Value("${aicos.hub.app-data:}") String appData,
-                          @Value("${aicos.hub.local-app-data:}") String localAppData) {
+                          @Value("${aicos.hub.local-app-data:}") String localAppData,
+                          ObjectProvider<JdbcTemplate> jdbc) {
+        this.jdbc = jdbc;
         this.home = Path.of(home).toAbsolutePath().normalize();
         this.appData = appData == null || appData.isBlank()
                 ? Optional.ofNullable(System.getenv("APPDATA")).map(Path::of)
@@ -188,7 +195,7 @@ public class SkillLocations {
         Path antigravityIde = gemini.resolve("antigravity-ide");
         Path opencode = home.resolve(".config").resolve("opencode");
         Path desktop = claudeDesktopHome();
-        return List.of(
+        List<Location> fixed = List.of(
                 new Location("claude-code.personal", "claude-code", "Skill personali", claude.resolve("skills"),
                         Scope.PERSONAL, Layout.SKILL_FOLDERS, true, List.of("claude-code", "opencode")),
                 new Location("claude-code.plugins", "claude-code", "Plugin", claude.resolve("plugins"),
@@ -253,6 +260,54 @@ public class SkillLocations {
                         Scope.PERSONAL, Layout.SKILL_FOLDERS, true, List.of("copilot")),
                 new Location("cursor.personal", "cursor", "Skill personali", home.resolve(".cursor").resolve("skills"),
                         Scope.PERSONAL, Layout.SKILL_FOLDERS, true, List.of("cursor")));
+        List<Location> projects = projectLocations();
+        if (projects.isEmpty()) {
+            return fixed;
+        }
+        List<Location> all = new ArrayList<>(fixed);
+        all.addAll(projects);
+        return List.copyOf(all);
+    }
+
+    private record ProjectFolder(String relative, String app, String label, List<String> readers) {
+    }
+
+    /** PHASE 32 (TD-78): where a repository keeps skills for the tools that work in it. */
+    private static final List<ProjectFolder> PROJECT_FOLDERS = List.of(
+            new ProjectFolder(".claude/skills", "claude-code", ".claude/skills", List.of("claude-code", "opencode")),
+            new ProjectFolder(".agents/skills", "agents", ".agents/skills", List.of("codex", "gemini-cli", "opencode", "copilot")),
+            new ProjectFolder(".agent/skills", "antigravity", ".agent/skills", List.of("antigravity")));
+
+    /**
+     * PHASE 32 (TD-78): the skills a project's repository carries -- {@code .claude/skills},
+     * {@code .agents/skills}, {@code .agent/skills} under its workspace -- for the
+     * projects not archived, when the folder is there. Read-only: the repository is
+     * the operator's code, and the Hub never writes a copy into it.
+     */
+    private List<Location> projectLocations() {
+        JdbcTemplate db = jdbc.getIfAvailable();
+        List<Location> out = new ArrayList<>();
+        if (db == null) {
+            return out;
+        }
+        db.query("SELECT id, name, workspace_path FROM projects WHERE workspace_path IS NOT NULL AND status <> 'ARCHIVED' "
+                + "ORDER BY id LIMIT 100", (java.sql.ResultSet row) -> {
+            Path repository;
+            try {
+                repository = Path.of(row.getString("workspace_path")).toAbsolutePath().normalize();
+            } catch (java.nio.file.InvalidPathException e) {
+                return;
+            }
+            for (ProjectFolder folder : PROJECT_FOLDERS) {
+                Path root = repository.resolve(folder.relative()).normalize();
+                if (root.startsWith(repository) && Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
+                    out.add(new Location(folder.app() + ".project-" + row.getLong("id"), folder.app(),
+                            "Skill del progetto «" + row.getString("name") + "» (" + folder.label() + ")", root, Scope.PROJECT,
+                            Layout.SKILL_FOLDERS, false, folder.readers()));
+                }
+            }
+        });
+        return out;
     }
 
     public App app(String id) {

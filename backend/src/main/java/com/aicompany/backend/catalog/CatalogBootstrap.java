@@ -75,13 +75,15 @@ public class CatalogBootstrap implements ApplicationRunner {
     private final QuotaPlanRepository quotas;
     private final HarnessResourceRepository resources;
     private final TransactionTemplate transactions;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final JsonMapper json = JsonMapper.builder()
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build();
 
     public CatalogBootstrap(SoftwareRepository software, ModelProviderRepository providers, LlmModelRepository models,
                             QuotaPlanRepository quotas, HarnessResourceRepository resources,
-                            TransactionTemplate transactions) {
+                            TransactionTemplate transactions, org.springframework.jdbc.core.JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
         this.software = software;
         this.providers = providers;
         this.models = models;
@@ -94,12 +96,9 @@ public class CatalogBootstrap implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         transactions.executeWithoutResult(status -> {
             int added = 0;
-            for (SoftwareRequest entry : read("catalog/software.json", SoftwareRequest[].class)) {
-                if (!software.existsByKey(entry.key())) {
-                    software.save(new Software(entry.key(), entry.definition()));
-                    added++;
-                }
-            }
+            // PHASE 32 (TD-71): a retired entry is not inserted again.
+            java.util.Set<String> retired = retired();
+            added += insertSoftware(key -> !retired.contains("SOFTWARE:" + key));
             for (ProviderEntry p : read("catalog/providers.json", ProviderEntry[].class)) {
                 if (!providers.existsByKey(p.key())) {
                     providers.save(new ModelProvider(p.key(), p.name(), p.kind(), p.engineProvider(), p.billing(),
@@ -108,15 +107,7 @@ public class CatalogBootstrap implements ApplicationRunner {
                 }
             }
             providers.flush();
-            for (ModelEntry m : read("catalog/models.json", ModelEntry[].class)) {
-                if (!models.existsByKey(m.key())) {
-                    LlmModel model = new LlmModel(m.key(), m.providerKey(), m.displayName(), m.role(), m.capabilities(),
-                            m.contextWindow(), m.sizeGb(), m.parameters(), m.lifecycle(), m.replacedBy(), m.notes());
-                    model.alsoServe(m.alsoServes());
-                    models.save(model);
-                    added++;
-                }
-            }
+            added += insertModels(key -> !retired.contains("MODEL:" + key));
             for (QuotaEntry q : read("catalog/quota-plans.json", QuotaEntry[].class)) {
                 if (!quotas.existsByKey(q.key())) {
                     quotas.save(new QuotaPlan(q.key(), q.name(), q.subject(), q.source(), q.windowKind(),
@@ -125,15 +116,8 @@ public class CatalogBootstrap implements ApplicationRunner {
                     added++;
                 }
             }
-            java.util.Set<String> shippedResources = new java.util.HashSet<>();
-            for (ResourceEntry r : read("catalog/resources.json", ResourceEntry[].class)) {
-                shippedResources.add(r.key());
-                if (!resources.existsByKey(r.key())) {
-                    resources.save(new HarnessResource(r.key(), r.kind(), r.name(), r.description(), r.tags(),
-                            r.sourceUrl(), r.searchUrl(), r.configuration()));
-                    added++;
-                }
-            }
+            java.util.Set<String> shippedResources = shippedKeys("catalog/resources.json");
+            added += insertResources(key -> !retired.contains("RESOURCE:" + key));
             // PHASE 32 (TD-73): POST /api/resources used to record a person's entry as CATALOG.
             // An entry labelled CATALOG that the shipped catalog does not have is one of those.
             int relabelled = 0;
@@ -150,6 +134,62 @@ public class CatalogBootstrap implements ApplicationRunner {
                 log.info("Catalog bootstrap: {} new reference entries", added);
             }
         });
+    }
+
+    private int insertSoftware(java.util.function.Predicate<String> wanted) {
+        int added = 0;
+        for (SoftwareRequest entry : read("catalog/software.json", SoftwareRequest[].class)) {
+            if (wanted.test(entry.key()) && !software.existsByKey(entry.key())) {
+                software.save(new Software(entry.key(), entry.definition()));
+                added++;
+            }
+        }
+        return added;
+    }
+
+    private int insertModels(java.util.function.Predicate<String> wanted) {
+        int added = 0;
+        for (ModelEntry m : read("catalog/models.json", ModelEntry[].class)) {
+            if (wanted.test(m.key()) && !models.existsByKey(m.key())) {
+                LlmModel model = new LlmModel(m.key(), m.providerKey(), m.displayName(), m.role(), m.capabilities(),
+                        m.contextWindow(), m.sizeGb(), m.parameters(), m.lifecycle(), m.replacedBy(), m.notes());
+                model.alsoServe(m.alsoServes());
+                models.save(model);
+                added++;
+            }
+        }
+        return added;
+    }
+
+    private int insertResources(java.util.function.Predicate<String> wanted) {
+        int added = 0;
+        for (ResourceEntry r : read("catalog/resources.json", ResourceEntry[].class)) {
+            if (wanted.test(r.key()) && !resources.existsByKey(r.key())) {
+                resources.save(new HarnessResource(r.key(), r.kind(), r.name(), r.description(), r.tags(),
+                        r.sourceUrl(), r.searchUrl(), r.configuration()));
+                added++;
+            }
+        }
+        return added;
+    }
+
+    /** PHASE 32 (TD-71): the retired entries, as {@code CATALOG:key}. */
+    private java.util.Set<String> retired() {
+        return java.util.Set.copyOf(jdbc.queryForList("SELECT catalog || ':' || key FROM catalog_retirements", String.class));
+    }
+
+    /**
+     * PHASE 32 (TD-71): puts one shipped entry back, as the catalog ships it, in the
+     * caller's transaction. False when the catalog does not ship that key, or the entry
+     * is already there.
+     */
+    public boolean restore(String catalog, String key) {
+        return switch (catalog) {
+            case "SOFTWARE" -> insertSoftware(key::equals) > 0;
+            case "MODEL" -> insertModels(key::equals) > 0;
+            case "RESOURCE" -> insertResources(key::equals) > 0;
+            default -> false;
+        };
     }
 
     /**

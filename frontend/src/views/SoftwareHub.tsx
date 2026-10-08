@@ -124,7 +124,7 @@ export function SoftwareHub({ selected, navigate }: { selected: string | null; n
               <AppIcon software={current} size={40} />
               <div><h2>{current.name}</h2><span className="muted" style={{ fontSize: 12 }}>{current.role}</span></div>
               <span className="spacer" />
-              {isAdmin && !current.catalog && <DeleteButton label={`Elimina ${current.name}`} onClick={() => setDeleting(current)} />}
+              {isAdmin && <DeleteButton label={`${current.catalog ? "Congeda" : "Elimina"} ${current.name}`} onClick={() => setDeleting(current)} />}
               <button className="btn btn-small" onClick={() => navigate("software")} aria-label="Chiudi"><Icon name="close" size={14} /></button>
             </div>
             <div className="card-body stack">
@@ -182,6 +182,8 @@ export function SoftwareHub({ selected, navigate }: { selected: string | null; n
       </div>
       {deleting && (
         <ConfirmDeletion title="Elimina dal Software Hub" subject={deleting.name}
+                         confirmLabel={deleting.catalog ? "Congeda" : undefined}
+                         intro={deleting.catalog ? <>Stai per togliere <strong>«{deleting.name}»</strong> dal Software Hub.</> : undefined}
                          loadPreview={() => api.softwareDeletionPreview(deleting.key)}
                          onClose={() => setDeleting(null)}
                          onConfirm={async () => {

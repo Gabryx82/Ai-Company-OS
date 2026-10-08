@@ -251,6 +251,48 @@ public class SkillScanner {
             out.add(pluginItem(location, entry.getValue(), plugin, state));
             out.addAll(skillsBelow(location, entry.getValue(), plugin, state));
         }
+        out.addAll(builtinPlugins(location, enabled));
+        return out;
+    }
+
+    /**
+     * PHASE 32 (TD-84): the plugins built into Claude Code ({@code name@builtin}) have
+     * no folder and no manifest. Claude Code names them where it counts their use
+     * ({@code pluginUsage} in {@code ~/.claude.json}) and where they are switched on or
+     * off ({@code enabledPlugins}); only the names, the use and the switch are read.
+     */
+    private List<FoundSkill> builtinPlugins(Location location, Map<String, Boolean> enabled) {
+        Map<String, JsonNode> usage = new java.util.TreeMap<>();
+        json(locations.home().resolve(".claude.json")).ifPresent(config ->
+                config.path("pluginUsage").properties().forEach(e -> usage.put(e.getKey(), e.getValue())));
+        Set<String> keys = new java.util.TreeSet<>(usage.keySet());
+        keys.addAll(enabled.keySet());
+        List<FoundSkill> out = new ArrayList<>();
+        for (String key : keys) {
+            String name = key.endsWith("@builtin") ? key.substring(0, key.length() - "@builtin".length()) : null;
+            if (name == null || !SkillMarketplaces.SLUG.matcher(name).matches()) {
+                continue;
+            }
+            Boolean on = enabled.get(key);
+            Map<String, String> details = new LinkedHashMap<>();
+            details.put("Tipo", "interno di Claude Code (@builtin)");
+            JsonNode used = usage.get(key);
+            if (used != null && used.path("usageCount").isNumber()) {
+                details.put("Usato", used.path("usageCount").asLong() + " volte");
+            }
+            if (on != null) {
+                details.put("Stato", on ? "attivo" : "disattivato");
+            }
+            String description = "Plugin interno di Claude Code: arriva con l'app, senza cartella né manifest.";
+            String relative = FoundSkill.BUILTIN + name;
+            Path nowhere = location.root().resolve("@builtin").resolve(name);
+            Instant last = used != null && used.path("lastUsedAt").isNumber()
+                    ? Instant.ofEpochMilli(used.path("lastUsedAt").asLong()) : null;
+            out.add(new FoundSkill(FoundSkill.idOf(location.id(), relative), location.app(), location.id(), Scope.PLUGIN,
+                    FoundSkill.PLUGIN, name, description, SkillCategories.of(name, null, null), name, null, "builtin", on, null,
+                    nowhere, nowhere, relative, false, Fingerprints.sha256(key + ":" + on), last, null,
+                    Collections.unmodifiableMap(details)));
+        }
         return out;
     }
 

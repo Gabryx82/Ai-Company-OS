@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useState } from "react";
 import { useApi, useIsAdmin } from "../../context";
-import type { HubApp, HubFoundDetail, HubSkill } from "../../api/types";
+import type { HubApp, HubCategory, HubFoundDetail, HubSkill } from "../../api/types";
 import { Field, ProblemNote, when } from "../../components/ui";
 import { Icon } from "../../components/icons";
+import { CategoryPicker } from "./CategoryPicker";
 import { COPY_LABEL, KIND_LABEL, kindOf, SCOPE_HINT, SCOPE_LABEL, slug } from "./hubModel";
 
 /**
@@ -10,8 +11,8 @@ import { COPY_LABEL, KIND_LABEL, kindOf, SCOPE_HINT, SCOPE_LABEL, slug } from ".
  * SKILL.md read-only -- the application owns it -- and what the Hub can do with
  * it: open its folder, bring it into the library, keep a Hub copy in step.
  */
-export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
-  skill: HubSkill; apps: HubApp[]; onClose: () => void; onChanged: (message: string) => void;
+export function FoundSkillDetail({ skill, apps, categories, onClose, onChanged }: {
+  skill: HubSkill; apps: HubApp[]; categories?: HubCategory[]; onClose: () => void; onChanged: (message: string) => void;
 }) {
   const api = useApi();
   const isAdmin = useIsAdmin();
@@ -46,6 +47,8 @@ export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
   const kind = kindOf(current);
   // Plugins and connectors stay their application's: they are shown, never imported or edited from here.
   const importable = kind === "SKILL" || kind === "KNOWLEDGE";
+  // PHASE 32 (TD-84): a plugin built into Claude Code has no folder to open.
+  const builtin = current.marketplace === "builtin";
   const details = Object.entries(current.details ?? {}).filter(([label]) => label !== "Cartella" || kind !== "PLUGIN");
 
   return (
@@ -61,7 +64,8 @@ export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
         {current.description && <div className="muted" style={{ whiteSpace: "pre-wrap" }}>{current.description}</div>}
         <dl className="hub-facts">
           <dt>Tipologia</dt><dd title={SCOPE_HINT[current.scope]}>{SCOPE_LABEL[current.scope]}{location ? ` · ${location.label}` : ""}</dd>
-          <dt>Categoria</dt><dd>{current.categoryLabel}</dd>
+          <dt>Categoria</dt><dd>{categories && categories.length > 0
+            ? <CategoryPicker skill={skill} categories={categories} onChanged={onChanged} /> : current.categoryLabel}</dd>
           {kind === "SKILL" && current.plugin && <><dt>Plugin</dt><dd>{current.plugin}{current.pluginVersion ? ` v${current.pluginVersion}` : ""}{current.marketplace ? ` · ${current.marketplace}` : ""}</dd></>}
           {kind === "SKILL" && current.version && <><dt>Versione</dt><dd>{current.version}</dd></>}
           {details.map(([label, value]) => <Fragment key={label}><dt>{label}</dt><dd>{value}</dd></Fragment>)}
@@ -98,7 +102,7 @@ export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
           </div>
         )}
 
-        {kind !== "CONNECTOR" && (
+        {kind !== "CONNECTOR" && !builtin && (
           <div className="row">
             <button className="btn" disabled={busy}
                     onClick={() => run(async () => `Aperta in VS Code: ${(await api.hubOpenSkill(skill.id)).folder}`)}>
@@ -111,7 +115,13 @@ export function FoundSkillDetail({ skill, apps, onClose, onChanged }: {
             variabili d'ambiente e token non vengono mai letti.
           </div>
         )}
-        {kind === "PLUGIN" && (
+        {builtin && (
+          <div className="muted" style={{ fontSize: 12.5 }}>
+            Un plugin interno arriva con Claude Code: non ha una cartella né un manifest, e si attiva o si spegne
+            in Claude Code (<code>/plugin</code>).
+          </div>
+        )}
+        {kind === "PLUGIN" && !builtin && (
           <div className="muted" style={{ fontSize: 12.5 }}>
             Il plugin resta dell'app: si installa, si attiva e si aggiorna lì. Le sue skill sono nel gruppo «Skill del
             plugin {current.name}» dell'elenco, e ognuna si può importare nella libreria.

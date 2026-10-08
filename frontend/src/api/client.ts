@@ -13,7 +13,7 @@ import type {
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry, TaskMove, TaskOutcome, Learning,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
-  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, DeletionPreview, SubAgentsPolicy,
+  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, DeletionPreview, SubAgentsPolicy, CatalogRetirement,
   InProgressPolicy, PlannedAgent, EcosystemServiceInfo, TerminalShell, TerminalTicket, TerminalSession, CodeGraph, CostSummary,
   AiAction, BlueprintActionOutcome, BlueprintAiAction, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintCanvasLayout, BlueprintGraph, BlueprintPoint,
   BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
@@ -749,13 +749,31 @@ export class ControlPlane {
     await this.request("DELETE", `/api/admin/ecosystem/services/${encodeURIComponent(key)}`, { ifMatch: `"${version}"` });
   }
 
-  /** PHASE 32 (TD-68): deleting a software entry added through the API; a catalog entry is refused. */
+  /** PHASE 32 (TD-68, TD-71): deleting a software entry; a catalog entry is retired. */
   softwareDeletionPreview(key: string): Promise<DeletionPreview> {
     return this.plain("GET", `/api/software/${encodeURIComponent(key)}/deletion`);
   }
 
   async deleteSoftware(key: string, version: number): Promise<void> {
     await this.request("DELETE", `/api/software/${encodeURIComponent(key)}`, { ifMatch: `"${version}"` });
+  }
+
+  /** PHASE 32 (TD-71): a model leaves the catalog; one the catalog ships is retired. */
+  modelDeletionPreview(key: string): Promise<DeletionPreview> {
+    return this.plain("GET", `/api/catalog/models/deletion?key=${encodeURIComponent(key)}`);
+  }
+
+  async deleteModel(key: string, version: number): Promise<void> {
+    await this.request("DELETE", `/api/catalog/models?key=${encodeURIComponent(key)}`, { ifMatch: `"${version}"` });
+  }
+
+  catalogRetirements(): Promise<CatalogRetirement[]> {
+    return this.plain("GET", "/api/admin/catalog/retirements");
+  }
+
+  /** Puts a retired entry back, as the catalog ships it. */
+  async restoreCatalogEntry(catalog: CatalogRetirement["catalog"], key: string): Promise<void> {
+    await this.request("DELETE", `/api/admin/catalog/retirements/${catalog}/${encodeURIComponent(key)}`);
   }
 
   // --- deleting for real (ADR-027) ---------------------------------------------
@@ -887,6 +905,16 @@ export class ControlPlane {
 
   hubSkill(id: string): Promise<HubFoundDetail> {
     return this.plain("GET", `/api/skill-hub/installed/${encodeURIComponent(id)}`);
+  }
+
+  /** PHASE 32 (TD-76): the operator's category for a skill, by name; null gives it back to the heuristic. */
+  async hubSetCategory(name: string, category: string | null): Promise<void> {
+    await this.request("PUT", "/api/skill-hub/categories", { body: { name, category } });
+  }
+
+  /** PHASE 32 (TD-80): ties a library skill to its package online; its updates come from there. */
+  hubLinkSource(key: string, provider: string, ref: string): Promise<{ key: string; provider: string; reference: string; version: string | null; inStep: boolean; message: string }> {
+    return this.plain("PUT", `/api/skill-hub/library/${encodeURIComponent(key)}/source`, { body: { provider, ref } });
   }
 
   hubOpenSkill(id: string): Promise<{ folder: string }> {

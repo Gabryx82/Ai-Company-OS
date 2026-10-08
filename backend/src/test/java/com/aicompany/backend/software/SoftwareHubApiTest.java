@@ -235,13 +235,10 @@ class SoftwareHubApiTest extends AbstractPostgresTest {
             jdbc.update("DELETE FROM agents WHERE id = ?", agent);
         }
 
+        // PHASE 32 (TD-71): a shipped entry is retired, not refused (CatalogRetirementApiTest).
         mockMvc.perform(get("/api/software/postman/deletion"))
-                .andExpect(jsonPath("$.allowed").value(false))
-                .andExpect(jsonPath("$.blockers[0]").value(org.hamcrest.Matchers.containsString("Disabilitalo")));
-        String postmanTag = mockMvc.perform(get("/api/software/postman")).andReturn().getResponse().getHeader(HttpHeaders.ETAG);
-        mockMvc.perform(delete("/api/software/postman").header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, postmanTag))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:deletion-blocked"));
+                .andExpect(jsonPath("$.allowed").value(true))
+                .andExpect(jsonPath("$.deletes").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("congedata"))));
     }
 
     @Test

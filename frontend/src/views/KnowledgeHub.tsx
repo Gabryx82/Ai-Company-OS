@@ -173,8 +173,8 @@ export function KnowledgeHub() {
       </div>
       {tab === "installed" && (installed
         ? <InstalledPanel installed={installed} onChanged={changed}
-                          renderLibraryDetail={(key, close) => (
-                            <ResourceDetail key={key} resourceKey={key} onClose={close} onChanged={changed}
+                          renderLibraryDetail={(key, close, extra) => (
+                            <ResourceDetail key={key} resourceKey={key} onClose={close} onChanged={changed} extra={extra}
                                             onDeleted={(message) => { close(); changed(message); }} />
                           )} />
         : !problem && <div className="muted">Leggo le skill delle app…</div>)}
@@ -308,8 +308,9 @@ function LibraryPanel({ onChanged }: { onChanged?: () => void }) {
   );
 }
 
-export function ResourceDetail({ resourceKey, onClose, onChanged, onDeleted }: {
+export function ResourceDetail({ resourceKey, onClose, onChanged, onDeleted, extra }: {
   resourceKey: string; onClose: () => void; onChanged: (message: string) => void; onDeleted: (message: string) => void;
+  extra?: React.ReactNode;
 }) {
   const api = useApi();
   const isAdmin = useIsAdmin();
@@ -372,6 +373,7 @@ export function ResourceDetail({ resourceKey, onClose, onChanged, onDeleted }: {
       <div className="card-body stack">
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
         {resource.description && <div className="muted">{resource.description}</div>}
+        {extra}
         <div className="row" style={{ fontSize: 12 }}>
           <span className="chip">{ORIGIN_LABEL[resource.origin] ?? resource.origin}</span>
           {resource.sourceUrl && <a href={resource.sourceUrl} target="_blank" rel="noreferrer"><Icon name="external" size={12} /> fonte</a>}

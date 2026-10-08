@@ -331,3 +331,66 @@ scritto a mano nella libreria entrava nell'indice solo con «Sincronizza ora» o
 voce si tocca solo se il file dice qualcosa di nuovo (nome, descrizione, tag, sorgente, percorso); così la
 sincronizzazione ogni 5 minuti rilegge anche la libreria, e un editor aperto su una voce diventa obsoleto
 solo se quel file è cambiato davvero. `LibraryApiTest`, `SkillHubApiTest`.
+
+## Revisione PHASE 32 (2026-10-08) — categoria scelta a mano (TD-76), anteprima che dice cosa resta (TD-77)
+
+**Categoria (TD-76).** La categoria resta un'euristica a parole chiave (§4), ma l'operatore la corregge:
+`PUT /api/skill-hub/categories` con `{name, category}` la fissa, `category` vuota la restituisce
+all'euristica. La scelta è **per nome** (in minuscolo, tabella `skill_categories`, V37): la stessa
+skill nella libreria e in ogni app è una sola decisione, che sopravvive a reinstallazioni e copie. Una
+categoria sconosciuta è `400 validation-failed`; una categoria che una versione futura non avesse più
+torna all'euristica. Ogni skill dice se la sua categoria è scelta (`categoryChosen`). È un'etichetta:
+un `PUT` idempotente, l'ultima scrittura vince (esenzione registrata in `PreconditionCoverageTest`).
+Console: nel dettaglio di una skill, «Categoria» è un selettore con «Automatica (…)» in testa.
+
+**Anteprima di eliminazione (TD-77).** Eliminare una skill della libreria non tocca le app né gli altri
+file del pacchetto, e ora l'anteprima lo dice (§7 di ADR-035): le copie del Hub trovate nelle app restano,
+«non più in libreria», con app e cartella, e si tolgono dal dettaglio di ciascuna copia; gli altri file
+accanto a `SKILL.md` restano nella libreria, nominati (i primi cinque). L'anteprima rilegge le app, non
+l'ultima scansione: è il momento in cui l'operatore decide. Test: `SkillHubApiTest` (rossi con le
+categorie scelte ignorate e con le copie non cercate), console `SkillHub.test.tsx`.
+
+## Revisione PHASE 32 (2026-10-08) — un token per l'API di GitHub (TD-79)
+
+Il Hub chiede l'API di GitHub in forma anonima (60 richieste l'ora). `AICOS_GITHUB_TOKEN` nel
+`local.env` dell'operatore (proprietà `aicos.hub.github-token`) le porta a 5000: un token di sola
+lettura, senza scope per i repository pubblici. Va **solo** ad `api.github.com` — non a
+`raw.githubusercontent.com`, da cui vengono i file dei pacchetti e che non consuma quel limite — e non
+si scrive da nessuna parte. Senza token, il messaggio di limite raggiunto dice come alzarlo; con il token,
+dice che il limite è quello del token. Test: `HttpHubWebTest` (rosso se il token non parte, o parte
+verso altri host), `SkillHubApiTest`.
+
+## Revisione PHASE 32 (2026-10-08) — i plugin interni di Claude Code (TD-84)
+
+I plugin `@builtin` di Claude Code (`agents-md`, `plugin-authoring`, `telemetry`, …) arrivano con l'app:
+nessuna cartella, nessun manifest. Claude Code li nomina dove ne conta l'uso (`pluginUsage` in
+`~/.claude.json`) e dove li accende o spegne (`enabledPlugins` in `~/.claude/settings.json`): il Hub
+legge da lì **solo** i nomi, il numero d'usi e l'interruttore, e li elenca tra i plugin di Claude Code
+(marketplace `builtin`, nessun percorso). Nulla di quel file si mostra — il dettaglio è il riepilogo del
+Hub — e «Apri cartella» è rifiutato (`409`) e non compare. La prima volta che il Hub li legge li
+fotografa (`baseline:claude-code.plugins#builtin`), come una cartella nuova: non sono «installati oggi»;
+da lì in poi un plugin interno che Claude Code comincia a usare è una novità. Test: `SkillHubApiTest`
+(rosso se la fotografia manca), console `SkillHub.test.tsx`.
+
+## Revisione PHASE 32 (2026-10-08) — le skill dei repository dei progetti (TD-78)
+
+Un repository porta skill per gli strumenti che ci lavorano: `.claude/skills` (Claude Code, letta anche da
+OpenCode), `.agents/skills` (la cartella condivisa: Codex, Gemini CLI, OpenCode, Copilot), `.agent/skills`
+(Antigravity). Il Hub le legge sotto il `workspace_path` dei progetti non archiviati, quando la cartella c'è:
+una posizione per progetto e cartella (`<app>.project-<id>`, «Skill del progetto «nome» (…)»), tipologia
+nuova `PROJECT` («Dei progetti»), **in sola lettura** — il repository è codice dell'operatore, e il Hub non
+vi installa mai una copia (le copie vanno nelle cartelle personali). Una posizione letta la prima volta è
+fotografata come le altre (§9). Test: `SkillHubApiTest` (rosso senza le posizioni dei progetti), console
+`hubModel.test.ts`.
+
+## Revisione PHASE 32 (2026-10-08) — una skill scritta fuori dal Hub si collega alla sua fonte (TD-80)
+
+Una skill personale copiata a mano (`~/.verdent/skills/pdf`, copia di `anthropics/skills`), una volta nella
+libreria, si collega alla sua fonte online: `PUT /api/skill-hub/library/{key}/source {provider, ref}` legge il
+pacchetto e sostituisce la provenienza (anche quella «app» di un import). Se la libreria contiene esattamente
+lo stato più recente della fonte sono allineate; altrimenti quale versione contenga non si sa: l'ultima è un
+aggiornamento, e applicarlo chiede conferma (`CONFLICT` senza `overwrite`), perché la libreria può contenere
+modifiche dell'operatore — resta comunque un backup. Da lì gli aggiornamenti vengono dal marketplace, non
+dall'app. Console: nel dettaglio di una skill della libreria, «Fonte» con «Collega a una fonte online» (o
+«Cambia fonte»), che cerca il nome della skill nei marketplace e propone i pacchetti. Test: `SkillHubApiTest`
+(allineata, poi aggiornata dal marketplace; diversa, aggiornata solo con conferma), console `SourceLink.test.tsx`.

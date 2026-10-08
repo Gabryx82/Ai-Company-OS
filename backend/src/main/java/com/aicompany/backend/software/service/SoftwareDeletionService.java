@@ -31,11 +31,14 @@ public class SoftwareDeletionService {
     private final SoftwareRepository repository;
     private final JdbcTemplate jdbc;
     private final SecurityLog log;
+    private final com.aicompany.backend.catalog.CatalogRetirements retirements;
 
-    public SoftwareDeletionService(SoftwareRepository repository, JdbcTemplate jdbc, SecurityLog log) {
+    public SoftwareDeletionService(SoftwareRepository repository, JdbcTemplate jdbc, SecurityLog log,
+                                   com.aicompany.backend.catalog.CatalogRetirements retirements) {
         this.repository = repository;
         this.jdbc = jdbc;
         this.log = log;
+        this.retirements = retirements;
     }
 
     /** Whether the key belongs to the catalog AI Company OS ships, which a start re-inserts. */
@@ -56,6 +59,10 @@ public class SoftwareDeletionService {
         jdbc.update("DELETE FROM ecosystem_autostart WHERE software_key = ?", software.getKey());
         repository.delete(software);
         repository.flush();
+        // PHASE 32 (TD-71): a shipped entry is retired, so that the next start does not bring it back.
+        if (shipped(key)) {
+            retirements.retire(com.aicompany.backend.catalog.CatalogRetirements.Catalog.SOFTWARE, key, by);
+        }
         log.record(SecurityLog.DATA_DELETED, by, null, "software " + key);
     }
 
@@ -65,8 +72,8 @@ public class SoftwareDeletionService {
                 .deletes("«" + name + "» esce dal Software Hub.")
                 .keeps("Il programma installato sul PC non è toccato.");
         if (shipped(software.getKey())) {
-            preview.blocker("«" + name + "» è nel catalogo di AI Company OS: tornerebbe al prossimo avvio. "
-                    + "Disabilitalo, invece.");
+            preview.deletes("È nel catalogo di AI Company OS: la voce viene congedata e il prossimo avvio non la reinserisce. "
+                    + "Si ripristina, com'è nel catalogo, da Impostazioni › Voci congedate.");
         }
         List<String> agents = jdbc.queryForList("SELECT a.name FROM agent_software l JOIN agents a ON a.id = l.agent_id "
                 + "WHERE l.software_id = ? ORDER BY a.name", String.class, software.getId());

@@ -9,8 +9,10 @@ import com.aicompany.backend.harness.library.SkillDocument;
 import com.aicompany.backend.harness.library.SkillLibrary;
 import com.aicompany.backend.harness.model.HarnessResource;
 import com.aicompany.backend.harness.repository.HarnessResourceRepository;
+import com.aicompany.backend.api.RequestValidationException;
 import com.aicompany.backend.software.service.SoftwareService;
 import org.jspecify.annotations.Nullable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -87,7 +90,14 @@ public class SkillHubService {
                             @Nullable String pluginVersion, @Nullable String marketplace, @Nullable Boolean enabled, @Nullable String version, @Nullable String path,
                             boolean writable, @Nullable Instant modified, @Nullable String libraryKey, @Nullable CopyStatus copyStatus,
                             @Nullable ProvenanceView provenance, List<CopyView> copies, boolean updateAvailable,
-                            Map<String, String> details) {
+                            Map<String, String> details, boolean categoryChosen) {
+
+        /** PHASE 32 (TD-76): the same skill under the category the operator chose. */
+        SkillView withCategory(SkillCategories.Category chosen) {
+            return new SkillView(id, app, location, scope, kind, name, description, chosen.key(), chosen.label(), plugin,
+                    pluginVersion, marketplace, enabled, version, path, writable, modified, libraryKey, copyStatus, provenance,
+                    copies, updateAvailable, details, true);
+        }
     }
 
     /** Counts for the page's summary; {@code skills} … {@code knowledge} by kind, everywhere. */
@@ -127,6 +137,14 @@ public class SkillHubService {
     public record InstallResult(String key, String name, String filePath, List<DeployResult> copies) {
     }
 
+    /** PHASE 32 (TD-80): the state of a skill tied to a source without knowing which of its versions it holds. */
+    private static final String LINKED = "linked:unknown";
+
+    /** PHASE 32 (TD-80): {@code inStep} the library holds the source's latest state; otherwise that is an update. */
+    public record SourceLinked(String key, String provider, String reference, @Nullable String version, boolean inStep,
+                               String message) {
+    }
+
     private final SkillLocations locations;
     private final SkillScanner scanner;
     private final SkillMarketplaces markets;
@@ -136,10 +154,12 @@ public class SkillHubService {
     private final HubFiles files;
     private final AgentRepository agents;
     private final SoftwareService software;
+    private final JdbcTemplate jdbc;
 
     public SkillHubService(SkillLocations locations, SkillScanner scanner, SkillMarketplaces markets, SkillLibrary library,
                            HarnessResourceRepository resources, SkillInstallationRepository installations, HubFiles files,
-                           AgentRepository agents, SoftwareService software) {
+                           AgentRepository agents, SoftwareService software, JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
         this.locations = locations;
         this.scanner = scanner;
         this.markets = markets;
@@ -198,11 +218,13 @@ public class SkillHubService {
             libraryViews.add(new SkillView(LIBRARY_APP + ":" + entry.getKey(), LIBRARY_APP, LIBRARY_LOCATION, Scope.LIBRARY,
                     entry.getKind().name(), entry.getName(), description, category.key(), category.label(), null, null,
                     null, null, pv == null ? null : pv.installedVersion(), path, true, null, entry.getKey(), null, pv,
-                    copies, pv != null && pv.updateAvailable(), Map.of()));
+                    copies, pv != null && pv.updateAvailable(), Map.of(), false));
         }
 
         List<SkillView> all = new ArrayList<>(libraryViews);
         all.addAll(found);
+        Map<String, SkillCategories.Category> chosen = chosenCategories();
+        all.replaceAll(v -> categorized(v, chosen));
         List<Agent> everyone = agents.findAllByOrderByIdAsc().stream().filter(Agent::isActive).toList();
         List<AppView> apps = new ArrayList<>();
         apps.add(new AppView(LIBRARY_APP, "AI Company OS", "La libreria di AI Company OS: skill e knowledge che gli agenti ricevono",
@@ -210,8 +232,9 @@ public class SkillHubService {
                 List.of(new LocationView(LIBRARY_LOCATION, "Libreria", Scope.LIBRARY, library.root().toString(),
                         Files.isDirectory(library.root()), true, List.of(LIBRARY_APP), libraryViews.size())),
                 libraryViews.size(), true));
+        List<Location> everyLocation = locations.locations();
         for (SkillLocations.App app : locations.apps()) {
-            List<LocationView> locationViews = locations.locations().stream().filter(l -> l.app().equals(app.id()))
+            List<LocationView> locationViews = everyLocation.stream().filter(l -> l.app().equals(app.id()))
                     .map(l -> new LocationView(l.id(), l.label(), l.scope(), l.root().toString(), Files.exists(l.root()),
                             l.writable(), l.readers(), (int) found.stream().filter(s -> s.location().equals(l.id())).count()))
                     .toList();
@@ -227,10 +250,51 @@ public class SkillHubService {
         SkillHubSummary summary = new SkillHubSummary(all.size(), (int) apps.stream().filter(a -> a.detected() && a.count() > 0).count(),
                 libraryViews.size(), updates, copies, countKind(all, FoundSkill.SKILL), countKind(all, FoundSkill.PLUGIN),
                 countKind(all, FoundSkill.CONNECTOR), countKind(all, FoundSkill.KNOWLEDGE));
+        return new InstalledView(scan.at(), apps, all, categories(), scan.notes(), summary);
+    }
+
+    /**
+     * PHASE 32 (TD-76): the operator's category for a skill, over the keyword
+     * heuristic. By name: the same skill in the library and in every application
+     * is one choice. No category gives the skill back to the heuristic.
+     */
+    public void categorize(String name, @Nullable String category, String by) {
+        String skill = name.strip().toLowerCase(Locale.ROOT);
+        if (category == null || category.isBlank()) {
+            jdbc.update("DELETE FROM skill_categories WHERE skill_name = ?", skill);
+            return;
+        }
+        if (categories().stream().noneMatch(c -> c.key().equals(category))) {
+            throw new RequestValidationException("category", "Non è una categoria del Hub: " + category);
+        }
+        jdbc.update("INSERT INTO skill_categories (skill_name, category, set_by) VALUES (?, ?, ?) "
+                + "ON CONFLICT (skill_name) DO UPDATE SET category = EXCLUDED.category, set_by = EXCLUDED.set_by, set_at = now()",
+                skill, category, by);
+    }
+
+    private static List<SkillCategories.Category> categories() {
         List<SkillCategories.Category> categories = new ArrayList<>(SkillCategories.all());
         categories.add(SkillScanner.INSTRUCTIONS);
         categories.add(SkillScanner.CONNECTORS);
-        return new InstalledView(scan.at(), apps, all, categories, scan.notes(), summary);
+        return categories;
+    }
+
+    private Map<String, SkillCategories.Category> chosenCategories() {
+        Map<String, SkillCategories.Category> byKey = categories().stream()
+                .collect(Collectors.toMap(SkillCategories.Category::key, Function.identity(), (a, b) -> a));
+        Map<String, SkillCategories.Category> chosen = new HashMap<>();
+        jdbc.query("SELECT skill_name, category FROM skill_categories", (java.sql.ResultSet row) -> {
+            SkillCategories.Category category = byKey.get(row.getString("category"));
+            if (category != null) {   // a category a later version no longer has: back to the heuristic
+                chosen.put(row.getString("skill_name"), category);
+            }
+        });
+        return chosen;
+    }
+
+    private static SkillView categorized(SkillView view, Map<String, SkillCategories.Category> chosen) {
+        SkillCategories.Category category = chosen.get(view.name().strip().toLowerCase(Locale.ROOT));
+        return category == null ? view : view.withCategory(category);
     }
 
     @Transactional(readOnly = true)
@@ -269,7 +333,8 @@ public class SkillHubService {
                 }
             }
         }
-        return new FoundDetail(view(skill, skill.marker() != null ? skill.marker().key() : importedKey, status), content,
+        return new FoundDetail(categorized(view(skill, skill.marker() != null ? skill.marker().key() : importedKey, status),
+                chosenCategories()), content,
                 truncated, list, skill.folder().toString());
     }
 
@@ -279,6 +344,9 @@ public class SkillHubService {
         FoundSkill skill = found(id);
         if (FoundSkill.CONNECTOR.equals(skill.kind())) {
             throw HubProblemException.readOnly("Un connettore si configura nella sua app: la sua cartella è quella della configurazione");
+        }
+        if (skill.builtin()) {
+            throw HubProblemException.readOnly("Un plugin interno di Claude Code arriva con l'app: non ha una cartella");
         }
         software.launchIn(com.aicompany.backend.harness.controller.LibraryController.EDITOR, skill.folder(), List.of());
         return skill.folder().toString();
@@ -496,6 +564,39 @@ public class SkillHubService {
                 + (followed > 0 ? "; aggiornate anche " + followed + " altre copie" : "");
     }
 
+    /**
+     * PHASE 32 (TD-80): ties a library skill written or imported outside the Hub to
+     * its source online, so that its updates are proposed like an installed
+     * package's. When the library holds exactly the source's latest state they are
+     * in step; otherwise which state it holds is unknown -- the latest is an update,
+     * and applying it asks for a confirmation, since the library may hold the
+     * operator's own edits (a backup stays either way).
+     */
+    public SourceLinked linkSource(String key, String provider, String ref) {
+        HarnessResource entry = resources.findByKey(key)
+                .orElseThrow(() -> new HarnessResourceNotFoundException("No resource '" + key + "' in the catalog"));
+        if (entry.getKind() != HarnessResource.Kind.SKILL || !Files.isRegularFile(library.skillFolder(key).resolve("SKILL.md"))) {
+            throw HubProblemException.readOnly("Si collega a una fonte online una skill della libreria con il suo SKILL.md");
+        }
+        SkillMarketplaces.Package pkg = markets.fetch(provider, ref);
+        String local = Fingerprints.of(readFolder(library.skillFolder(key)));
+        boolean inStep = Fingerprints.of(forLibrary(key, pkg.files(), entry.getName(), entry.getDescription())).equals(local);
+        SkillInstallation provenance = installations.findByResourceId(entry.getId()).orElse(null);
+        if (provenance == null) {
+            provenance = installations.save(new SkillInstallation(entry.getId(), pkg.provider(), pkg.reference(), pkg.sourceUrl(),
+                    inStep ? pkg.version() : null, inStep ? pkg.fingerprint() : LINKED, inStep ? local : LINKED));
+        } else {
+            provenance.linkedTo(pkg.provider(), pkg.reference(), pkg.sourceUrl(), inStep ? pkg.version() : null,
+                    inStep ? pkg.fingerprint() : LINKED, inStep ? local : LINKED);
+        }
+        provenance.checked(pkg.version(), pkg.fingerprint());
+        String source = markets.providers().stream().filter(m -> m.key().equals(pkg.provider()))
+                .map(SkillMarketplaces.Provider::name).findFirst().orElse(pkg.provider());
+        return new SourceLinked(key, pkg.provider(), pkg.reference(), pkg.version(), inStep, inStep
+                ? "«" + entry.getName() + "» collegata a " + source + ": è alla versione più recente"
+                : "«" + entry.getName() + "» collegata a " + source + ": la versione online è diversa, è tra gli aggiornamenti");
+    }
+
     /** Re-installs a package at its latest upstream state, or re-imports a changed application skill. */
     public String update(String key, boolean overwrite) {
         HarnessResource entry = resources.findByKey(key)
@@ -567,10 +668,10 @@ public class SkillHubService {
     private SkillView view(FoundSkill s, String libraryKey, CopyStatus status) {
         return new SkillView(s.id(), s.app(), s.location(), s.scope(), s.kind(), s.name(), s.description(),
                 s.category().key(), s.category().label(), s.plugin(), s.pluginVersion(), s.marketplace(), s.enabled(),
-                s.version(), FoundSkill.CONNECTOR.equals(s.kind()) ? null : s.file().toString(), s.writable(), s.modified(),
+                s.version(), FoundSkill.CONNECTOR.equals(s.kind()) || s.builtin() ? null : s.file().toString(), s.writable(), s.modified(),
                 libraryKey, status, null, List.of(),
                 status == CopyStatus.OUTDATED || status == CopyStatus.MODIFIED || status == CopyStatus.CONFLICT,
-                s.details() == null ? Map.of() : s.details());
+                s.details() == null ? Map.of() : s.details(), false);
     }
 
     /** What the scan kept about a plugin or a connector, as text: label by label. */

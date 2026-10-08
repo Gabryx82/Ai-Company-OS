@@ -31,4 +31,9 @@ public interface HubWeb {
      * is refused; a network failure is a {@link HubProblemException#marketplace}.
      */
     Response get(URI uri, int maxBytes);
+
+    /** PHASE 32 (TD-79): whether the GitHub API is asked with the operator's token (5000 requests an hour, not 60). */
+    default boolean githubAuthenticated() {
+        return false;
+    }
 }

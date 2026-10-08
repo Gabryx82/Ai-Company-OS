@@ -13,6 +13,7 @@ export const SCOPE_LABEL: Record<HubScope, string> = {
   ACCOUNT: "Dell'account",
   KNOWLEDGE: "Knowledge",
   INSTRUCTIONS: "Istruzioni globali",
+  PROJECT: "Dei progetti",
 };
 
 export const SCOPE_HINT: Record<HubScope, string> = {
@@ -23,9 +24,10 @@ export const SCOPE_HINT: Record<HubScope, string> = {
   ACCOUNT: "Arrivano con il tuo account (per esempio i connettori di claude.ai).",
   KNOWLEDGE: "Elementi di conoscenza e memoria che l'app conserva.",
   INSTRUCTIONS: "Le istruzioni globali che l'app legge a ogni sessione.",
+  PROJECT: "Nel repository di un progetto: le leggono gli strumenti che lavorano lì. Il Hub non le modifica.",
 };
 
-export const SCOPE_ORDER: HubScope[] = ["LIBRARY", "PERSONAL", "PLUGIN", "SYSTEM", "ACCOUNT", "KNOWLEDGE", "INSTRUCTIONS"];
+export const SCOPE_ORDER: HubScope[] = ["LIBRARY", "PERSONAL", "PROJECT", "PLUGIN", "SYSTEM", "ACCOUNT", "KNOWLEDGE", "INSTRUCTIONS"];
 
 export const KIND_LABEL: Record<HubKind, string> = {
   SKILL: "Skill",
@@ -141,6 +143,15 @@ export function sections(apps: HubApp[], skills: HubSkill[], focus: string | nul
     add("personal", "PERSONAL", "SKILL", "Skill personali", skillsOnly.filter((s) => s.scope === "PERSONAL"));
     add("system", "SYSTEM", "SKILL", "Skill di sistema", skillsOnly.filter((s) => s.scope === "SYSTEM"));
     add("account", "ACCOUNT", "SKILL", "Skill dell'account", skillsOnly.filter((s) => s.scope === "ACCOUNT"));
+    // PHASE 32 (TD-78): a project's repository, one group per project and folder.
+    const byProject = new Map<string, HubSkill[]>();
+    for (const skill of skillsOnly.filter((s) => s.scope === "PROJECT")) {
+      byProject.set(skill.location, [...(byProject.get(skill.location) ?? []), skill]);
+    }
+    for (const [location, list] of byProject) {
+      const where = app.locations?.find((l) => l.id === location);
+      add(`project:${location}`, "PROJECT", "SKILL", where?.label ?? "Skill di un progetto", list, where?.path ?? null);
+    }
     const byPlugin = new Map<string, HubSkill[]>();
     for (const skill of skillsOnly.filter((s) => s.scope === "PLUGIN")) {
       const name = skill.plugin ?? "plugin";

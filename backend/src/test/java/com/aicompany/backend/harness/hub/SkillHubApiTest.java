@@ -85,6 +85,8 @@ class SkillHubApiTest extends AbstractPostgresTest {
         web.reset();
         markets.clearCaches();
         jdbc.update("DELETE FROM skill_sync_events");
+        jdbc.update("DELETE FROM skill_categories");
+        jdbc.update("DELETE FROM projects WHERE name LIKE 'Repo con skill%'");
         jdbc.update("DELETE FROM skill_snapshot");
         jdbc.update("DELETE FROM skill_installations");
         jdbc.update("DELETE FROM agent_resources");
@@ -116,6 +118,229 @@ class SkillHubApiTest extends AbstractPostgresTest {
                 .isEqualTo(1);
         jdbc.update("DELETE FROM harness_resources WHERE key = 'scheduled-skill'");
         Files.delete(library.root().resolve("skills/scheduled-skill/SKILL.md"));
+    }
+
+    /** PHASE 32 (TD-76): the heuristic's category is corrected by hand, by name, wherever the skill is. */
+    @Test
+    void theOperatorCorrectsASkillsCategoryEverywhereItIsAndCanGiveItBackToTheHeuristic() throws Exception {
+        String skill = "---\nname: algorithmic-art\ndescription: Generative art written as code\n---\n";
+        write(home.resolve(".claude/skills/algorithmic-art/SKILL.md"), skill);
+        write(home.resolve(".codex/skills/algorithmic-art/SKILL.md"), skill);
+        List<JsonNode> before = named(getJson("/api/skill-hub/installed?rescan=true"), "algorithmic-art");
+        assertThat(before).hasSize(2).allSatisfy(s -> {
+            assertThat(s.path("category").asString()).isNotEqualTo("design");
+            assertThat(s.path("categoryChosen").asBoolean()).isFalse();
+        });
+        String heuristic = before.getFirst().path("category").asString();
+
+        mockMvc.perform(put("/api/skill-hub/categories").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Algorithmic-Art\", \"category\": \"design\"}"))
+                .andExpect(status().isNoContent());
+        List<JsonNode> chosen = named(getJson("/api/skill-hub/installed"), "algorithmic-art");
+        assertThat(chosen).hasSize(2).allSatisfy(s -> {
+            assertThat(s.path("category").asString()).isEqualTo("design");
+            assertThat(s.path("categoryLabel").asString()).isEqualTo("Design e UI");
+            assertThat(s.path("categoryChosen").asBoolean()).isTrue();
+        });
+        String id = chosen.getFirst().path("id").asString();
+        assertThat(getJson("/api/skill-hub/installed/" + java.net.URLEncoder.encode(id, java.nio.charset.StandardCharsets.UTF_8))
+                .path("skill").path("category").asString()).isEqualTo("design");
+
+        mockMvc.perform(put("/api/skill-hub/categories").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"algorithmic-art\", \"category\": \"non-esiste\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.category").exists());
+
+        mockMvc.perform(put("/api/skill-hub/categories").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"algorithmic-art\", \"category\": null}"))
+                .andExpect(status().isNoContent());
+        assertThat(named(getJson("/api/skill-hub/installed"), "algorithmic-art")).allSatisfy(s -> {
+            assertThat(s.path("category").asString()).isEqualTo(heuristic);
+            assertThat(s.path("categoryChosen").asBoolean()).isFalse();
+        });
+    }
+
+    /** PHASE 32 (TD-77): deleting a library skill says what stays -- its copies in the applications, its package's files. */
+    @Test
+    void theDeletionPreviewOfALibrarySkillNamesItsCopiesAndThePackageFilesThatStay() throws Exception {
+        Files.createDirectories(home.resolve(".claude"));
+        createLibrarySkill();
+        write(library.root().resolve("skills/api-review/scripts/check.py"), "print('ok')\n");
+        deploy("api-review", "claude-code", false).andExpect(jsonPath("$.outcome").value("CREATED"));
+
+        JsonNode preview = getJson("/api/resources/api-review/deletion");
+        assertThat(preview.path("allowed").asBoolean()).isTrue();
+        assertThat(preview.path("keeps").toString())
+                .contains("Le sue copie nelle app restano, segnate «non più in libreria»: Claude Code")
+                .contains("Gli altri 1 file della sua cartella restano, nella libreria: scripts/check.py");
+        assertThat(preview.path("files").toString()).contains("skills/api-review/SKILL.md").doesNotContain("check.py");
+    }
+
+    /** PHASE 32 (TD-79): when GitHub's anonymous limit is reached, the Hub says how to raise it. */
+    @Test
+    void gitHubsAnonymousLimitSaysHowToRaiseIt() throws Exception {
+        markets.clearCaches();
+        web.answer(TREE, 403, "{\"message\": \"API rate limit exceeded\"}", java.util.Map.of("x-ratelimit-reset", "1791460000"));
+        mockMvc.perform(get("/api/skill-hub/marketplaces/skills-sh/package").param("ref", "anthropics/skills/pdf"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("limite di richieste anonime"),
+                        org.hamcrest.Matchers.containsString("AICOS_GITHUB_TOKEN"))));
+    }
+
+    /**
+     * PHASE 32 (TD-84): Claude Code's built-in plugins have no folder: they are listed from where Claude Code
+     * counts their use and switches them, nothing of that file is shown, and the first time they are read
+     * they are photographed, not reported as installed today.
+     */
+    @Test
+    void claudeCodesBuiltInPluginsAreListedWithoutAFolderAndPhotographedTheFirstTime() throws Exception {
+        // The snapshot of a version that did not read them yet: Claude Code's plugins already looked at.
+        jdbc.update("INSERT INTO skill_snapshot (id, app, location, relative_path, name, fingerprint, first_seen_at, last_changed_at) "
+                + "VALUES ('baseline', 'aicos', 'baseline', '', 'baseline', '', now(), now()), "
+                + "('baseline:claude-code.plugins', 'aicos', 'claude-code.plugins', '', 'baseline', '', now(), now())");
+        write(home.resolve(".claude.json"), "{\"oauthAccount\": {\"emailAddress\": \"someone@example.com\"}, \"pluginUsage\": {"
+                + "\"agents-md@builtin\": {\"usageCount\": 3, \"lastUsedAt\": 1790167486460},"
+                + "\"security-guidance@inline\": {\"usageCount\": 9, \"lastUsedAt\": 1790167486460}}}");
+        write(home.resolve(".claude/settings.json"), "{\"enabledPlugins\": {\"telemetry@builtin\": false}}");
+
+        mockMvc.perform(post("/api/skill-hub/sync")).andExpect(status().isOk()).andExpect(jsonPath("$.added").value(0));
+        List<JsonNode> builtin = new java.util.ArrayList<>();
+        getJson("/api/skill-hub/installed").path("skills").forEach(s -> {
+            if ("builtin".equals(s.path("marketplace").asString())) {
+                builtin.add(s);
+            }
+        });
+        assertThat(builtin).extracting(s -> s.path("name").asString()).containsExactly("agents-md", "telemetry");
+        assertThat(builtin).allSatisfy(s -> {
+            assertThat(s.path("app").asString()).isEqualTo("claude-code");
+            assertThat(s.path("kind").asString()).isEqualTo("PLUGIN");
+            assertThat(s.path("path").isNull()).isTrue();
+            assertThat(s.path("details").path("Tipo").asString()).contains("@builtin");
+        });
+        assertThat(builtin.get(0).path("details").path("Usato").asString()).isEqualTo("3 volte");
+        assertThat(builtin.get(1).path("enabled").asBoolean(true)).isFalse();
+
+        String id = builtin.get(0).path("id").asString();
+        String encoded = java.net.URLEncoder.encode(id, java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(getJson("/api/skill-hub/installed/" + encoded).path("content").asString())
+                .contains("agents-md").doesNotContain("someone@example.com").doesNotContain("oauthAccount");
+        mockMvc.perform(post("/api/skill-hub/installed/" + encoded + "/open")).andExpect(status().is4xxClientError());
+
+        // From now on, a built-in plugin Claude Code starts using is news.
+        write(home.resolve(".claude.json"), "{\"pluginUsage\": {\"agents-md@builtin\": {\"usageCount\": 3},"
+                + "\"plugin-authoring@builtin\": {\"usageCount\": 1}}}");
+        mockMvc.perform(post("/api/skill-hub/sync")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.added").value(1))
+                .andExpect(jsonPath("$.events[?(@.change == 'ADDED')].name").value(org.hamcrest.Matchers.contains("plugin-authoring")));
+    }
+
+    /**
+     * PHASE 32 (TD-78): the skills a project's repository carries for the tools that work in it are read --
+     * not those of an archived project -- and the Hub never installs a copy there.
+     */
+    @Test
+    void theSkillsAProjectsRepositoryCarriesAreReadForTheToolsThatWorkInIt() throws Exception {
+        Path repository = home.resolve("work/repo-con-skill");
+        write(repository.resolve(".claude/skills/repo-review/SKILL.md"), "---\nname: repo-review\ndescription: Reviews this repo\n---\n");
+        write(repository.resolve(".agents/skills/repo-release/SKILL.md"), "---\nname: repo-release\ndescription: Releases\n---\n");
+        Path archived = home.resolve("work/archiviato");
+        write(archived.resolve(".claude/skills/old-skill/SKILL.md"), "---\nname: old-skill\ndescription: Old\n---\n");
+        long project = jdbc.queryForObject("INSERT INTO projects (name, status, workspace_path, created_at, updated_at) "
+                + "VALUES ('Repo con skill', 'ACTIVE', ?, now(), now()) RETURNING id", Long.class, repository.toString());
+        jdbc.update("INSERT INTO projects (name, status, workspace_path, created_at, updated_at) "
+                + "VALUES ('Repo con skill archiviato', 'ARCHIVED', ?, now(), now())", archived.toString());
+        Files.createDirectories(home.resolve(".claude"));
+
+        JsonNode installed = getJson("/api/skill-hub/installed?rescan=true");
+        JsonNode review = named(installed, "repo-review").getFirst();
+        assertThat(review.path("app").asString()).isEqualTo("claude-code");
+        assertThat(review.path("scope").asString()).isEqualTo("PROJECT");
+        assertThat(review.path("location").asString()).isEqualTo("claude-code.project-" + project);
+        assertThat(named(installed, "repo-release").getFirst().path("app").asString()).isEqualTo("agents");
+        assertThat(named(installed, "old-skill")).isEmpty();
+        List<JsonNode> where = new java.util.ArrayList<>();
+        installed.path("apps").forEach(a -> a.path("locations").forEach(l -> {
+            if (l.path("id").asString().equals("claude-code.project-" + project)) {
+                where.add(l);
+            }
+        }));
+        assertThat(where).singleElement().satisfies(l -> {
+            assertThat(l.path("label").asString()).isEqualTo("Skill del progetto «Repo con skill» (.claude/skills)");
+            assertThat(l.path("writable").asBoolean()).isFalse();
+            assertThat(l.path("count").asInt()).isEqualTo(1);
+        });
+
+        // A library skill is still installed for Claude Code in the personal folder, never in the repository.
+        createLibrarySkill();
+        deploy("api-review", "claude-code", false).andExpect(jsonPath("$.outcome").value("CREATED"));
+        assertThat(home.resolve(".claude/skills/api-review/SKILL.md")).exists();
+        assertThat(repository.resolve(".claude/skills/api-review")).doesNotExist();
+    }
+
+    /**
+     * PHASE 32 (TD-80): a skill copied by hand into an application, once in the library, is tied to its source
+     * online: in step, nothing to do; then upstream moves and the update comes from there, not from the app.
+     */
+    @Test
+    void aSkillWrittenOutsideTheHubIsTiedToItsSourceOnlineAndUpdatedFromThere() throws Exception {
+        scriptAnthropicPdf("a1", PDF_V1);
+        write(home.resolve(".verdent/skills/pdf/SKILL.md"), PDF_V1);
+        write(home.resolve(".verdent/skills/pdf/scripts/fill.py"), "print('fill the form')\n");
+        importFromVerdent("pdf");
+
+        mockMvc.perform(put("/api/skill-hub/library/pdf/source").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\": \"anthropic-skills\", \"ref\": \"anthropics/skills:skills/pdf\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.inStep").value(true))
+                .andExpect(jsonPath("$.provider").value("anthropic-skills"));
+        assertThat(ids(postJson("/api/skill-hub/updates/check", null))).doesNotContain("mkt:pdf");
+
+        scriptAnthropicPdf("a2", PDF_V2);
+        assertThat(ids(postJson("/api/skill-hub/updates/check", null))).contains("mkt:pdf");
+        apply(List.of("mkt:pdf"), false).andExpect(jsonPath("$.results[0].outcome").value("UPDATED"));
+        assertThat(Files.readString(library.root().resolve("skills/pdf/SKILL.md"))).isEqualTo(PDF_V2);
+    }
+
+    /** PHASE 32 (TD-80): tied to a source it differs from, the library may hold the operator's edits: the update asks first. */
+    @Test
+    void aSkillTiedToASourceItDiffersFromIsUpdatedOnlyAfterAConfirmation() throws Exception {
+        scriptAnthropicPdf("a1", PDF_V1);
+        write(home.resolve(".verdent/skills/pdf/SKILL.md"), PDF_V1 + "\n- La mia regola.\n");
+        importFromVerdent("pdf");
+
+        mockMvc.perform(put("/api/skill-hub/library/pdf/source").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\": \"anthropic-skills\", \"ref\": \"anthropics/skills:skills/pdf\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.inStep").value(false));
+        assertThat(ids(getJson("/api/skill-hub/updates"))).contains("mkt:pdf");
+        Path md = library.root().resolve("skills/pdf/SKILL.md");
+        apply(List.of("mkt:pdf"), false).andExpect(jsonPath("$.results[0].outcome").value("CONFLICT"));
+        assertThat(Files.readString(md)).contains("La mia regola");
+        apply(List.of("mkt:pdf"), true).andExpect(jsonPath("$.results[0].outcome").value("UPDATED"));
+        assertThat(Files.readString(md)).isEqualTo(PDF_V1);
+        assertThat(backups()).anyMatch(name -> name.startsWith("libreria-pdf"));
+
+        mockMvc.perform(put("/api/skill-hub/library/pdf/source").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\": \"anthropic-skills\", \"ref\": \"\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    private void importFromVerdent(String name) throws Exception {
+        scanner.scan();
+        mockMvc.perform(post("/api/skill-hub/installed/" + FoundSkill.idOf("verdent.personal", name + "/SKILL.md") + "/import")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isCreated());
+    }
+
+    private static List<JsonNode> named(JsonNode installed, String name) {
+        List<JsonNode> out = new java.util.ArrayList<>();
+        installed.path("skills").forEach(s -> {
+            if (name.equals(s.path("name").asString())) {
+                out.add(s);
+            }
+        });
+        return out;
     }
 
     @Test

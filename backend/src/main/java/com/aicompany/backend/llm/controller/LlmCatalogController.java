@@ -31,9 +31,30 @@ import java.util.List;
 public class LlmCatalogController {
 
     private final LlmCatalogService service;
+    private final com.aicompany.backend.llm.service.ModelDeletionService deletions;
 
-    public LlmCatalogController(LlmCatalogService service) {
+    public LlmCatalogController(LlmCatalogService service,
+                                com.aicompany.backend.llm.service.ModelDeletionService deletions) {
         this.service = service;
+        this.deletions = deletions;
+    }
+
+    /** PHASE 32 (TD-71): what removing a model from the catalog would take and keep. */
+    @GetMapping("/models/deletion")
+    public com.aicompany.backend.deletion.DeletionPreview modelDeletion(@RequestParam String key) {
+        return deletions.preview(key);
+    }
+
+    /**
+     * PHASE 32 (TD-71): the model leaves the catalog -- retired, if the catalog ships it.
+     * Admin-only (SecurityConfiguration); takes the entry's tag.
+     */
+    @org.springframework.web.bind.annotation.DeleteMapping("/models")
+    public ResponseEntity<Void> deleteModel(@RequestParam String key,
+                                            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+                                            org.springframework.security.core.Authentication caller) {
+        deletions.delete(key, Precondition.fromHeader(ifMatch), caller.getName());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/providers")

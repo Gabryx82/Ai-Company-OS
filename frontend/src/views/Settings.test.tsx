@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ControlPlane, type Session } from "../api/client";
 import { ApiContext } from "../context";
 import { fakeFetch } from "../test/fakeServer";
@@ -13,6 +13,7 @@ function renderSettings(routes: Parameters<typeof fakeFetch>[0]) {
     "GET /api/ecosystem/services": () => ({ body: [] }),
     "GET /api/admin/users": () => ({ body: [ADMIN] }),
     "GET /api/admin/security-events": () => ({ body: [] }),
+    "GET /api/admin/catalog/retirements": () => ({ body: [] }),
     ...routes,
   });
   const session: Session = { baseUrl: "http://localhost:8081", token: "aicos_s_abc", user: ADMIN };
@@ -59,5 +60,34 @@ describe("my account (ADR-024)", () => {
     await screen.findByText("Salvato");
     expect(calls.find((c) => c.path === "/api/auth/profile")?.body).toEqual({ displayName: "Gabriele" });
     expect(onSession).toHaveBeenCalledWith(expect.objectContaining({ user: expect.objectContaining({ displayName: "Gabriele" }) }));
+  });
+});
+
+describe("retired catalog entries (TD-71)", () => {
+  it("lists what an admin retired and puts one back as the catalog ships it", async () => {
+    let retired = [
+      { catalog: "MODEL", key: "ollama:qwen3.5:4b", retiredBy: "admin", retiredAt: "2026-10-08T10:00:00Z" },
+      { catalog: "SOFTWARE", key: "postman", retiredBy: "admin", retiredAt: "2026-10-08T11:00:00Z" },
+    ];
+    const { calls } = renderSettings({
+      "GET /api/admin/catalog/retirements": () => ({ body: retired }),
+      "DELETE /api/admin/catalog/retirements/MODEL/ollama%3Aqwen3.5%3A4b": () => {
+        retired = retired.filter((r) => r.key !== "ollama:qwen3.5:4b");
+        return { status: 204 };
+      },
+    });
+    expect(await screen.findByText("ollama:qwen3.5:4b")).toBeTruthy();
+    expect(screen.getByText("Modelli LLM")).toBeTruthy();
+    expect(screen.getByText("Software Hub")).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Ripristina" })[0]);
+    await waitFor(() => expect(screen.queryByText("ollama:qwen3.5:4b")).toBeNull());
+    expect(screen.getByText("postman")).toBeTruthy();
+    expect(calls.some((c) => c.method === "DELETE" && c.path === "/api/admin/catalog/retirements/MODEL/ollama%3Aqwen3.5%3A4b")).toBe(true);
+  });
+
+  it("says when nothing is retired", async () => {
+    renderSettings({});
+    expect(await screen.findByText("Nessuna voce congedata.")).toBeTruthy();
   });
 });
