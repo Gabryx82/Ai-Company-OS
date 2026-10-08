@@ -102,6 +102,14 @@ export function FoundSkillDetail({ skill, apps, categories, onClose, onChanged }
           </div>
         )}
 
+        {isAdmin && (kind === "PLUGIN" || kind === "CONNECTOR") && !builtin && (
+          <div className="row">
+            <button className="btn btn-small btn-danger" disabled={busy}
+                    onClick={() => window.confirm(`Tolgo «${current.name}» da ${app?.name ?? skill.app}?`)
+                      && run(async () => (await api.hubUninstall(skill.id)).message ?? "Tolto dall'app")}>
+              <Icon name="trash" size={12} /> Togli da {app?.name ?? skill.app}</button>
+          </div>
+        )}
         {kind !== "CONNECTOR" && !builtin && (
           <div className="row">
             <button className="btn" disabled={busy}

@@ -67,8 +67,10 @@ public class SkillHubController {
     public record SkillFolderOpened(String folder) {
     }
 
+    /** {@code values}: PHASE 32 (TD-88), the plugin's options; they go to the application and are never kept. */
     public record PluginInstallRequest(@NotBlank @Size(max = 40) String provider, @NotBlank @Size(max = 200) String ref,
-                                       @NotBlank @Size(max = 40) String target, @Size(max = 64) String confirmation) {
+                                       @NotBlank @Size(max = 40) String target, @Size(max = 64) String confirmation,
+                                       @Size(max = 40) Map<@Size(max = 64) String, @Size(max = 4000) String> values) {
     }
 
     /** {@code values}: what the connector needs (API keys...), passed to the applications and never kept. */
@@ -188,7 +190,14 @@ public class SkillHubController {
     /** Installs a plugin with the application's own CLI; a declared command needs the operator's confirmation first. */
     @PostMapping("/api/skill-hub/plugins/install")
     public HubInstaller.InstallOutcome installMarketplacePlugin(@Valid @RequestBody PluginInstallRequest body) {
-        return installer.installPlugin(body.provider(), body.ref(), body.target(), body.confirmation());
+        return installer.installPlugin(body.provider(), body.ref(), body.target(), body.confirmation(),
+                body.values() == null ? Map.of() : body.values());
+    }
+
+    /** PHASE 32 (TD-90): a plugin or a connector taken out of its application (admin). */
+    @DeleteMapping("/api/skill-hub/installed/{id}")
+    public HubInstaller.InstallOutcome uninstallFromApp(@PathVariable String id) {
+        return installer.uninstall(id);
     }
 
     /** Adds a connector to the chosen applications, one outcome each. */

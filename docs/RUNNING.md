@@ -412,7 +412,8 @@ L'API di GitHub, anonima, concede 60 richieste l'ora: un token (`AICOS_GITHUB_TO
 | `DELETE /api/skill-hub/library/{key}/copies/{app}` | admin | toglie una copia del Hub (resta come backup); una cartella non del Hub: `409` |
 | `GET /api/skill-hub/library/{key}/package.zip` | tutti | la skill per Claude Desktop (*Impostazioni → Capacità → Skill*) |
 | `GET …/marketplaces/search?q=&kind=SKILL\|PLUGIN\|CONNECTOR` · `GET …/marketplaces/{provider}/item?ref=` | tutti | plugin e connettori: scheda, valori richiesti, per ogni app il comando esatto (ADR-036 §6b) |
-| `POST /api/skill-hub/plugins/install {provider, ref, target, confirmation?}` | operatore | con la CLI dell'app; `NEEDS_CONFIRMATION` + sha256 se il marketplace dichiara un comando |
+| `POST /api/skill-hub/plugins/install {provider, ref, target, confirmation?, values?}` | operatore | con la CLI dell'app; `NEEDS_CONFIRMATION` + sha256 se il marketplace dichiara un comando; `values` = le opzioni del plugin (`--config`, TD-88), mai conservate |
+| `DELETE /api/skill-hub/installed/{id}` | admin | toglie un plugin o un connettore dall'app (CLI dell'app, o il file di configurazione con backup) (TD-90) |
 | `POST /api/skill-hub/connectors/install {provider, ref, targets[], name?, values, replace?}` | operatore | un esito per app; i `values` (chiavi) vanno all'app e non si salvano né si restituiscono |
 | `GET /api/skill-hub/updates` · `POST …/updates/check` · `POST …/updates/apply {ids[], overwrite}` | operatore | aggiornamenti noti; verifica online; applica uno per uno (`UPDATED`, `CONFLICT`, `FAILED`) |
 | `PUT /api/skill-hub/library/{key}/source {provider, ref}` | operatore | collega una skill della libreria alla sua fonte online (TD-80): `inStep`, o l'ultima versione diventa un aggiornamento da confermare |

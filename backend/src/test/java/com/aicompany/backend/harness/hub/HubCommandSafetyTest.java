@@ -46,12 +46,20 @@ class HubCommandSafetyTest {
         assertThat(ExtensionMarketplaces.shortName("io.github.someone/My Server!")).isEqualTo("my-server");
     }
 
+    /**
+     * PHASE 32 (TD-89): a remote address may carry a query string and percent-encoding -- what cmd.exe would
+     * read is still refused when a CLI goes through it (above). Never plain http, spaces, quotes, credentials
+     * in the address, or a part to fill in the remote does not declare.
+     */
     @Test
-    void aRemoteConnectorIsOnlyAnHttpsAddressWithNothingToFillInOrInterpret() {
+    void aRemoteConnectorIsAnHttpsAddressWithNothingUndeclaredToFillIn() {
         assertThat(ExtensionMarketplaces.REMOTE_URL.matcher("https://mcp.notion.com/mcp").matches()).isTrue();
         assertThat(ExtensionMarketplaces.REMOTE_URL.matcher("https://api.example.org:8443/v1/mcp").matches()).isTrue();
-        for (String url : List.of("http://mcp.example.org/mcp", "https://{tenant}.example.org/mcp", "https://x.org/mcp?key=1&rem",
-                "https://x.org/a b", "https://x.org/\"q\"", "https://x.org/%25", "https://user@x.org/mcp")) {
+        assertThat(ExtensionMarketplaces.REMOTE_URL.matcher("https://x.org/mcp?project=a%20b&v=2").matches()).isTrue();
+        assertThatThrownBy(() -> ProcessHubCommands.requireSafe(List.of("https://x.org/mcp?key=1&rem"), true))
+                .isInstanceOf(HubProblemException.class);
+        for (String url : List.of("http://mcp.example.org/mcp", "https://{tenant}.example.org/mcp",
+                "https://x.org/a b", "https://x.org/\"q\"", "https://user@x.org/mcp", "https://x.org/mcp#frag")) {
             assertThat(ExtensionMarketplaces.REMOTE_URL.matcher(url).matches()).as(url).isFalse();
         }
     }

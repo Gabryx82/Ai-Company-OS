@@ -67,7 +67,7 @@ class MigrationStreamTest {
     private static final List<String> TABLES_AT_HEAD =
             List.of("agent_resources", "agent_software", "agents", "app_users", "auth_sessions", "blueprint_ai_actions", "blueprint_change_proposals",
                     "blueprint_edges", "blueprint_layouts", "blueprint_nodes", "blueprint_scans", "catalog_retirements", "cost_budgets", "daily_items", "ecosystem_autostart",
-                    "flyway_schema_history", "harness_resources", "llm_models", "model_providers", "plan_runs", "project_phases", "project_resources", "projects",
+                    "flyway_schema_history", "harness_resources", "hub_connector_installs", "llm_models", "model_providers", "plan_runs", "project_phases", "project_resources", "projects",
                     "quota_plans", "security_events", "skill_categories", "skill_installations", "skill_snapshot", "skill_sync_events", "software", "task_handoffs", "task_reviews", "task_runs", "task_transitions", "tasks");
 
     @Container

@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -75,9 +76,13 @@ class MarketplaceExtensionsApiTest extends AbstractPostgresTest {
     private Path home;
     private Path desktopHome;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     @BeforeEach
     @AfterEach
     void aCleanMachine() throws IOException {
+        jdbc.update("DELETE FROM hub_connector_installs");
         web.reset();
         clis.reset();
         markets.clearCaches();
@@ -138,7 +143,7 @@ class MarketplaceExtensionsApiTest extends AbstractPostgresTest {
         JsonNode remote = getJson("/api/skill-hub/marketplaces/mcp-registry/item?ref=io.github.acme/notes");
         assertThat(plan(remote, "claude-code").path("command").asString())
                 .isEqualTo("claude mcp add --scope user --transport http notes https://mcp.acme.example/mcp");
-        assertThat(plan(remote, "codex").path("method").asString()).isEqualTo("MANUAL");
+        assertThat(plan(remote, "codex").path("method").asString()).isEqualTo("CONFIG");   // PHASE 32 (TD-89): config.toml
         assertThat(plan(remote, "claude-desktop").path("note").asString()).contains("connettore personalizzato");
         JsonNode codexPlugin = getJson("/api/skill-hub/marketplaces/openai-plugins/item?ref=linear");
         assertThat(codexPlugin.path("name").asString()).isEqualTo("Linear");
@@ -223,6 +228,44 @@ class MarketplaceExtensionsApiTest extends AbstractPostgresTest {
         assertThat(clis.calls()).hasSize(before);
     }
 
+    /**
+     * PHASE 32 (TD-88): a plugin's options (userConfig) are asked in the dialog and given to Claude Code at
+     * install; a required one missing, or one the plugin does not declare, is refused before anything runs;
+     * a secret never comes back.
+     */
+    @Test
+    void aPluginsOptionsAreAskedAndGivenToClaudeCodeAtInstall() throws Exception {
+        scriptCatalogs();
+        web.answer("https://raw.githubusercontent.com/anthropics/claude-plugins-official/HEAD/plugins/frontend-design/.claude-plugin/plugin.json",
+                "{\"name\": \"frontend-design\", \"version\": \"1.0.0\", \"userConfig\": {"
+                        + "\"api_token\": {\"type\": \"string\", \"title\": \"Token\", \"sensitive\": true, \"required\": true},"
+                        + "\"region\": {\"type\": \"string\", \"description\": \"Regione\", \"default\": \"eu\"}}}");
+        write(home.resolve(".claude/plugins/known_marketplaces.json"), "{\"claude-plugins-official\": {}}");
+        JsonNode preview = getJson("/api/skill-hub/marketplaces/claude-plugins-official/item?ref=frontend-design");
+        assertThat(preview.path("inputs").toString())
+                .contains("\"name\":\"api_token\"").contains("\"kind\":\"CONFIG\"").contains("\"secret\":true")
+                .contains("\"defaultValue\":\"eu\"");
+
+        int before = clis.calls().size();
+        mockMvc.perform(post("/api/skill-hub/plugins/install").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\":\"claude-plugins-official\",\"ref\":\"frontend-design\",\"target\":\"claude-code\"}"))
+                .andExpect(status().isUnprocessableEntity());
+        mockMvc.perform(post("/api/skill-hub/plugins/install").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\":\"claude-plugins-official\",\"ref\":\"frontend-design\",\"target\":\"claude-code\","
+                                + "\"values\":{\"api_token\":\"tok-123456\",\"other\":\"x\"}}"))
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(clis.calls()).hasSize(before);
+
+        clis.answer(Tool.CLAUDE, List.of("plugin", "install"), 0,
+                "{\"command\":\"install\",\"outcome\":\"installed\",\"plugin\":\"frontend-design\",\"echo\":\"tok-123456\"}\n");
+        JsonNode installed = postJson("/api/skill-hub/plugins/install",
+                "{\"provider\":\"claude-plugins-official\",\"ref\":\"frontend-design\",\"target\":\"claude-code\","
+                        + "\"values\":{\"api_token\":\"tok-123456\",\"region\":\"us\"}}");
+        assertThat(installed.path("status").asString()).isEqualTo("INSTALLED");
+        assertThat(clis.calls().getLast().arguments()).containsSubsequence("--config", "api_token=tok-123456", "--config", "region=us");
+        assertThat(installed.toString()).doesNotContain("tok-123456");
+    }
+
     @Test
     void aConnectorIsAddedToEachApplicationChosenAndItsKeyIsNeverShownBack() throws Exception {
         scriptCatalogs();
@@ -273,7 +316,8 @@ class MarketplaceExtensionsApiTest extends AbstractPostgresTest {
         assertThat(outcome(again, "claude-desktop").path("status").asString()).isEqualTo("FAILED");
         assertThat(outcome(again, "claude-desktop").path("message").asString()).contains("già");
 
-        // A remote one: the key travels in a header for Claude Code; Codex and Claude Desktop are told where to add it.
+        // A remote one: the key travels in a header for Claude Code, into Codex's config.toml (its CLI takes no
+        // header -- PHASE 32, TD-89); Claude Desktop is told where to add it.
         clis.reset();
         JsonNode remote = postJson("/api/skill-hub/connectors/install", json.writeValueAsString(Map.of(
                 "provider", "mcp-registry", "ref", "io.github.acme/notes", "name", "acme-notes",
@@ -282,7 +326,10 @@ class MarketplaceExtensionsApiTest extends AbstractPostgresTest {
         assertThat(remote.toString()).doesNotContain(SECRET);
         assertThat(outcome(remote, "claude-code").path("command").asString())
                 .isEqualTo("claude mcp add --scope user --transport http acme-notes https://mcp.acme.example/mcp --header \"Authorization: ••••\"");
-        assertThat(outcome(remote, "codex").path("status").asString()).isEqualTo("MANUAL");
+        assertThat(outcome(remote, "codex").path("status").asString()).isEqualTo("INSTALLED");
+        assertThat(Files.readString(home.resolve(".codex/config.toml"))).contains("[mcp_servers.acme-notes]")
+                .contains("url = \"https://mcp.acme.example/mcp\"")
+                .contains("http_headers = { \"Authorization\" = \"Bearer " + SECRET + "\" }");
         assertThat(outcome(remote, "claude-desktop").path("status").asString()).isEqualTo("MANUAL");
         assertThat(clis.calls()).containsExactly(new FakeHubCommands.Call(Tool.CLAUDE, List.of("mcp", "add", "--scope", "user",
                 "--transport", "http", "acme-notes", "https://mcp.acme.example/mcp", "--header", "Authorization: Bearer " + SECRET)));
@@ -301,6 +348,159 @@ class MarketplaceExtensionsApiTest extends AbstractPostgresTest {
                         .content("{\"provider\":\"mcp-registry\",\"ref\":\"io.github.acme/templated\",\"targets\":[\"claude-code\"]}"))
                 .andExpect(status().isUnprocessableEntity());
         assertThat(clis.calls()).isEmpty();
+    }
+
+    /**
+     * PHASE 32 (TD-89): a remote address with parts its remote declares, and a package that wants command-line
+     * arguments, are installed with what the operator gives; a flag the Hub cannot pass stays manual.
+     */
+    @Test
+    void aConnectorWithAddressPartsOrArgumentsIsInstalledWithTheOperatorsValues() throws Exception {
+        scriptCatalogs();
+        JsonNode tenant = getJson("/api/skill-hub/marketplaces/mcp-registry/item?ref=io.github.acme/tenant");
+        assertThat(tenant.path("inputs").toString()).contains("\"name\":\"tenant\"").contains("\"kind\":\"URL\"")
+                .contains("\"defaultValue\":\"eu\"");
+        JsonNode added = postJson("/api/skill-hub/connectors/install", json.writeValueAsString(Map.of(
+                "provider", "mcp-registry", "ref", "io.github.acme/tenant", "name", "acme-tenant", "targets", List.of("claude-code"),
+                "values", Map.of("tenant", "my team"))));
+        assertThat(outcome(added, "claude-code").path("status").asString()).isEqualTo("INSTALLED");
+        assertThat(clis.calls().getLast().arguments()).contains("https://mcp.acme.example/my%20team/mcp?region=eu");
+
+        JsonNode cli = getJson("/api/skill-hub/marketplaces/mcp-registry/item?ref=io.github.acme/cli");
+        assertThat(cli.path("inputs").toString()).contains("\"name\":\"workspace\"").contains("\"kind\":\"ARG\"")
+                .contains("\"name\":\"port\"");
+        clis.reset();
+        mockMvc.perform(post("/api/skill-hub/connectors/install").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"provider\":\"mcp-registry\",\"ref\":\"io.github.acme/cli\",\"targets\":[\"claude-code\"]}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.detail").value("Serve un valore per workspace"));
+        JsonNode withArgs = postJson("/api/skill-hub/connectors/install", json.writeValueAsString(Map.of(
+                "provider", "mcp-registry", "ref", "io.github.acme/cli", "targets", List.of("claude-code"),
+                "values", Map.of("workspace", "C:/work/shop"))));
+        assertThat(outcome(withArgs, "claude-code").path("status").asString()).isEqualTo("INSTALLED");
+        List<String> arguments = clis.calls().getLast().arguments();
+        assertThat(arguments.subList(arguments.indexOf("@acme/cli-mcp@1.0.0"), arguments.size()))
+                .containsExactly("@acme/cli-mcp@1.0.0", "--mode", "readonly", "C:/work/shop", "--port", "7000");
+
+        JsonNode evil = getJson("/api/skill-hub/marketplaces/mcp-registry/item?ref=io.github.acme/evilargs");
+        assertThat(evil.path("targets")).isEmpty();
+        assertThat(evil.path("warnings").toString()).contains("non sa passare");
+    }
+
+    /**
+     * PHASE 32 (TD-90): an admin takes a plugin or a connector out of its application the way the application
+     * does it -- its CLI, or its configuration file with a backup; what another source brings is only said.
+     */
+    @Test
+    void aPluginOrAConnectorIsTakenOutOfItsApplicationByAnAdmin() throws Exception {
+        Path plugin = home.resolve(".claude/plugins/cache/claude-plugins-official/frontend-design/1.0.0");
+        write(plugin.resolve(".claude-plugin/plugin.json"), "{\"name\": \"frontend-design\", \"version\": \"1.0.0\"}");
+        write(home.resolve(".claude/plugins/installed_plugins.json"), "{\"plugins\": {\"frontend-design@claude-plugins-official\": "
+                + "[{\"installPath\": \"" + plugin.toString().replace("\\", "\\\\") + "\", \"version\": \"1.0.0\"}]}}");
+        write(home.resolve(".claude.json"), "{\"mcpServers\": {\"files\": {\"command\": \"npx\", \"args\": [\"-y\", \"@acme/files-mcp\"]}}}");
+        write(desktopHome.resolve("claude_desktop_config.json"),
+                "{\"mcpServers\": {\"blender\": {\"command\": \"uvx\"}, \"notes\": {\"command\": \"npx\"}}}");
+        JsonNode installed = getJson("/api/skill-hub/installed?rescan=true");
+        String admin = com.aicompany.backend.support.AdminSession.bearer(mockMvc);
+
+        String pluginId = itemId(installed, "claude-code", "PLUGIN", "frontend-design");
+        mockMvc.perform(delete("/api/skill-hub/installed/" + pluginId)).andExpect(status().isForbidden());
+        assertThat(clis.calls()).isEmpty();
+
+        JsonNode removed = json.readTree(mockMvc.perform(delete("/api/skill-hub/installed/" + pluginId)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, admin)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+        assertThat(removed.path("status").asString()).isEqualTo("REMOVED");
+        assertThat(clis.calls().getLast()).isEqualTo(new FakeHubCommands.Call(Tool.CLAUDE,
+                List.of("plugin", "uninstall", "frontend-design@claude-plugins-official", "--scope", "user", "--json")));
+
+        JsonNode connector = json.readTree(mockMvc.perform(delete("/api/skill-hub/installed/"
+                        + itemId(installed, "claude-code", "CONNECTOR", "files"))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, admin)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+        assertThat(connector.path("status").asString()).isEqualTo("REMOVED");
+        assertThat(clis.calls().getLast()).isEqualTo(new FakeHubCommands.Call(Tool.CLAUDE, List.of("mcp", "remove", "files", "-s", "user")));
+
+        JsonNode desktop = json.readTree(mockMvc.perform(delete("/api/skill-hub/installed/"
+                        + itemId(installed, "claude-desktop", "CONNECTOR", "notes"))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, admin)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+        assertThat(desktop.path("status").asString()).isEqualTo("REMOVED");
+        assertThat(Files.readString(desktopHome.resolve("claude_desktop_config.json"))).contains("blender").doesNotContain("notes");
+        try (Stream<Path> backups = Files.list(Path.of(aicosHome).resolve("backups/app-config"))) {
+            assertThat(backups.map(f -> f.getFileName().toString())).anyMatch(n -> n.startsWith("claude-desktop-claude_desktop_config.json-"));
+        }
+    }
+
+    /**
+     * PHASE 32 (TD-90): a connector the Hub installed from the MCP Registry is offered again when the registry
+     * has a newer version; with nothing to ask the operator it is reinstalled in place, otherwise it says why not.
+     */
+    @Test
+    void aConnectorTheHubInstalledIsOfferedAgainWhenItsCatalogHasANewerVersion() throws Exception {
+        scriptCatalogs();
+        web.answer(REGISTRY + "io.github.acme%2Fplain", plain("1.0.0"));
+        assertThat(postJson("/api/skill-hub/connectors/install", json.writeValueAsString(Map.of("provider", "mcp-registry",
+                "ref", "io.github.acme/plain", "targets", List.of("claude-code")))).path("results").path(0).path("status").asString())
+                .isEqualTo("INSTALLED");
+        postJson("/api/skill-hub/connectors/install", json.writeValueAsString(Map.of("provider", "mcp-registry",
+                "ref", "io.github.acme/files", "targets", List.of("claude-code"), "values", Map.of("ACME_KEY", SECRET))));
+        assertThat(updateIds(postJson("/api/skill-hub/updates/check", "{}"))).noneMatch(id -> id.startsWith("conn:"));
+
+        markets.clearCaches();
+        web.answer(REGISTRY + "io.github.acme%2Fplain", plain("1.1.0"));
+        web.answer(REGISTRY + "io.github.acme%2Ffiles", files("0.4.0"));
+        JsonNode check = postJson("/api/skill-hub/updates/check", "{}");
+        JsonNode plainItem = updateItem(check, "conn:claude-code:plain");
+        assertThat(plainItem.path("from").asString()).isEqualTo("1.0.0");
+        assertThat(plainItem.path("to").asString()).isEqualTo("1.1.0");
+        assertThat(plainItem.path("applicable").asBoolean()).isTrue();
+        assertThat(updateItem(check, "conn:claude-code:files").path("applicable").asBoolean()).isFalse();
+
+        clis.reset();
+        JsonNode applied = postJson("/api/skill-hub/updates/apply", json.writeValueAsString(Map.of("ids", List.of("conn:claude-code:plain"),
+                "overwrite", false)));
+        assertThat(applied.path("results").path(0).path("outcome").asString()).isEqualTo("UPDATED");
+        assertThat(clis.calls()).extracting(FakeHubCommands.Call::arguments).first().isEqualTo(List.of("mcp", "remove", "plain", "-s", "user"));
+        assertThat(clis.calls().getLast().arguments()).contains("@acme/plain-mcp@1.1.0");
+        assertThat(updateIds(postJson("/api/skill-hub/updates/check", "{}"))).doesNotContain("conn:claude-code:plain");
+    }
+
+    private static String plain(String version) {
+        return "{\"servers\": [{\"server\": {\"name\": \"io.github.acme/plain\", \"description\": \"Plain\", \"version\": \"" + version
+                + "\", \"packages\": [{\"registryType\": \"npm\", \"identifier\": \"@acme/plain-mcp\", \"version\": \"" + version
+                + "\", \"transport\": {\"type\": \"stdio\"}}]}}]}";
+    }
+
+    private static String files(String version) {
+        return "{\"servers\": [{\"server\": {\"name\": \"io.github.acme/files\", \"description\": \"Files\", \"version\": \"" + version
+                + "\", \"packages\": [{\"registryType\": \"npm\", \"identifier\": \"@acme/files-mcp\", \"version\": \"" + version
+                + "\", \"transport\": {\"type\": \"stdio\"}, \"environmentVariables\": [{\"name\": \"ACME_KEY\", \"isRequired\": true,"
+                + " \"isSecret\": true}]}]}}]}";
+    }
+
+    private static List<String> updateIds(JsonNode updates) {
+        List<String> out = new ArrayList<>();
+        updates.path("items").forEach(i -> out.add(i.path("id").asString()));
+        return out;
+    }
+
+    private static JsonNode updateItem(JsonNode updates, String id) {
+        for (JsonNode item : updates.path("items")) {
+            if (id.equals(item.path("id").asString())) {
+                return item;
+            }
+        }
+        throw new AssertionError("no update " + id + " in " + updateIds(updates));
+    }
+
+    private static String itemId(JsonNode installed, String app, String kind, String name) {
+        for (JsonNode s : installed.path("skills")) {
+            if (app.equals(s.path("app").asString()) && kind.equals(s.path("kind").asString()) && name.equals(s.path("name").asString())) {
+                return s.path("id").asString();
+            }
+        }
+        throw new AssertionError("no " + kind + " " + name + " in " + app);
     }
 
     // --- fixtures -------------------------------------------------------------------------
@@ -329,9 +529,21 @@ class MarketplaceExtensionsApiTest extends AbstractPostgresTest {
                 + " \"environmentVariables\": [{\"name\": \"ACME_KEY\", \"isRequired\": true, \"isSecret\": true, \"description\": \"API key\"},"
                 + " {\"name\": \"ACME_REGION\", \"default\": \"eu\"}]}]}},"
                 + "{\"server\": {\"name\": \"io.github.acme/templated\", \"description\": \"Per tenant\", \"remotes\": ["
-                + "{\"type\": \"streamable-http\", \"url\": \"https://{tenant}.acme.example/mcp\"}]}}]}";
+                + "{\"type\": \"streamable-http\", \"url\": \"https://{tenant}.acme.example/mcp\"}]}},"
+                + "{\"server\": {\"name\": \"io.github.acme/tenant\", \"description\": \"Per tenant, declared\", \"remotes\": ["
+                + "{\"type\": \"streamable-http\", \"url\": \"https://mcp.acme.example/{tenant}/mcp?region={region}\","
+                + " \"variables\": {\"tenant\": {\"description\": \"Your tenant\"}, \"region\": {\"default\": \"eu\"}}}]}},"
+                + "{\"server\": {\"name\": \"io.github.acme/cli\", \"description\": \"With arguments\", \"packages\": ["
+                + "{\"registryType\": \"npm\", \"identifier\": \"@acme/cli-mcp\", \"version\": \"1.0.0\", \"transport\": {\"type\": \"stdio\"},"
+                + " \"packageArguments\": [{\"type\": \"positional\", \"valueHint\": \"workspace\", \"isRequired\": true},"
+                + " {\"type\": \"named\", \"name\": \"--mode\", \"value\": \"readonly\"},"
+                + " {\"type\": \"named\", \"name\": \"--port\", \"default\": \"7000\"}]}]}},"
+                + "{\"server\": {\"name\": \"io.github.acme/evilargs\", \"description\": \"Bad flag\", \"packages\": ["
+                + "{\"registryType\": \"npm\", \"identifier\": \"@acme/evil-mcp\", \"transport\": {\"type\": \"stdio\"},"
+                + " \"packageArguments\": [{\"type\": \"named\", \"name\": \"--x&rem\", \"isRequired\": true}]}]}}]}";
         web.answer(REGISTRY + "acme", servers);
-        for (String ref : List.of("io.github.acme%2Fnotes", "io.github.acme%2Ffiles", "io.github.acme%2Ftemplated")) {
+        for (String ref : List.of("io.github.acme%2Fnotes", "io.github.acme%2Ffiles", "io.github.acme%2Ftemplated",
+                "io.github.acme%2Ftenant", "io.github.acme%2Fcli", "io.github.acme%2Fevilargs")) {
             web.answer(REGISTRY + ref, servers);
         }
     }

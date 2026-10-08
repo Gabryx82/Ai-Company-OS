@@ -1854,7 +1854,7 @@ export interface paths {
         get: operations["installedSkill"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["uninstallFromApp"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3541,7 +3541,7 @@ export interface components {
             output: string | null;
             software: string | null;
             /** @enum {string} */
-            status: "INSTALLED" | "NEEDS_CONFIRMATION" | "MANUAL" | "FAILED";
+            status: "INSTALLED" | "NEEDS_CONFIRMATION" | "MANUAL" | "FAILED" | "REMOVED";
             target: string;
         };
         InstallPlan: {
@@ -3594,7 +3594,7 @@ export interface components {
             software: string | null;
             to: string | null;
             /** @enum {string} */
-            type: "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN";
+            type: "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN" | "CONNECTOR";
         };
         LaunchRequest: {
             /** Format: int64 */
@@ -3896,6 +3896,9 @@ export interface components {
             provider: string;
             ref: string;
             target: string;
+            values?: {
+                [key: string]: string;
+            };
         };
         Preview: {
             description: string;
@@ -8081,6 +8084,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["FoundDetail"];
+                };
+            };
+        };
+    };
+    uninstallFromApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstallOutcome"];
                 };
             };
         };

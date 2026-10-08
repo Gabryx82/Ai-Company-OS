@@ -66,7 +66,9 @@ public class SecurityConfiguration {
             // PHASE 32 (TD-68): a software entry added through the API.
             "/api/software/*",
             // PHASE 32 (TD-71): a model of the catalog.
-            "/api/catalog/models"};
+            "/api/catalog/models",
+            // PHASE 32 (TD-90): a plugin or a connector taken out of its application.
+            "/api/skill-hub/installed/*"};
 
     /** The same decision for a selection: deleting several agents at once (PHASE 30). */
     public static final String[] ADMIN_ONLY_BULK_DELETES = {"/api/agents/bulk-delete"};

@@ -410,3 +410,34 @@ perché sono suoi. Da lì valgono le regole delle copie: allineata, da aggiornar
 riporta nella libreria nel suo unico file), mai sovrascritta in silenzio. Console: «Nelle app» compare anche
 nel dettaglio di una knowledge. Test: `SkillHubApiTest` (rosso con l'aggiornamento delle knowledge
 rifiutato), console `KnowledgeHub.test.tsx`.
+
+## Revisione PHASE 32 (2026-10-08) — opzioni dei plugin, connettori con valori, togliere e aggiornare (TD-88, TD-89, TD-90)
+
+**Opzioni dei plugin (TD-88).** Le opzioni che un plugin dichiara (`userConfig` del suo `plugin.json`) diventano
+campi del dialogo d'installazione (tipo `CONFIG`; le `sensitive` come password) e arrivano a Claude Code con
+`claude plugin install … --config chiave=valore`, verificata sulla CLI installata. Un'opzione che il plugin non
+dichiara, o una obbligatoria mancante, è rifiutata prima di eseguire qualsiasi cosa; i valori non tornano mai
+indietro (mascherati nel comando mostrato, tolti dall'output). Codex non riceve opzioni dalla CLI: il plugin si
+installa e il messaggio dice di completarle in Codex.
+
+**Connettori del registro MCP (TD-89).** Non più rifiutati per prudenza: un indirizzo remoto può avere una query
+string e caratteri codificati (`%`) — ogni argomento passa comunque da `ProcessHubCommands.requireSafe`, che
+rifiuta ciò che `cmd.exe` interpreterebbe quando la CLI passa da lì; le parti `{nome}` **dichiarate** dal remoto
+(`variables`) diventano campi (`URL`) e si completano codificate; un pacchetto con argomenti da riga di comando
+li riceve — fissi come li dà il registro, gli altri chiesti all'operatore (`ARG`), con il loro flag; un flag che
+il Hub non sa passare resta «da configurare a mano». Codex, la cui CLI non accetta intestazioni, riceve un
+connettore remoto con intestazioni nel suo `~/.codex/config.toml` (`[mcp_servers.nome]`, `url`,
+`http_headers`), con backup del file; una tabella con quel nome si sostituisce solo con conferma.
+
+**Togliere e aggiornare (TD-90).** `DELETE /api/skill-hub/installed/{id}` (admin) toglie un plugin o un connettore
+come fa l'app: `claude plugin uninstall … --scope user`, `codex plugin remove …`, `claude mcp remove … -s user`,
+`codex mcp remove …`; per Claude Desktop, Gemini CLI e Antigravity la voce esce dal file di configurazione, con
+backup. Ciò che porta un'altra fonte — un plugin, l'account, un progetto, un'estensione — non si toglie da qui: la
+risposta dice dove. I connettori che il Hub installa dal registro sono registrati (`hub_connector_installs`, V39:
+app, nome, riferimento, versione — mai i valori); «Verifica ora» propone quelli con una versione più recente
+(`conn:<app>:<nome>`): se non servono valori si reinstallano al loro posto, altrimenti l'aggiornamento dice di
+reinstallarli dal Marketplace, perché i valori non vengono conservati. Un remoto si aggiorna dove vive: nulla da
+fare qui. Console: «Togli da …» nel dettaglio di un plugin o di un connettore (admin), «Connettori» negli
+Aggiornamenti. Test: `MarketplaceExtensionsApiTest` (rossi con le opzioni non passate, gli argomenti ignorati,
+le intestazioni di Codex non scritte, la disinstallazione senza la CLI, il controllo dei connettori spento),
+`HubCommandSafetyTest`, console `ExtensionsManage.test.tsx`.

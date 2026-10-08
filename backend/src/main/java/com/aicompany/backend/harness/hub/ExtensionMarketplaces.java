@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -52,7 +53,15 @@ public class ExtensionMarketplaces {
     static final Pattern VERSION = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$");
     static final Pattern VARIABLE = Pattern.compile("^[A-Za-z_][A-Za-z0-9_-]{0,63}$");
     /** An HTTPS endpoint with nothing left to fill in and nothing a command line would read as syntax. */
-    static final Pattern REMOTE_URL = Pattern.compile("^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~:/@!$'()*+,;=-]*)?$");
+    // PHASE 32 (TD-89): a query string and percent-encoding are allowed -- every argument still passes
+    // ProcessHubCommands.requireSafe, which refuses what cmd.exe would read when a CLI goes through it.
+    static final Pattern REMOTE_URL = Pattern.compile(
+            "^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~:/@!$'()*+,;=%-]*)?(\\?[A-Za-z0-9._~:/@!$'()*+,;=%&?-]*)?$");
+    /** PHASE 32 (TD-89): a part of a remote address the operator completes, declared in the remote's variables. */
+    static final Pattern URL_VARIABLE = Pattern.compile("\\{([A-Za-z_][A-Za-z0-9_-]{0,63})\\}");
+    /** PHASE 32 (TD-89): a named argument of a package, and a fixed value the registry gives. */
+    static final Pattern FLAG = Pattern.compile("^--?[A-Za-z0-9][A-Za-z0-9_-]{0,63}$");
+    static final Pattern PLAIN_VALUE = Pattern.compile("^[A-Za-z0-9@:/._=,+~-]{1,500}$");
 
     public enum Kind { SKILL, PLUGIN, CONNECTOR }
 
@@ -72,7 +81,9 @@ public class ExtensionMarketplaces {
      */
     public record ConnectorSpec(String provider, String ref, String name, String title, String description, String version,
                                 String repository, String transport, String url, List<String> command,
-                                String packageType, List<ConnectorInput> inputs, List<String> warnings) {
+                                String packageType, List<ConnectorInput> inputs, List<String> warnings,
+                                Map<String, String> flags) {
+        /** {@code flags}: PHASE 32 (TD-89), for an ARG input, its named flag; "" for a positional one. */
         public boolean remote() {
             return url != null;
         }
@@ -252,11 +263,30 @@ public class ExtensionMarketplaces {
                 if (!preferred.equals(type) || url == null) {
                     continue;
                 }
-                if (!REMOTE_URL.matcher(url).matches()) {
-                    warnings.add("L'indirizzo remoto ha parti da completare o caratteri speciali: va configurato a mano");
+                // PHASE 32 (TD-89): parts to complete are fine when the remote declares them.
+                Map<String, JsonNode> variables = new LinkedHashMap<>();
+                remote.path("variables").properties().forEach(e -> variables.put(e.getKey(), e.getValue()));
+                java.util.regex.Matcher parts = URL_VARIABLE.matcher(url);
+                Set<String> used = new java.util.LinkedHashSet<>();
+                boolean undeclared = false;
+                while (parts.find()) {
+                    if (variables.containsKey(parts.group(1))) {
+                        used.add(parts.group(1));
+                    } else {
+                        undeclared = true;
+                    }
+                }
+                if (undeclared || !REMOTE_URL.matcher(URL_VARIABLE.matcher(url).replaceAll("x")).matches()) {
+                    warnings.add("L'indirizzo remoto ha parti non dichiarate o caratteri speciali: va configurato a mano");
                     continue;
                 }
                 List<ConnectorInput> inputs = new ArrayList<>();
+                for (String variable : used) {
+                    JsonNode v = variables.get(variable);
+                    String fallback = text(v, "default");
+                    inputs.add(new ConnectorInput(variable, "URL", fallback == null, v.path("isSecret").asBoolean(false),
+                            text(v, "description"), fallback));
+                }
                 for (JsonNode header : remote.path("headers")) {
                     String headerName = text(header, "name");
                     if (headerName != null && headerName.matches("[A-Za-z0-9-]{1,64}")) {
@@ -266,7 +296,7 @@ public class ExtensionMarketplaces {
                 }
                 return new ConnectorSpec(provider.key(), name, shortName(name), text(server, "title"),
                         text(server, "description"), text(server, "version"), repository,
-                        preferred.equals("sse") ? "sse" : "http", url, List.of(), null, inputs, warnings);
+                        preferred.equals("sse") ? "sse" : "http", url, List.of(), null, inputs, warnings, Map.of());
             }
         }
         for (JsonNode pkg : server.path("packages")) {
@@ -280,13 +310,49 @@ public class ExtensionMarketplaces {
             if (version != null && !VERSION.matcher(version).matches()) {
                 version = null;
             }
-            boolean requiredArgs = false;
+            // PHASE 32 (TD-89): the package's arguments -- fixed ones as given, the others asked of the operator.
+            List<String> fixed = new ArrayList<>();
+            List<ConnectorInput> asked = new ArrayList<>();
+            Map<String, String> flags = new LinkedHashMap<>();
+            boolean unusable = false;
+            int positional = 0;
             for (JsonNode argument : pkg.path("packageArguments")) {
-                requiredArgs |= argument.path("isRequired").asBoolean(false) && text(argument, "default") == null
-                        && text(argument, "value") == null;
+                String flag = "named".equals(text(argument, "type")) ? text(argument, "name") : "";
+                if (flag == null || (!flag.isEmpty() && !FLAG.matcher(flag).matches())) {
+                    unusable = true;
+                    break;
+                }
+                String value = text(argument, "value");
+                if (value != null) {
+                    if (!PLAIN_VALUE.matcher(value).matches()) {
+                        unusable = true;
+                        break;
+                    }
+                    if (!flag.isEmpty()) {
+                        fixed.add(flag);
+                    }
+                    fixed.add(value);
+                    continue;
+                }
+                String fallback = text(argument, "default");
+                boolean required = argument.path("isRequired").asBoolean(false);
+                if (!required && fallback == null) {
+                    continue;
+                }
+                positional += flag.isEmpty() ? 1 : 0;
+                String hint = text(argument, "valueHint");
+                String inputName = !flag.isEmpty() ? flag.replaceFirst("^-+", "")
+                        : hint != null && VARIABLE.matcher(hint).matches() ? hint : "arg" + positional;
+                if (!VARIABLE.matcher(inputName).matches() || flags.containsKey(inputName)) {
+                    unusable = true;
+                    break;
+                }
+                flags.put(inputName, flag);
+                asked.add(new ConnectorInput(inputName, "ARG", required && fallback == null,
+                        argument.path("isSecret").asBoolean(false), text(argument, "description"), fallback));
             }
-            if (requiredArgs) {
-                warnings.add("Il pacchetto " + identifier + " vuole argomenti da riga di comando: va configurato a mano");
+            if (unusable) {
+                warnings.add("Il pacchetto " + identifier + " ha argomenti che il Knowledge Hub non sa passare: va configurato a mano");
                 continue;
             }
             List<String> command = switch (type) {
@@ -299,10 +365,12 @@ public class ExtensionMarketplaces {
             if (command == null) {
                 continue;
             }
-            List<ConnectorInput> inputs = new ArrayList<>();
+            command = new ArrayList<>(command);
+            command.addAll(fixed);
+            List<ConnectorInput> inputs = new ArrayList<>(asked);
             for (JsonNode variable : pkg.path("environmentVariables")) {
                 String variableName = text(variable, "name");
-                if (variableName != null && VARIABLE.matcher(variableName).matches()) {
+                if (variableName != null && VARIABLE.matcher(variableName).matches() && !flags.containsKey(variableName)) {
                     inputs.add(new ConnectorInput(variableName, "ENV", variable.path("isRequired").asBoolean(false),
                             variable.path("isSecret").asBoolean(false), text(variable, "description"), text(variable, "default")));
                 }
@@ -311,11 +379,11 @@ public class ExtensionMarketplaces {
                 warnings.add("Parte in un container: serve Docker avviato");
             }
             return new ConnectorSpec(provider.key(), name, shortName(name), text(server, "title"), text(server, "description"),
-                    text(server, "version"), repository, "stdio", null, command, type, inputs, warnings);
+                    text(server, "version"), repository, "stdio", null, List.copyOf(command), type, inputs, warnings, flags);
         }
         warnings.add("Nessun modo di avvio che il Knowledge Hub sappia configurare");
         return new ConnectorSpec(provider.key(), name, shortName(name), text(server, "title"), text(server, "description"),
-                text(server, "version"), repository, null, null, List.of(), null, List.of(), warnings);
+                text(server, "version"), repository, null, null, List.of(), null, List.of(), warnings, Map.of());
     }
 
     private JsonNode registrySearch(String query) {

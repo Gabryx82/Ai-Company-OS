@@ -11,6 +11,7 @@ const STATUS: Record<HubInstallOutcome["status"], { label: string; tone: string 
   NEEDS_CONFIRMATION: { label: "da confermare", tone: "badge badge-warn" },
   MANUAL: { label: "da completare nell'app", tone: "badge badge-accent" },
   FAILED: { label: "non installato", tone: "badge badge-danger" },
+  REMOVED: { label: "tolto", tone: "badge" },
 };
 
 /**
@@ -21,6 +22,12 @@ const STATUS: Record<HubInstallOutcome["status"], { label: string; tone: string 
  * declares runs only once the operator has read it and approved it. The values
  * typed for a connector (API keys) go to the applications and are forgotten here.
  */
+/** What a value is for, as the dialog says it (PHASE 32: URL and ARG, TD-89; CONFIG, TD-88). */
+const INPUT_KIND: Record<string, string> = {
+  HEADER: "intestazione HTTP", ENV: "variabile d'ambiente", URL: "parte dell'indirizzo",
+  ARG: "argomento del comando", CONFIG: "opzione del plugin",
+};
+
 export function ExtensionInstallDialog({ result, installed, providerName, onClose, onInstalled }: {
   result: HubResult; installed: HubInstalled | null; providerName: string; onClose: () => void;
   onInstalled: (message: string) => void;
@@ -47,8 +54,16 @@ export function ExtensionInstallDialog({ result, installed, providerName, onClos
 
   const installable = (preview?.targets ?? []).filter((t) => t.method !== "MANUAL");
   const manual = (preview?.targets ?? []).filter((t) => t.method === "MANUAL");
-  const missing = (preview?.inputs ?? []).filter((i) => i.required && !(values[i.name] ?? "").trim()).map((i) => i.name);
+  // A plugin's options reach Claude Code only (TD-88): they are required when it is one of the targets.
+  const asks = connector || targets.includes("claude-code");
+  const missing = asks ? (preview?.inputs ?? []).filter((i) => i.required && !i.defaultValue && !(values[i.name] ?? "").trim()).map((i) => i.name) : [];
   const nameOk = !connector || NAME.test(name);
+
+  /** A plugin's options, when any was given (TD-88). */
+  function options(): Record<string, string> | undefined {
+    const given = Object.fromEntries(Object.entries(values).filter(([, v]) => v.trim() !== ""));
+    return Object.keys(given).length > 0 ? given : undefined;
+  }
 
   function report(list: HubInstallOutcome[]) {
     const done = list.filter((o) => o.status === "INSTALLED").map((o) => appName(o.target));
@@ -70,7 +85,7 @@ export function ExtensionInstallDialog({ result, installed, providerName, onClos
       } else {
         const list: HubInstallOutcome[] = [];
         for (const target of targets) {
-          list.push(await api.hubInstallPlugin(result.provider, result.ref, target));
+          list.push(await api.hubInstallPlugin(result.provider, result.ref, target, undefined, options()));
           setOutcomes([...list]);
         }
         report(list);
@@ -87,7 +102,7 @@ export function ExtensionInstallDialog({ result, installed, providerName, onClos
     setBusy(true);
     setProblem(null);
     try {
-      const again = await api.hubInstallPlugin(result.provider, result.ref, outcome.target, outcome.confirmation);
+      const again = await api.hubInstallPlugin(result.provider, result.ref, outcome.target, outcome.confirmation, options());
       setOutcomes((list) => list.map((o) => o.target === outcome.target ? again : o));
       report([again]);
     } catch (error) {
@@ -139,15 +154,17 @@ export function ExtensionInstallDialog({ result, installed, providerName, onClos
 
             {outcomes.length === 0 && (
               <>
-                {connector && installable.length > 0 && (
+                {installable.length > 0 && (connector || preview.inputs.length > 0) && (
                   <>
+                    {connector && (
                     <Field label="Nome del connettore nelle app" hint="Lettere, cifre, trattini. Così lo vedrai nelle app."
                            error={nameOk ? undefined : "Solo lettere, cifre, - e _ (fino a 64)"}>
                       <input value={name} onChange={(e) => setName(e.target.value)} />
                     </Field>
+                    )}
                     {preview.inputs.map((input) => (
                       <Field key={input.name} label={`${input.name}${input.required ? " *" : ""}`}
-                             hint={[input.description, input.kind === "HEADER" ? "intestazione HTTP" : "variabile d'ambiente",
+                             hint={[input.description, INPUT_KIND[input.kind] ?? input.kind,
                                input.secret ? "segreta: va solo alle app, AI Company OS non la conserva" : null].filter(Boolean).join(" · ")}>
                         <input type={input.secret ? "password" : "text"} autoComplete="off" spellCheck={false}
                                placeholder={input.defaultValue ?? ""} value={values[input.name] ?? ""}
@@ -215,7 +232,7 @@ export function ExtensionInstallDialog({ result, installed, providerName, onClos
           </>
         )}
         <div className="row modal-actions">
-          {connector && missing.length > 0 && outcomes.length === 0 && installable.length > 0 && (
+          {missing.length > 0 && outcomes.length === 0 && installable.length > 0 && (
             <span className="muted" style={{ fontSize: 12 }}>Serve: {missing.join(", ")}</span>
           )}
           <span className="spacer" />

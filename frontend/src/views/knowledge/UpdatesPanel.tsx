@@ -9,6 +9,7 @@ const SECTIONS: { type: HubUpdateType[]; title: string; hint: string }[] = [
   { type: ["SOURCE"], title: "Dalle app", hint: "Skill importate da un'app e cambiate lì dopo l'importazione." },
   { type: ["COPY", "PULL"], title: "Copie nelle app", hint: "Copie scritte dal Knowledge Hub: da aggiornare, o cambiate nell'app." },
   { type: ["PLUGIN"], title: "Plugin delle app", hint: "Plugin con una versione pubblicata più recente: li aggiorna l'app." },
+  { type: ["CONNECTOR"], title: "Connettori", hint: "Connettori installati dal Knowledge Hub con una versione nuova nel registro MCP." },
 ];
 
 /**
@@ -119,7 +120,8 @@ function UpdateRow({ item, appName, result, busy, onApply, onOpen }: {
   item: HubUpdateItem; appName: string; result?: HubApplied; busy: boolean;
   onApply: (overwrite: boolean) => void; onOpen: () => void;
 }) {
-  const verb = item.type === "PULL" ? "Riporta nella libreria" : item.type === "COPY" ? "Aggiorna la copia" : "Aggiorna";
+  const verb = item.type === "PULL" ? "Riporta nella libreria" : item.type === "COPY" ? "Aggiorna la copia"
+    : item.type === "CONNECTOR" ? "Reinstalla" : "Aggiorna";
   return (
     <div className="hub-update-row">
       <div className="stack" style={{ gap: 2 }}>

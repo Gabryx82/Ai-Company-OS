@@ -2859,7 +2859,7 @@
             "type" : [ "string", "null" ]
           },
           "status" : {
-            "enum" : [ "INSTALLED", "NEEDS_CONFIRMATION", "MANUAL", "FAILED" ],
+            "enum" : [ "INSTALLED", "NEEDS_CONFIRMATION", "MANUAL", "FAILED", "REMOVED" ],
             "type" : "string"
           },
           "target" : {
@@ -3027,7 +3027,7 @@
             "type" : [ "string", "null" ]
           },
           "type" : {
-            "enum" : [ "MARKETPLACE", "SOURCE", "COPY", "PULL", "PLUGIN" ],
+            "enum" : [ "MARKETPLACE", "SOURCE", "COPY", "PULL", "PLUGIN", "CONNECTOR" ],
             "type" : "string"
           }
         },
@@ -3909,6 +3909,12 @@
             "maxLength" : 40,
             "minLength" : 0,
             "type" : "string"
+          },
+          "values" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
           }
         },
         "required" : [ "provider", "ref", "target" ],
@@ -10688,6 +10694,30 @@
       }
     },
     "/api/skill-hub/installed/{id}" : {
+      "delete" : {
+        "operationId" : "uninstallFromApp",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InstallOutcome"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "skill-hub-controller" ]
+      },
       "get" : {
         "operationId" : "installedSkill",
         "parameters" : [ {

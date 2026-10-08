@@ -965,8 +965,15 @@ export class ControlPlane {
     return this.plain("GET", `/api/skill-hub/marketplaces/${encodeURIComponent(provider)}/item?ref=${encodeURIComponent(ref)}`);
   }
 
-  hubInstallPlugin(provider: string, ref: string, target: string, confirmation?: string): Promise<HubInstallOutcome> {
-    return this.plain("POST", "/api/skill-hub/plugins/install", { body: { provider, ref, target, confirmation } });
+  /** values: PHASE 32 (TD-88), the plugin's options -- they go to the application only. */
+  hubInstallPlugin(provider: string, ref: string, target: string, confirmation?: string,
+                   values?: Record<string, string>): Promise<HubInstallOutcome> {
+    return this.plain("POST", "/api/skill-hub/plugins/install", { body: { provider, ref, target, confirmation, values } });
+  }
+
+  /** PHASE 32 (TD-90): a plugin or a connector taken out of its application (admin). */
+  hubUninstall(id: string): Promise<HubInstallOutcome> {
+    return this.plain("DELETE", `/api/skill-hub/installed/${encodeURIComponent(id)}`);
   }
 
   /** The values (API keys...) go to the applications only: the server neither keeps nor returns them. */

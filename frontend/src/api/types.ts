@@ -447,7 +447,8 @@ export interface HubPreview {
 }
 /** Something a connector needs from the operator: a header or an environment variable (an API key...). */
 export interface HubConnectorInput {
-  name: string; kind: "ENV" | "HEADER"; required: boolean; secret: boolean; description: string | null; defaultValue: string | null;
+  /** PHASE 32: URL a part of a remote address, ARG a command-line argument (TD-89), CONFIG a plugin option (TD-88). */
+  name: string; kind: "ENV" | "HEADER" | "URL" | "ARG" | "CONFIG"; required: boolean; secret: boolean; description: string | null; defaultValue: string | null;
 }
 /** How a plugin or connector would reach one application: its CLI, Claude Desktop's file, or a step in the app. */
 export interface HubInstallPlan {
@@ -458,7 +459,8 @@ export interface HubExtensionPreview {
   version: string | null; sourceUrl: string | null; details: Record<string, string>; inputs: HubConnectorInput[];
   targets: HubInstallPlan[]; warnings: string[];
 }
-export type HubInstallStatus = "INSTALLED" | "NEEDS_CONFIRMATION" | "MANUAL" | "FAILED";
+/** REMOVED: PHASE 32 (TD-90), taken out of the application. */
+export type HubInstallStatus = "INSTALLED" | "NEEDS_CONFIRMATION" | "MANUAL" | "FAILED" | "REMOVED";
 export interface HubInstallOutcome {
   target: string; status: HubInstallStatus; message: string | null; command: string | null; output: string | null;
   /** The sha256 of a plugin's declared command, sent back once the operator approved it. */
@@ -470,7 +472,7 @@ export interface HubCopyTarget {
   app: string; appName: string; available: boolean; path: string;
   status: "NONE" | "FOREIGN" | CopyStatus; deployedAt: string | null; skillId: string | null;
 }
-export type HubUpdateType = "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN";
+export type HubUpdateType = "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN" | "CONNECTOR";
 export interface HubUpdateItem {
   id: string; type: HubUpdateType; app: string; name: string; key: string | null; from: string | null; to: string | null;
   detail: string | null; applicable: boolean; needsOverwrite: boolean; software: string | null; command: string | null;

@@ -41,7 +41,8 @@ public class SkillUpdates {
     private static final Pattern GITHUB_URL = Pattern.compile("^https://github\\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(\\.git)?/?$");
     private static final Pattern SHA = Pattern.compile("^[0-9a-f]{7,40}$");
 
-    public enum Type { MARKETPLACE, SOURCE, COPY, PULL, PLUGIN }
+    /** {@code CONNECTOR}: PHASE 32 (TD-90), a connector the Hub installed, newer in its catalog. */
+    public enum Type { MARKETPLACE, SOURCE, COPY, PULL, PLUGIN, CONNECTOR }
 
     /**
      * One thing that can be updated. {@code applicable} items the Hub applies itself;
@@ -65,7 +66,10 @@ public class SkillUpdates {
     private volatile List<String> errors = List.of();
     private volatile Instant checkedAt;
 
-    public SkillUpdates(SkillHubService hub, SkillScanner scanner, SkillLocations locations, HubWeb web) {
+    private final HubInstaller installer;
+
+    public SkillUpdates(SkillHubService hub, SkillScanner scanner, SkillLocations locations, HubWeb web, HubInstaller installer) {
+        this.installer = installer;
         this.hub = hub;
         this.scanner = scanner;
         this.locations = locations;
@@ -129,6 +133,14 @@ public class SkillUpdates {
         } catch (RuntimeException e) {
             problems.add("Plugin di Claude Code: " + e.getMessage());
         }
+        // PHASE 32 (TD-90): the connectors the Hub installed from a catalog.
+        for (HubInstaller.ConnectorUpdate update : installer.connectorUpdates(problems)) {
+            found.add(new Item("conn:" + update.app() + ":" + update.name(), Type.CONNECTOR, update.app(), update.name(),
+                    update.reference(), update.from(), update.to(), update.applicable()
+                    ? "Nuova versione nel registro MCP: si reinstalla al suo posto"
+                    : "Nuova versione nel registro MCP: reinstallalo dal Marketplace (servono di nuovo i suoi valori, che non vengono conservati)",
+                    update.applicable(), false, null, null));
+        }
         plugins = List.copyOf(found);
         errors = List.copyOf(problems);
         checkedAt = Instant.now();
@@ -141,6 +153,13 @@ public class SkillUpdates {
             String message;
             if (id.startsWith("mkt:") || id.startsWith("src:")) {
                 message = hub.update(id.substring(4), overwrite);
+            } else if (id.startsWith("conn:") && id.split(":", 3).length == 3) {
+                String[] parts = id.split(":", 3);
+                HubInstaller.InstallOutcome outcome = installer.reinstallConnector(parts[1], parts[2]);
+                if (outcome.status() != HubInstaller.InstallStatus.INSTALLED) {
+                    return new Applied(id, "FAILED", outcome.message());
+                }
+                message = outcome.message();
             } else if (id.startsWith("pull:")) {
                 message = hub.pull(id.substring(5), overwrite);
             } else if (id.startsWith("push:")) {
