@@ -380,6 +380,18 @@ class SkillHubApiTest extends AbstractPostgresTest {
         assertThat(backups()).anyMatch(name -> name.startsWith("libreria-regole-codex"));
     }
 
+    /** PHASE 32 (TD-85): the Code tab of the Claude app reads Claude Desktop's skills and plugins too. */
+    @Test
+    void claudeDesktopsAccountSkillsAreReadByClaudeCodeToo() throws Exception {
+        List<String> readers = new java.util.ArrayList<>();
+        getJson("/api/skill-hub/installed").path("apps").forEach(app -> app.path("locations").forEach(l -> {
+            if ("claude-desktop.account".equals(l.path("id").asString())) {
+                l.path("readers").forEach(r -> readers.add(r.asString()));
+            }
+        }));
+        assertThat(readers).containsExactly("claude-desktop", "claude-code");
+    }
+
     private static List<JsonNode> named(JsonNode installed, String name) {
         List<JsonNode> out = new java.util.ArrayList<>();
         installed.path("skills").forEach(s -> {

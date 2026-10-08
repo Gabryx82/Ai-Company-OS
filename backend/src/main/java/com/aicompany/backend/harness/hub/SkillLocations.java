@@ -206,9 +206,11 @@ public class SkillLocations {
                         Scope.INSTRUCTIONS, Layout.SINGLE_FILE, false, List.of("claude-code")),
                 new Location("claude-code.memory", "claude-code", "Memoria dei progetti", claude.resolve("projects"),
                         Scope.KNOWLEDGE, Layout.CLAUDE_CODE_MEMORY, false, List.of("claude-code")),
+                // PHASE 32 (TD-85): the Code tab of the Claude app receives them too -- listed under Claude Code as
+                // read from here, once in the overview.
                 new Location("claude-desktop.account", "claude-desktop", "Skill e plugin dell'account",
                         desktop.resolve("local-agent-mode-sessions"), Scope.SYSTEM, Layout.CLAUDE_DESKTOP, false,
-                        List.of("claude-desktop")),
+                        List.of("claude-desktop", "claude-code")),
                 new Location("claude-desktop.connectors", "claude-desktop", "Connettori (MCP) ed estensioni",
                         desktop.resolve("extensions-installations.json"), Scope.PERSONAL, Layout.CONNECTORS, false,
                         List.of("claude-desktop")),

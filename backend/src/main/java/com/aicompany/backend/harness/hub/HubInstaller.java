@@ -796,6 +796,39 @@ public class HubInstaller {
         }
     }
 
+    /**
+     * PHASE 32 (TD-75): a Claude Code plugin brought to its latest version by Claude
+     * Code's own CLI. A command the marketplace declares for the update is not run
+     * from here: it is shown, to be read and confirmed in Claude Code.
+     */
+    public InstallOutcome updateClaudePlugin(String pluginId) {
+        String[] parts = pluginId.split("@", 2);
+        if (parts.length != 2 || !SkillMarketplaces.SLUG.matcher(parts[0]).matches() || !SkillMarketplaces.OWNER.matcher(parts[1]).matches()) {
+            throw HubProblemException.notFound("Not a Claude Code plugin: " + pluginId);
+        }
+        List<String> args = List.of("plugin", "update", pluginId, "--scope", "user", "--json");
+        HubCommands.Result result = commands.run(Tool.CLAUDE, args, LONG);
+        JsonNode line = lastJsonLine(result.output());
+        String outcome = line == null ? null : text(line, "outcome");
+        JsonNode shown = line == null ? null : line.path("shownCommand");
+        String display = "claude " + String.join(" ", args);
+        InstallOutcome done;
+        if (shown != null && !shown.isMissingNode() && !shown.isNull()) {
+            done = new InstallOutcome("claude-code", InstallStatus.NEEDS_CONFIRMATION, "Il marketplace dichiara un comando per "
+                    + "aggiornare «" + pluginId + "»: leggilo e confermalo in Claude Code (/plugin)", shownCommand(shown),
+                    clip(result.output()), null, "claude-code");
+        } else if (result.ok() && !"failed".equals(outcome)) {
+            done = new InstallOutcome("claude-code", InstallStatus.INSTALLED, "«" + pluginId + "» aggiornato in Claude Code: "
+                    + "riavvialo per usarlo", display, clip(result.output()), null, null);
+        } else {
+            done = new InstallOutcome("claude-code", InstallStatus.FAILED, Optional.ofNullable(line == null ? null : text(line, "message"))
+                    .orElse("Claude Code non ha aggiornato «" + pluginId + "»") + (result.timedOut() ? " (tempo scaduto)" : ""),
+                    display, clip(result.output()), null, null);
+        }
+        rescan(done);
+        return done;
+    }
+
     // --- connector updates (PHASE 32, TD-90) ---------------------------------------------------
 
     /**

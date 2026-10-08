@@ -3613,7 +3613,7 @@ export interface components {
             detail: string;
             from: string | null;
             id: string;
-            key: string;
+            key: string | null;
             name: string;
             needsOverwrite: boolean;
             software: string | null;

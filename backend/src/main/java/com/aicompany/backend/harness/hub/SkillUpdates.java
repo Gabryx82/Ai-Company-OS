@@ -48,7 +48,7 @@ public class SkillUpdates {
      * One thing that can be updated. {@code applicable} items the Hub applies itself;
      * the others say where to do it ({@code software} to open, a {@code command}).
      */
-    public record Item(String id, Type type, String app, String name, String key, @Nullable String from, @Nullable String to,
+    public record Item(String id, Type type, String app, String name, @Nullable String key, @Nullable String from, @Nullable String to,
                        String detail, boolean applicable, boolean needsOverwrite, @Nullable String software, @Nullable String command) {
     }
 
@@ -160,6 +160,12 @@ public class SkillUpdates {
                     return new Applied(id, "FAILED", outcome.message());
                 }
                 message = outcome.message();
+            } else if (id.startsWith("plugin:claude-code:")) {
+                HubInstaller.InstallOutcome outcome = installer.updateClaudePlugin(id.substring("plugin:claude-code:".length()));
+                if (outcome.status() != HubInstaller.InstallStatus.INSTALLED) {
+                    return new Applied(id, "FAILED", outcome.message());
+                }
+                message = outcome.message();
             } else if (id.startsWith("pull:")) {
                 message = hub.pull(id.substring(5), overwrite);
             } else if (id.startsWith("push:")) {
@@ -251,9 +257,10 @@ public class SkillUpdates {
                             .map(j -> text(j, "version")).orElse(null);
                 }
                 if (published != null && plugin[2] != null && newer(published, plugin[2])) {
-                    out.add(new Item("plugin:claude-code:" + plugin[0], Type.PLUGIN, "claude-code", plugin[0], null,
-                            plugin[2], published, "Si aggiorna con la CLI di Claude Code", false, false, "claude-code",
-                            "claude plugin update " + plugin[0] + "@" + plugin[1]));
+                    // PHASE 32 (TD-75): the Hub updates it with Claude Code's CLI; the command stays shown.
+                    out.add(new Item("plugin:claude-code:" + plugin[0] + "@" + plugin[1], Type.PLUGIN, "claude-code", plugin[0], null,
+                            plugin[2], published, "Si aggiorna con la CLI di Claude Code; poi riavvia Claude Code", true, false,
+                            null, "claude plugin update " + plugin[0] + "@" + plugin[1] + " --scope user"));
                 }
             }
         }

@@ -466,6 +466,41 @@ class MarketplaceExtensionsApiTest extends AbstractPostgresTest {
         assertThat(updateIds(postJson("/api/skill-hub/updates/check", "{}"))).doesNotContain("conn:claude-code:plain");
     }
 
+    /**
+     * PHASE 32 (TD-75): a Claude Code plugin with a newer version in its marketplace is updated from the Hub,
+     * with Claude Code's own CLI; a command the marketplace declares for it is shown, never run from here.
+     */
+    @Test
+    void aClaudeCodePluginIsUpdatedFromTheHubWithItsCli() throws Exception {
+        Path plugin = home.resolve(".claude/plugins/cache/claude-plugins-official/frontend-design/1.0.0");
+        write(plugin.resolve(".claude-plugin/plugin.json"), "{\"name\": \"frontend-design\", \"version\": \"1.0.0\"}");
+        write(home.resolve(".claude/plugins/installed_plugins.json"), "{\"plugins\": {\"frontend-design@claude-plugins-official\": "
+                + "[{\"installPath\": \"" + plugin.toString().replace("\\", "\\\\") + "\", \"version\": \"1.0.0\"}]}}");
+        write(home.resolve(".claude/plugins/marketplaces/claude-plugins-official/.claude-plugin/marketplace.json"),
+                "{\"name\": \"claude-plugins-official\", \"plugins\": [{\"name\": \"frontend-design\", \"version\": \"1.1.0\"}]}");
+        getJson("/api/skill-hub/installed?rescan=true");
+
+        String id = "plugin:claude-code:frontend-design@claude-plugins-official";
+        JsonNode item = updateItem(postJson("/api/skill-hub/updates/check", "{}"), id);
+        assertThat(item.path("applicable").asBoolean()).isTrue();
+        assertThat(item.path("to").asString()).isEqualTo("1.1.0");
+
+        clis.answer(Tool.CLAUDE, List.of("plugin", "update"), 0, "{\"command\":\"update\",\"outcome\":\"updated\"}\n");
+        JsonNode applied = postJson("/api/skill-hub/updates/apply", json.writeValueAsString(Map.of("ids", List.of(id), "overwrite", false)));
+        assertThat(applied.path("results").path(0).path("outcome").asString()).isEqualTo("UPDATED");
+        assertThat(clis.calls().getLast()).isEqualTo(new FakeHubCommands.Call(Tool.CLAUDE,
+                List.of("plugin", "update", "frontend-design@claude-plugins-official", "--scope", "user", "--json")));
+
+        // A command the marketplace declares is not run from here.
+        clis.reset();
+        clis.answer(Tool.CLAUDE, List.of("plugin", "update"), 1, "{\"command\":\"update\",\"outcome\":\"failed\","
+                + "\"shownCommand\":{\"command\":\"npx -y setup\",\"sha256\":\"" + "b".repeat(64) + "\"}}\n");
+        JsonNode declared = postJson("/api/skill-hub/updates/apply", json.writeValueAsString(Map.of("ids", List.of(id), "overwrite", false)));
+        assertThat(declared.path("results").path(0).path("outcome").asString()).isEqualTo("FAILED");
+        assertThat(declared.path("results").path(0).path("message").asString()).contains("confermalo in Claude Code");
+        assertThat(clis.calls()).hasSize(1);
+    }
+
     private static String plain(String version) {
         return "{\"servers\": [{\"server\": {\"name\": \"io.github.acme/plain\", \"description\": \"Plain\", \"version\": \"" + version
                 + "\", \"packages\": [{\"registryType\": \"npm\", \"identifier\": \"@acme/plain-mcp\", \"version\": \"" + version

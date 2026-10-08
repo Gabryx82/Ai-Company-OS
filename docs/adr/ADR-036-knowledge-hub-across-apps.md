@@ -441,3 +441,21 @@ fare qui. Console: «Togli da …» nel dettaglio di un plugin o di un connettor
 Aggiornamenti. Test: `MarketplaceExtensionsApiTest` (rossi con le opzioni non passate, gli argomenti ignorati,
 le intestazioni di Codex non scritte, la disinstallazione senza la CLI, il controllo dei connettori spento),
 `HubCommandSafetyTest`, console `ExtensionsManage.test.tsx`.
+
+## Revisione PHASE 32 (2026-10-08) — plugin di Claude Code aggiornati dal Hub; la scheda Code (TD-75, TD-85, TD-74)
+
+**TD-75.** Un plugin di Claude Code con una versione più recente nel suo marketplace si aggiorna da
+«Aggiornamenti»: il Hub esegue `claude plugin update <plugin>@<marketplace> --scope user --json`, la CLI di Claude
+Code, e dice di riavviarlo. Un comando che il marketplace dichiari per l'aggiornamento non parte da qui: il Hub lo
+mostra e rimanda a Claude Code (`/plugin`), dove si legge e si conferma. I plugin di Claude Desktop restano
+dell'account (TD-86) e quelli di Codex li aggiorna Codex (TD-74).
+
+**TD-85.** La scheda Code dell'app Claude riceve anche le skill e i plugin di Claude Desktop: la posizione «Skill e
+plugin dell'account» dichiara come lettore anche Claude Code. Nella vista di Claude Code compaiono come «Lette
+anche da qui», con la loro provenienza; nella vista d'insieme restano una volta sola, sotto Claude Desktop.
+
+**TD-74, verifica.** `codex plugin list --json --available` (Codex CLI, 2026-10-08) elenca i plugin installati con
+la *loro* versione e quelli non installati con la versione del marketplace: per un plugin installato la versione
+più recente non c'è. Senza quel dato un controllo darebbe falsi segnali; resta un vincolo esterno
+(`docs/PHASE32_DECISIONS.md`). Test: `MarketplaceExtensionsApiTest` (rosso se l'aggiornamento non è applicabile),
+`SkillHubApiTest` (rosso senza il lettore).

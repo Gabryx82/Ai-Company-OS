@@ -3044,7 +3044,7 @@
             "type" : "string"
           },
           "key" : {
-            "type" : "string"
+            "type" : [ "string", "null" ]
           },
           "name" : {
             "type" : "string"

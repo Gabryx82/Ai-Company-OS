@@ -8,7 +8,7 @@ const SECTIONS: { type: HubUpdateType[]; title: string; hint: string }[] = [
   { type: ["MARKETPLACE"], title: "Dai marketplace", hint: "Skill installate da un marketplace con una versione nuova." },
   { type: ["SOURCE"], title: "Dalle app", hint: "Skill importate da un'app e cambiate lì dopo l'importazione." },
   { type: ["COPY", "PULL"], title: "Copie nelle app", hint: "Copie scritte dal Knowledge Hub: da aggiornare, o cambiate nell'app." },
-  { type: ["PLUGIN"], title: "Plugin delle app", hint: "Plugin con una versione pubblicata più recente: li aggiorna l'app." },
+  { type: ["PLUGIN"], title: "Plugin delle app", hint: "Con una versione pubblicata più recente: quelli di Claude Code si aggiornano da qui, gli altri dall'app." },
   { type: ["CONNECTOR"], title: "Connettori", hint: "Connettori installati dal Knowledge Hub con una versione nuova nel registro MCP." },
 ];
 
