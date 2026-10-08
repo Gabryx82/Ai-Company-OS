@@ -92,6 +92,22 @@ describe("TaskDrawer", () => {
     expect(launch.body).toEqual({});
   });
 
+  it("cancels a running run and shows it ended (TD-39)", async () => {
+    let cancelled = false;
+    const running = { id: 5, status: "RUNNING", requestedModel: null, servedModel: null, createdAt: null,
+      systemPrompt: "", userPrompt: "", correlationId: "run-5" };
+    const calls = renderDrawer({
+      "GET /api/tasks/7": () => ({ body: { ...TASK, status: "IN_PROGRESS" }, etag: '"2"' }),
+      "GET /api/tasks/7/runs": () => ({ body: [cancelled ? { ...running, status: "FAILED",
+        failureType: "urn:ai-company-os:run-failure:cancelled", failureDetail: "Annullata da admin" } : running] }),
+      "POST /api/runs/5/cancel": () => { cancelled = true; return { body: { ...running, status: "FAILED" } }; },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Annulla" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/api/runs/5/cancel")).toBe(true));
+    expect(await screen.findByText("Annullata da admin")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Annulla" })).toBeNull();
+  });
+
   it("does not offer a run for a task nobody holds", async () => {
     renderDrawer({ "GET /api/tasks/7": () => ({ body: { ...TASK, agentId: null }, etag: '"0"' }) });
     await screen.findByText("Assegna prima un agente.");

@@ -156,6 +156,24 @@ public class TaskRun {
         return true;
     }
 
+    /**
+     * PHASE 32 (TD-65): the engine answered, the tokens were spent, and there is no
+     * answer -- the model used all of them before writing one. Not a success with an
+     * empty output: a failure that keeps what it cost.
+     */
+    public boolean failSpent(String failureType, String failureDetail, String finishReason, String servedModel,
+                             int inputTokens, int outputTokens, long latencyMs) {
+        if (!fail(failureType, failureDetail)) {
+            return false;
+        }
+        this.finishReason = finishReason;
+        this.servedModel = servedModel;
+        this.inputTokens = inputTokens;
+        this.outputTokens = outputTokens;
+        this.latencyMs = latencyMs;
+        return true;
+    }
+
     /** {@code QUEUED | RUNNING → FAILED}. A finished run is never rewritten. */
     public boolean fail(String failureType, String failureDetail) {
         if (status.isFinished()) {

@@ -148,7 +148,9 @@ class TaskRunApiTest extends AbstractPostgresTest {
                 .contains("PostgreSQL and data modeling");
         assertThat(sent.user()).contains("Index the runs table").contains("Queries by task, newest first")
                 .contains("Priority: HIGH").contains("Project: Company OS");
-        assertThat(sent.model()).as("no model asked for: the engine's default").isNull();
+        // No model asked for: the engine's default -- sent by name since PHASE 32 (TD-54), so the
+        // model the budget check saw is the model the engine runs.
+        assertThat(sent.model()).as("no model asked for: the engine's default, by name").isEqualTo("echo:default");
         assertThat(sent.correlationId()).isEqualTo(run.get("correlationId").asString()).startsWith("run-");
         assertThat(sent.metadata()).containsEntry("run_id", String.valueOf(runId))
                 .containsEntry("task_id", String.valueOf(taskId));
@@ -260,6 +262,43 @@ class TaskRunApiTest extends AbstractPostgresTest {
 
         engine.release();
         awaitFinished(first);
+
+        mockMvc.perform(launch(taskId, etagOfTask(taskId))).andExpect(status().isAccepted());
+    }
+
+    /**
+     * PHASE 32 (TD-39): a running run is stopped -- recorded as cancelled at once, its
+     * wait on the engine interrupted, the late answer of the engine ignored -- and the
+     * task can run again.
+     */
+    @Test
+    void aRunningRunIsCancelledAndItsWaitOnTheEngineIsInterrupted() throws Exception {
+
+        Long taskId = task("Cancel me", null, agent("Backend", "Engineer", "jvm"), null);
+        engine.holdNextCall();
+        long runId = idOf(mockMvc.perform(launch(taskId, etagOfTask(taskId))).andReturn());
+        engine.awaitEntered();
+
+        mockMvc.perform(post("/api/runs/{id}/cancel", runId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.failureType").value("urn:ai-company-os:run-failure:cancelled"));
+
+        long deadline = System.currentTimeMillis() + 10_000;
+        while (!engine.interrupted() && System.currentTimeMillis() < deadline) {
+            Thread.sleep(20);
+        }
+        assertThat(engine.interrupted()).as("the thread waiting on the engine was interrupted, not left to time out").isTrue();
+        JsonNode finished = awaitFinished(runId);
+        assertThat(finished.path("failureType").asString()).as("the engine's late answer does not overwrite it")
+                .isEqualTo("urn:ai-company-os:run-failure:cancelled");
+        assertThat(finished.path("output").isNull() || finished.path("output").isMissingNode()).isTrue();
+
+        // Finished: cancelling again answers it as it is; an unknown run is a 404.
+        mockMvc.perform(post("/api/runs/{id}/cancel", runId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.failureType").value("urn:ai-company-os:run-failure:cancelled"));
+        mockMvc.perform(post("/api/runs/{id}/cancel", 999_999L)).andExpect(status().isNotFound());
 
         mockMvc.perform(launch(taskId, etagOfTask(taskId))).andExpect(status().isAccepted());
     }

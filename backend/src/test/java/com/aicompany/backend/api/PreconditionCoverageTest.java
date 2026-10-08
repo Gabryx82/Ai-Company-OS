@@ -124,7 +124,10 @@ class PreconditionCoverageTest {
             // follows the rewritten file as it does after sync (reindexFolder), so an open editor still sees 412.
             // checkProvenance records what upstream answered: the server's bookkeeping.
             "indexFolder", "reindexFolder", "importFound", "update", "pull", "deploy", "undeploy",
-            "checkProvenance");
+            "checkProvenance",
+            // PHASE 32 (TD-39): cancelling a run asks for an end state -- not running -- that nothing the caller
+            // saw can make wrong: a run already finished is answered as it is. No tag to be stale about.
+            "cancel");
 
     @Test
     void everyWritePathOnAnExistingRowTakesAPrecondition() {
@@ -190,7 +193,8 @@ class PreconditionCoverageTest {
         // existing row and carries the task's precondition. The executor's own
         // writes to the run (RunRecorder) are not a client path and not listed.
         assertThat(writePaths(RunService.class))
-                .containsExactlyInAnyOrder("launch:Precondition");
+                .containsExactlyInAnyOrder("launch:Precondition",
+                        "cancel");                     // PHASE 32 (TD-39): exempt -- nothing the caller saw decides it
 
         assertThat(writePaths(AgentService.class))
                 .containsExactlyInAnyOrder(
@@ -222,7 +226,8 @@ class PreconditionCoverageTest {
         // precondition would otherwise have had to express.
         assertThat(writePaths(PlanningService.class))
                 .containsExactlyInAnyOrder("generate", "importFromWorkspace", "recoverInterrupted",
-                        "approvePlan:Precondition", "reviewPhase:Precondition");
+                        "approvePlan:Precondition", "reviewPhase:Precondition",
+                        "cancel");                     // PHASE 32 (TD-43): exempt like a run's cancel
 
         // PHASE 11 (ADR-021 §4-5). Both may move the task, so both take its tag.
         assertThat(writePaths(ExecutionService.class))

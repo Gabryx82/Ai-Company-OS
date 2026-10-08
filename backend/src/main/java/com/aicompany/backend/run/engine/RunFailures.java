@@ -27,6 +27,15 @@ public final class RunFailures {
     /** No executor thread would take it: the queue was full. */
     public static final String REJECTED = PREFIX + "rejected";
 
+    /** PHASE 32 (TD-39): somebody cancelled it while it was queued or running. */
+    public static final String CANCELLED = PREFIX + "cancelled";
+
+    /** PHASE 32 (TD-65): the model spent every token it was allowed and wrote no answer. */
+    public static final String NO_ANSWER = PREFIX + "no-answer";
+
+    /** PHASE 32 (TD-54): the engine's default model is billed per token and has no budget or price. */
+    public static final String BUDGET = PREFIX + "budget";
+
     /** Anything else, logged in full; the run says only that it was internal. */
     public static final String INTERNAL = PREFIX + "internal";
 

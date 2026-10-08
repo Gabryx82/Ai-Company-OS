@@ -57,4 +57,10 @@ public class RunController {
     public RunResponse getRun(@PathVariable Long runId) {
         return service.findById(runId);
     }
+
+    /** PHASE 32 (TD-39): stops a queued or running run; a finished one is answered as it is. */
+    @PostMapping("/api/runs/{runId}/cancel")
+    public RunResponse cancelRun(@PathVariable Long runId, Principal principal) {
+        return service.cancel(runId, principal.getName());
+    }
 }

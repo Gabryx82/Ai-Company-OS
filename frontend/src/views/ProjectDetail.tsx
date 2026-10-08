@@ -333,8 +333,13 @@ function PlanTab({ project, plan, docs, agents, onReload, onOpenTask }: {
           {last && (
             <div className={last.status === "FAILED" ? "notice notice-danger" : "notice"}>
               <div className="row">
-                <strong>{last.status === "RUNNING" ? `Generazione in corso… ${last.progress ?? ""}` : last.status === "SUCCEEDED" ? "Ultima pianificazione riuscita" : "Ultima pianificazione fallita"}</strong>
+                <strong>{last.status === "RUNNING" ? `Generazione in corso… ${last.progress ?? ""}` : last.status === "SUCCEEDED" ? "Ultima pianificazione riuscita" : last.failureDetail?.startsWith("cancelled:") ? "Ultima pianificazione annullata" : "Ultima pianificazione fallita"}</strong>
                 <span className="muted">{last.source === "ENGINE" ? last.servedModel ?? last.requestedModel ?? "engine" : "import"} · {when(last.createdAt)}</span>
+                {last.status === "RUNNING" && (
+                  <button className="btn btn-small" style={{ marginLeft: "auto" }}
+                          onClick={() => guard(async () => setRunning(await api.cancelPlanRun(last.id)))}>
+                    <Icon name="close" size={12} /> Annulla</button>
+                )}
               </div>
               {last.status === "SUCCEEDED" && <div>{last.phases} fasi, {last.tasks} task{last.outputTokens ? ` · ${last.inputTokens}→${last.outputTokens} token` : ""}</div>}
               {last.failureDetail && <div className="mono" style={{ fontSize: 12 }}>{last.failureDetail}</div>}

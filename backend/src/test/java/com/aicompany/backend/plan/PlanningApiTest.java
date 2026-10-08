@@ -120,10 +120,17 @@ public class PlanningApiTest extends AbstractPostgresTest {
     }
 
     private JsonNode generateAndWait() throws Exception {
+        return awaitPlanRun(startGeneration());
+    }
+
+    private long startGeneration() throws Exception {
         MvcResult started = mockMvc.perform(post("/api/projects/" + projectId + "/plan/generate")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"model\":\"ollama:qwen3.5:9b\"}"))
                 .andExpect(status().isAccepted()).andReturn();
-        long runId = json.readTree(started.getResponse().getContentAsString()).path("id").asLong();
+        return json.readTree(started.getResponse().getContentAsString()).path("id").asLong();
+    }
+
+    private JsonNode awaitPlanRun(long runId) throws Exception {
         for (int i = 0; i < 100; i++) {
             JsonNode run = json.readTree(mockMvc.perform(get("/api/plan-runs/" + runId))
                     .andReturn().getResponse().getContentAsString());
@@ -217,6 +224,82 @@ public class PlanningApiTest extends AbstractPostgresTest {
 
         assertThat(run.path("status").asString()).isEqualTo("FAILED");
         assertThat(run.path("failureDetail").asString()).contains("Nothing answered");
+    }
+
+    // --- PHASE 32 (TD-43): a generation can be cancelled -------------------------------
+
+    private void awaitInterrupted() throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 10_000;
+        while (!engine.interrupted() && System.currentTimeMillis() < deadline) {
+            Thread.sleep(20);
+        }
+        assertThat(engine.interrupted()).as("the thread waiting on the engine was interrupted, not left to time out")
+                .isTrue();
+    }
+
+    @Test
+    void aGenerationCancelledWhileItWaitsStopsThereAndImportsNothing() throws Exception {
+        writeMasterPrompt();
+        scriptPlan();
+        engine.holdNextCall();
+        long runId = startGeneration();
+        engine.awaitEntered();
+
+        mockMvc.perform(post("/api/plan-runs/{id}/cancel", runId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.failureDetail").value("cancelled: Annullata da operator"));
+        awaitInterrupted();
+
+        JsonNode run = awaitPlanRun(runId);
+        assertThat(run.path("failureDetail").asString()).isEqualTo("cancelled: Annullata da operator");
+        Thread.sleep(300);
+        assertThat(engine.requests()).as("the answer that came back is not followed by the next stage").hasSize(1);
+        mockMvc.perform(get("/api/projects/" + projectId + "/plan")).andExpect(jsonPath("$.phases.length()").value(0));
+
+        // Finished: cancelling again answers it as it is; an unknown run is a 404; a new generation may start.
+        mockMvc.perform(post("/api/plan-runs/{id}/cancel", runId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.failureDetail").value("cancelled: Annullata da operator"));
+        mockMvc.perform(post("/api/plan-runs/{id}/cancel", 999_999L)).andExpect(status().isNotFound());
+        engine.reset();
+        scriptPlan();
+        assertThat(generateAndWait().path("status").asString()).isEqualTo("SUCCEEDED");
+    }
+
+    @Test
+    void theFailureThatFollowsACancellationDoesNotReplaceIt() throws Exception {
+        writeMasterPrompt();
+        engine.holdNextCall();   // unscripted: the late answer is an echo, which is not a plan
+        long runId = startGeneration();
+        engine.awaitEntered();
+
+        mockMvc.perform(post("/api/plan-runs/{id}/cancel", runId)).andExpect(status().isOk());
+        awaitInterrupted();
+        Thread.sleep(300);
+
+        JsonNode run = awaitPlanRun(runId);
+        assertThat(run.path("failureDetail").asString()).isEqualTo("cancelled: Annullata da operator");
+        assertThat(run.path("output").isNull() || run.path("output").isMissingNode()).isTrue();
+    }
+
+    @Test
+    void aGenerationCancelledDuringItsLastStageWritesNoPlan() throws Exception {
+        writeMasterPrompt();
+        scriptPlan();
+        engine.holdCallsAfter(2);   // the phases and the tasks of phase 1 answer; phase 2 is held
+        long runId = startGeneration();
+        engine.awaitEntered();
+
+        mockMvc.perform(post("/api/plan-runs/{id}/cancel", runId)).andExpect(status().isOk());
+        awaitInterrupted();
+        Thread.sleep(300);
+
+        JsonNode run = awaitPlanRun(runId);
+        assertThat(run.path("status").asString()).isEqualTo("FAILED");
+        assertThat(run.path("failureDetail").asString()).isEqualTo("cancelled: Annullata da operator");
+        assertThat(engine.requests()).hasSize(3);
+        mockMvc.perform(get("/api/projects/" + projectId + "/plan")).andExpect(jsonPath("$.phases.length()").value(0));
     }
 
     @Test

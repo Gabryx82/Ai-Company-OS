@@ -30,14 +30,18 @@ public class ScriptedEngineClient implements EngineClient {
     private final List<Request> requests = Collections.synchronizedList(new ArrayList<>());
     private volatile CountDownLatch hold;
     private volatile CountDownLatch entered;
+    private volatile int holdFrom;
 
     public synchronized void reset() {
         script.clear();
         requests.clear();
         release();
         modelsUnavailable = false;
+        defaultModel = "echo:default";
+        interrupted = false;
         hold = null;
         entered = null;
+        holdFrom = 0;
     }
 
     public synchronized void answer(String output) {
@@ -63,8 +67,14 @@ public class ScriptedEngineClient implements EngineClient {
 
     /** The next call blocks until {@link #release()}; {@link #awaitEntered()} waits for it to start. */
     public synchronized void holdNextCall() {
+        holdCallsAfter(0);
+    }
+
+    /** PHASE 32 (TD-43): the next {@code passing} calls answer; those after them block until {@link #release()}. */
+    public synchronized void holdCallsAfter(int passing) {
         hold = new CountDownLatch(1);
         entered = new CountDownLatch(1);
+        holdFrom = requests.size() + passing;
     }
 
     public void release() {
@@ -81,6 +91,18 @@ public class ScriptedEngineClient implements EngineClient {
     }
 
     private volatile boolean modelsUnavailable;
+    private volatile String defaultModel = "echo:default";
+    private volatile boolean interrupted;
+
+    /** PHASE 32 (TD-39): whether a held call was interrupted -- a cancelled run gives its thread back at once. */
+    public boolean interrupted() {
+        return interrupted;
+    }
+
+    /** PHASE 32 (TD-54): the model the engine would use for a run that names none. */
+    public void defaultModel(String key) {
+        defaultModel = key;
+    }
 
     public void modelsUnavailable() {
         modelsUnavailable = true;
@@ -92,7 +114,7 @@ public class ScriptedEngineClient implements EngineClient {
             modelsUnavailable = false;
             throw new EngineFailure("urn:ai-company-os:run-failure:engine-unreachable", "Nothing answered");
         }
-        return new ModelList("echo:default", List.of(
+        return new ModelList(defaultModel, List.of(
                 new ModelInfo("echo:default", "echo", true, "Deterministic echo; not a language model", false),
                 new ModelInfo("anthropic:claude-opus-5", "anthropic", false, "Set ANTHROPIC_API_KEY to enable", true)));
     }
@@ -103,12 +125,12 @@ public class ScriptedEngineClient implements EngineClient {
 
     @Override
     public Completion complete(Request request) {
-        requests.add(request);
         CountDownLatch waitFor;
         Function<Request, Completion> next;
         synchronized (this) {
-            waitFor = hold;
-            if (entered != null) {
+            requests.add(request);
+            waitFor = hold != null && requests.size() > holdFrom ? hold : null;
+            if (waitFor != null && entered != null) {
                 entered.countDown();
             }
             next = script.poll();
@@ -117,6 +139,7 @@ public class ScriptedEngineClient implements EngineClient {
             try {
                 waitFor.await(30, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
+                interrupted = true;
                 Thread.currentThread().interrupt();
             }
         }

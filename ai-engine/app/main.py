@@ -12,10 +12,11 @@ import re
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.cancellation import CallerGone, until_caller_leaves
 from app.config import Settings
 from app.contract import CONTRACT_VERSION, CompletionRequest, CompletionResponse, ModelList
 from app.gateway import Gateway
@@ -130,10 +131,15 @@ def create_app(settings: Settings | None = None, providers: list[Provider] | Non
 
     @app.post("/v1/completions", response_model=CompletionResponse,
               dependencies=[Depends(require_service_token)])
-    async def complete(body: CompletionRequest, request: Request) -> CompletionResponse:
+    async def complete(body: CompletionRequest, request: Request):
         correlation_id = request.state.correlation_id
         log.info("correlation=%s model=%s metadata=%s", correlation_id, body.model or gateway.default_model,
                  body.metadata)
-        return await gateway.complete(body, correlation_id)
+        try:
+            return await until_caller_leaves(gateway.complete(body, correlation_id), request.is_disconnected)
+        except CallerGone:
+            # PHASE 32 (TD-39): the run was cancelled; nobody reads this answer.
+            log.info("correlation=%s cancelled: the caller went away, the provider call was stopped", correlation_id)
+            return Response(status_code=499)
 
     return app

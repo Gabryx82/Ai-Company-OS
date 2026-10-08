@@ -101,12 +101,22 @@ public class PlanRun {
         this.finishedAt = DatabaseClock.now();
     }
 
-    public void fail(String detail, String output, String servedModel) {
+    /**
+     * {@code RUNNING → FAILED}. A finished run is never rewritten (PHASE 32, TD-43): a
+     * generation cancelled while it waited on the engine ends with the engine's
+     * interruption, and that must not replace the cancellation it follows from.
+     */
+    public boolean fail(String detail, String output, String servedModel) {
+        if (status != Status.RUNNING) {
+            return false;
+        }
         this.status = Status.FAILED;
+        this.progress = null;
         this.failureDetail = detail.length() > 4000 ? detail.substring(0, 4000) : detail;
         this.output = output;
         this.servedModel = servedModel;
         this.finishedAt = DatabaseClock.now();
+        return true;
     }
 
     public Long getId() { return id; }

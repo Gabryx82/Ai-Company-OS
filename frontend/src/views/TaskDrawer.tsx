@@ -127,7 +127,8 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
             <OrchestratorPanel task={task} busy={busy} act={act} />
 
             <RunSection task={task} agent={agent} binding={binding} runs={runs} models={models} busy={busy}
-                        onLaunch={(model) => act((etag) => api.launchRun(task.id, etag, model))} />
+                        onLaunch={(model) => act((etag) => api.launchRun(task.id, etag, model))}
+                        onCancel={(runId) => act(() => api.cancelRun(runId))} />
 
             <DetailsSection key={version.etag} task={task} busy={busy}
                             onSave={(details) => act((etag) => api.updateTask(task.id, etag, details))} />
@@ -156,9 +157,9 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
   );
 }
 
-function RunSection({ task, agent, binding, runs, models, busy, onLaunch }: {
+function RunSection({ task, agent, binding, runs, models, busy, onLaunch, onCancel }: {
   task: Task; agent: Agent | undefined; binding: AgentConfiguration | undefined; runs: Run[]; models: ModelInfo[];
-  busy: boolean; onLaunch: (model?: string) => void;
+  busy: boolean; onLaunch: (model?: string) => void; onCancel: (runId: number) => void;
 }) {
   const [model, setModel] = useState("");
   const elsewhere = binding && binding.executionTarget !== "engine" ? binding.binding.target.name : null;
@@ -183,12 +184,12 @@ function RunSection({ task, agent, binding, runs, models, busy, onLaunch }: {
       </div>
       {blocked && <div className="muted">{blocked}</div>}
       {runs.length === 0 && <div className="muted">Nessuna esecuzione.</div>}
-      {runs.map((run) => <RunCard key={run.id} run={run} />)}
+      {runs.map((run) => <RunCard key={run.id} run={run} busy={busy} onCancel={() => onCancel(run.id)} />)}
     </div>
   );
 }
 
-function RunCard({ run }: { run: Run }) {
+function RunCard({ run, busy, onCancel }: { run: Run; busy: boolean; onCancel: () => void }) {
   return (
     <article className="run" aria-label={`Run ${run.id}`}>
       <div className="row">
@@ -217,7 +218,10 @@ function RunCard({ run }: { run: Run }) {
         </div>
       )}
       {(run.status === "QUEUED" || run.status === "RUNNING") && (
-        <div className="muted">{run.status === "QUEUED" ? "In attesa di un esecutore…" : "Il modello sta lavorando…"}</div>
+        <div className="row">
+          <span className="muted">{run.status === "QUEUED" ? "In attesa di un esecutore…" : "Il modello sta lavorando…"}</span>
+          <button className="btn btn-small" disabled={busy} onClick={onCancel}>Annulla</button>
+        </div>
       )}
       <details>
         <summary>Cosa è stato inviato</summary>

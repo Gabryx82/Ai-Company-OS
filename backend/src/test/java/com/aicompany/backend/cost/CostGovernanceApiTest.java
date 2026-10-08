@@ -38,6 +38,9 @@ class CostGovernanceApiTest extends AbstractPostgresTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private com.aicompany.backend.support.ScriptedEngineClient engine;
+
     private final JsonMapper json = JsonMapper.builder().build();
     private String admin;
     private long agentId;
@@ -134,6 +137,77 @@ class CostGovernanceApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:budget-exceeded"));
         run(second, "echo:default").andExpect(status().isAccepted());
         assertThat(awaitCost(second)).isEqualByComparingTo("0");
+    }
+
+    /**
+     * PHASE 32 (TD-54): a run that names no model goes to the engine's default, and when
+     * that default is billed per token it meets the same budget and price as a model a
+     * person names -- before the engine is asked for anything that costs.
+     */
+    @Test
+    void aRunOnTheEnginesDefaultModelIsHeldToTheSameBudget() throws Exception {
+        engine.reset();
+        engine.defaultModel(PAID);
+        try {
+            long refused = task();
+            run(refused, null).andExpect(status().isAccepted());
+            String failure = awaitFailure(refused);
+            assertThat(failure).isEqualTo("urn:ai-company-os:run-failure:budget");
+            assertThat(engine.requests()).as("nothing billed was asked for").isEmpty();
+
+            mockMvc.perform(put("/api/admin/costs/budgets/anthropic").header(HttpHeaders.AUTHORIZATION, admin)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"monthlyLimitUsd\":1.00}")).andExpect(status().isOk());
+            long version = jdbc.queryForObject("SELECT version FROM llm_models WHERE key = ?", Long.class, PAID);
+            mockMvc.perform(put("/api/admin/costs/prices/" + PAID).header(HttpHeaders.AUTHORIZATION, admin)
+                    .header(HttpHeaders.IF_MATCH, "\"" + version + "\"").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"inputPricePerMtok\":15,\"outputPricePerMtok\":75}")).andExpect(status().isOk());
+
+            long allowed = task();
+            run(allowed, null).andExpect(status().isAccepted());
+            assertThat(awaitCost(allowed)).isEqualByComparingTo("0.000630");
+            assertThat(engine.requests()).singleElement()
+                    .satisfies(request -> assertThat(request.model()).as("sent by name: the model checked is the model used").isEqualTo(PAID));
+        } finally {
+            engine.reset();
+        }
+    }
+
+    /** PHASE 32 (TD-65): out of tokens before the first word -- a failure that keeps what it cost, not an empty success. */
+    @Test
+    void aRunThatSpentEveryTokenWithoutAnsweringFailsAndKeepsItsCost() throws Exception {
+        engine.reset();
+        engine.answerWith(new com.aicompany.backend.run.engine.EngineClient.Completion("", "length", "echo:default", 120, 4096, 9000));
+        try {
+            long id = task();
+            run(id, "echo:default").andExpect(status().isAccepted());
+            assertThat(awaitFailure(id)).isEqualTo("urn:ai-company-os:run-failure:no-answer");
+            var row = jdbc.queryForMap("SELECT finish_reason, output_tokens, failure_detail, cost_usd FROM task_runs WHERE task_id = ?", id);
+            assertThat(row.get("finish_reason")).isEqualTo("length");
+            assertThat(((Number) row.get("output_tokens")).intValue()).isEqualTo(4096);
+            assertThat((String) row.get("failure_detail")).contains("4096");
+            assertThat((BigDecimal) row.get("cost_usd")).isEqualByComparingTo("0");
+
+            // A long answer cut at the limit is still an answer: it succeeds and says it was cut.
+            engine.answerWith(new com.aicompany.backend.run.engine.EngineClient.Completion("half an answer", "length", "echo:default", 1, 2, 3));
+            long cut = task();
+            run(cut, "echo:default").andExpect(status().isAccepted());
+            assertThat(awaitCost(cut)).isEqualByComparingTo("0");
+            assertThat(jdbc.queryForObject("SELECT finish_reason FROM task_runs WHERE task_id = ?", String.class, cut)).isEqualTo("length");
+        } finally {
+            engine.reset();
+        }
+    }
+
+    private String awaitFailure(long taskId) throws Exception {
+        for (int i = 0; i < 200; i++) {
+            var failure = jdbc.queryForList("SELECT failure_type FROM task_runs WHERE task_id = ? AND status = 'FAILED'",
+                    String.class, taskId);
+            if (!failure.isEmpty()) {
+                return failure.getFirst();
+            }
+            Thread.sleep(25);
+        }
+        throw new AssertionError("the run did not fail");
     }
 
     /** PHASE 30 (ADR-035): removing a budget stops paid runs again; it never frees them. */

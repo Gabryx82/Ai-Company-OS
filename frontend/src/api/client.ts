@@ -224,6 +224,11 @@ export class ControlPlane {
 
   // --- runs -------------------------------------------------------------------
 
+  /** PHASE 32 (TD-39): stops a queued or running run; a finished one comes back as it is. */
+  cancelRun(runId: number): Promise<Run> {
+    return this.plain("POST", `/api/runs/${runId}/cancel`);
+  }
+
   /** Takes the TASK's tag: launching may start the task (ADR-016 §2). */
   launchRun(taskId: number, taskEtag: string, model?: string): Promise<Run> {
     return this.plain("POST", `/api/tasks/${taskId}/runs`, { body: model ? { model } : {}, ifMatch: taskEtag });
@@ -355,6 +360,11 @@ export class ControlPlane {
 
   planRun(runId: number): Promise<PlanRun> {
     return this.plain("GET", `/api/plan-runs/${runId}`);
+  }
+
+  /** PHASE 32 (TD-43): stops a generation that is running; a finished one comes back as it is. */
+  cancelPlanRun(runId: number): Promise<PlanRun> {
+    return this.plain("POST", `/api/plan-runs/${runId}/cancel`);
   }
 
   approvePlan(id: number, etag: string, approveAllPhases: boolean): Promise<Versioned<Project>> {

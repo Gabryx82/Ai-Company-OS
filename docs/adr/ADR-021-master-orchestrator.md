@@ -90,3 +90,21 @@ esattamente quello di PHASE 6 — è la regressione che protegge il flusso già 
   («non voglio dipendere obbligatoriamente dalle API»); restano disponibili, spente senza chiave.
 - **Un runtime a grafo (LangGraph) adesso**: ADR-001 lo rinvia a un esperimento con criteri
   misurabili; l'orchestrazione di oggi è una sequenza con gate umani, e il codice la esprime già.
+
+## Revisione PHASE 32 (2026-10-08) — una generazione si annulla (TD-43)
+
+Col 9B locale una generazione dura circa 13 minuti; ora si può fermare.
+`POST /api/plan-runs/{id}/cancel`, senza `If-Match` come l'annullamento di una run (ADR-016):
+
+- sotto il lock della `plan_run` la generazione diventa `FAILED` con dettaglio
+  `cancelled: Annullata da <chi>`; dopo il commit il thread che attende l'engine è interrotto e la
+  connessione si chiude (l'engine smette di generare quando il chiamante se ne va);
+- la generazione si ferma prima dello stadio successivo: ogni stadio, prima di chiamare l'engine,
+  verifica che la run sia ancora in corso;
+- **il piano si scrive solo sotto lo stesso lock e solo se la run è ancora `RUNNING`**: import e
+  successo sono una transazione sola, così un annullamento arrivato dopo l'ultima risposta non lascia
+  un piano importato da una run annullata;
+- il fallimento che segue l'interruzione non sovrascrive l'annullamento (`PlanRun.fail` non riscrive
+  una run finita); una run già finita è restituita com'è.
+
+La console mostra «Annulla» accanto all'avanzamento e, dopo, «Ultima pianificazione annullata».

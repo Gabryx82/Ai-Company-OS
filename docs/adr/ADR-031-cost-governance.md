@@ -39,3 +39,11 @@ prezzi si impostano in **Modelli**.
 `CostGovernanceApiTest`: senza budget rifiutata, senza prezzo rifiutata, con entrambi eseguita e costo
 registrato esatto (7 + 7 token a 15/75 USD per milione = 0,00063), riepilogo, budget abbassato con tag
 → esaurito → run a consumo rifiutata e run locale eseguita a costo zero; operatore senza accesso.
+
+## Revisione PHASE 32 (2026-10-08) — il default dell'engine non sfugge (TD-54)
+
+La regola 2 valeva solo per i modelli nominati: una run senza modello andava al default dell'AI
+Engine senza controllo. Ora il control plane chiede all'engine qual è il suo default, lo controlla come
+qualunque altro modello e lo invia per nome, così il modello controllato è quello eseguito. Rifiutato,
+la run fallisce con `run-failure:budget` senza chiamare il provider. `CostGovernanceApiTest`: un
+default a consumo senza budget è rifiutato e il provider non riceve nulla.

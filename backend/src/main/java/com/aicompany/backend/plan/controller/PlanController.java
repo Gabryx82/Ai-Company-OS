@@ -101,6 +101,16 @@ public class PlanController {
         return PlanRunResponse.from(service.run(runId));
     }
 
+    /**
+     * Stops a generation that is running (PHASE 32, TD-43). It ends as {@code FAILED},
+     * {@code cancelled: ...}, and nothing is imported; a run that has already finished
+     * is returned as it is.
+     */
+    @PostMapping("/api/plan-runs/{runId}/cancel")
+    public PlanRunResponse cancelPlanRun(@PathVariable Long runId, Authentication caller) {
+        return PlanRunResponse.from(service.cancel(runId, caller.getName()));
+    }
+
     @PostMapping("/api/projects/{id}/plan/approve")
     public ResponseEntity<ProjectResponse> approve(
             @PathVariable Long id,

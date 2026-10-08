@@ -8,6 +8,7 @@ import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
 import com.aicompany.backend.run.dto.RunResponse;
+import com.aicompany.backend.run.engine.RunFailures;
 import com.aicompany.backend.run.exception.RunNotFoundException;
 import com.aicompany.backend.run.exception.TaskRunInProgressException;
 import com.aicompany.backend.run.execution.RunContext;
@@ -141,5 +142,22 @@ public class RunService {
             throw new TaskNotFoundException(taskId);
         }
         return runs.findAllByTaskIdOrderByIdDesc(taskId).stream().map(RunResponse::from).toList();
+    }
+
+    /**
+     * PHASE 32 (TD-39): stops a run that is queued or running. It is recorded as
+     * failed with the type {@code cancelled}, under the run's lock; after the commit
+     * the thread waiting on the engine is interrupted ({@link RunCancelled}), which
+     * closes the connection, and the engine stops its provider when its caller goes.
+     * A run that has already finished is answered as it is: the state asked for --
+     * not running -- is already there. No precondition: nothing the caller saw
+     * decides the outcome.
+     */
+    public RunResponse cancel(Long runId, String by) {
+        TaskRun run = runs.findByIdForUpdate(runId).orElseThrow(() -> new RunNotFoundException(runId));
+        if (run.fail(RunFailures.CANCELLED, "Annullata da " + by)) {
+            events.publishEvent(new RunCancelled(runId));
+        }
+        return RunResponse.from(run);
     }
 }

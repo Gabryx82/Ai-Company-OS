@@ -89,3 +89,23 @@ dell'engine.
 
 Cancellazione di una run, streaming dell'output, retry automatici, esecuzione a più passi o a grafo,
 quote e costi, artefatti strutturati oltre al testo.
+
+## Revisione PHASE 32 (2026-10-08) — TD-39, TD-54, TD-65 chiusi
+
+- **Una run si annulla** (rivede §7): `POST /api/runs/{id}/cancel`, senza `If-Match` — lo stato
+  chiesto, «non in corso», non dipende da nulla che il chiamante abbia letto. Sotto il lock della run
+  (`QUEUED | RUNNING → FAILED`, tipo `urn:ai-company-os:run-failure:cancelled`, dettaglio «Annullata da
+  <chi>»); **dopo il commit** il thread che attende l'engine è interrotto: la chiamata HTTP si arrende e
+  chiude la connessione, e l'AI Engine, che durante una completion controlla se il chiamante c'è ancora,
+  annulla la richiesta al provider (per Ollama chiuderla ferma la generazione) e risponde `499` a
+  nessuno. La risposta o l'errore che arrivano dopo non riscrivono la run: una run finita non si riscrive
+  (già vero, ora con un test che lo vede). Una run già finita è restituita com'è; ignota `404`.
+- **Il modello di default passa dal budget** (TD-54, ADR-031): una run senza modello chiede all'engine
+  il suo default, lo sottopone allo stesso controllo dei modelli nominati e lo invia **per nome**: il
+  modello controllato è quello usato. Se il budget lo rifiuta la run fallisce con
+  `run-failure:budget` e il provider non è chiamato.
+- **Nessuna risposta non è un successo** (TD-65): una completion con output vuoto e
+  `finish_reason: length` è `FAILED` con il tipo `run-failure:no-answer` e un dettaglio che dice quanti
+  token ha speso; modello servito, token e latenza restano sulla run e il costo è contabilizzato come per
+  ogni altra run conclusa.
+- Tipi del control plane aggiunti a §4: `cancelled`, `budget`, `no-answer`.

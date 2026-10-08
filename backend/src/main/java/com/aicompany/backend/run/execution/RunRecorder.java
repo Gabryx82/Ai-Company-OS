@@ -1,6 +1,7 @@
 package com.aicompany.backend.run.execution;
 
 import com.aicompany.backend.run.engine.EngineClient;
+import com.aicompany.backend.run.engine.RunFailures;
 import com.aicompany.backend.run.model.RunStatus;
 import com.aicompany.backend.run.model.TaskRun;
 import com.aicompany.backend.run.repository.TaskRunRepository;
@@ -57,8 +58,19 @@ public class RunRecorder {
 
     public void succeed(Long runId, EngineClient.Completion completion) {
         runs.findByIdForUpdate(runId).ifPresent(run -> {
-            run.succeed(completion.output(), completion.finishReason(), completion.model(), completion.inputTokens(),
-                    completion.outputTokens(), completion.latencyMs());
+            boolean noAnswer = (completion.output() == null || completion.output().isBlank())
+                    && "length".equals(completion.finishReason());
+            if (noAnswer) {
+                // PHASE 32 (TD-65): out of tokens before the first word of the answer.
+                run.failSpent(RunFailures.NO_ANSWER, "Il modello ha usato tutti i " + completion.outputTokens()
+                                + " token di output senza scrivere una risposta. Rilanciala con un modello che non "
+                                + "ragiona così a lungo, o con un limite di token più alto.",
+                        completion.finishReason(), completion.model(), completion.inputTokens(),
+                        completion.outputTokens(), completion.latencyMs());
+            } else {
+                run.succeed(completion.output(), completion.finishReason(), completion.model(), completion.inputTokens(),
+                        completion.outputTokens(), completion.latencyMs());
+            }
             // PHASE 24 (ADR-031): the cost at the price of this moment; unknown stays null.
             costs.costOf(run.getRequestedModel() != null ? run.getRequestedModel() : completion.model(),
                     completion.inputTokens(), completion.outputTokens()).ifPresent(run::recordCost);

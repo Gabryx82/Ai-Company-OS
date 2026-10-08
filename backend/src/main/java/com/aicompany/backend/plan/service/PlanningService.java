@@ -74,6 +74,8 @@ public class PlanningService {
     private final EngineClient engine;
     private final TaskExecutor executor;
     private final TransactionTemplate transactions;
+    /** The generation each planning thread is working on, to interrupt it when it is cancelled (TD-43). */
+    private final Map<Long, Thread> working = new java.util.concurrent.ConcurrentHashMap<>();
 
     public PlanningService(ProjectRepository projects, ProjectPhaseRepository phases, PlanRunRepository planRuns,
                            TaskRepository tasks, AgentRepository agents, SoftwareRepository software,
@@ -149,6 +151,19 @@ public class PlanningService {
      * the tokens of all stages together.
      */
     void execute(Long runId, Long projectId, String model, String masterPrompt) {
+        working.put(runId, Thread.currentThread());
+        try {
+            generateOnEngine(runId, projectId, model, masterPrompt);
+        } finally {
+            synchronized (working) {
+                working.remove(runId);
+                // a cancellation that arrived as the generation ended must not reach this thread's next job
+                Thread.interrupted();
+            }
+        }
+    }
+
+    private void generateOnEngine(Long runId, Long projectId, String model, String masterPrompt) {
         StringBuilder output = new StringBuilder();
         String served = null;
         int tokensIn = 0;
@@ -184,31 +199,85 @@ public class PlanningService {
                 tasksByPhase.add(PlanDocument.parseTasks(tasksAnswer.output()));
             }
 
-            progress(runId, "Scrittura di piano, fasi e task");
             PlanDocument plan = skeleton.withTasks(tasksByPhase);
-            PlanImporter.Imported imported = importer.importPlan(projectId, plan, "AI Engine, " + served);
             String finalServed = served;
             String finalOutput = output.toString();
             int finalIn = tokensIn;
             int finalOut = tokensOut;
+            // PHASE 32 (TD-43): the plan is written under the run's lock, and only while the run
+            // is still running -- a generation cancelled after its last answer writes nothing.
             transactions.executeWithoutResult(status -> {
-                PlanRun run = planRuns.findById(runId).orElseThrow();
+                PlanRun run = planRuns.findByIdForUpdate(runId).orElseThrow();
+                if (run.getStatus() != PlanRun.Status.RUNNING) {
+                    throw new GenerationStopped();
+                }
+                PlanImporter.Imported imported = importer.importPlan(projectId, plan, "AI Engine, " + finalServed);
                 run.progress(null);
                 run.succeed(imported.phases(), imported.tasks(), finalOutput, finalServed, finalIn, finalOut);
             });
+        } catch (GenerationStopped stopped) {
+            log.info("Plan run {} was cancelled; the generation stopped", runId);
         } catch (EngineFailure failure) {
+            // an interruption is a cancellation already recorded: the flag is cleared so the
+            // record below can still reach the database, and it does not overwrite the run
+            Thread.interrupted();
             finish(runId, failure.type() + ": " + failure.detail(), output.toString(), served);
         } catch (ProblemException refused) {
             finish(runId, refused.problem().slug() + ": " + refused.getMessage()
                     + (refused.errors().isEmpty() ? "" : " " + refused.errors()), output.toString(), served);
         } catch (RuntimeException unexpected) {
-            log.error("Plan run {} failed unexpectedly", runId, unexpected);
+            if (Thread.interrupted()) {
+                log.info("Plan run {} was cancelled while it wrote to the database", runId);
+            } else {
+                log.error("Plan run {} failed unexpectedly", runId, unexpected);
+            }
             finish(runId, "internal: " + unexpected.getClass().getSimpleName(), output.toString(), served);
         }
     }
 
+    /** The run is no longer running: it was cancelled, and the generation stops where it is. */
+    private static final class GenerationStopped extends RuntimeException {
+        GenerationStopped() {
+            super(null, null, false, false);
+        }
+    }
+
+    /** Records the stage the generation is entering -- and stops it if the run was cancelled meanwhile. */
     private void progress(Long runId, String text) {
-        transactions.executeWithoutResult(status -> planRuns.findById(runId).orElseThrow().progress(text));
+        transactions.executeWithoutResult(status -> {
+            PlanRun run = planRuns.findById(runId).orElseThrow();
+            if (run.getStatus() != PlanRun.Status.RUNNING) {
+                throw new GenerationStopped();
+            }
+            run.progress(text);
+        });
+    }
+
+    /**
+     * PHASE 32 (TD-43): stops a generation that is running -- with a local model one
+     * lasts minutes. It is recorded as failed ({@code cancelled: ...}) under the run's
+     * lock, so nothing is imported after it; once that is committed, the thread
+     * waiting on the engine is interrupted, which closes the connection, and the
+     * engine stops its provider when its caller goes. A run that has already
+     * finished is answered as it is. No precondition: nothing the caller saw
+     * decides the outcome.
+     */
+    public PlanRun cancel(Long runId, String by) {
+        boolean[] cancelled = new boolean[1];
+        PlanRun run = transactions.execute(status -> {
+            PlanRun locked = planRuns.findByIdForUpdate(runId).orElseThrow(() -> new PlanRunNotFoundException(runId));
+            cancelled[0] = locked.fail("cancelled: Annullata da " + by, null, null);
+            return locked;
+        });
+        if (cancelled[0]) {
+            synchronized (working) {
+                Thread thread = working.get(runId);
+                if (thread != null) {
+                    thread.interrupt();
+                }
+            }
+        }
+        return run;
     }
 
     private static String correlation(Long runId, int stage) {

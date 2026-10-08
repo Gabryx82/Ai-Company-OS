@@ -1,9 +1,12 @@
 package com.aicompany.backend.run.execution;
 
+import com.aicompany.backend.cost.CostProblemException;
+import com.aicompany.backend.cost.CostService;
 import com.aicompany.backend.run.engine.EngineClient;
 import com.aicompany.backend.run.engine.EngineFailure;
 import com.aicompany.backend.run.engine.EngineProperties;
 import com.aicompany.backend.run.engine.RunFailures;
+import com.aicompany.backend.run.service.RunCancelled;
 import com.aicompany.backend.run.service.RunQueued;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,13 +38,17 @@ public class RunDispatcher {
     private final EngineClient engine;
     private final EngineProperties properties;
     private final TaskExecutor executor;
+    private final CostService costs;
+    /** The run each executor thread is waiting on the engine for (TD-39). */
+    private final Map<Long, Thread> working = new java.util.concurrent.ConcurrentHashMap<>();
 
     public RunDispatcher(RunRecorder recorder, EngineClient engine, EngineProperties properties,
-                         @Qualifier("runExecutor") TaskExecutor executor) {
+                         @Qualifier("runExecutor") TaskExecutor executor, CostService costs) {
         this.recorder = recorder;
         this.engine = engine;
         this.properties = properties;
         this.executor = executor;
+        this.costs = costs;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -68,22 +75,67 @@ public class RunDispatcher {
         }
     }
 
+    /**
+     * PHASE 32 (TD-39): the run is already recorded as cancelled; the thread waiting on
+     * the engine for it, if any, is interrupted -- the HTTP call gives up and closes
+     * the connection. Only while that thread is still on that run.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onCancelled(RunCancelled cancelled) {
+        synchronized (working) {
+            Thread thread = working.get(cancelled.runId());
+            if (thread != null) {
+                thread.interrupt();
+            }
+        }
+    }
+
     void execute(Long runId) {
         recorder.markRunning(runId).ifPresent(started -> {
+            working.put(runId, Thread.currentThread());
             try {
-                EngineClient.Completion completion = engine.complete(new EngineClient.Request(
-                        started.model(), started.system(), started.user(), properties.getMaxTokens(),
-                        started.correlationId(),
-                        Map.of("run_id", String.valueOf(started.runId()),
-                                "task_id", String.valueOf(started.taskId()),
-                                "agent_id", String.valueOf(started.agentId()))));
-                recorder.succeed(runId, completion);
-            } catch (EngineFailure failure) {
-                recorder.fail(runId, failure.type(), failure.detail());
-            } catch (RuntimeException unexpected) {
-                log.error("Run {} (correlation {}) failed unexpectedly", runId, started.correlationId(), unexpected);
-                recorder.fail(runId, RunFailures.INTERNAL, "The run failed inside the control plane; see its log");
+                runOnEngine(runId, started);
+            } finally {
+                synchronized (working) {
+                    working.remove(runId);
+                    // a cancellation that arrived as the answer did must not reach the next run of this thread
+                    Thread.interrupted();
+                }
             }
         });
+    }
+
+    private void runOnEngine(Long runId, RunRecorder.StartedRun started) {
+        try {
+            // PHASE 32 (TD-54): a run with no model goes to the engine's default, and that
+            // default passes the same budget check as any model a person names. It is sent
+            // by name, so the model checked is the model used.
+            String model = started.model();
+            if (model == null) {
+                model = engine.models().defaultModel();
+                try {
+                    costs.requireBudget(model);
+                } catch (CostProblemException refused) {
+                    recorder.fail(runId, RunFailures.BUDGET, "Il modello di default dell'AI Engine (" + model
+                            + ") è a consumo: " + refused.getMessage());
+                    return;
+                }
+            }
+            EngineClient.Completion completion = engine.complete(new EngineClient.Request(
+                    model, started.system(), started.user(), properties.getMaxTokens(),
+                    started.correlationId(),
+                    Map.of("run_id", String.valueOf(started.runId()),
+                            "task_id", String.valueOf(started.taskId()),
+                            "agent_id", String.valueOf(started.agentId()))));
+            recorder.succeed(runId, completion);
+        } catch (EngineFailure failure) {
+            // an interruption is a cancellation already recorded: the flag is cleared so the
+            // record can still reach the database, and it does not overwrite the run
+            Thread.interrupted();
+            recorder.fail(runId, failure.type(), failure.detail());
+        } catch (RuntimeException unexpected) {
+            log.error("Run {} (correlation {}) failed unexpectedly", runId, started.correlationId(), unexpected);
+            recorder.fail(runId, RunFailures.INTERNAL, "The run failed inside the control plane; see its log");
+        }
     }
 }

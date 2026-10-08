@@ -7611,6 +7611,33 @@
         "tags" : [ "plan-controller" ]
       }
     },
+    "/api/plan-runs/{runId}/cancel" : {
+      "post" : {
+        "operationId" : "cancelPlanRun",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "runId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanRunResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "plan-controller" ]
+      }
+    },
     "/api/projects" : {
       "get" : {
         "operationId" : "listProjects",
@@ -9763,6 +9790,33 @@
     "/api/runs/{runId}" : {
       "get" : {
         "operationId" : "getRun",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "runId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RunResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "run-controller" ]
+      }
+    },
+    "/api/runs/{runId}/cancel" : {
+      "post" : {
+        "operationId" : "cancelRun",
         "parameters" : [ {
           "in" : "path",
           "name" : "runId",
