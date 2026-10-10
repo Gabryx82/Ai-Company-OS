@@ -2,6 +2,7 @@ package com.aicompany.backend.deletion;
 
 import com.aicompany.backend.api.Precondition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,15 +27,17 @@ public class DeletionController {
     }
 
     @GetMapping("/api/tasks/{id}/deletion")
-    public DeletionService.Impact previewTask(@PathVariable Long id) {
+    public DeletionPreview previewTask(@PathVariable Long id) {
         return deletions.previewTask(id);
     }
 
+    /** PHASE 32 (TD-72): {@code 204}, like every other delete; what it took was the preview. */
     @DeleteMapping("/api/tasks/{id}")
-    public DeletionService.Impact deleteTask(@PathVariable Long id,
-                                             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
-                                             @RequestParam(required = false) String confirm, Authentication caller) {
-        return deletions.deleteTask(id, confirm, caller.getName(), Precondition.fromHeader(ifMatch));
+    public ResponseEntity<Void> deleteTask(@PathVariable Long id,
+                                           @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+                                           @RequestParam(required = false) String confirm, Authentication caller) {
+        deletions.deleteTask(id, confirm, caller.getName(), Precondition.fromHeader(ifMatch));
+        return ResponseEntity.noContent().build();
     }
 
     /** PHASE 30 (ADR-035 §8): what deleting the project's whole Blueprint would take. */
@@ -53,16 +56,16 @@ public class DeletionController {
     }
 
     @GetMapping("/api/projects/{id}/deletion")
-    public DeletionService.Impact previewProject(@PathVariable Long id,
-                                                 @RequestParam DeletionService.TasksPolicy tasks) {
+    public DeletionPreview previewProject(@PathVariable Long id, @RequestParam DeletionService.TasksPolicy tasks) {
         return deletions.previewProject(id, tasks);
     }
 
     /** {@code tasks} has no default on purpose: what happens to the tasks is always said out loud. */
     @DeleteMapping("/api/projects/{id}")
-    public DeletionService.Impact deleteProject(@PathVariable Long id, @RequestParam DeletionService.TasksPolicy tasks,
-                                                @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
-                                                @RequestParam(required = false) String confirm, Authentication caller) {
-        return deletions.deleteProject(id, tasks, confirm, caller.getName(), Precondition.fromHeader(ifMatch));
+    public ResponseEntity<Void> deleteProject(@PathVariable Long id, @RequestParam DeletionService.TasksPolicy tasks,
+                                              @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+                                              @RequestParam(required = false) String confirm, Authentication caller) {
+        deletions.deleteProject(id, tasks, confirm, caller.getName(), Precondition.fromHeader(ifMatch));
+        return ResponseEntity.noContent().build();
     }
 }

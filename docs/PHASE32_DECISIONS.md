@@ -6,6 +6,9 @@
 > del progetto riservano all'operatore (cancellare dati, cambiare l'architettura contro un ADR, cambiare un
 > contratto pubblicato in modo non additivo, credenziali). Per ognuno: com'è oggi, che cosa si è misurato,
 > la proposta concreta e che cosa serve per farla.
+>
+> **Decisioni dell'operatore del 2026-10-10**: TD-51 — il modello resta; TD-67 — iGPU accesa; TD-72 — sì, unificate;
+> TD-44 — resta così, i connettori li collega l'operatore. Resta in attesa di una decisione solo TD-53.
 
 ## Decisioni da prendere
 
@@ -17,6 +20,8 @@
   ripristinabile da *Impostazioni → Voci congedate*); il modello in Ollama si rimuove con
   `ollama rm llama3.2:3b`. Non si annulla: per riaverlo serve `ollama pull llama3.2:3b` (2 GB di download).
 - **Serve**: il tuo sì. Poi sono due comandi, o li esegui tu.
+- **Deciso il 2026-10-10: non si rimuove.** `llama3.2:3b` resta installato e nel catalogo come `DEPRECATED`. Debito chiuso
+  per decisione, senza modifiche.
 
 ### TD-67 — Accendere la GPU integrata per Ollama
 
@@ -25,6 +30,11 @@
 - **Misurato** (PHASE 29, Arc 140V): Qwen 3.5 e Gemma 4 elaborano il prompt 2–3,7× più in fretta.
 - **Proposta**: variabile d'ambiente utente `OLLAMA_IGPU_ENABLE=1`, poi riavvio di Ollama. Per tornare indietro:
   togliere la variabile e riavviare. È una configurazione di sistema del tuo PC: non la tocco io.
+- **Deciso il 2026-10-10: accesa.** Variabile utente `OLLAMA_IGPU_ENABLE=1`, Ollama riavviato (da Explorer, con nessun
+  modello caricato). Il log di Ollama ora elenca l'«inference compute» Vulkan dell'Arc 140V (`type=iGPU`). Verifica:
+  `qwen3.5:4b` 2,9 GB tutti in GPU; `lfm2.5:8b` con `num_gpu: 0` (come lo manda l'engine) 4,9 GB tutti in CPU, 33 tok/s
+  in generazione. Per spegnerla: `[Environment]::SetEnvironmentVariable('OLLAMA_IGPU_ENABLE', $null, 'User')` e
+  riavvio di Ollama.
 
 ### TD-53 — Token di sessione in un cookie `HttpOnly` (architettura, ADR-024 §8)
 
@@ -48,6 +58,11 @@
   `DELETE /api/projects/{id}` e `DELETE /api/tasks/{id}` rispondono `204` come gli altri, e `DeletionImpact` esce
   dal contratto.
 - **Serve**: il tuo sì al passo (2): un client esterno che legge oggi il corpo del `200` andrebbe aggiornato.
+- **Deciso il 2026-10-10: sì, in un passo solo.** Le due anteprime rispondono un `DeletionPreview`, i due `DELETE` `204`;
+  un'esecuzione in corso è un blocco dell'anteprima (`409 deletion-blocked` con la stessa frase, prima
+  `409 task-run-in-progress`); `DeletionImpact` è uscito dal contratto; la console usa `ConfirmDeletion` con il nome
+  digitato e, per un progetto attivo, «Archivia» accanto. Un guard del contratto tiene una sola forma (ADR-027,
+  revisione TD-72).
 
 ### TD-44 — Gmail, Drive, ClickUp, ChatGPT web, Gemini dentro la console
 
@@ -58,6 +73,8 @@
   nuova (impacchettamento, firma, aggiornamenti): non la propongo ora.
 - **Serve**: le tue credenziali OAuth (Google Cloud, ClickUp), che inserisci tu nel dialogo d'installazione del
   connettore: AI Company OS non le conserva.
+- **Deciso il 2026-10-10: resta così.** L'interfaccia nelle finestre dedicate; i connettori li colleghi tu, con le tue
+  credenziali, quando vorrai (i token OAuth sono legati ad API a pagamento). Debito chiuso per decisione, senza modifiche.
 
 ## Vincoli esterni (nessuna azione possibile oggi; si riverifica)
 

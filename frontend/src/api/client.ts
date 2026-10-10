@@ -13,7 +13,7 @@ import type {
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry, TaskMove, TaskOutcome, Learning,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
-  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, DeletionImpact, TasksPolicy, DeletionPreview, SubAgentsPolicy, CatalogRetirement,
+  ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, TasksPolicy, DeletionPreview, SubAgentsPolicy, CatalogRetirement,
   InProgressPolicy, PlannedAgent, EcosystemServiceInfo, TerminalShell, TerminalTicket, TerminalSession, CodeGraph, CostSummary,
   AiAction, BlueprintActionOutcome, BlueprintAiAction, BlueprintBlockDetail, BlueprintBlockWrite, BlueprintCanvasLayout, BlueprintGraph, BlueprintPoint,
   BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
@@ -781,22 +781,22 @@ export class ControlPlane {
     await this.request("DELETE", `/api/admin/catalog/retirements/${catalog}/${encodeURIComponent(key)}`);
   }
 
-  // --- deleting for real (ADR-027) ---------------------------------------------
+  // --- deleting for real (ADR-027; one shape with the others since TD-72) -------------
 
-  taskDeletionPreview(id: number): Promise<DeletionImpact> {
+  taskDeletionPreview(id: number): Promise<DeletionPreview> {
     return this.plain("GET", `/api/tasks/${id}/deletion`);
   }
 
-  deleteTask(id: number, etag: string, confirm: string): Promise<DeletionImpact> {
-    return this.plain("DELETE", `/api/tasks/${id}?confirm=${encodeURIComponent(confirm)}`, { ifMatch: etag });
+  async deleteTask(id: number, etag: string, confirm: string): Promise<void> {
+    await this.request("DELETE", `/api/tasks/${id}?confirm=${encodeURIComponent(confirm)}`, { ifMatch: etag });
   }
 
-  projectDeletionPreview(id: number, tasks: TasksPolicy): Promise<DeletionImpact> {
+  projectDeletionPreview(id: number, tasks: TasksPolicy): Promise<DeletionPreview> {
     return this.plain("GET", `/api/projects/${id}/deletion?tasks=${tasks}`);
   }
 
-  deleteProject(id: number, etag: string, tasks: TasksPolicy, confirm: string): Promise<DeletionImpact> {
-    return this.plain("DELETE", `/api/projects/${id}?tasks=${tasks}&confirm=${encodeURIComponent(confirm)}`, { ifMatch: etag });
+  async deleteProject(id: number, etag: string, tasks: TasksPolicy, confirm: string): Promise<void> {
+    await this.request("DELETE", `/api/projects/${id}?tasks=${tasks}&confirm=${encodeURIComponent(confirm)}`, { ifMatch: etag });
   }
 
   // --- removing what was created here (PHASE 30, ADR-035) -----------------------

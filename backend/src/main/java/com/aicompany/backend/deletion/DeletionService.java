@@ -4,26 +4,29 @@ import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.project.exception.ProjectNotFoundException;
 import com.aicompany.backend.project.model.Project;
 import com.aicompany.backend.project.repository.ProjectRepository;
-import com.aicompany.backend.run.exception.TaskRunInProgressException;
 import com.aicompany.backend.task.exception.TaskNotFoundException;
 import com.aicompany.backend.task.model.Task;
 import com.aicompany.backend.task.repository.TaskRepository;
 import com.aicompany.backend.user.service.SecurityLog;
-import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Deleting for real (ADR-027): distinct from archiving, reserved to admins, and
  * guarded three times -- the row's tag (ADR-009), the resource's name typed back
  * as confirmation, and a refusal while a run is in flight. What a delete takes
  * with it is computed first and shown ({@link #previewTask}, {@link #previewProject}),
- * then reported, and recorded in the security log.
+ * then recorded in the security log.
+ *
+ * <p>PHASE 32 (TD-72): the preview is a {@link DeletionPreview}, like every other
+ * delete of the console (ADR-035 §3), and the delete answers {@code 204}. A run in
+ * flight is a blocker of the preview, and a delete attempted anyway is the same
+ * {@code 409 deletion-blocked} with the same sentence.
  *
  * <p>What it never takes: files. The project's folder and the task documents
  * stay on disk -- they are the operator's, and a database delete is not the
@@ -36,11 +39,6 @@ public class DeletionService {
 
     /** What happens to the tasks of a deleted project. There is no default: the caller says. */
     public enum TasksPolicy { DETACH, DELETE }
-
-    public record Impact(String kind, Long id, String name, int tasks, int runs, int handoffs, int reviews,
-                         int dailyItems, int phases, int planRuns, int resources, boolean runInProgress,
-                         @Nullable String folder, List<String> notes) {
-    }
 
     private final TaskRepository tasks;
     private final ProjectRepository projects;
@@ -57,44 +55,35 @@ public class DeletionService {
     // --- tasks ---------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
-    public Impact previewTask(Long taskId) {
+    public DeletionPreview previewTask(Long taskId) {
         Task task = tasks.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
         return taskImpact(task);
     }
 
-    public Impact deleteTask(Long taskId, String confirmation, String by, Precondition precondition) {
+    public void deleteTask(Long taskId, String confirmation, String by, Precondition precondition) {
         Task task = tasks.findByIdForUpdate(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
         precondition.requireSatisfiedBy(task.getVersion());
         requireConfirmation(task.getTitle(), confirmation);
-        Impact impact = taskImpact(task);
-        if (impact.runInProgress()) {
-            throw new TaskRunInProgressException(taskId);
-        }
+        DeletionPreview impact = taskImpact(task).requireAllowed();
         removeTaskRows(List.of(taskId));
         log.record(SecurityLog.DATA_DELETED, by, null, "task " + taskId + " «" + task.getTitle() + "»: "
-                + impact.runs() + " run, " + impact.handoffs() + " handoff, " + impact.reviews() + " review");
-        return impact;
+                + String.join(" ", impact.deletes()));
     }
 
     // --- projects ------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
-    public Impact previewProject(Long projectId, TasksPolicy policy) {
+    public DeletionPreview previewProject(Long projectId, TasksPolicy policy) {
         Project project = projects.findById(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
         return projectImpact(project, policy);
     }
 
-    public Impact deleteProject(Long projectId, TasksPolicy policy, String confirmation, String by,
-                                Precondition precondition) {
+    public void deleteProject(Long projectId, TasksPolicy policy, String confirmation, String by,
+                              Precondition precondition) {
         Project project = projects.findByIdForUpdate(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
         precondition.requireSatisfiedBy(project.getVersion());
         requireConfirmation(project.getName(), confirmation);
-        Impact impact = projectImpact(project, policy);
-        if (impact.runInProgress()) {
-            Long running = jdbc.queryForObject("SELECT r.task_id FROM task_runs r JOIN tasks t ON t.id = r.task_id "
-                    + "WHERE t.project_id = ? AND r.status IN ('QUEUED','RUNNING') LIMIT 1", Long.class, projectId);
-            throw new TaskRunInProgressException(running);
-        }
+        DeletionPreview impact = projectImpact(project, policy).requireAllowed();
         List<Long> taskIds = jdbc.queryForList("SELECT id FROM tasks WHERE project_id = ?", Long.class, projectId);
         // PHASE 28 (ADR-033): the Blueprint is the project's own description; it goes with it.
         // Proposals first -- they point at tasks that may be deleted just below.
@@ -119,8 +108,7 @@ public class DeletionService {
         projects.delete(project);
         projects.flush();
         log.record(SecurityLog.DATA_DELETED, by, null, "project " + projectId + " «" + project.getName() + "», tasks "
-                + policy + " (" + impact.tasks() + "); folder kept: " + impact.folder());
-        return impact;
+                + policy + ": " + String.join(" ", impact.deletes()) + " Folder kept: " + project.getWorkspacePath());
     }
 
     // --- a project's Blueprint (PHASE 30, ADR-035 §8) -----------------------------------
@@ -208,57 +196,72 @@ public class DeletionService {
         }
     }
 
-    private Impact taskImpact(Task task) {
+    private DeletionPreview taskImpact(Task task) {
         long id = task.getId();
-        List<String> notes = new ArrayList<>();
-        if (task.getDocumentPath() != null) {
-            notes.add("Il documento " + task.getDocumentPath() + " resta nella cartella del progetto.");
-        }
-        if (task.getPhase() != null) {
-            notes.add("La task appartiene a una fase del piano: la fase resta, senza questa task.");
+        DeletionPreview.Builder preview = DeletionPreview.of("TASK").subject(id, task.getTitle());
+        preview.deletes("La task «" + task.getTitle() + "», con " + count("SELECT count(*) FROM task_runs WHERE task_id = ?", id)
+                + " esecuzioni, " + count("SELECT count(*) FROM task_handoffs WHERE task_id = ?", id) + " handoff e "
+                + count("SELECT count(*) FROM task_reviews WHERE task_id = ?", id) + " review.");
+        int moves = count("SELECT count(*) FROM task_transitions WHERE task_id = ?", id);
+        if (moves > 0) {
+            preview.deletes("La storia della task (" + moves + " transizioni).");
         }
         int daily = count("SELECT count(*) FROM daily_items WHERE task_id = ?", id);
         if (daily > 0) {
-            notes.add(daily + " voci del Daily Work restano, come voci personali con il titolo della task.");
+            preview.detaches(daily + " voci del Daily Work restano, come voci personali con il titolo della task.");
         }
-        int moves = count("SELECT count(*) FROM task_transitions WHERE task_id = ?", id);
-        if (moves > 0) {
-            notes.add("La storia della task (" + moves + " transizioni) viene eliminata con lei.");
+        int proposals = count("SELECT count(*) FROM blueprint_change_proposals WHERE task_id = ?", id);
+        if (proposals > 0) {
+            preview.detaches(proposals + " proposte del Blueprint accettate in questa task restano, senza la task.");
         }
-        return new Impact("TASK", id, task.getTitle(), 1, count("SELECT count(*) FROM task_runs WHERE task_id = ?", id),
-                count("SELECT count(*) FROM task_handoffs WHERE task_id = ?", id),
-                count("SELECT count(*) FROM task_reviews WHERE task_id = ?", id), daily, 0, 0, 0,
-                count("SELECT count(*) FROM task_runs WHERE task_id = ? AND status IN ('QUEUED','RUNNING')", id) > 0,
-                null, notes);
+        if (task.getPhase() != null) {
+            preview.keeps("La fase del piano resta, senza questa task.");
+        }
+        if (task.getDocumentPath() != null) {
+            preview.keeps("Il documento " + task.getDocumentPath() + " resta nella cartella del progetto.");
+        }
+        if (count("SELECT count(*) FROM task_runs WHERE task_id = ? AND status IN ('QUEUED','RUNNING')", id) > 0) {
+            preview.blocker("Un'esecuzione della task è in corso: attendi che finisca, o annullala.");
+        }
+        return preview.build();
     }
 
-    private Impact projectImpact(Project project, TasksPolicy policy) {
+    private DeletionPreview projectImpact(Project project, TasksPolicy policy) {
         long id = project.getId();
         String inTasks = "SELECT id FROM tasks WHERE project_id = " + id;
         int taskCount = count("SELECT count(*) FROM tasks WHERE project_id = ?", id);
-        List<String> notes = new ArrayList<>();
-        notes.add(policy == TasksPolicy.DELETE
-                ? "Le " + taskCount + " task del progetto vengono eliminate, con esecuzioni, handoff, review e storia."
-                : "Le " + taskCount + " task del progetto restano, senza progetto, senza fase e senza codice di piano.");
-        if (project.getWorkspacePath() != null) {
-            notes.add("La cartella " + project.getWorkspacePath() + " resta sul disco: eliminala tu, se vuoi.");
+        DeletionPreview.Builder preview = DeletionPreview.of("PROJECT").subject(id, project.getName());
+        preview.deletes("Il progetto «" + project.getName() + "», con " + count("SELECT count(*) FROM project_phases WHERE project_id = ?", id)
+                + " fasi, " + count("SELECT count(*) FROM plan_runs WHERE project_id = ?", id) + " generazioni di piano e "
+                + count("SELECT count(*) FROM project_resources WHERE project_id = ?", id) + " risorse adottate.");
+        String theTasks = taskCount == 1 ? "La task del progetto" : "Le " + taskCount + " task del progetto";
+        if (taskCount > 0 && policy == TasksPolicy.DELETE) {
+            preview.deletes(theTasks + ", con " + count("SELECT count(*) FROM task_runs WHERE task_id IN (" + inTasks + ")")
+                    + " esecuzioni, " + count("SELECT count(*) FROM task_handoffs WHERE task_id IN (" + inTasks + ")")
+                    + " handoff, " + count("SELECT count(*) FROM task_reviews WHERE task_id IN (" + inTasks + ")")
+                    + " review e la loro storia.");
+            int daily = count("SELECT count(*) FROM daily_items WHERE task_id IN (" + inTasks + ")");
+            if (daily > 0) {
+                preview.detaches(daily + " voci del Daily Work restano, come voci personali con il titolo della loro task.");
+            }
+        } else if (taskCount > 0) {
+            preview.detaches(theTasks + (taskCount == 1 ? " resta" : " restano")
+                    + ", senza progetto, senza fase e senza codice di piano.");
         }
         int blocks = count("SELECT count(*) FROM blueprint_nodes WHERE project_id = ?", id);
         if (blocks > 0) {
-            notes.add("Il Blueprint del progetto (" + blocks + " blocchi, "
-                    + count("SELECT count(*) FROM blueprint_edges WHERE project_id = ?", id) + " relazioni) viene eliminato.");
+            preview.deletes("Il Blueprint del progetto (" + blocks + " blocchi, "
+                    + count("SELECT count(*) FROM blueprint_edges WHERE project_id = ?", id) + " relazioni).");
         }
-        boolean deleting = policy == TasksPolicy.DELETE;
-        return new Impact("PROJECT", id, project.getName(), taskCount,
-                deleting ? count("SELECT count(*) FROM task_runs WHERE task_id IN (" + inTasks + ")") : 0,
-                deleting ? count("SELECT count(*) FROM task_handoffs WHERE task_id IN (" + inTasks + ")") : 0,
-                deleting ? count("SELECT count(*) FROM task_reviews WHERE task_id IN (" + inTasks + ")") : 0,
-                deleting ? count("SELECT count(*) FROM daily_items WHERE task_id IN (" + inTasks + ")") : 0,
-                count("SELECT count(*) FROM project_phases WHERE project_id = ?", id),
-                count("SELECT count(*) FROM plan_runs WHERE project_id = ?", id),
-                count("SELECT count(*) FROM project_resources WHERE project_id = ?", id),
-                count("SELECT count(*) FROM task_runs WHERE status IN ('QUEUED','RUNNING') AND task_id IN (" + inTasks + ")") > 0,
-                project.getWorkspacePath(), notes);
+        if (project.getWorkspacePath() != null) {
+            preview.keeps("La cartella " + project.getWorkspacePath() + " resta sul disco: eliminala tu, se vuoi.");
+        }
+        for (Map<String, Object> running : jdbc.queryForList("SELECT DISTINCT t.id, t.title FROM task_runs r "
+                + "JOIN tasks t ON t.id = r.task_id WHERE t.project_id = ? AND r.status IN ('QUEUED','RUNNING') ORDER BY t.id", id)) {
+            preview.blocker("La task «" + running.get("title") + "» (#" + running.get("id") + ") ha un'esecuzione in corso: "
+                    + "attendi che finisca, o annullala.");
+        }
+        return preview.build();
     }
 
     private int count(String sql, Object... args) {

@@ -16,7 +16,8 @@ import { Icon } from "./icons";
  *    typed name is asked only for the heavy deletes;
  *  - <SelectionBar> and useSelection() are the multi-select of a list.
  *
- * The projects' and tasks' dialog of ADR-027 (DeleteDialog) keeps its own shape.
+ * Since PHASE 32 (TD-72) projects and tasks (ADR-027) use the same dialog, with
+ * the name typed back: there is one way of deleting in the console.
  */
 
 export function DeleteButton({ label, onClick, disabled, title }: {

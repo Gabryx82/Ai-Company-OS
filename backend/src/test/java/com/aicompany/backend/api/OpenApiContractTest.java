@@ -114,6 +114,44 @@ class OpenApiContractTest extends AbstractPostgresTest {
                 .isEqualTo(produced);
     }
 
+    /**
+     * PHASE 32 (TD-72): one way of deleting. Every preview ({@code GET …/deletion})
+     * answers a {@code DeletionPreview}, and the delete it previews answers without
+     * a body -- what it took was in the preview. A second shape coming back (a
+     * preview of its own, a delete that returns its impact) turns this red.
+     */
+    @Test
+    void everyDeletionPreviewHasTheOneShapeAndItsDeleteAnswersWithoutABody() throws Exception {
+
+        JsonNode paths = description().get("paths");
+        List<String> previews = new ArrayList<>();
+        List<String> offenders = new ArrayList<>();
+        paths.properties().forEach(entry -> {
+            String path = entry.getKey();
+            JsonNode preview = entry.getValue().get("get");
+            if (!path.endsWith("/deletion") || preview == null) {
+                return;
+            }
+            previews.add(path);
+            String schema = preview.at("/responses/200/content").valueStream().findFirst()
+                    .map(content -> content.at("/schema/$ref").asString("")).orElse("");
+            if (!schema.equals("#/components/schemas/DeletionPreview")) {
+                offenders.add("GET " + path + " answers " + schema);
+            }
+            JsonNode delete = paths.path(path.substring(0, path.length() - "/deletion".length())).get("delete");
+            if (delete != null) {
+                delete.path("responses").properties().forEach(response -> {
+                    if (response.getKey().startsWith("2") && response.getValue().has("content")) {
+                        offenders.add("DELETE " + path.replace("/deletion", "") + " answers a body");
+                    }
+                });
+            }
+        });
+        assertThat(previews).contains("/api/tasks/{id}/deletion", "/api/projects/{id}/deletion", "/api/agents/{id}/deletion");
+        assertThat(offenders).isEmpty();
+        assertThat(description().path("components").path("schemas").has("Impact")).isFalse();
+    }
+
     // --- the engine's models, relayed ---------------------------------------
 
     @Test

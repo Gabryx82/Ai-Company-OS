@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useApi, useIsAdmin } from "../context";
-import { DeleteDialog } from "../components/DeleteDialog";
+import { ConfirmDeletion } from "../components/Deletion";
 import { ApiProblem, type Versioned } from "../api/client";
 import {
   TASK_PRIORITIES, TRANSITIONS, type Agent, type AgentConfiguration, type ModelInfo, type Project, type Run,
@@ -161,19 +161,29 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
                 : <span className="muted" style={{ fontSize: 12.5 }}>Solo un admin può eliminare una task. Per metterla da parte, completala o riassegnala.</span>}
             </div>
             {deleting && (
-              <DeleteDialog what="la task" name={task.title} loadImpact={() => api.taskDeletionPreview(task.id)}
-                            onClose={() => setDeleting(false)}
-                            onConfirm={async (confirm) => {
-                              await api.deleteTask(task.id, version.etag, confirm);
-                              setDeleting(false);
-                              onChanged();
-                              onClose();
-                            }} />
+              <DeleteTask task={task} etag={version.etag} onClose={() => setDeleting(false)}
+                          onDeleted={() => { setDeleting(false); onChanged(); onClose(); }} />
             )}
           </>
         )}
       </aside>
     </div>
+  );
+}
+
+/** ADR-027, in the dialog of every other delete (TD-72): what goes is the server's preview; the title is typed back. */
+function DeleteTask({ task, etag, onClose, onDeleted }: {
+  task: Task; etag: string; onClose: () => void; onDeleted: () => void;
+}) {
+  const api = useApi();
+  const load = useCallback(() => api.taskDeletionPreview(task.id), [api, task.id]);
+  return (
+    <ConfirmDeletion title="Elimina la task" subject={task.title} typedName={task.title} loadPreview={load}
+                     onClose={onClose} confirmLabel="Elimina definitivamente"
+                     onConfirm={async () => {
+                       await api.deleteTask(task.id, etag, task.title);
+                       onDeleted();
+                     }} />
   );
 }
 

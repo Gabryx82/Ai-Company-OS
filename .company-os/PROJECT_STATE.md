@@ -60,13 +60,15 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Chiusi**: lo spazio dell'audit intero (TD-01, 02, 03, 05, 06, 09, 10, 14, 15, 16, 19, 20, 21,
   22 — `AuditDebtGuardTest`, `ApiShapeGuardTest`, `RouteCoverageTest`); vivi TD-26, TD-32, TD-33,
   TD-34, TD-35, TD-38, TD-39, TD-41, TD-43, TD-45, TD-46, TD-47, TD-48, TD-49, TD-54, TD-55, TD-57, TD-58,
-  TD-59, TD-60, TD-61, TD-62, TD-63, TD-65, TD-66, TD-67, TD-68, TD-69, TD-70, TD-71, TD-73, TD-75, TD-76,
+  TD-59, TD-60, TD-61, TD-62, TD-63, TD-65, TD-66, TD-67, TD-68, TD-69, TD-70, TD-71, TD-72, TD-73, TD-75, TD-76,
   TD-77, TD-78, TD-79, TD-80, TD-81, TD-82, TD-84, TD-85, TD-88, TD-89, TD-90. Dettagli in `docs/DEBT_REGISTRY.md`
-  e nelle revisioni di ADR-009, ADR-010, ADR-014, ADR-016, ADR-017, ADR-021, ADR-022, ADR-025, ADR-030,
+  e nelle revisioni di ADR-009, ADR-010, ADR-014, ADR-016, ADR-017, ADR-021, ADR-022, ADR-025, ADR-027, ADR-030,
   ADR-031, ADR-033, ADR-034, ADR-035, ADR-036.
-- **Restano aperti, con una proposta** (`docs/PHASE32_DECISIONS.md`): decisioni dell'operatore TD-44 (connettori
-  OAuth), TD-51 (`ollama rm llama3.2:3b`), TD-53 (cookie `HttpOnly`, ADR-024 §8), TD-72 (contratto non additivo)
-  e l'accensione dell'iGPU (TD-67); vincoli esterni, riverificati il 2026-10-08: TD-50, TD-74, TD-83, TD-86, TD-87.
+- **Decisioni dell'operatore del 2026-10-10** (`docs/PHASE32_DECISIONS.md`): TD-72 sì, una sola forma di eliminazione
+  (anteprima `DeletionPreview`, `DELETE` `204`, contratto non additivo); iGPU accesa (`OLLAMA_IGPU_ENABLE=1`, TD-67);
+  TD-51 chiuso tenendo `llama3.2:3b`; TD-44 chiuso lasciando le finestre dedicate (i connettori li collega l'operatore).
+- **Restano aperti, con una proposta** (`docs/PHASE32_DECISIONS.md`): decisione dell'operatore TD-53 (cookie
+  `HttpOnly`, ADR-024 §8); vincoli esterni, riverificati il 2026-10-08: TD-50, TD-74, TD-83, TD-86, TD-87.
 - **Migrazioni nuove**: V31 (transizioni), V32 (livello nelle review), V33 (id a blocchi del Blueprint), V34
   (azioni AI), V35 (ruoli serviti), V36 (voci congedate), V37 (categorie scelte), V38 (porta di OpenCode),
   V39 (connettori installati dal Hub): tutte additive.
@@ -83,7 +85,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Contratto**: i campi delle risposte sono richiesti e `@Nullable` dove possono essere null (`ResponseShapes`);
   `ResponseContractTest` confronta ogni risposta JSON della suite con `docs/api/openapi.json`. Un record nuovo
   con un campo che può essere null va annotato, o la suite lo segnala con schema, campo e rotta.
-- **Suite**: Java **698** verdi (1 saltato preesistente), console **99**, engine **73**.
+- **Suite**: Java **699** verdi (1 saltato preesistente), console **101**, engine **73**.
 - **Prossimo passo**: Human Final Review della fase; le decisioni di `docs/PHASE32_DECISIONS.md`.
 
 ## ▶▶▶▶▶▶▶ PHASE 31 — Il Knowledge Hub come punto unico — COMPLETATA il 2026-10-07, in attesa di Human Final Review

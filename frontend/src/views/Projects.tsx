@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApi, useIsAdmin } from "../context";
-import { DeleteDialog } from "../components/DeleteDialog";
+import { ConfirmDeletion } from "../components/Deletion";
 import type { TasksPolicy } from "../api/types";
 import type { AutonomyLevel, Project, ProjectType, ProjectTypeInfo, Task } from "../api/types";
 import { Field, Modal, ProblemNote } from "../components/ui";
@@ -104,26 +104,35 @@ export function Projects({ selected, navigate }: { selected: string | null; navi
       </div>
       {projects?.length === 0 && <div className="card card-body muted">Nessun progetto ancora: creane uno.</div>}
       {deleting && <DeleteProject project={deleting} onClose={() => setDeleting(null)}
-                                  onDeleted={() => { setDeleting(null); reload(); }} />}
+                                  onDeleted={() => { setDeleting(null); reload(); }}
+                                  onArchive={async () => { await toggle(deleting); setDeleting(null); }} />}
       {creating && <CreateProject types={types} onClose={() => setCreating(false)}
                                   onCreated={(id) => { setCreating(false); reload(); navigate("projects", String(id)); }} />}
     </div>
   );
 }
 
-/** ADR-027: the tasks' fate is chosen, never defaulted; archiving stays the reversible way. */
-function DeleteProject({ project, onClose, onDeleted }: { project: Project; onClose: () => void; onDeleted: () => void }) {
+/**
+ * ADR-027: the tasks' fate is chosen, never defaulted; archiving stays the reversible way.
+ * PHASE 32 (TD-72): the dialog of every other delete, with the name typed back.
+ */
+export function DeleteProject({ project, onClose, onDeleted, onArchive }: {
+  project: Project; onClose: () => void; onDeleted: () => void; onArchive: () => Promise<void>;
+}) {
   const api = useApi();
   const [policy, setPolicy] = useState<TasksPolicy>("DETACH");
   const load = useCallback(() => api.projectDeletionPreview(project.id, policy), [api, project.id, policy]);
   return (
-    <DeleteDialog key={policy} what="il progetto" name={project.name} loadImpact={load} onClose={onClose}
-                  archiveHint={project.status === "ACTIVE" ? "Se vuoi solo metterlo da parte, usa «Archivia»: si ripristina quando vuoi." : undefined}
-                  onConfirm={async (confirm) => {
-                    const current = await api.project(project.id);
-                    await api.deleteProject(project.id, current.etag, policy, confirm);
-                    onDeleted();
-                  }}>
+    <ConfirmDeletion title="Elimina il progetto" subject={project.name} typedName={project.name} loadPreview={load}
+                     onClose={onClose} confirmLabel="Elimina definitivamente"
+                     alternative={project.status === "ACTIVE"
+                       ? { label: "Archivia", hint: "Se vuoi solo metterlo da parte, archivialo: si ripristina quando vuoi.", onClick: onArchive }
+                       : undefined}
+                     onConfirm={async () => {
+                       const current = await api.project(project.id);
+                       await api.deleteProject(project.id, current.etag, policy, project.name);
+                       onDeleted();
+                     }}>
       <div className="stack" style={{ gap: 4 }}>
         <strong>Le task del progetto</strong>
         <label className="row" style={{ gap: 6 }}><input type="radio" style={{ width: "auto" }} checked={policy === "DETACH"}
@@ -131,7 +140,7 @@ function DeleteProject({ project, onClose, onDeleted }: { project: Project; onCl
         <label className="row" style={{ gap: 6 }}><input type="radio" style={{ width: "auto" }} checked={policy === "DELETE"}
                onChange={() => setPolicy("DELETE")} /> Vengono eliminate anche loro</label>
       </div>
-    </DeleteDialog>
+    </ConfirmDeletion>
   );
 }
 

@@ -302,3 +302,12 @@ sceglie per modello quanti layer possono andare sulla GPU — l'opzione `num_gpu
 sono lasciati a Ollama. Con l'iGPU spenta, come oggi, non cambia nulla: `0` è ciò che succede comunque.
 Accendere l'iGPU è una configurazione del servizio Ollama dell'operatore, non di AI Company OS: resta una sua
 decisione (`docs/PHASE32_DECISIONS.md`). Test: `test_providers.py` (rosso se `num_gpu` non parte).
+
+## Revisione PHASE 32 (2026-10-10) — iGPU accesa (TD-67)
+
+Su decisione dell'operatore, `OLLAMA_IGPU_ENABLE=1` come variabile d'ambiente utente e Ollama riavviato: il suo log
+ora elenca l'Arc 140V come «inference compute» (Vulkan, `type=iGPU`) invece di «dropping integrated GPU». Verifica
+con le richieste che l'engine fa: `qwen3.5:4b` carica 2,9 GB su 2,9 in GPU; `lfm2.5:8b` con `num_gpu: 0` (il default
+di `AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL`) carica 4,9 GB tutti in CPU e genera a 33 tok/s. Gli altri modelli sono
+lasciati a Ollama, che li mette in GPU quanto la memoria condivisa consente. Per spegnerla: togliere la variabile e
+riavviare Ollama.

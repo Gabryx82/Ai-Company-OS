@@ -3528,31 +3528,6 @@ export interface components {
             /** Format: int32 */
             importedBy: number;
         };
-        Impact: {
-            /** Format: int32 */
-            dailyItems: number;
-            folder: string | null;
-            /** Format: int32 */
-            handoffs: number;
-            /** Format: int64 */
-            id: number;
-            kind: string;
-            name: string;
-            notes: string[];
-            /** Format: int32 */
-            phases: number;
-            /** Format: int32 */
-            planRuns: number;
-            /** Format: int32 */
-            resources: number;
-            /** Format: int32 */
-            reviews: number;
-            runInProgress: boolean;
-            /** Format: int32 */
-            runs: number;
-            /** Format: int32 */
-            tasks: number;
-        };
         Import: {
             url: string;
         };
@@ -6500,9 +6475,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "*/*": components["schemas"]["Impact"];
-                };
+                content?: never;
             };
         };
     };
@@ -7263,7 +7236,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["Impact"];
+                    "*/*": components["schemas"]["DeletionPreview"];
                 };
             };
         };
@@ -8881,9 +8854,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "*/*": components["schemas"]["Impact"];
-                };
+                content?: never;
             };
         };
     };
@@ -9002,7 +8973,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["Impact"];
+                    "*/*": components["schemas"]["DeletionPreview"];
                 };
             };
         };

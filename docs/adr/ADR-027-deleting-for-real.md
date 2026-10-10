@@ -45,3 +45,23 @@ dipendenze eliminate e voci Daily conservate; esecuzione in corso; progetto con 
 eliminate e senza default; archiviazione ancora reversibile), `ProjectApiTest` (l'operatore non
 elimina), coperture `PreconditionCoverageTest` e `ApiProblemCoverageTest`; console:
 `DeleteDialog.test` (impatto mostrato, conferma col nome, rifiuto con run in corso).
+
+## Revisione PHASE 32 (2026-10-10) — una sola forma di eliminazione (TD-72)
+
+Su decisione dell'operatore (2026-10-10, cambio di contratto non additivo) progetti e task si eliminano come
+tutto il resto della console (ADR-035 §3):
+
+- `GET /api/tasks/{id}/deletion` e `GET /api/projects/{id}/deletion?tasks=…` rispondono un **`DeletionPreview`**:
+  che cosa viene eliminato, che cosa resta scollegato (le task staccate, le voci del Daily Work), che cosa resta
+  (la cartella, il documento, la fase), e i blocchi;
+- `DELETE /api/tasks/{id}` e `DELETE /api/projects/{id}` rispondono **`204`** senza corpo: ciò che portano via
+  era nell'anteprima, e il registro di sicurezza ne tiene le frasi;
+- un'esecuzione in corso è un **blocco** dell'anteprima (`allowed: false`, con la task che la blocca); un'eliminazione
+  tentata comunque è `409 deletion-blocked` con la stessa frase (prima `409 task-run-in-progress`);
+- `DeletionImpact` è uscito dal contratto. Le tre protezioni del §2 restano identiche: ruolo, tag della riga, nome
+  digitato (`?confirm=`), e `tasks=DETACH|DELETE` resta senza default.
+
+La console usa `ConfirmDeletion` con `typedName` anche qui; per un progetto attivo «Archivia» sta accanto come
+gesto reversibile. `DeleteDialog` non esiste più. Test: `DeletionApiTest` (anteprima, `204`, blocco e `409` per task
+e progetto), `OpenApiContractTest` (ogni anteprima `/deletion` è un `DeletionPreview` e il suo `DELETE` non ha
+corpo: rosso se una seconda forma torna), `Projects.test`, `TaskDrawer.test`.

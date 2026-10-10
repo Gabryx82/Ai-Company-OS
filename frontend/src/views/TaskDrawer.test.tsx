@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { ControlPlane } from "../api/client";
-import { ApiContext } from "../context";
+import { ControlPlane, type Session } from "../api/client";
+import { ApiContext, SessionContext } from "../context";
 import type { Agent } from "../api/types";
 import { fakeFetch } from "../test/fakeServer";
 import { TaskDrawer } from "./TaskDrawer";
@@ -190,5 +190,65 @@ describe("TaskDrawer", () => {
     const put = calls.find((c) => c.method === "PUT" && c.path === "/api/tasks/7/agent")!;
     expect(put.headers["If-Match"]).toBe('"3"');
     expect(put.body).toEqual({ agentId: 2 });
+  });
+});
+
+describe("TaskDrawer — deleting in the one dialog of the console (TD-72)", () => {
+  function renderAsAdmin(routes: Parameters<typeof fakeFetch>[0], onClose = vi.fn()) {
+    const { fetcher, calls } = fakeFetch({
+      "GET /api/tasks/7": () => ({ body: TASK, etag: '"5"' }),
+      "GET /api/tasks/7/runs": () => ({ body: [] }),
+      "GET /api/tasks/7/agent-suggestions": () => ({ body: [] }),
+      "GET /api/engine/models": () => ({ body: { defaultModel: "echo:default", models: [] } }),
+      ...routes,
+    });
+    const session: Session = { baseUrl: "http://localhost:8080", token: "t0123456789abcdef",
+      user: { id: 1, username: "admin", displayName: null, role: "ADMIN" } as Session["user"] };
+    render(
+      <SessionContext.Provider value={session}>
+        <ApiContext.Provider value={new ControlPlane(session, fetcher)}>
+          <TaskDrawer taskId={7} agents={[AGENT]} projects={[]} onClose={onClose} onChanged={vi.fn()} />
+        </ApiContext.Provider>
+      </SessionContext.Provider>,
+    );
+    return calls;
+  }
+  const PREVIEW = { kind: "TASK", subjects: [{ id: "7", name: "Design the planner" }],
+    deletes: ["La task «Design the planner», con 2 esecuzioni, 1 handoff e 0 review."],
+    detaches: ["1 voci del Daily Work restano, come voci personali con il titolo della task."],
+    keeps: ["Il documento tasks/TASK-007.md resta nella cartella del progetto."], files: [], blockers: [], allowed: true };
+
+  it("shows the server's preview, asks for the title, and deletes under the task's tag", async () => {
+    const onClose = vi.fn();
+    const calls = renderAsAdmin({
+      "GET /api/tasks/7/deletion": () => ({ body: PREVIEW }),
+      "DELETE /api/tasks/7": () => ({ status: 204 }),
+    }, onClose);
+    fireEvent.click(await screen.findByRole("button", { name: "Elimina task" }));
+
+    expect(await screen.findByText("La task «Design the planner», con 2 esecuzioni, 1 handoff e 0 review.")).toBeTruthy();
+    expect(screen.getByText("1 voci del Daily Work restano, come voci personali con il titolo della task.")).toBeTruthy();
+    expect(screen.getByText("Il documento tasks/TASK-007.md resta nella cartella del progetto.")).toBeTruthy();
+
+    const confirm = screen.getByRole("button", { name: /Elimina definitivamente/ }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Conferma nome"), { target: { value: "  design the planner " } });
+    expect(confirm.disabled).toBe(false);
+    fireEvent.click(confirm);
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const deleted = calls.find((c) => c.method === "DELETE")!;
+    expect(deleted.path).toBe("/api/tasks/7?confirm=Design%20the%20planner");
+    expect(deleted.headers["If-Match"]).toBe('"5"');
+  });
+
+  it("does not delete while the preview says why it cannot", async () => {
+    const calls = renderAsAdmin({ "GET /api/tasks/7/deletion": () => ({ body: { ...PREVIEW, allowed: false,
+      blockers: ["Un'esecuzione della task è in corso: attendi che finisca, o annullala."] } }) });
+    fireEvent.click(await screen.findByRole("button", { name: "Elimina task" }));
+    expect(await screen.findByText("Un'esecuzione della task è in corso: attendi che finisca, o annullala.")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Conferma nome"), { target: { value: "Design the planner" } });
+    expect((screen.getByRole("button", { name: /Elimina definitivamente/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
   });
 });

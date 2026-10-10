@@ -93,10 +93,11 @@ class DeletionApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:delete-confirmation-mismatch"));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM tasks WHERE id = ?", Integer.class, id)).isOne();
 
-        mockMvc.perform(delete("/api/tasks/" + id).header(HttpHeaders.AUTHORIZATION, admin)
+        // PHASE 32 (TD-72): 204 like every other delete -- what it took was in the preview.
+        MvcResult deleted = mockMvc.perform(delete("/api/tasks/" + id).header(HttpHeaders.AUTHORIZATION, admin)
                         .header(HttpHeaders.IF_MATCH, tag("/api/tasks/" + id)).param("confirm", "  scrivere il readme "))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Scrivere il README"));
+                .andExpect(status().isNoContent()).andReturn();
+        assertThat(deleted.getResponse().getContentAsString()).isEmpty();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM tasks WHERE id = ?", Integer.class, id)).isZero();
         assertThat(jdbc.queryForList("SELECT detail FROM security_events WHERE type = 'DATA_DELETED'", String.class))
                 .singleElement().asString().contains("Scrivere il README");
@@ -109,27 +110,58 @@ class DeletionApiTest extends AbstractPostgresTest {
         jdbc.update("INSERT INTO daily_items (day, task_id, status, priority, position, created_at, updated_at, version) "
                 + "VALUES (current_date, ?, 'TODO', 'MEDIUM', 0, now(), now(), 0)", id);
 
+        // PHASE 32 (TD-72): the preview has the shape of every other delete (ADR-035 §3).
         mockMvc.perform(get("/api/tasks/" + id + "/deletion"))
-                .andExpect(jsonPath("$.runs").value(1))
-                .andExpect(jsonPath("$.dailyItems").value(1));
+                .andExpect(jsonPath("$.kind").value("TASK"))
+                .andExpect(jsonPath("$.subjects[0].id").value(String.valueOf(id)))
+                .andExpect(jsonPath("$.subjects[0].name").value("Migrare lo schema"))
+                .andExpect(jsonPath("$.deletes[0]").value("La task «Migrare lo schema», con 1 esecuzioni, 0 handoff e 0 review."))
+                .andExpect(jsonPath("$.detaches[0]").value(org.hamcrest.Matchers.startsWith("1 voci del Daily Work restano")))
+                .andExpect(jsonPath("$.files").isEmpty())
+                .andExpect(jsonPath("$.blockers").isEmpty())
+                .andExpect(jsonPath("$.allowed").value(true));
 
         mockMvc.perform(delete("/api/tasks/" + id).header(HttpHeaders.AUTHORIZATION, admin)
                         .header(HttpHeaders.IF_MATCH, tag("/api/tasks/" + id)).param("confirm", "Migrare lo schema"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         assertThat(jdbc.queryForObject("SELECT count(*) FROM task_runs WHERE task_id = ?", Integer.class, id)).isZero();
         assertThat(jdbc.queryForObject("SELECT title FROM daily_items WHERE task_id IS NULL AND title LIKE 'Migrare%'", String.class))
                 .isEqualTo("Migrare lo schema (task eliminata)");
     }
 
+    /**
+     * PHASE 32 (TD-72): a run in flight is a blocker of the preview, and a delete
+     * attempted anyway is refused with the same sentence -- the preview and the act
+     * cannot disagree.
+     */
     @Test
     void nothingIsDeletedWhileARunIsInFlight() throws Exception {
         long id = task("In esecuzione", null);
         aRun(id, "RUNNING");
+        String blocker = "Un'esecuzione della task è in corso: attendi che finisca, o annullala.";
+        mockMvc.perform(get("/api/tasks/" + id + "/deletion"))
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.blockers[0]").value(blocker));
         mockMvc.perform(delete("/api/tasks/" + id).header(HttpHeaders.AUTHORIZATION, admin)
                         .header(HttpHeaders.IF_MATCH, tag("/api/tasks/" + id)).param("confirm", "In esecuzione"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:task-run-in-progress"));
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:deletion-blocked"))
+                .andExpect(jsonPath("$.detail").value(blocker));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM tasks WHERE id = ?", Integer.class, id)).isOne();
+
+        long project = project("Progetto in esecuzione");
+        jdbc.update("UPDATE tasks SET project_id = ? WHERE id = ?", project, id);
+        mockMvc.perform(get("/api/projects/" + project + "/deletion").param("tasks", "DETACH"))
+                .andExpect(jsonPath("$.allowed").value(false))
+                .andExpect(jsonPath("$.blockers[0]").value("La task «In esecuzione» (#" + id + ") ha un'esecuzione in corso: "
+                        + "attendi che finisca, o annullala."));
+        mockMvc.perform(delete("/api/projects/" + project).header(HttpHeaders.AUTHORIZATION, admin)
+                        .header(HttpHeaders.IF_MATCH, tag("/api/projects/" + project))
+                        .param("tasks", "DETACH").param("confirm", "Progetto in esecuzione"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:deletion-blocked"));
+        mockMvc.perform(get("/api/projects/" + project)).andExpect(status().isOk());
         jdbc.update("UPDATE task_runs SET status = 'FAILED', failure_type = 'test', finished_at = now() WHERE task_id = ?", id);
     }
 
@@ -145,20 +177,26 @@ class DeletionApiTest extends AbstractPostgresTest {
                 .andExpect(status().isBadRequest());
 
         mockMvc.perform(get("/api/projects/" + kept + "/deletion").param("tasks", "DETACH"))
-                .andExpect(jsonPath("$.tasks").value(1))
-                .andExpect(jsonPath("$.notes[0]").value(org.hamcrest.Matchers.containsString("restano")));
+                .andExpect(jsonPath("$.kind").value("PROJECT"))
+                .andExpect(jsonPath("$.subjects[0].name").value("Progetto da chiudere"))
+                .andExpect(jsonPath("$.deletes[0]").value(org.hamcrest.Matchers.startsWith("Il progetto «Progetto da chiudere»")))
+                .andExpect(jsonPath("$.detaches[0]").value("La task del progetto resta, senza progetto, senza fase e senza codice di piano."))
+                .andExpect(jsonPath("$.allowed").value(true));
+        mockMvc.perform(get("/api/projects/" + gone + "/deletion").param("tasks", "DELETE"))
+                .andExpect(jsonPath("$.deletes[1]").value("La task del progetto, con 0 esecuzioni, 0 handoff, 0 review e la loro storia."))
+                .andExpect(jsonPath("$.detaches").isEmpty());
 
         mockMvc.perform(delete("/api/projects/" + kept).header(HttpHeaders.AUTHORIZATION, admin)
                         .header(HttpHeaders.IF_MATCH, tag("/api/projects/" + kept))
                         .param("tasks", "DETACH").param("confirm", "Progetto da chiudere"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
         assertThat(jdbc.queryForObject("SELECT project_id IS NULL FROM tasks WHERE id = ?", Boolean.class, keptTask)).isTrue();
         mockMvc.perform(get("/api/projects/" + kept)).andExpect(status().isNotFound());
 
         mockMvc.perform(delete("/api/projects/" + gone).header(HttpHeaders.AUTHORIZATION, admin)
                         .header(HttpHeaders.IF_MATCH, tag("/api/projects/" + gone))
                         .param("tasks", "DELETE").param("confirm", "Progetto da cancellare"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM tasks WHERE id = ?", Integer.class, goneTask)).isZero();
     }
 

@@ -729,10 +729,10 @@ class BlueprintApiTest extends AbstractPostgresTest {
         String project = "/api/projects/" + projectId;
         mockMvc.perform(get(project + "/deletion").header(HttpHeaders.AUTHORIZATION, admin).param("tasks", "DELETE"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.notes[?(@ =~ /.*Blueprint.*/)]").exists());
+                .andExpect(jsonPath("$.deletes[?(@ =~ /.*Blueprint.*/)]").exists());
         mockMvc.perform(delete(project).header(HttpHeaders.AUTHORIZATION, admin).header(HttpHeaders.IF_MATCH, tag(project))
                         .param("tasks", "DELETE").param("confirm", projectName))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
         for (String table : new String[]{"blueprint_nodes", "blueprint_edges", "blueprint_scans", "blueprint_layouts",
                 "blueprint_change_proposals"}) {
             assertThat(jdbc.queryForObject("SELECT count(*) FROM " + table + " WHERE project_id = ?", Integer.class, projectId))

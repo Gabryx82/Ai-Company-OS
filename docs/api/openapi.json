@@ -2792,66 +2792,6 @@
         "required" : [ "id", "importedBy" ],
         "type" : "object"
       },
-      "Impact" : {
-        "properties" : {
-          "dailyItems" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "folder" : {
-            "type" : [ "string", "null" ]
-          },
-          "handoffs" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "id" : {
-            "format" : "int64",
-            "type" : "integer"
-          },
-          "kind" : {
-            "type" : "string"
-          },
-          "name" : {
-            "type" : "string"
-          },
-          "notes" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "phases" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "planRuns" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "resources" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "reviews" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "runInProgress" : {
-            "type" : "boolean"
-          },
-          "runs" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "tasks" : {
-            "format" : "int32",
-            "type" : "integer"
-          }
-        },
-        "required" : [ "dailyItems", "folder", "handoffs", "id", "kind", "name", "notes", "phases", "planRuns", "resources", "reviews", "runInProgress", "runs", "tasks" ],
-        "type" : "object"
-      },
       "Import" : {
         "properties" : {
           "url" : {
@@ -8435,13 +8375,6 @@
         } ],
         "responses" : {
           "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Impact"
-                }
-              }
-            },
             "description" : "OK"
           }
         },
@@ -9657,7 +9590,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Impact"
+                  "$ref" : "#/components/schemas/DeletionPreview"
                 }
               }
             },
@@ -11659,13 +11592,6 @@
         } ],
         "responses" : {
           "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Impact"
-                }
-              }
-            },
             "description" : "OK"
           }
         },
@@ -11896,7 +11822,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Impact"
+                  "$ref" : "#/components/schemas/DeletionPreview"
                 }
               }
             },

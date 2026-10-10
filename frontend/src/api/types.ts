@@ -246,13 +246,8 @@ export interface ResourceFile {
 }
 export interface LibrarySync { root: string; created: string[]; updated: string[]; invalid: string[] }
 
-// --- PHASE 20: deleting for real (ADR-027) ------------------------------------------
+// --- PHASE 20: deleting for real (ADR-027); the preview is a DeletionPreview (TD-72) ---
 
-export interface DeletionImpact {
-  kind: "TASK" | "PROJECT"; id: number; name: string; tasks: number; runs: number; handoffs: number; reviews: number;
-  dailyItems: number; phases: number; planRuns: number; resources: number; runInProgress: boolean; folder: string | null;
-  notes: string[];
-}
 export type TasksPolicy = "DETACH" | "DELETE";
 
 // --- PHASE 30: everything created here can be removed here (ADR-035) -------------------

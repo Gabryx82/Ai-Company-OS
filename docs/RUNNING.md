@@ -377,8 +377,8 @@ dipende da ciò che si elimina e non si può scollegare, con le stesse frasi del
 | `GET /api/resources/{key}/deletion` · `DELETE /api/resources/{key}` | admin | skill e knowledge creati o importati, con il file; **`If-Match`**; le voci del catalogo spedito no |
 | `GET /api/projects/{id}/blueprint/deletion` · `DELETE /api/projects/{id}/blueprint?confirm=<nome>` | admin | l'intero Blueprint, mai il codice; **`If-Match`** della disposizione |
 | `DELETE /api/admin/costs/budgets/{provider}` | admin | **`If-Match`**; senza budget le run a consumo si fermano |
-| `GET /api/tasks/{id}/deletion` · `DELETE /api/tasks/{id}?confirm=<titolo>` | admin | ADR-027: `200` con l'impatto, **`If-Match`** |
-| `GET /api/projects/{id}/deletion?tasks=` · `DELETE /api/projects/{id}?tasks=DETACH\|DELETE&confirm=<nome>` | admin | ADR-027: la cartella del progetto resta sul disco |
+| `GET /api/tasks/{id}/deletion` · `DELETE /api/tasks/{id}?confirm=<titolo>` | admin | ADR-027: l'anteprima è un `DeletionPreview`, il `DELETE` risponde `204` (TD-72), **`If-Match`** |
+| `GET /api/projects/{id}/deletion?tasks=` · `DELETE /api/projects/{id}?tasks=DETACH\|DELETE&confirm=<nome>` | admin | ADR-027: `DeletionPreview` e `204` come le altre eliminazioni (TD-72); la cartella del progetto resta sul disco |
 
 I file si eliminano **solo** dentro cartelle che AI Company OS gestisce, e **a stadi**: rinominati e
 nascosti, poi rimossi al commit o rimessi al loro posto al rollback (ADR-035 §5). Un file aperto da un
@@ -481,7 +481,7 @@ Modelli locali (PHASE 29, ADR-034):
 |---|---|---|
 | `AICOS_ENGINE_OLLAMA_NUM_CTX` | `16384` | finestra di contesto chiesta a Ollama. Senza GPU Ollama userebbe 4096 token: un modello che ragiona (le run testuali lasciano il *thinking* attivo) riempiva la finestra col ragionamento e chiudeva con `finish_reason: length` e risposta vuota. `0` lascia il default di Ollama |
 | `AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL` | `deepseek-coder-v2:16b=4096,llama3.2:3b=4096` | finestra più piccola per i modelli con una cache di contesto pesante: a 16K DeepSeek passa da 9,4 a 12,6 GB e Llama 3.2 da 2,4 a 3,7, contro +0,15–0,4 GB di Qwen 3.5, Gemma 4 e LFM2.5 |
-| `AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL` | `lfm2.5:8b=0` | quanti layer di un modello vanno sulla GPU (`num_gpu` di Ollama); un modello non elencato è lasciato a Ollama. Ollama accende l'iGPU per tutti i modelli insieme (`OLLAMA_IGPU_ENABLE=1`): misurato sull'Arc 140V, Qwen 3.5 e Gemma 4 elaborano il prompt 2–3,7× più in fretta, LFM2.5 genera a metà velocità — per questo resta sulla CPU (TD-67) |
+| `AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL` | `lfm2.5:8b=0` | quanti layer di un modello vanno sulla GPU (`num_gpu` di Ollama); un modello non elencato è lasciato a Ollama. Ollama accende l'iGPU per tutti i modelli insieme (`OLLAMA_IGPU_ENABLE=1`, **accesa su questo PC dal 2026-10-10**): misurato sull'Arc 140V, Qwen 3.5 e Gemma 4 elaborano il prompt 2–3,7× più in fretta, LFM2.5 genera a metà velocità — per questo resta sulla CPU (TD-67) |
 | `AICOS_ENGINE_OLLAMA_THINK` | `false` | se una risposta testuale «ragiona» prima di rispondere. Misurato su questa CPU: con il ragionamento acceso Qwen 3.5 consumava 4–6 mila token (10–20 minuti) senza arrivare alla risposta, spento rispondeva giusto in ~740 token. `true` lo riaccende, `model` lo lascia al modello. Le risposte JSON non ragionano mai |
 | `AICOS_ENGINE_OLLAMA_FALLBACKS` | `lfm2.5:8b=qwen3.5:4b,gemma4:e4b=gemma4:e4b-legacy,qwen3.5:9b=qwen3.5:4b` | se Ollama non ha un modello (404) risponde il successivo della catena; la risposta dice quale modello ha davvero lavorato (`model`). Vuota = nessun ripiego |
 

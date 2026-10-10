@@ -156,10 +156,10 @@ class TaskTransitionHistoryApiTest extends AbstractPostgresTest {
 
         mockMvc.perform(get("/api/tasks/" + taskId + "/deletion"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.notes[?(@ =~ /.*storia della task \\(2 transizioni\\).*/)]").exists());
+                .andExpect(jsonPath("$.deletes[?(@ =~ /.*storia della task \\(2 transizioni\\).*/)]").exists());
         mockMvc.perform(delete("/api/tasks/" + taskId).param("confirm", "Endpoint contatti")
                         .header(HttpHeaders.AUTHORIZATION, AdminSession.bearer(mockMvc)).header(HttpHeaders.IF_MATCH, tag(taskId)))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         assertThat(jdbc.queryForObject("SELECT count(*) FROM task_transitions WHERE task_id = ?", Integer.class, taskId))
                 .isZero();
