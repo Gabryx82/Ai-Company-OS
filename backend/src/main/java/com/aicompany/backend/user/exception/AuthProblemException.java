@@ -49,4 +49,13 @@ public class AuthProblemException extends ProblemException {
     public static AuthProblemException notAUser() {
         return new AuthProblemException(ApiProblem.NOT_A_USER_SESSION, null);
     }
+
+    /** PHASE 32 (TD-53): a cookie session's write without its anti-forgery token. */
+    public static AuthProblemException csrfRejected() {
+        return new AuthProblemException(ApiProblem.CSRF_REJECTED, null);
+    }
+
+    public static AuthProblemException notABrowserSession() {
+        return new AuthProblemException(ApiProblem.NOT_A_BROWSER_SESSION, null);
+    }
 }

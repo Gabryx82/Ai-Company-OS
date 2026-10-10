@@ -77,3 +77,10 @@ dichiarava non-null campi che il server manda `null`.
 - **La console** usa i tipi generati così come sono: `Deep<T>` è eliminato, e con lui le correzioni a
   mano di `WorkspaceDocuments`, `AgentProfile`, `DailyItem` (ora le dice il contratto). `Wire<T>` resta
   solo per la struttura di un blocco del Blueprint, che è anche un corpo di richiesta.
+
+## Revisione PHASE 32 (2026-10-10) — la sessione in un cookie (TD-53)
+
+La riga «Bearer (ADR-013)» della tabella sopra non vale più per la console: il token di sessione è un cookie
+`HttpOnly` che il control plane imposta e nessuno script legge; la console manda `credentials: "include"` e, su
+ogni scrittura, il token anti-CSRF della sessione in `X-AICOS-CSRF`. Nel `sessionStorage` restano indirizzo,
+utente e token anti-CSRF. Un `401` riporta ancora al login. Dettagli in ADR-024, revisione TD-53.

@@ -71,3 +71,10 @@ diventerà l'identità di un utente, e «Team identity / RBAC» resta la sua fas
 
 Utenti, password, RBAC, OAuth/SSO, rotazione e scadenza dei token, rate limiting, audit log delle
 richieste. Il nome del principal è disponibile a chiunque lo voglia registrare (PHASE 6 lo usa).
+
+## Revisione PHASE 32 (2026-10-10) — il cookie della console (TD-53)
+
+Il punto 1 («nessun cookie», quindi CSRF spento) vale ancora per i token `Bearer`, ma non più per la console: il
+suo token di sessione è ora un cookie `HttpOnly`, e le sue scritture portano un token anti-CSRF (`X-AICOS-CSRF`)
+che il filtro di autenticazione verifica. CORS ammette le credenziali solo dalle origini dichiarate. Il
+dettaglio è nella revisione PHASE 32 di ADR-024.

@@ -5,6 +5,8 @@ export interface Call {
   path: string;
   headers: Record<string, string>;
   body: unknown;
+  /** Whether the browser would attach its cookies (TD-53: the session is one). */
+  credentials?: RequestCredentials;
 }
 
 type Handler = (call: Call) => { status?: number; body?: unknown; etag?: string; problem?: boolean };
@@ -19,6 +21,7 @@ export function fakeFetch(routes: Record<string, Handler>) {
       path: url.pathname + url.search,
       headers: Object.fromEntries(Object.entries((init?.headers as Record<string, string>) ?? {})),
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      credentials: init?.credentials,
     };
     calls.push(call);
     const handler = routes[`${call.method} ${url.pathname}`] ?? routes[`${call.method} ${call.path}`];

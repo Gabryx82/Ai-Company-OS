@@ -21,9 +21,14 @@ import java.util.List;
  *       honoured. With bearer tokens it would not leak a credential by itself, but
  *       it would make "which page is allowed to drive the control plane" a question
  *       nobody answered.</li>
- *   <li><strong>No credentialed requests.</strong> The browser attaches nothing by
- *       itself; the page sends the token explicitly. That is what keeps CSRF out of
- *       the picture (ADR-013 §3).</li>
+ *   <li><strong>Credentialed requests from the declared origins only</strong>
+ *       (PHASE 32, TD-53; until then none, ADR-013 §3). The console's session is
+ *       an {@code HttpOnly} cookie the browser attaches by itself, so the page
+ *       sends {@code credentials: "include"} and the answer must allow it; the
+ *       declared list is what keeps every other origin from reading those
+ *       answers. Forged writes are stopped by the session's anti-forgery header
+ *       ({@link SessionCookie#CSRF_HEADER}), which no other origin can add without
+ *       a preflight this policy refuses.</li>
  *   <li><strong>{@code If-Match} in, {@code ETag} out.</strong> Without the
  *       exposed header a browser hides the entity-tag from script, and every
  *       mutation of ADR-009 becomes impossible from a page.</li>
@@ -34,7 +39,8 @@ public final class CorsPolicy {
     static final List<String> ALLOWED_METHODS = List.of("GET", "POST", "PUT", "DELETE", "OPTIONS");
 
     static final List<String> ALLOWED_HEADERS = List.of(
-            HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE, HttpHeaders.IF_MATCH, HttpHeaders.ACCEPT);
+            HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE, HttpHeaders.IF_MATCH, HttpHeaders.ACCEPT,
+            SessionCookie.CSRF_HEADER);
 
     static final List<String> EXPOSED_HEADERS = List.of(HttpHeaders.ETAG, HttpHeaders.LOCATION);
 
@@ -80,7 +86,7 @@ public final class CorsPolicy {
         configuration.setAllowedMethods(ALLOWED_METHODS);
         configuration.setAllowedHeaders(ALLOWED_HEADERS);
         configuration.setExposedHeaders(EXPOSED_HEADERS);
-        configuration.setAllowCredentials(false);
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(Duration.ofHours(1));
 
         source.registerCorsConfiguration("/api/**", configuration);

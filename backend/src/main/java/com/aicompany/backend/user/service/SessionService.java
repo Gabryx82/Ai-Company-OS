@@ -95,6 +95,23 @@ public class SessionService {
         return idle;
     }
 
+    /**
+     * PHASE 32 (TD-53): the anti-forgery token of a browser session, derived from
+     * its session token. The page gets it in the body of the sign-in and sends it
+     * back on every write; the cookie it pairs with stays out of the page's reach.
+     * Knowing it does not reveal the session token, and it differs from the digest
+     * stored in the database.
+     */
+    public static String csrfToken(String token) {
+        try {
+            byte[] hash = MessageDigest.getInstance("SHA-256")
+                    .digest(("aicos-csrf:" + token).getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
     static String digest(String token) {
         try {
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));

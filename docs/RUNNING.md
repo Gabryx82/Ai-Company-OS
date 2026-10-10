@@ -154,10 +154,18 @@ curl -X POST http://localhost:8081/api/auth/logout -H "Authorization: Bearer $TO
 può chiamare. Ruolo `OPERATOR`, salvo `aicos.security.api-token-roles.<nome>=ADMIN`. Un token più
 corto di 16 caratteri, o lo stesso token sotto due nomi, impediscono l'avvio.
 
-L'unica rotta pubblica oltre al login è `GET /actuator/health`, che risponde soltanto
-`{"status":"UP"}`. Un token sbagliato riceve **esattamente** la stessa risposta di un token
-assente. **CSRF**: il token viaggia in un header e mai in un cookie, quindi il browser non lo
-allega da solo; non c'è niente che un sito terzo possa sfruttare.
+Le uniche rotte pubbliche oltre ai due accessi (`POST /api/auth/login`, `POST /api/auth/session`) sono
+`GET /actuator/health`, che risponde soltanto `{"status":"UP"}`, e la stretta di mano del terminale (con il
+suo biglietto). Un token sbagliato riceve **esattamente** la stessa risposta di un token assente.
+
+**La console e il cookie di sessione (TD-53, ADR-024 revisione PHASE 32)**: la console entra con
+`POST /api/auth/session`, che mette il token di sessione in un cookie `HttpOnly`, `SameSite=Strict`,
+`Path=/api` (`aicos_session_<porta>`) e le restituisce solo l'utente e un token anti-CSRF; nessuno script
+vede il token. Ogni scrittura con il cookie porta `X-AICOS-CSRF`, altrimenti `403 csrf-rejected`.
+`GET /api/auth/session` dà utente e token anti-CSRF del cookie (una scheda nuova entra da sola); il logout
+scade il cookie. **Console e control plane devono avere lo stesso nome host** (`localhost` con
+`localhost`, `127.0.0.1` con `127.0.0.1`): altrimenti il browser non rimanda il cookie, e la console lo dice
+all'accesso. Script e servizi continuano a usare il token `Bearer` di `/api/auth/login`.
 
 Negli esempi qui sotto l'header `Authorization` è **sottinteso**.
 
@@ -169,9 +177,9 @@ Negli esempi qui sotto l'header `Authorization` è **sottinteso**.
   (`AICOS_CORS_ALLOWED_ORIGINS`). In `dev` il default è il dev server di Vite
   (`http://localhost:5173`, `http://127.0.0.1:5173`); in `prod` **nessuna**. `*` e valori che non
   sono origini (`scheme://host[:port]`) **impediscono l'avvio**.
-- La policy espone `ETag` e `Location` e accetta `If-Match`: senza, una pagina potrebbe leggere ma
-  mai scrivere. Nessuna richiesta *credentialed*: il token lo manda la pagina, il browser non
-  allega niente da sé.
+- La policy espone `ETag` e `Location` e accetta `If-Match` e `X-AICOS-CSRF`: senza, una pagina potrebbe
+  leggere ma mai scrivere. Richieste *credentialed* (il cookie di sessione della console) **solo dalle
+  origini dichiarate** (TD-53).
 
 ### Poi: ogni mutazione richiede `If-Match`
 
@@ -501,7 +509,9 @@ npm run dev        # http://localhost:5173
 ```
 
 Deve girare su `http://localhost:5173`: è l'origine che il profilo `dev` del backend ammette
-(`aicos.cors.allowed-origins`). Login con l'URL del backend e il token dell'operatore.
+(`aicos.cors.allowed-origins`). Accedi con utente e password: il control plane proposto è sullo stesso host
+da cui apri la console (`http://localhost:8081` se apri `http://localhost:5173`), perché il cookie di sessione
+torna solo allo stesso nome host.
 
 | Comando | |
 |---|---|

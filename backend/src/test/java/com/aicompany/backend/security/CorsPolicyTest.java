@@ -97,15 +97,27 @@ class CorsPolicyTest extends AbstractPostgresTest {
     }
 
     /**
-     * No cookies, so no credentialed CORS: the browser must never attach anything
-     * by itself. That is what keeps CSRF irrelevant (ADR-013 §3).
+     * PHASE 32 (TD-53): the console's session is an HttpOnly cookie, so its
+     * requests are credentialed -- allowed for the declared origin, with the
+     * anti-forgery header among those it may send, and for nobody else. (Until
+     * then the opposite held: no cookies, no credentialed CORS, ADR-013 §3.)
      */
     @Test
-    void credentialedRequestsAreNotAllowed() throws Exception {
+    void credentialedRequestsAreAllowedOnlyFromTheDeclaredOrigin() throws Exception {
 
         browser.perform(options("/api/projects")
                         .header(HttpHeaders.ORIGIN, CONSOLE)
-                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET"))
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "content-type,x-aicos-csrf"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, containsString("x-aicos-csrf")));
+
+        browser.perform(options("/api/projects")
+                        .header(HttpHeaders.ORIGIN, STRANGER)
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "content-type,x-aicos-csrf"))
+                .andExpect(status().isForbidden())
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS));
     }
 

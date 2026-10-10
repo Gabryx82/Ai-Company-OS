@@ -32,6 +32,11 @@ public class CallerResolver {
         return registry.principalFor(token).map(name -> Caller.service(name, roleOf(name)));
     }
 
+    /** PHASE 32 (TD-53): a cookie only ever carries a signed-in session, never a configured token. */
+    public Optional<Caller> resolveSession(String token) {
+        return sessions.resolve(token);
+    }
+
     private Role roleOf(String name) {
         String role = roles.get(name);
         return role == null ? Role.OPERATOR : Role.valueOf(role.strip().toUpperCase(Locale.ROOT));

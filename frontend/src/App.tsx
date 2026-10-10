@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiProblem, ControlPlane, type Session } from "./api/client";
 import { ApiContext, SessionContext } from "./context";
-import { clearSession, loadSession, saveSession } from "./session";
+import { clearSession, DEFAULT_BASE_URL, loadSession, saveSession } from "./session";
 import { clearStoredTerminals, storedTerminals } from "./terminalStore";
 import { Login } from "./views/Login";
 import { Dashboard } from "./views/Dashboard";
@@ -60,6 +60,9 @@ function routeFromHash(): { page: string; detail: string | null } {
 
 export function App() {
   const [session, setSession] = useState<Session | null>(() => loadSession());
+  // TD-53: a tab with nothing stored asks whether the browser already holds a session cookie
+  // for the control plane (another tab signed in): if so, it is signed in too.
+  const [restoring, setRestoring] = useState(() => session === null);
   const [route, setRoute] = useState(routeFromHash);
   const [backendUp, setBackendUp] = useState<boolean | null>(null);
   // The terminal view stays mounted once visited, so its shells stay shown while
@@ -69,7 +72,17 @@ export function App() {
   const [terminalsRunning, setTerminalsRunning] = useState(0);
   useEffect(() => { if (route.page === "terminal") setTerminalKept(true); }, [route.page]);
 
-  const api = useMemo(() => (session ? new ControlPlane(session) : null), [session]);
+  // A refreshed anti-forgery token (another tab signed in) is kept for the next reload.
+  const api = useMemo(() => (session ? new ControlPlane(session, undefined, saveSession) : null), [session]);
+
+  useEffect(() => {
+    if (!restoring) return;
+    let cancelled = false;
+    ControlPlane.restore(DEFAULT_BASE_URL)
+      .then((found) => { if (found && !cancelled) { saveSession(found); setSession(found); } })
+      .finally(() => { if (!cancelled) setRestoring(false); });
+    return () => { cancelled = true; };
+  }, [restoring]);
 
   useEffect(() => {
     const onHash = () => setRoute(routeFromHash());
@@ -88,7 +101,7 @@ export function App() {
 
   const signIn = useCallback((next: Session) => { saveSession(next); setSession(next); }, []);
   const signOut = useCallback(() => { clearSession(); clearStoredTerminals(); setSession(null); }, []);
-  // Signing out also ends the session on the server (ADR-024): a copied token stops working.
+  // Signing out also ends the session on the server (ADR-024) and expires its cookie (TD-53).
   // The shells this tab shows end with it; others stay listed for the next sign-in.
   const logout = useCallback(() => {
     const closing = storedTerminals().map((t) => api?.closeTerminalSession(t.session).catch(() => undefined));
@@ -111,7 +124,7 @@ export function App() {
     window.location.hash = `/${page}${detail ? `/${encodeURIComponent(detail)}` : ""}`;
   }, []);
 
-  // A 401 anywhere means the token is wrong or was rotated: back to the login.
+  // A 401 anywhere means the session ended (signed out, expired, revoked): back to the login.
   useEffect(() => {
     const onRejection = (event: PromiseRejectionEvent) => {
       if (event.reason instanceof ApiProblem && event.reason.isUnauthenticated) signOut();
@@ -119,6 +132,10 @@ export function App() {
     window.addEventListener("unhandledrejection", onRejection);
     return () => window.removeEventListener("unhandledrejection", onRejection);
   }, [signOut]);
+
+  if (!session && restoring) {
+    return <div className="login"><p className="muted">Verifico la sessione…</p></div>;
+  }
 
   if (!session || !api) {
     return <Login onSignIn={signIn} />;

@@ -1375,6 +1375,18 @@
         "required" : [ "actions", "kinds", "pathStates", "proposalKinds", "relations", "statuses" ],
         "type" : "object"
       },
+      "BrowserSession" : {
+        "properties" : {
+          "csrfToken" : {
+            "type" : "string"
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/UserResponse"
+          }
+        },
+        "required" : [ "csrfToken", "user" ],
+        "type" : "object"
+      },
       "Budget" : {
         "properties" : {
           "alert" : {
@@ -7461,6 +7473,50 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/session" : {
+      "get" : {
+        "operationId" : "browserSession",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrowserSession"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      },
+      "post" : {
+        "operationId" : "openBrowserSession",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrowserSession"
                 }
               }
             },

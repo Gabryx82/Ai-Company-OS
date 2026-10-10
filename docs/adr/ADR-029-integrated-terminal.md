@@ -81,7 +81,7 @@ Code non si poteva scorrere.
     il suo vecchio contenuto finirebbe nello schermo normale), le modalità e una richiesta di
     ridisegno (una riga in meno, poi la misura vera: ConPTY e il programma ridisegnano lo schermo).
     Un secondo socket che aggancia la stessa shell la prende (l'altro si chiude con `4001`).
-  - **La console**: ogni scheda del browser ricorda in `sessionStorage` (come il token) le shell che
+  - **La console**: ogni scheda del browser ricorda in `sessionStorage` (come l'indirizzo del control plane) le shell che
     mostra e dopo un ricaricamento le riaggancia da sé, anche se l'operatore è su un'altra pagina; le
     altre shell dell'operatore (di un'altra scheda, o di una scheda chiusa) sono elencate «In
     background» con *Riprendi qui* e *Chiudi* (`GET /api/terminal/sessions`,

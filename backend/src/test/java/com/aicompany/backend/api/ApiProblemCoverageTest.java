@@ -180,6 +180,8 @@ class ApiProblemCoverageTest {
                         "invalid-credentials", "too-many-login-attempts", "access-denied", "weak-password",
                         "current-password-wrong", "username-taken", "user-not-found", "last-admin",
                         "not-a-user-session",
+                        // PHASE 32 (TD-53): the browser session in an HttpOnly cookie.
+                        "csrf-rejected", "not-a-browser-session",
                         "binding-invalid", "agent-works-elsewhere", "target-not-found", "no-baseline",
                         "resource-not-file-backed", "skill-document-invalid", "skill-import-refused", "library-unavailable",
                         // PHASE 31 (ADR-036): the Knowledge Hub across applications and marketplaces.

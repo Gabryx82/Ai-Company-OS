@@ -7,26 +7,46 @@ const ADMIN = { id: 1, username: "admin", displayName: "Administrator", role: "A
   mustChangePassword: true, lastLoginAt: null, passwordChangedAt: null, version: 0 };
 
 describe("sign-in (ADR-024)", () => {
-  it("sends username and password without a bearer token and keeps the session token it gets back", async () => {
+  it("signs in as a browser: the session token stays in the cookie, the page keeps only the anti-forgery token (TD-53)", async () => {
     const { fetcher, calls } = fakeFetch({
-      "POST /api/auth/login": () => ({ body: { token: "aicos_s_abc", expiresAt: "2026-09-26T00:00:00Z", user: ADMIN } }),
+      "POST /api/auth/session": () => ({ body: { user: ADMIN, csrfToken: "csrf-abc" } }),
+      "GET /api/auth/session": () => ({ body: { user: ADMIN, csrfToken: "csrf-abc" } }),
+      "POST /api/auth/logout": () => ({ status: 204 }),
     });
     const session = await ControlPlane.login("http://localhost:8081/", "admin", "a-long-password", fetcher);
 
+    expect(calls[0].path).toBe("/api/auth/session");
     expect(calls[0].headers.Authorization).toBeUndefined();
+    expect(calls[0].credentials).toBe("include");
     expect(calls[0].body).toEqual({ username: "admin", password: "a-long-password" });
-    expect(session).toEqual({ baseUrl: "http://localhost:8081", token: "aicos_s_abc", user: ADMIN });
+    // The browser is asked to show the cookie back before the console says "signed in".
+    expect(calls[1].method).toBe("GET");
+    expect(calls[1].path).toBe("/api/auth/session");
+    expect(session).toEqual({ baseUrl: "http://localhost:8081", csrf: "csrf-abc", user: ADMIN });
+    expect(JSON.stringify(session)).not.toContain("aicos_s_");
 
-    const api = new ControlPlane(session, fetcher);
-    await api.logout().catch(() => undefined);
-    expect(calls[1].headers.Authorization).toBe("Bearer aicos_s_abc");
+    await new ControlPlane(session, fetcher).logout();
+    expect(calls[2].headers.Authorization).toBeUndefined();
+    expect(calls[2].headers["X-AICOS-CSRF"]).toBe("csrf-abc");
+    expect(calls[2].credentials).toBe("include");
+  });
+
+  it("says why, once, when the browser does not send the cookie back (another host name)", async () => {
+    const { fetcher } = fakeFetch({
+      "POST /api/auth/session": () => ({ body: { user: ADMIN, csrfToken: "csrf-abc" } }),
+      "GET /api/auth/session": () => ({ status: 401, problem: true,
+        body: { type: "urn:ai-company-os:problem:unauthenticated", title: "Unauthenticated", status: 401 } }),
+    });
+    const refused = await ControlPlane.login("http://127.0.0.1:8081", "admin", "a-long-password", fetcher).catch((e) => e);
+    expect(refused.slug).toBe("session-cookie-not-sent");
+    expect(refused.detail).toContain("stesso nome host");
   });
 
   it("explains a refused sign-in in words and clears the password field", async () => {
     const { Login } = await import("./Login");
     const original = globalThis.fetch;
     const { fetcher } = fakeFetch({
-      "POST /api/auth/login": () => ({ status: 401, problem: true,
+      "POST /api/auth/session": () => ({ status: 401, problem: true,
         body: { type: "urn:ai-company-os:problem:invalid-credentials", title: "Sign-in refused", status: 401 } }),
     });
     globalThis.fetch = fetcher;

@@ -109,3 +109,50 @@ logout, cambio password con revoca delle altre sessioni, ruoli, ultimo admin, di
 chiude le sessioni, token contraffatto, intestazioni), `LoginThrottleTest`,
 `ApiAuthenticationContractTest` (ogni rotta rifiuta l'anonimo, tranne il login),
 `ApiTokenRegistryTest`, e le coperture `ApiProblemCoverageTest` e `PreconditionCoverageTest`.
+
+## Revisione PHASE 32 (2026-10-10) — il token della console in un cookie `HttpOnly` (TD-53)
+
+Su decisione dell'operatore (2026-10-10) il §8 cambia: il token di sessione della console non vive più nel
+`sessionStorage`, dove uno script iniettato poteva leggerlo, ma in un cookie che nessuno script vede.
+
+- **Accesso dal browser**: `POST /api/auth/session` (pubblico, stessi controlli di `/api/auth/login`: blocco, limite
+  per indirizzo, registro) imposta il cookie `aicos_session_<porta>` — `HttpOnly`, `SameSite=Strict`, `Path=/api`,
+  `Secure` se la richiesta è HTTPS, senza `Max-Age` (finisce con il browser; inattività e durata massima del §2
+  restano) — e risponde **chi è entrato e il token anti-CSRF**, mai il token di sessione. La porta nel nome tiene
+  separati due control plane sullo stesso host: il browser conserva i cookie per host, non per porta.
+- **CSRF**: il cookie il browser lo allega da sé, quindi ogni scrittura (tutto tranne GET, HEAD, OPTIONS)
+  autenticata dal cookie porta `X-AICOS-CSRF` con il token anti-CSRF della sessione (SHA-256 di
+  `"aicos-csrf:" + token`: non rivela il token, ed è diverso dal digest salvato). Senza, o sbagliato:
+  `403 csrf-rejected` e una voce `ACCESS_DENIED` nel registro. Un'altra origine non può aggiungere quell'header
+  senza un preflight CORS che il control plane rifiuta, e non conosce il valore.
+- **CORS** (cambia ADR-013 §3 e il §7 qui sopra): richieste con credenziali **ammesse solo dalle origini
+  dichiarate**, `X-AICOS-CSRF` tra gli header permessi. Il `*` resta rifiutato all'avvio.
+- **Il cookie** non è mai un token di servizio; uno che non corrisponde a una sessione viva (sessione finita,
+  altro control plane) è **ignorato**, non rifiutato: le rotte pubbliche rispondono, le altre danno il `401` di
+  sempre. Sulle rotte di accesso il cookie non si legge: una scheda può rientrare anche se il browser ne tiene
+  uno valido.
+- **`GET /api/auth/session`**: con il cookie restituisce utente e token anti-CSRF. Serve a una scheda nuova
+  (entra da sola se il browser ha già la sessione) e a una scheda il cui token anti-CSRF non è più quello del
+  cookie perché un'altra scheda è entrata: la console lo chiede una volta e ripete la richiesta.
+  Con un token `Bearer` risponde `409 not-a-browser-session`.
+- **Logout**: revoca la sessione e scade il cookie (`Max-Age=0`).
+- **`Bearer` resta** per script, servizi e test: `POST /api/auth/login` restituisce ancora il token, e i token di
+  servizio non cambiano. È la console che non lo vede più.
+
+**Diverso dalla proposta**: non serve servire la console dallo stesso origin del backend. Console
+(`localhost:5173`) e control plane (`localhost:8081`) sono *same-site* (i porti non contano), quindi il cookie
+`Strict` viaggia con `credentials: "include"` e CORS con credenziali. Basta che i due abbiano **lo stesso nome
+host**: la console ora propone il control plane sull'host da cui è aperta, e se il browser non rimanda il cookie
+(`localhost` con `127.0.0.1`) lo dice all'accesso invece di uscire al primo clic.
+
+La console tiene nel `sessionStorage` solo indirizzo, utente e token anti-CSRF, e scarta una sessione salvata da
+una versione precedente che conteneva un token.
+
+Test: `BrowserSessionApiTest` (cookie `HttpOnly`/`Strict`/`Path=/api` e nessun token nel corpo; letture con il
+cookie, scritture rifiutate senza o con un token anti-CSRF sbagliato e registrate; `GET /api/auth/session`;
+logout che scade il cookie; cookie scaduto ignorato, mai un token di servizio, mai quello di un'altra porta;
+nuovo accesso con un cookie valido), `CorsPolicyTest` (credenziali solo per l'origine dichiarata),
+`ApiAuthenticationContractTest`, `ApiProblemCoverageTest`; console: `client.test` (cookie e token anti-CSRF solo
+sulle scritture, mai `Authorization`; riallineamento dopo un'altra scheda, una volta sola; sonda di salute senza
+cookie), `Login.test`, `session.test`, `App.test` (una scheda nuova entra con il cookie). Ogni protezione vista
+rossa per mutazione.

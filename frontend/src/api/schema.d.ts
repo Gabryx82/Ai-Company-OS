@@ -548,6 +548,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["browserSession"];
+        put?: never;
+        post: operations["openBrowserSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/blueprint/vocabulary": {
         parameters: {
             query?: never;
@@ -3098,6 +3114,10 @@ export interface components {
             proposalKinds: ("CREATE_FILE" | "ADD_DEPENDENCY" | "CUSTOM")[];
             relations: components["schemas"]["BlueprintRelationInfo"][];
             statuses: ("PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "DEPRECATED")[];
+        };
+        BrowserSession: {
+            csrfToken: string;
+            user: components["schemas"]["UserResponse"];
         };
         Budget: {
             alert: boolean;
@@ -5683,6 +5703,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    browserSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BrowserSession"];
+                };
+            };
+        };
+    };
+    openBrowserSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BrowserSession"];
                 };
             };
         };

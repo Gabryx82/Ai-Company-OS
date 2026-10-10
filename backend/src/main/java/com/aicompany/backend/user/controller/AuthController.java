@@ -1,6 +1,9 @@
 package com.aicompany.backend.user.controller;
 
 import com.aicompany.backend.security.Caller;
+import com.aicompany.backend.security.SessionCookie;
+import com.aicompany.backend.user.exception.AuthProblemException;
+import com.aicompany.backend.user.service.SessionService;
 import com.aicompany.backend.user.model.AppUser;
 import com.aicompany.backend.user.model.Role;
 import com.aicompany.backend.user.service.AuthService;
@@ -48,6 +51,14 @@ public class AuthController {
     public record LoginResponse(String token, Instant expiresAt, UserResponse user) {
     }
 
+    /**
+     * PHASE 32 (TD-53): what a browser's sign-in answers. The session token is in
+     * the {@code HttpOnly} cookie, not here; {@code csrfToken} is what the page
+     * sends back in {@code X-AICOS-CSRF} on every write.
+     */
+    public record BrowserSession(UserResponse user, String csrfToken) {
+    }
+
     public record MeResponse(String name, Role role, Caller.Kind kind, @Nullable UserResponse user) {
     }
 
@@ -68,10 +79,43 @@ public class AuthController {
                 .body(new LoginResponse(signedIn.token(), signedIn.expiresAt(), UserResponse.from(signedIn.user())));
     }
 
+    /**
+     * PHASE 32 (TD-53): the browser's sign-in. Same checks as {@link #login}, but
+     * the session token goes into an {@code HttpOnly} cookie the page cannot read;
+     * the body carries who signed in and the anti-forgery token.
+     */
+    @PostMapping("/api/auth/session")
+    public ResponseEntity<BrowserSession> openBrowserSession(@Valid @RequestBody LoginRequest request,
+                                                             HttpServletRequest http) {
+        AuthService.SignedIn signedIn = auth.login(request.username(), request.password(), http.getRemoteAddr(),
+                http.getHeader(HttpHeaders.USER_AGENT));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .header(HttpHeaders.SET_COOKIE, SessionCookie.issue(http, signedIn.token()).toString())
+                .body(new BrowserSession(UserResponse.from(signedIn.user()), SessionService.csrfToken(signedIn.token())));
+    }
+
+    /**
+     * The browser session this request came with: how a reloaded page, or another
+     * tab, gets the anti-forgery token of the cookie the browser holds.
+     */
+    @GetMapping("/api/auth/session")
+    public ResponseEntity<BrowserSession> browserSession(@AuthenticationPrincipal Caller caller, HttpServletRequest http) {
+        if (!(http.getAttribute(SessionCookie.CSRF_ATTRIBUTE) instanceof String csrf)) {
+            throw AuthProblemException.notABrowserSession();
+        }
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new BrowserSession(UserResponse.from(auth.current(caller)), csrf));
+    }
+
+    /** Ends the session; a browser's cookie is expired with it. */
     @PostMapping("/api/auth/logout")
     public ResponseEntity<Void> logout(@AuthenticationPrincipal Caller caller, HttpServletRequest http) {
         auth.logout(caller, http.getRemoteAddr());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, SessionCookie.clear(http).toString())
+                .build();
     }
 
     @GetMapping("/api/auth/me")

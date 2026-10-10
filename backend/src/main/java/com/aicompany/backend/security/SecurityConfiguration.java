@@ -28,10 +28,12 @@ import java.util.List;
  * The security of the control plane, in one chain (ADR-013).
  *
  * <ul>
- *   <li><strong>Stateless.</strong> No session, no cookie: every request carries
- *       its credential. That is also why CSRF protection is off -- CSRF abuses a
- *       credential the browser attaches by itself, and a bearer token is never
- *       attached by the browser.</li>
+ *   <li><strong>Stateless.</strong> No servlet session: every request carries
+ *       its credential -- a bearer token, or (PHASE 32, TD-53) the console's
+ *       session cookie, {@code HttpOnly} so no script can read it. Spring's CSRF
+ *       filter stays off: bearer tokens are never attached by the browser, and the
+ *       cookie's writes are checked by {@link CredentialAuthenticationFilter}
+ *       against the session's own anti-forgery header ({@link SessionCookie}).</li>
  *   <li><strong>Two kinds of caller, two roles</strong> (PHASE 15, ADR-024). People
  *       sign in and get a session token; machines keep configured tokens. Both
  *       travel as bearer tokens in a header, so the stateless reasoning above
@@ -130,6 +132,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/actuator/health").permitAll()
                         // How a person gets a credential: the only public write.
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        // PHASE 32 (TD-53): the same, for a browser -- the token goes in a cookie.
+                        .requestMatchers(HttpMethod.POST, "/api/auth/session").permitAll()
                         // The error dispatch of a request that was already
                         // authorised or already refused: not a way in.
                         .requestMatchers("/error").permitAll()
@@ -149,7 +153,7 @@ public class SecurityConfiguration {
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(entryPoint)
                         .accessDeniedHandler(denied))
-                .addFilterBefore(new BearerTokenAuthenticationFilter(callers, entryPoint),
+                .addFilterBefore(new CredentialAuthenticationFilter(callers, entryPoint, resolver, securityLog),
                         AnonymousAuthenticationFilter.class);
 
         return http.build();

@@ -1,8 +1,11 @@
 // The control plane, as a browser sees it.
 //
 // Three rules of the server shape every function here:
-//  - every request carries a bearer token: a signed-in session (ADR-024) or a
-//    configured service token (ADR-013);
+//  - every request carries a credential. The console's is its browser session
+//    (PHASE 32, TD-53): an HttpOnly cookie the page never sees, attached by the
+//    browser (credentials: "include"), plus the session's anti-forgery token in
+//    X-AICOS-CSRF on every write. A configured service token (ADR-013) still
+//    travels as a bearer token;
 //  - every mutation of an existing resource carries If-Match with the ETag the
 //    caller last read (ADR-009) -- so the functions that mutate take the tag
 //    explicitly, and the ones that read a single resource return it;
@@ -62,28 +65,64 @@ export interface Versioned<T> {
 
 export interface Session {
   baseUrl: string;
-  token: string;
+  /** The anti-forgery token of the browser session (TD-53): sent back on every write. */
+  csrf?: string;
+  /** A configured service token (ADR-013). The console's own sign-in never has one: its token is a cookie. */
+  token?: string;
   /** Who signed in (ADR-024); absent for a service-token session. */
   user?: UserInfo;
+}
+
+/** What the browser sign-in answers: no session token, which stays in the HttpOnly cookie. */
+interface BrowserSession {
+  user: UserInfo;
+  csrfToken: string;
 }
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 
 export class ControlPlane {
-  constructor(private readonly session: Session, private readonly fetcher: typeof fetch = fetch.bind(globalThis)) {}
+  private session: Session;
 
-  private async request<T>(method: Method, path: string, options: { body?: unknown; ifMatch?: string } = {}):
-    Promise<{ body: T; etag: string | null; status: number }> {
+  /**
+   * `onSession` hears of a session the client had to refresh: another tab signed in
+   * and the browser now holds that tab's cookie, so the anti-forgery token changed.
+   */
+  constructor(session: Session, private readonly fetcher: typeof fetch = fetch.bind(globalThis),
+              private readonly onSession?: (session: Session) => void) {
+    this.session = session;
+  }
+
+  private base(): string {
+    return this.session.baseUrl.replace(/\/+$/, "");
+  }
+
+  /** The credential of a request: the bearer token if there is one, the anti-forgery token on a cookie write. */
+  private credentials(method: string): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (this.session.token) headers.Authorization = `Bearer ${this.session.token}`;
+    if (this.session.csrf && method !== "GET") headers["X-AICOS-CSRF"] = this.session.csrf;
+    return headers;
+  }
+
+  /** Every call goes out with the browser's cookie for the control plane, and with the credential headers. */
+  private send(url: string, init: RequestInit & { headers?: Record<string, string> } = {}): Promise<Response> {
+    const method = init.method ?? "GET";
+    return this.fetcher(url, { ...init, credentials: "include",
+      headers: { ...this.credentials(method), ...(init.headers ?? {}) } });
+  }
+
+  private async request<T>(method: Method, path: string, options: { body?: unknown; ifMatch?: string } = {},
+                           retried = false): Promise<{ body: T; etag: string | null; status: number }> {
     const headers: Record<string, string> = {
       Accept: "application/json, application/problem+json",
     };
-    if (this.session.token) headers.Authorization = `Bearer ${this.session.token}`;
     if (options.body !== undefined) headers["Content-Type"] = "application/json";
     if (options.ifMatch !== undefined) headers["If-Match"] = options.ifMatch;
 
     let response: Response;
     try {
-      response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "") + path, {
+      response = await this.send(this.base() + path, {
         method,
         headers,
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -99,9 +138,22 @@ export class ControlPlane {
     const text = await response.text();
     const parsed = text ? safeJson(text) : null;
     if (!response.ok) {
-      throw new ApiProblem(response.status, (parsed as object | null) ?? {});
+      const problem = new ApiProblem(response.status, (parsed as object | null) ?? {});
+      // Another tab signed in: the browser now holds its cookie, whose anti-forgery
+      // token this page does not know yet. Ask for it once, then try again.
+      if (problem.slug === "csrf-rejected" && this.session.csrf && !retried) {
+        await this.refreshSession();
+        return this.request(method, path, options, true);
+      }
+      throw problem;
     }
     return { body: parsed as T, etag: response.headers.get("ETag"), status: response.status };
+  }
+
+  private async refreshSession(): Promise<void> {
+    const fresh = await this.plain<BrowserSession>("GET", "/api/auth/session");
+    this.session = { ...this.session, csrf: fresh.csrfToken, user: fresh.user };
+    this.onSession?.(this.session);
   }
 
   private async versioned<T>(method: Method, path: string, options: { body?: unknown; ifMatch?: string } = {}):
@@ -122,14 +174,42 @@ export class ControlPlane {
 
   // --- people and sessions (ADR-024) -----------------------------------------
 
-  /** Signs in and returns the session the console keeps. The one call without a token. */
+  /**
+   * Signs in as a browser (TD-53): the control plane puts the session token in an
+   * HttpOnly cookie and answers who signed in and the anti-forgery token -- the
+   * page never holds the session token. Then it checks that the browser sends the
+   * cookie back: it does not when the console and the control plane are on
+   * different host names (localhost and 127.0.0.1), and that is said here, once,
+   * instead of as a sign-out at the first click.
+   */
   static async login(baseUrl: string, username: string, password: string,
                      fetcher: typeof fetch = fetch.bind(globalThis)): Promise<Session> {
     const base = baseUrl.trim().replace(/\/+$/, "");
-    const anonymous = new ControlPlane({ baseUrl: base, token: "" }, fetcher);
-    const body = await anonymous.plain<{ token: string; expiresAt: string; user: UserInfo }>(
-      "POST", "/api/auth/login", { body: { username, password } });
-    return { baseUrl: base, token: body.token, user: body.user };
+    const anonymous = new ControlPlane({ baseUrl: base }, fetcher);
+    const body = await anonymous.plain<BrowserSession>("POST", "/api/auth/session", { body: { username, password } });
+    const session: Session = { baseUrl: base, csrf: body.csrfToken, user: body.user };
+    try {
+      await new ControlPlane(session, fetcher).plain("GET", "/api/auth/session");
+    } catch (error) {
+      if (error instanceof ApiProblem && error.isUnauthenticated) {
+        throw new ApiProblem(401, { type: `${PROBLEM}session-cookie-not-sent`, title: "Sessione non mantenuta",
+          detail: `Il browser non rimanda il cookie di sessione a ${base}: apri la console con lo stesso nome host `
+            + `del control plane (per esempio http://localhost:5173 con http://localhost:8081).` });
+      }
+      throw error;
+    }
+    return session;
+  }
+
+  /** The browser session the cookie stands for, if the browser holds one for this control plane (another tab, a reload). */
+  static async restore(baseUrl: string, fetcher: typeof fetch = fetch.bind(globalThis)): Promise<Session | null> {
+    const base = baseUrl.trim().replace(/\/+$/, "");
+    try {
+      const body = await new ControlPlane({ baseUrl: base }, fetcher).plain<BrowserSession>("GET", "/api/auth/session");
+      return { baseUrl: base, csrf: body.csrfToken, user: body.user };
+    } catch {
+      return null;
+    }
   }
 
   logout(): Promise<void> {
@@ -172,7 +252,8 @@ export class ControlPlane {
 
   async health(): Promise<boolean> {
     try {
-      const response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "") + "/actuator/health");
+      // Public, and its CORS answer does not allow credentials: asked without the cookie.
+      const response = await this.fetcher(this.base() + "/actuator/health", { credentials: "omit" });
       return response.ok;
     } catch {
       return false;
@@ -310,9 +391,7 @@ export class ControlPlane {
   }
 
   async readFile(id: number, path: string): Promise<string> {
-    const response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "")
-      + `/api/projects/${id}/files?path=${encodeURIComponent(path)}`,
-      { headers: { Authorization: `Bearer ${this.session.token}` } });
+    const response = await this.send(this.base() + `/api/projects/${id}/files?path=${encodeURIComponent(path)}`);
     if (!response.ok) {
       const text = await response.text();
       throw new ApiProblem(response.status, (text ? safeJson(text) : {}) as object);
@@ -322,9 +401,7 @@ export class ControlPlane {
 
   async fileUrl(id: number, path: string): Promise<string | null> {
     try {
-      const response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "")
-        + `/api/projects/${id}/files?path=${encodeURIComponent(path)}`,
-        { headers: { Authorization: `Bearer ${this.session.token}` } });
+      const response = await this.send(this.base() + `/api/projects/${id}/files?path=${encodeURIComponent(path)}`);
       return response.ok ? URL.createObjectURL(await response.blob()) : null;
     } catch {
       return null;
@@ -347,8 +424,8 @@ export class ControlPlane {
 
   /** The planning request as an external agent reads it (text). */
   async readPlanHandoff(id: number): Promise<string> {
-    const response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "") + `/api/projects/${id}/plan/handoff`,
-      { headers: { Authorization: `Bearer ${this.session.token}`, Accept: "text/plain, application/problem+json" } });
+    const response = await this.send(this.base() + `/api/projects/${id}/plan/handoff`,
+      { headers: { Accept: "text/plain, application/problem+json" } });
     const text = await response.text();
     if (!response.ok) throw new ApiProblem(response.status, (text ? safeJson(text) : {}) as object);
     return text;
@@ -534,12 +611,10 @@ export class ControlPlane {
     return this.plain("POST", "/api/software/refresh");
   }
 
-  /** The program's real icon, fetched with the token and handed back as an object URL (or null). */
+  /** The program's real icon, fetched with the session and handed back as an object URL (or null). */
   async softwareIcon(key: string): Promise<string | null> {
     try {
-      const response = await this.fetcher(
-        this.session.baseUrl.replace(/\/+$/, "") + `/api/software/${encodeURIComponent(key)}/icon`,
-        { headers: { Authorization: `Bearer ${this.session.token}` } });
+      const response = await this.send(this.base() + `/api/software/${encodeURIComponent(key)}/icon`);
       if (response.status !== 200) return null;
       return URL.createObjectURL(await response.blob());
     } catch {
@@ -555,8 +630,8 @@ export class ControlPlane {
       + `?folder=${encodeURIComponent(folder)}&name=${encodeURIComponent(name)}`;
     let response: Response;
     try {
-      response = await this.fetcher(url, { method: "POST", body: file, headers: {
-        Authorization: `Bearer ${this.session.token}`, Accept: "application/json, application/problem+json",
+      response = await this.send(url, { method: "POST", body: file, headers: {
+        Accept: "application/json, application/problem+json",
         "Content-Type": file.type || "application/octet-stream" } });
     } catch {
       throw new ApiProblem(0, { type: `${PROBLEM}control-plane-unreachable`, title: "Control plane unreachable" });
@@ -996,11 +1071,9 @@ export class ControlPlane {
     return this.plain("DELETE", `/api/skill-hub/library/${encodeURIComponent(key)}/copies/${encodeURIComponent(app)}`);
   }
 
-  /** The skill as a .zip for Claude Desktop, fetched with the token: an object URL to hand to a link. */
+  /** The skill as a .zip for Claude Desktop, fetched with the session: an object URL to hand to a link. */
   async hubPackageUrl(key: string): Promise<string> {
-    const response = await this.fetcher(this.session.baseUrl.replace(/\/+$/, "")
-      + `/api/skill-hub/library/${encodeURIComponent(key)}/package.zip`,
-      { headers: { Authorization: `Bearer ${this.session.token}` } });
+    const response = await this.send(this.base() + `/api/skill-hub/library/${encodeURIComponent(key)}/package.zip`);
     if (!response.ok) {
       const text = await response.text();
       throw new ApiProblem(response.status, (text ? safeJson(text) : {}) as object);

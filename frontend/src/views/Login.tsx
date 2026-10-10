@@ -5,8 +5,9 @@ import { Field, ProblemNote } from "../components/ui";
 import { Icon } from "../components/icons";
 
 /**
- * Sign-in with a username and a password (ADR-024). The session token the
- * control plane returns is kept for this tab only (sessionStorage).
+ * Sign-in with a username and a password (ADR-024). Since PHASE 32 (TD-53) the
+ * session token is an HttpOnly cookie the control plane sets: this page never
+ * holds it, only who signed in and the session's anti-forgery token.
  */
 export function Login({ onSignIn }: { onSignIn: (session: Session) => void }) {
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);

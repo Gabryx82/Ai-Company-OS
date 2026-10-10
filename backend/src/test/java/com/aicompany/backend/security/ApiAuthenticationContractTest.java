@@ -71,7 +71,9 @@ class ApiAuthenticationContractTest extends AbstractPostgresTest {
     // Coverage: every route, not a sample
     // ------------------------------------------------------------------
 
-    private static final List<String> PUBLIC_ROUTES = List.of("POST /api/auth/login");
+    private static final List<String> PUBLIC_ROUTES = List.of("POST /api/auth/login",
+            // PHASE 32 (TD-53): the same sign-in, for a browser: the token goes in an HttpOnly cookie.
+            "POST /api/auth/session");
 
     @Test
     void everyApiRouteRefusesAnAnonymousCaller() throws Exception {

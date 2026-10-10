@@ -269,6 +269,15 @@ public enum ApiProblem {
             "Last admin", "The last enabled admin cannot be disabled or demoted"),
     NOT_A_USER_SESSION("not-a-user-session", HttpStatus.CONFLICT,
             "Not a user session", "This operation needs a signed-in person, not a service token"),
+    /**
+     * PHASE 32 (TD-53): a write sent with the session cookie but without the
+     * session's anti-forgery token -- what a page of another origin would send.
+     */
+    CSRF_REJECTED("csrf-rejected", HttpStatus.FORBIDDEN,
+            "Request not confirmed", "A write with the session cookie needs the session's X-AICOS-CSRF header"),
+    /** PHASE 32 (TD-53): the browser session was asked for by a caller that has none (a bearer token). */
+    NOT_A_BROWSER_SESSION("not-a-browser-session", HttpStatus.CONFLICT,
+            "Not a browser session", "This request did not come with a session cookie"),
 
     // --- agent binding (PHASE 16, ADR-025) --------------------------------------------
 

@@ -1,5 +1,5 @@
-// The shells this browser tab shows (ADR-029 §5), kept where the session token
-// is: in sessionStorage, which survives a reload and not a closed tab. After a
+// The shells this browser tab shows (ADR-029 §5), kept with what the tab knows of
+// its session: in sessionStorage, which survives a reload and not a closed tab. After a
 // reload the console attaches to them again; a shell another tab shows, or one
 // left when a tab was closed, is offered in the terminal's "in background" list.
 const KEY = "aicos.terminals";

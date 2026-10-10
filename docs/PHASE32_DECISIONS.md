@@ -8,7 +8,8 @@
 > la proposta concreta e che cosa serve per farla.
 >
 > **Decisioni dell'operatore del 2026-10-10**: TD-51 — il modello resta; TD-67 — iGPU accesa; TD-72 — sì, unificate;
-> TD-44 — resta così, i connettori li collega l'operatore. Resta in attesa di una decisione solo TD-53.
+> TD-44 — resta così, i connettori li collega l'operatore. TD-53 — sì, cookie `HttpOnly` (deciso lo stesso giorno).
+> Nessuna decisione resta in attesa.
 
 ## Decisioni da prendere
 
@@ -47,6 +48,11 @@
 - **Perché è una decisione**: cambia l'architettura scritta in ADR-024 §8 e il contratto di login per la console
   (oggi restituisce il token).
 - **Serve**: il tuo via libera per una revisione di ADR-024.
+- **Deciso il 2026-10-10: sì.** Fatto senza servire la console dallo stesso origin: console e control plane sullo
+  stesso host sono *same-site*, quindi bastano il cookie `HttpOnly`/`SameSite=Strict`/`Path=/api`, `credentials:
+  "include"` e CORS con credenziali per le sole origini dichiarate. Il login per il browser è
+  `POST /api/auth/session` (risponde utente e token anti-CSRF, non il token); `POST /api/auth/login` resta per
+  script e servizi, quindi il contratto cambia solo in modo additivo. ADR-024, revisione TD-53.
 
 ### TD-72 — Una sola forma di eliminazione (contratto non additivo)
 
