@@ -74,3 +74,10 @@ momento della creazione: l'operatore la accetta o la modifica, e il piano (PHASE
   terminali nel progetto.
 - Il contesto di una task (PHASE 11) è una lista di **percorsi**, non di contenuti copiati.
 - Nessun dato di progetto esce dalla macchina: i file restano dove l'operatore li vuole.
+
+## Revisione PHASE 33 (ADR-039, 2026-10-11) — W3 in lettura
+
+L'explorer dei file della console legge **ogni** file della cartella del progetto, non solo i documenti di W3:
+l'operatore vuole vedere il codice senza aprire un IDE. W2 vale com'è (nessuna uscita dalla cartella, link compresi);
+i file di credenziali sono elencati ma mai letti; solo le immagini sono servite come byte. **La scrittura non cambia**:
+l'API scrive ancora soltanto i documenti elencati in W3.

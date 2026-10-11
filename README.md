@@ -22,13 +22,15 @@ code graph, visual references), tasks with the orchestrator's decision,
 handoffs and reviews, agents and sub-agents with their Agent → Model → Provider → Execution Target
 binding, prompt engineering and harness, the **Ecosistema 3D** -- every agent and what defines it (model,
 provider, skills, knowledge, MCP, plugins, prompts, directives, roles, sub-agents) as an interactive 3D map
-read from the live configuration (ADR-037) --, Daily Work, the Second Brain graph, the Software Hub
+read from the live configuration (ADR-037) --, a **file explorer** opened from the top bar that shows every file
+of a project's folder, read-only, without an IDE (ADR-039), Daily Work, the Second Brain graph, the Software Hub
 (detection and launch of the programs installed on this machine), an integrated terminal
 (PowerShell, Claude Code, OpenCode), integrations (Open WebUI and 3D Omniverse embedded, started
 with the system), a Knowledge Hub of skills kept as editable Markdown files -- which also shows the
 skills of Claude Code, Claude Desktop, Codex and the other agent apps on the machine, installs new ones
 from online marketplaces, keeps copies in sync and checks for updates --, a Mockup Hub, models,
-usage and costs with budgets, and people with roles and a security log.
+usage and costs with budgets (Claude Code, Codex, Antigravity's per-model quotas, Kimi Code, the billed runs;
+only figures something measured), and people with roles and a security log.
 
 Claude Code, Codex, Antigravity, OpenCode and the agentic IDEs are used through their own apps and
 CLIs, never through the OpenAI or Anthropic APIs: the Master Orchestrator prepares the folder, the

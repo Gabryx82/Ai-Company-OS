@@ -429,6 +429,34 @@ L'API di GitHub, anonima, concede 60 richieste l'ora: un token (`AICOS_GITHUB_TO
 | `PUT /api/skill-hub/library/{key}/source {provider, ref}` | operatore | collega una skill della libreria alla sua fonte online (TD-80): `inStep`, o l'ultima versione diventa un aggiornamento da confermare |
 | `PUT /api/skill-hub/categories {name, category}` | operatore | categoria scelta a mano per nome (TD-76); `category` vuota torna all'euristica; `204` |
 
+### Consumi: Antigravity, Kimi Code, Copilot (PHASE 33, ADR-038)
+
+`GET /api/usage` ha tre fonti in più. **Antigravity** e **Antigravity IDE**: le quote di ogni modello che l'app ha
+salvato nel suo stato (`%APPDATA%\Antigravity…\User\globalStorage\state.vscdb`, letto in sola lettura; proprietà
+`aicos.usage.antigravity-home`, `aicos.usage.antigravity-ide-home`); si aggiornano quando l'app è aperta. **Kimi Code**:
+aggiungi la tua chiave (console di Kimi Code → API Keys) al `local.env` e riavvia il backend:
+
+```
+AICOS_KIMI_CODE_API_KEY=<la tua chiave Kimi Code>
+```
+
+La chiave va solo a `https://api.kimi.com/coding/v1/usages` (`aicos.usage.kimi-code-base-url`), mai altrove; senza,
+la scheda dice come aggiungerla. **GitHub Copilot**: nessun dato sul PC, solo il reset del primo del mese (00:00 UTC) e
+la pagina ufficiale.
+
+### File dei progetti (PHASE 33, ADR-039)
+
+Il bottone **File** nella barra in alto apre a sinistra l'albero della cartella di un progetto; un file si apre al posto
+della pagina (*Chiudi* o `Esc` per tornare). Sola lettura.
+
+| Endpoint | Chi | Note |
+|---|---|---|
+| `GET /api/projects/{id}/browse[?path=]` | tutti | una cartella, cartelle prima; al più 5000 voci (`truncated`) |
+| `GET /api/projects/{id}/browse/file?path=` | tutti | `TEXT` con il contenuto (UTF-8, fino a 2 MB), oppure `IMAGE`, `BINARY`, `WITHHELD` (file di credenziali, mai letti), `TOO_LARGE` |
+| `GET /api/projects/{id}/browse/image?path=` | tutti | i byte di un'immagine (fino a 10 MB); ogni altro file `400` |
+
+Fuori dalla cartella (`..`, percorsi assoluti, link verso l'esterno): `400 workspace-path-refused`.
+
 ### Errori
 
 Ogni risposta d'errore è un `ProblemDetail` (RFC 9457) con un `type` **stabile**

@@ -44,9 +44,44 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶▶▶▶▶▶▶▶▶ Registro chiuso e PHASE 30–32 in `master` — 2026-10-11
+## ▶▶▶▶▶▶▶▶▶▶ PHASE 33 — Consumi di Antigravity, Kimi Code e Copilot; i file dei progetti — 2026-10-11, in attesa di Human Final Review
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttive** dell'operatore del 2026-10-11: «aggiungere nella scheda dei consumi i consumi di Antigravity, GitHub
+  Copilot da VS Code e Kimi»; «un file tree explorer, in modo che io possa visualizzare tutti i file, di ogni progetto,
+  senza dover aprire gli IDE [...] aprire il file manager sulla sinistra cliccando un bottone».
+- **Branch**: `autonomous/phase-33-usage-and-files`, dalla punta di `master` locale (`3e6e5ec`, PHASE 30–32 e la
+  chiusura del registro, non ancora pushata). Non pushato; `master` intoccato.
+- **Consumi (ADR-038)**: Antigravity e Antigravity IDE — le quote per modello che l'app salva nel suo database di stato
+  (SQLite, chiave `antigravityUnifiedStateSync.userStatus`, protobuf osservato), in sola lettura, senza mai leggere nome
+  ed email dell'account; Kimi Code — `GET https://api.kimi.com/coding/v1/usages` (la richiesta della CLI ufficiale per
+  `/usage`) con la chiave **dell'operatore** `AICOS_KIMI_CODE_API_KEY` nel `local.env`, mai quella dell'app; Copilot —
+  nessun dato sul PC né API documentata per questo piano (`free_educational_quota`): solo il reset del primo del mese
+  alle 00:00 UTC e la pagina ufficiale, coerente con la decisione su TD-50. Nuova dipendenza `sqlite-jdbc` (versione
+  di Spring Boot).
+- **File dei progetti (ADR-039, rivede ADR-020 W3 in lettura)**: bottone **File** nella barra in alto, pannello a
+  sinistra con l'albero (cartelle lette quando si aprono), file aperto al posto della pagina che resta montata;
+  `GET /api/projects/{id}/browse`, `…/browse/file`, `…/browse/image`, sola lettura, dentro la cartella (W2), file di
+  credenziali elencati ma mai letti, testo UTF-8 fino a 2 MB, solo le immagini come byte.
+- **Migrazione**: V40 (allarga `quota_plans_source_check` e `quota_plans_window_check`), additiva.
+- **Contratto**: additivo — `UsageWindowResponse.modelQuotas`, `ModelQuotaResponse`, tre rotte e tre schemi
+  (`ProjectDirectoryListing`, `ProjectFileEntry`, `ProjectFileView`); enum allargati (`ANTIGRAVITY_LOCAL`,
+  `KIMI_CODE_API`, `PER_MODEL`).
+- **Mutazioni** viste rosse: credenziali lette, cartella fuori elencata, BOM conservato, float omesso letto come
+  «tutto residuo», reset del modello non usato, `used` non ricavato da `remaining`.
+- **Smoke dal vivo** (backend 8091, database `aicompany_p33`, console 5180; i tuoi 8081 e 5173 non toccati): i due
+  database reali di Antigravity letti (7 e 14 modelli, azzerati dall'ultimo salvataggio), Copilot con reset al
+  1° novembre, Kimi che chiede la chiave; un progetto sulla cartella di AI Company OS sfogliato, `package.json` aperto,
+  pannello sovrapposto a 375 px senza scorrimento orizzontale.
+- **Suite**: Java **727 (0 falliti; 2 saltati: i test dei link simbolici, che Windows non crea senza privilegi, girano in CI)**, console **151 (anche con la suite Java in parallelo)**, engine **73** (non toccato).
+- **Da sapere**: un test della Blueprint (`BlueprintView.test.tsx`, «shows the numbers…») è fallito una volta su
+  cinque esecuzioni della suite sotto carico, poi verde: attese di un secondo; non toccato da questa fase.
+- **Prossimo passo**: Human Final Review della fase; poi il merge in `master` e il push, insieme a quello già pronto.
+
+## ▶▶▶▶▶▶▶▶▶ Registro chiuso e PHASE 30–32 in `master` — 2026-10-11
+
+> Sostituita, dove diverge, dalla sezione qui sopra.
 
 - **Decisione dell'operatore** del 2026-10-11: «consideriamo tutti i debiti chiusi anche se non abbiamo effettuato
   azioni, aggiorna tutti i documenti necessari e mergia tutto in master». Chiusi per decisione, senza modifiche al
