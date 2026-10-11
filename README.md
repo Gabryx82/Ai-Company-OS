@@ -12,7 +12,7 @@ the operator approves plans and phases and reviews every outcome.
 |---|---|---|
 | **Control plane** | Java 21, Spring Boot 4.1, PostgreSQL 17, Flyway | `backend/` |
 | **AI Engine** (model gateway) | Python ≥ 3.11, FastAPI; providers `echo`, Ollama (local), Anthropic and OpenRouter (cloud, off without a key) | `ai-engine/` |
-| **Operator console** | React 19, TypeScript, Vite, d3-force, React Flow | `frontend/` |
+| **Operator console** | React 19, TypeScript, Vite, d3-force, React Flow, three.js (React Three Fiber) | `frontend/` |
 | **API contract** | OpenAPI, generated from the code and held to it by a test | `docs/api/openapi.json` |
 
 The console covers: dashboard, projects (type, stack, workspace folder, master prompt, plan,
@@ -20,7 +20,9 @@ phase approvals, documents, the **Blueprint** -- a node editor of the project's 
 their relations, read from the code and editable, whose code changes become proposals and tasks --,
 code graph, visual references), tasks with the orchestrator's decision,
 handoffs and reviews, agents and sub-agents with their Agent → Model → Provider → Execution Target
-binding, prompt engineering and harness, Daily Work, the Second Brain graph, the Software Hub
+binding, prompt engineering and harness, the **Ecosistema 3D** -- every agent and what defines it (model,
+provider, skills, knowledge, MCP, plugins, prompts, directives, roles, sub-agents) as an interactive 3D map
+read from the live configuration (ADR-037) --, Daily Work, the Second Brain graph, the Software Hub
 (detection and launch of the programs installed on this machine), an integrated terminal
 (PowerShell, Claude Code, OpenCode), integrations (Open WebUI and 3D Omniverse embedded, started
 with the system), a Knowledge Hub of skills kept as editable Markdown files -- which also shows the

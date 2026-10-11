@@ -11,7 +11,7 @@ import { BindingChain, DELIVERY_LABEL } from "../components/BindingChain";
 import { alreadyGone, ConfirmDeletion, DeleteButton, SelectionBar, useSelection } from "../components/Deletion";
 import { useIsAdmin } from "../context";
 
-const ORIGIN_LABEL = { SEED: "Seed iniziale", TEMPLATE: "Da template", USER: "Creato da te" } as const;
+export const ORIGIN_LABEL = { SEED: "Seed iniziale", TEMPLATE: "Da template", USER: "Creato da te" } as const;
 const KINDS = [
   { key: "SKILL", label: "Skill" }, { key: "KNOWLEDGE", label: "Knowledge" }, { key: "TOOL", label: "Tool" },
   { key: "MCP", label: "MCP" }, { key: "FRAMEWORK", label: "Framework" },
@@ -28,10 +28,11 @@ const FIELD_LABEL: Record<string, string> = {
  * served by which provider, working where -- and, for seed and template agents,
  * what is still the initial configuration and what a person changed.
  */
-export function Agents() {
+export function Agents({ selected: initial = null }: { selected?: string | null } = {}) {
   const api = useApi();
   const [agents, setAgents] = useState<AgentConfiguration[] | null>(null);
-  const [selected, setSelected] = useState<number | null>(null);
+  // ADR-037: #/agents/{id} opens that agent's editor -- the 3D view links here.
+  const [selected, setSelected] = useState<number | null>(() => (initial && /^\d+$/.test(initial) ? Number(initial) : null));
   const [problem, setProblem] = useState<unknown>(null);
   const [creating, setCreating] = useState(false);
   const [templates, setTemplates] = useState(false);

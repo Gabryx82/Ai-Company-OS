@@ -177,3 +177,29 @@ describe("Agents — deleting (ADR-035 §2)", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: /Backend Bot/ })).toBeNull());
   });
 });
+
+describe("Agents — opened from a link (ADR-037)", () => {
+  it("#/agents/{id} opens that agent's editor; without it, none", async () => {
+    const { fetcher } = fakeFetch({
+      "GET /api/ecosystem/bindings": () => ({ body: [agent(1, "Backend Bot"), agent(2, "Frontend Bot")] }),
+      "GET /api/agents/2/configuration": () => ({ body: agent(2, "Frontend Bot"), etag: '"20"' }),
+    });
+    const session: Session = { baseUrl: "http://localhost:8081", token: "t0123456789abcdef",
+      user: { id: 1, username: "admin", displayName: null, role: "ADMIN" } as Session["user"] };
+    const view = render(
+      <SessionContext.Provider value={session}>
+        <ApiContext.Provider value={new ControlPlane(session, fetcher)}><Agents selected="2" /></ApiContext.Provider>
+      </SessionContext.Provider>,
+    );
+    expect(await screen.findByRole("heading", { name: "Frontend Bot" })).toBeTruthy();
+    view.unmount();
+
+    render(
+      <SessionContext.Provider value={session}>
+        <ApiContext.Provider value={new ControlPlane(session, fetcher)}><Agents selected="non-un-numero" /></ApiContext.Provider>
+      </SessionContext.Provider>,
+    );
+    await screen.findByRole("button", { name: /Backend Bot/ });
+    expect(screen.queryByRole("heading", { name: "Frontend Bot" })).toBeNull();
+  });
+});

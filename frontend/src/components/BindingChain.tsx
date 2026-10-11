@@ -10,7 +10,7 @@ export const DELIVERY_LABEL: Record<Delivery, string> = {
   MANUAL: "lavoro manuale",
 };
 
-const BILLING_LABEL: Record<string, string> = { FREE: "gratuito", PAY_PER_TOKEN: "a consumo (API)", SUBSCRIPTION: "abbonamento, senza API" };
+export const BILLING_LABEL: Record<string, string> = { FREE: "gratuito", PAY_PER_TOKEN: "a consumo (API)", SUBSCRIPTION: "abbonamento, senza API" };
 
 /**
  * Agent → Model → Provider → Execution Target (ADR-025), four boxes in a row:

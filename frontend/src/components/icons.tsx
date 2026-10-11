@@ -31,6 +31,8 @@ const PATHS: Record<string, string> = {
   warning: "M12 3l10 18H2zM12 10v5M12 18h.01",
   logout: "M15 4h4v16h-4M10 16l-4-4 4-4M6 12h10",
   graph: "M6 6a2 2 0 1 0 0 .1M18 6a2 2 0 1 0 0 .1M12 18a2 2 0 1 0 0 .1M6 8l5 8M18 8l-5 8M8 6h8",
+  // ADR-037: the 3D map of the agent ecosystem -- a node joined to five around it.
+  network: "M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM5 4.5a1.5 1.5 0 1 0 0 .1M19 4.5a1.5 1.5 0 1 0 0 .1M4 18a1.5 1.5 0 1 0 0 .1M20 18a1.5 1.5 0 1 0 0 .1M12 21.5a1 1 0 1 0 0 .1M6 5.5l4.2 4.6M18 5.5l-4.2 4.6M5.3 17.2l4.7-3.4M18.7 17.2l-4.7-3.4M12 14.5v6",
   // PHASE 30: the one icon of every delete.
   trash: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
 };

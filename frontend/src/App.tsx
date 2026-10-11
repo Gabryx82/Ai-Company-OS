@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ApiProblem, ControlPlane, type Session } from "./api/client";
 import { ApiContext, SessionContext } from "./context";
 import { clearSession, DEFAULT_BASE_URL, loadSession, saveSession } from "./session";
@@ -23,6 +23,9 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Icon, type IconName } from "./components/icons";
 import { displayName } from "./preferences";
 
+// ADR-037: three.js and the 3D view load only when its tab is opened.
+const Ecosystem3D = lazy(() => import("./views/ecosystem3d/Ecosystem3D").then((m) => ({ default: m.Ecosystem3D })));
+
 // The sections of the ecosystem, grouped as the operator works: the work
 // itself, the tools that do it, and the resources behind them.
 const NAV: { group: string; items: { key: string; label: string; icon: IconName }[] }[] = [
@@ -31,6 +34,7 @@ const NAV: { group: string; items: { key: string; label: string; icon: IconName 
     { key: "projects", label: "Progetti", icon: "projects" },
     { key: "tasks", label: "Task", icon: "tasks" },
     { key: "agents", label: "Agenti", icon: "agents" },
+    { key: "ecosystem3d", label: "Ecosistema 3D", icon: "network" },
     { key: "daily", label: "Daily Work", icon: "daily" },
     { key: "brain", label: "Second Brain", icon: "brain" },
   ] },
@@ -212,7 +216,10 @@ export function App() {
             {page === "dashboard" && <Dashboard navigate={navigate} />}
             {page === "projects" && <Projects selected={detail} navigate={navigate} />}
             {page === "tasks" && <TaskBoard />}
-            {page === "agents" && <Agents />}
+            {page === "agents" && <Agents selected={detail} />}
+            {page === "ecosystem3d" && (
+              <Suspense fallback={<p className="muted">Carico la vista 3D…</p>}><Ecosystem3D navigate={navigate} /></Suspense>
+            )}
             {page === "daily" && <DailyWork />}
             {page === "brain" && <SecondBrain navigate={navigate} />}
             {page === "software" && <SoftwareHub selected={detail} navigate={navigate} />}
