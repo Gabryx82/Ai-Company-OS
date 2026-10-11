@@ -8,12 +8,21 @@ import { BlueprintView } from "./BlueprintView";
 // React Flow measures its container and its nodes; jsdom measures nothing.
 beforeAll(() => {
   class ResizeObserverStub {
+    private readonly pending = new Set<Element>();
     constructor(private readonly callback: ResizeObserverCallback) {}
+    // As in a browser, the elements observed in one render are reported in one callback: one at a time,
+    // React Flow's first fit would see block 1 alone and leave block 2 off the canvas.
     observe(target: Element) {
-      this.callback([{ target, contentRect: { width: 800, height: 600 } } as unknown as ResizeObserverEntry], this as unknown as ResizeObserver);
+      if (this.pending.size === 0) queueMicrotask(() => this.report());
+      this.pending.add(target);
     }
-    unobserve() {}
-    disconnect() {}
+    unobserve(target: Element) { this.pending.delete(target); }
+    disconnect() { this.pending.clear(); }
+    private report() {
+      const entries = [...this.pending].map((target) => ({ target, contentRect: { width: 800, height: 600 } }) as unknown as ResizeObserverEntry);
+      this.pending.clear();
+      if (entries.length > 0) this.callback(entries, this as unknown as ResizeObserver);
+    }
   }
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub;
   (globalThis as unknown as { DOMMatrixReadOnly: unknown }).DOMMatrixReadOnly = class {
