@@ -9,7 +9,11 @@
 >
 > **Decisioni dell'operatore del 2026-10-10**: TD-51 — il modello resta; TD-67 — iGPU accesa; TD-72 — sì, unificate;
 > TD-44 — resta così, i connettori li collega l'operatore. TD-53 — sì, cookie `HttpOnly` (deciso lo stesso giorno).
-> Nessuna decisione resta in attesa.
+>
+> **Decisione dell'operatore del 2026-10-11**: «consideriamo tutti i debiti chiusi anche se non abbiamo effettuato
+> azioni». Chiusi per decisione, senza modifiche al codice, i cinque vincoli esterni (TD-50, TD-74, TD-83, TD-86,
+> TD-87) e le quattro voci rimaste aperte fuori dal registro, registrate e chiuse lo stesso giorno (TD-93…TD-96,
+> sezione in fondo). **Nessun debito resta aperto e nessuna decisione resta in attesa.**
 
 ## Decisioni da prendere
 
@@ -82,9 +86,9 @@
 - **Deciso il 2026-10-10: resta così.** L'interfaccia nelle finestre dedicate; i connettori li colleghi tu, con le tue
   credenziali, quando vorrai (i token OAuth sono legati ad API a pagamento). Debito chiuso per decisione, senza modifiche.
 
-## Vincoli esterni (nessuna azione possibile oggi; si riverifica)
+## Vincoli esterni — chiusi per decisione il 2026-10-11
 
-| Debito | Che cosa manca, fuori da AI Company OS | Verifica fatta il 2026-10-08 | Quando riaprirlo |
+| Debito | Che cosa manca, fuori da AI Company OS | Verifica fatta il 2026-10-08 | Quando aprirne uno nuovo |
 |---|---|---|---|
 | TD-50 | Nessuna API espone le quote degli abbonamenti (Claude, ChatGPT/Codex) | Codex resta misurato fino all'ultima sessione locale; il reset settimanale di Claude si imposta una volta in *Utilizzo* | Quando Anthropic o OpenAI pubblicano un endpoint di utilizzo per gli abbonamenti |
 | TD-74 | Codex non dice la versione più recente di un plugin installato | `codex plugin list --json --available`: 24 installati con la loro versione, 5575 *non* installati con la loro; nessuna versione «disponibile» per gli installati. Codex li aggiorna da sé | Quando la CLI di Codex espone un `outdated` o la versione del marketplace per gli installati |
@@ -92,5 +96,25 @@
 | TD-86 | Claude Desktop riceve plugin e connettori remoti dall'account | Il Hub dice dove aggiungerli e apre l'app; installa i connettori locali in `claude_desktop_config.json` | Se Claude Desktop espone una CLI o un file per i plugin |
 | TD-87 | ChatGPT (chat) non tiene skill né app sul PC | Le app dell'account si vedono solo dalla cache di Codex | Se ChatGPT desktop salva in locale skill o app |
 
-Ognuno resta nel registro con stato «vincolo esterno» e la data di questa verifica: non è chiuso, perché la
-cosa che servirebbe non esiste ancora.
+Fino al 2026-10-11 ognuno restava nel registro con stato «vincolo esterno», perché la cosa che servirebbe non
+esisteva. **Deciso il 2026-10-11: chiusi tutti e cinque.** AI Company OS resta com'è: la scheda Consumi misura Codex
+dall'ultima sessione locale e il reset settimanale di Claude si imposta a mano (TD-50); il Hub non verifica le
+versioni dei plugin di Codex, che Codex aggiorna da sé (TD-74); dei connettori di claude.ai conosce i nomi già usati da
+Claude Code (TD-83); per plugin e connettori remoti di Claude Desktop dice dove aggiungerli e apre l'app (TD-86); di
+ChatGPT vede le app dalla cache di Codex (TD-87). Scartata per TD-50 la lettura degli endpoint interni che le app usano
+per `/usage` e `/status`: non documentati, e richiederebbero di leggere i token di accesso delle app. Un id chiuso non
+si riapre: se una delle condizioni dell'ultima colonna si avvera, si apre un debito nuovo con il prossimo id libero.
+
+## Fuori dal registro — registrati e chiusi per decisione il 2026-10-11
+
+Quattro voci restavano aperte nei documenti senza un id, quindi PHASE 32 non le aveva contate. Sono state registrate
+con i prossimi id liberi e chiuse lo stesso giorno, senza modifiche:
+
+| Debito | Che cosa era | Da dove | Deciso |
+|---|---|---|---|
+| TD-93 | Il `.env` del repository configura solo il database di Compose; il backend legge le variabili d'ambiente o `~/.aicos/local.env`. Cambiare password o porta solo nel `.env` fa divergere i due | Review di TASK-001, R3 | Resta così |
+| TD-94 | `postgres:17-alpine` è un tag mobile; nomi del container e del volume fissi | Review di TASK-001, R6 | Resta così: un PC, un'istanza |
+| TD-95 | Correzioni a `docs/audit/TECHNICAL_DEBT.md` (TD-06, TD-07, TD-14 (audit), percentuali di copertura) | Review di TASK-001 | L'audit resta la fotografia di TASK-000; i suoi debiti sono chiusi |
+| TD-96 | Le «domande di contratto aperte» di PHASE 2 ancora vere: task congelata visibile solo dal `409`, nessun distacco task → progetto né filtro «senza progetto», archiviazione ripetuta `409`, archiviati nell'elenco senza filtro, nessuna assegnazione in coda, nessuna paginazione né slug | `PROJECT_STATE.md`, PHASE 2 | Restano scelte di contratto |
+
+R5 (backend su loopback) e R7 (`.env.*` ignorati) della stessa review erano già chiusi da TASK-014.

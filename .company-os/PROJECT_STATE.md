@@ -44,9 +44,36 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶▶▶▶▶▶▶▶ PHASE 32 — Debito zero — COMPLETATA il 2026-10-08, in attesa di Human Final Review
+## ▶▶▶▶▶▶▶▶▶ Registro chiuso e PHASE 30–32 in `master` — 2026-10-11
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Decisione dell'operatore** del 2026-10-11: «consideriamo tutti i debiti chiusi anche se non abbiamo effettuato
+  azioni, aggiorna tutti i documenti necessari e mergia tutto in master». Chiusi per decisione, senza modifiche al
+  codice: i cinque vincoli esterni **TD-50, TD-74, TD-83, TD-86, TD-87**, e quattro voci che restavano aperte nei
+  documenti senza un id, registrate e chiuse lo stesso giorno: **TD-93** (R3 della review di TASK-001, `.env` e
+  backend), **TD-94** (R6, tag mobile di PostgreSQL e nomi di Compose fissi), **TD-95** (correzioni mai applicate
+  all'audit di TASK-000), **TD-96** (le domande di contratto di PHASE 2 ancora vere). **Nessun debito aperto** in
+  nessuno dei due spazi; prossimo id libero **TD-97**. Dettagli: `docs/PHASE32_DECISIONS.md`, `docs/DEBT_REGISTRY.md`.
+- **Ecosistema 3D** (ADR-037, direttiva del 2026-10-10): la scheda `#/ecosystem3d` disegna ogni agente e ciò che lo
+  definisce come grafo 3D navigabile, letto dalle API esistenti, in sola lettura; three.js e React Three Fiber in un
+  chunk caricato a richiesta. Nessuna modifica a control plane, database o contratto. Committata in questa
+  chiusura; il test della scheda in `App.test.tsx` aspetta il chunk fino a 10 s (con l'intera suite il
+  caricamento di three.js superava il secondo di default).
+- **Merge autorizzato** dall'operatore il 2026-10-11 (charter §8): `master` avanza da `f4c69b3` (punta di PHASE 29,
+  già su `origin`) alla punta di `autonomous/phase-32-debt-zero` con un **fast-forward** — PHASE 30, PHASE 31,
+  PHASE 32, l'Ecosistema 3D e questa chiusura; nessun merge commit, nessun force. Ogni altro branch locale e remoto
+  era già contenuto. **Push su `origin` non ancora eseguito**: lo decide l'operatore.
+- **Suite** prima del merge: Java **705 (0 falliti, 1 saltato: link simbolici su Windows)**, console **142** (due esecuzioni consecutive), engine **73**; typecheck
+  della console pulito.
+- **Pulizia dei documenti**: titoli delle fasi già integrate (non più «in attesa di Human Final Review»), sezioni
+  storiche «Debito aperto rilevante» e «Domande di contratto» allineate al registro, percorso del file dei segreti in
+  `docs/RUNNING.md` (TD-79), handoff `docs/handoff/FINAL_HANDOFF_PHASE_32.md`.
+- **Prossimo passo**: il push di `master` su `origin`, quando l'operatore lo autorizza.
+
+## ▶▶▶▶▶▶▶▶ PHASE 32 — Debito zero — COMPLETATA il 2026-10-08, integrata in `master` il 2026-10-11
+
+> Sostituita, dove diverge, dalla sezione qui sopra.
 
 - **Direttiva** dell'operatore (2026-10-07): «non restare debiti aperti alla fine, nel senso che devi
   risolverli tutti» — confermata con una domanda esplicita: **tutti i debiti del registro**, sia
@@ -54,7 +81,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   decisioni umane, hard stop del charter §5) si portano all'operatore con una proposta, non si chiudono
   per finta.
 - **Branch**: `autonomous/phase-32-debt-zero`, dalla punta di PHASE 31 (`021404c`, che contiene anche le
-  correzioni del terminale e dei pannelli). Non pushato; `master` intoccato.
+  correzioni del terminale e dei pannelli). Non pushato; integrato in `master` il 2026-10-11 (sezione sopra).
 - **Regola di chiusura** (charter §4): ogni debito chiuso ha un test che fallisce se il difetto torna,
   visto rosso per mutazione.
 - **Chiusi**: lo spazio dell'audit intero (TD-01, 02, 03, 05, 06, 09, 10, 14, 15, 16, 19, 20, 21,
@@ -68,8 +95,8 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   (anteprima `DeletionPreview`, `DELETE` `204`, contratto non additivo); iGPU accesa (`OLLAMA_IGPU_ENABLE=1`, TD-67);
   TD-51 chiuso tenendo `llama3.2:3b`; TD-44 chiuso lasciando le finestre dedicate (i connettori li collega l'operatore);
   TD-53 sì: il token di sessione della console è un cookie `HttpOnly` con token anti-CSRF (`POST /api/auth/session`).
-- **Restano aperti** (`docs/PHASE32_DECISIONS.md`): solo vincoli esterni, riverificati il 2026-10-08: TD-50, TD-74,
-  TD-83, TD-86, TD-87. Nessuna decisione dell'operatore in attesa.
+- **Restavano aperti** (`docs/PHASE32_DECISIONS.md`): solo vincoli esterni, riverificati il 2026-10-08: TD-50, TD-74,
+  TD-83, TD-86, TD-87. Chiusi per decisione dell'operatore il 2026-10-11 (sezione sopra).
 - **Migrazioni nuove**: V31 (transizioni), V32 (livello nelle review), V33 (id a blocchi del Blueprint), V34
   (azioni AI), V35 (ruoli serviti), V36 (voci congedate), V37 (categorie scelte), V38 (porta di OpenCode),
   V39 (connettori installati dal Hub): tutte additive.
@@ -87,9 +114,10 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   `ResponseContractTest` confronta ogni risposta JSON della suite con `docs/api/openapi.json`. Un record nuovo
   con un campo che può essere null va annotato, o la suite lo segnala con schema, campo e rotta.
 - **Suite**: Java **705** verdi (1 saltato preesistente), console **110**, engine **73**.
-- **Prossimo passo**: Human Final Review della fase; le decisioni di `docs/PHASE32_DECISIONS.md`.
+- **Prossimo passo**: Human Final Review della fase; le decisioni di `docs/PHASE32_DECISIONS.md`. Fatti entrambi il
+  2026-10-11 (sezione sopra).
 
-## ▶▶▶▶▶▶▶ PHASE 31 — Il Knowledge Hub come punto unico — COMPLETATA il 2026-10-07, in attesa di Human Final Review
+## ▶▶▶▶▶▶▶ PHASE 31 — Il Knowledge Hub come punto unico — COMPLETATA il 2026-10-07, integrata in `master` il 2026-10-11
 
 - **Direttiva** del 2026-10-07: trasformare il Knowledge Hub in un punto unico per le skill e le knowledge di
   tutti gli agenti — quelle della libreria e quelle installate con Claude Desktop, Codex e le altre app,
@@ -155,7 +183,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review
   (`docs/handoff/FINAL_HANDOFF_PHASE_31.md`).
 
-## ▶▶▶▶▶▶ PHASE 30 — Ciò che si crea qui si elimina qui — COMPLETATA il 2026-10-06, in attesa di Human Final Review
+## ▶▶▶▶▶▶ PHASE 30 — Ciò che si crea qui si elimina qui — COMPLETATA il 2026-10-06, integrata in `master` il 2026-10-11
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
 
@@ -202,7 +230,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review
   (`docs/handoff/FINAL_HANDOFF_PHASE_30.md`).
 
-## ▶▶▶▶▶ PHASE 29 — Upgrade dei modelli locali — COMPLETATA il 2026-10-01, in attesa di Human Final Review
+## ▶▶▶▶▶ PHASE 29 — Upgrade dei modelli locali — COMPLETATA il 2026-10-01, integrata in `master` (`f4c69b3`)
 
 > Sostituita, dove diverge, da PHASE 30 qui sopra.
 
@@ -226,7 +254,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Debiti**: TD-64 aperto e chiuso nella fase; aperti TD-65…TD-67; prossimo libero **TD-68**.
   Handoff: `docs/handoff/FINAL_HANDOFF_PHASE_29.md`.
 
-## ▶▶▶▶ PHASE 28 — Project Blueprint — COMPLETATA il 2026-09-29, in attesa di Human Final Review
+## ▶▶▶▶ PHASE 28 — Project Blueprint — COMPLETATA il 2026-09-29, integrata in `master` (`f4c69b3`)
 
 > Sostituita, dove diverge, da PHASE 29 qui sopra.
 
@@ -259,7 +287,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Prossimo passo autonomo**: nessuno — fermo per la Human Final Review (`FINAL_HANDOFF.md`, sezione
   PHASE 28).
 
-## ▶▶▶ Consolidamento — PHASE 15 → PHASE 27 — COMPLETATO il 2026-09-25, in attesa di Human Final Review
+## ▶▶▶ Consolidamento — PHASE 15 → PHASE 27 — COMPLETATO il 2026-09-25, integrato in `master` (`f4c69b3`)
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
 
@@ -287,7 +315,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   al primo avvio riceverà V12–V24 e l'admin con la password di quel file.
 - **Debiti nuovi**: TD-53…TD-56; chiusi TD-40, TD-42; TD-46 chiuso in parte; prossimo libero **TD-57**.
 
-## ▶▶ Riallineamento V2 — PHASE 8 → PHASE 14 — COMPLETATO il 2026-09-24, in attesa di Human Final Review
+## ▶▶ Riallineamento V2 — PHASE 8 → PHASE 14 — COMPLETATO il 2026-09-24, integrato in `master` il 2026-09-25
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
 
@@ -324,7 +352,7 @@ funziona, e proseguire autonomamente. Gap analysis: `docs/realignment/GAP_ANALYS
 - **Prossimo passo autonomo**: fermo per la Human Final Review (`FINAL_HANDOFF.md`). Dopo:
   PHASE 15 (terminale PTY integrato), poi l'ordine di `ROADMAP_V2.md`.
 
-## ▶ Blocco autonomo PHASE 3 → PHASE 7 — COMPLETATO il 2026-09-23, in attesa di Human Final Review
+## ▶ Blocco autonomo PHASE 3 → PHASE 7 — COMPLETATO il 2026-09-23, integrato in `master` il 2026-09-25
 
 > **Leggere prima questa sezione.** Il resto del file descrive lo stato fino a TASK-012 ed è
 > conservato; dove questa sezione e il resto divergono, **vale questa**.
@@ -1000,10 +1028,14 @@ Il merge di PHASE 1 in `master` resta il gesto con cui un umano accetta il lavor
 
 ## Debito aperto rilevante
 
+**Al 2026-10-11 nessun debito è aperto**: l'elenco completo, con lo stato di ciascuno, è in
+**`docs/DEBT_REGISTRY.md`**. Ciò che segue in questa sezione è lo storico di PHASE 1–2, conservato com'era: i debiti
+che vi compaiono come aperti sono tutti chiusi.
+
 > ⚠️ **Due spazi di identificatori.** `docs/audit/TECHNICAL_DEBT.md` (TASK-000) e la numerazione
 > qui sotto usano lo stesso formato `TD-NN` per debiti diversi: **`TD-14`, `TD-19`, `TD-20`,
 > `TD-21`, `TD-22` collidono**. Questa numerazione è **autoritativa**, il prossimo id libero è
-> **`TD-38`**, e la mappa completa è in **`docs/DEBT_REGISTRY.md`** — da leggere prima di chiudere
+> **`TD-97`**, e la mappa completa è in **`docs/DEBT_REGISTRY.md`** — da leggere prima di chiudere
 > o citare un `TD-NN`.
 
 **Chiusi da TASK-004**: TD-19 (componente ciclo di vita), **TD-24**, **TD-25**.
@@ -1060,18 +1092,22 @@ riportarlo avrebbe aperto creazione, modifica e transizioni a qualunque origine 
 collaterale. Non chiude TD-11 — la policy CORS resta una decisione da prendere — ma la superficie
 oggi è più stretta di quanto il debito descrivesse.
 
-Rilievi della review TASK-001 ancora aperti: **R3** (`.env` non configura il processo Maven),
-**R5** (`server.address` non vincolato a loopback), **R6** (tag immagine mobile), **R7**
-(`.gitignore` non copre `.env.*`). Correzioni documentali ai file `docs/audit/*` di TASK-000:
-da applicare. `docs/RUNNING.md` non documenta `/api/projects` né gli endpoint di TASK-003.
+Rilievi della review TASK-001: **R5** (`server.address` non vincolato a loopback) e **R7**
+(`.gitignore` non copre `.env.*`) chiusi da TASK-014; **R3** (`.env` non configura il processo Maven)
+e **R6** (tag immagine mobile) chiusi per decisione dell'operatore il 2026-10-11 come **TD-93** e
+**TD-94**. Correzioni documentali ai file `docs/audit/*` di TASK-000: chiuse per decisione come
+**TD-95** (l'audit resta la fotografia di TASK-000). `docs/RUNNING.md` documenta `/api/projects` e
+gli endpoint di TASK-003.
 
 ## Failure aperti
 
-**Nessuno.** 329/329 Java, 51/51 engine, 14/14 console (2026-09-23), e CI verde sui branch pushati.
+**Nessuno.** Java 705 (0 falliti, 1 saltato: link simbolici su Windows), console 142/142, engine 73/73 (2026-10-11).
 
-## Domande di contratto aperte
+## Domande di contratto (chiuse il 2026-10-11)
 
-Da decidere insieme, quando esisterà un client reale che le pone:
+Scritte in PHASE 2, «da decidere insieme, quando esisterà un client reale che le pone». Le risolte: filtro
+per stato su `GET /api/tasks`, transizioni (TD-37), TD-34, TD-35. Le altre restano scelte di contratto, chiuse
+per decisione dell'operatore il 2026-10-11 come **TD-96**. L'elenco com'era:
 
 - nessun modo di sapere in anticipo che un task è congelato: lo si scopre dal `409`;
 - nessun `DELETE /api/tasks/{id}/project`: `NULL → non NULL` resta a senso unico;
@@ -1109,6 +1145,9 @@ Da decidere insieme, quando esisterà un client reale che le pone:
 - Voice Interaction Layer, Payments / quota monitoring, 3D Omniverse integration
 
 ## Immediate goal
+**Al 2026-10-11**: tutto integrato in `master`, nessun debito aperto; resta il push di `master` su `origin`
+(sezione in cima). Lo storico che segue è com'era:
+
 **Blocco PHASE 3–7 completato, da accettare.** Il Company OS è utilizzabile dal vivo: un operatore
 autenticato crea un task, lo assegna all'agente suggerito, lo fa eseguire da un modello locale
 attraverso l'AI Engine, ne legge l'esito e lo chiude — da API o dalla console.

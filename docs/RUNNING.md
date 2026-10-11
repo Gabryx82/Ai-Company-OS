@@ -407,7 +407,7 @@ Plugin e connettori del Marketplace si installano con le CLI delle app: `claude`
 `<aicos.home>/backups/app-config/`.
 
 L'API di GitHub, anonima, concede 60 richieste l'ora: un token (`AICOS_GITHUB_TOKEN` in
-`%USERPROFILE%.aicoslocal.env`, di sola lettura, nessuno scope per i repository pubblici; proprietà
+`%USERPROFILE%\.aicos\local.env`, di sola lettura, nessuno scope per i repository pubblici; proprietà
 `aicos.hub.github-token`) le porta a 5000. Va solo a `api.github.com` e non si scrive da nessuna parte (TD-79).
 
 | Endpoint | Chi | Note |
