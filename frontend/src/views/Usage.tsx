@@ -13,7 +13,12 @@ const STATUS: Record<UsageWindow["status"], { label: string; tone: string; hint:
   CONFIGURATION_NEEDED: { label: "Da configurare", tone: "badge badge-warn", hint: "Indica quando si azzera la finestra" },
 };
 const WINDOW: Record<UsageWindow["windowKind"], string> = {
-  ROLLING_5H: "5 ore", DAILY: "Giornaliera", WEEKLY: "Settimanale", MONTHLY: "Mensile",
+  ROLLING_5H: "5 ore", DAILY: "Giornaliera", WEEKLY: "Settimanale", MONTHLY: "Mensile", PER_MODEL: "Per modello",
+};
+// Who a window belongs to, as the operator calls it; an unknown subject shows as it is.
+const SUBJECT: Record<string, string> = {
+  "claude-code": "Claude Code", codex: "Codex", anthropic: "Anthropic API", openrouter: "OpenRouter", gemini: "Gemini",
+  antigravity: "Antigravity", "antigravity-ide": "Antigravity IDE", copilot: "GitHub Copilot", kimi: "Kimi Code",
 };
 const DAYS = ["", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
@@ -34,7 +39,8 @@ function tokens(n: number | null): string {
 /**
  * Consumption of the cloud models and when each window resets. A number is
  * shown only when something measured it: Codex records its own rate limits,
- * Claude Code records tokens, the control plane records its runs.
+ * Claude Code records tokens, the control plane records its runs, Antigravity
+ * keeps the quota of every model, Kimi Code answers with the operator's key.
  */
 export function Usage() {
   const api = useApi();
@@ -63,15 +69,16 @@ export function Usage() {
       </div>
       <ProblemNote problem={problem} />
       <div className="notice">
-        Nessuna API pubblica espone le quote degli abbonamenti Claude o ChatGPT. Qui compaiono solo dati reali:
-        i limiti che <strong>Codex</strong> registra nelle sue sessioni locali, i token che <strong>Claude Code</strong>
-        registra per messaggio, e le run che AI Company OS ha inviato a provider a consumo.
+        Nessuna API pubblica espone le quote degli abbonamenti Claude, ChatGPT o Copilot. Qui compaiono solo dati reali:
+        i limiti che <strong>Codex</strong> registra nelle sue sessioni locali, i token che <strong>Claude Code</strong>{" "}
+        registra per messaggio, le quote per modello che <strong>Antigravity</strong> salva nel suo stato, la quota che{" "}
+        <strong>Kimi Code</strong> restituisce alla tua chiave, e le run che AI Company OS ha inviato a provider a consumo.
       </div>
 
       <div className="grid grid-2">
         {subjects.map((subject) => (
           <div key={subject} className="card">
-            <div className="card-head"><h2>{subject}</h2></div>
+            <div className="card-head"><h2>{SUBJECT[subject] ?? subject}</h2></div>
             {windows!.filter((w) => w.subject === subject).map((w) => (
               <div key={w.key} className="list-item" style={{ display: "grid", gap: 6 }}>
                 <div className="row">
@@ -93,6 +100,25 @@ export function Usage() {
                     {tokens(w.tokens)} token{w.outputTokens !== null ? ` · ${tokens(w.outputTokens)} in uscita` : ""}
                     {w.byModel.length > 0 && <> · {w.byModel.map((m) => `${m.model}: ${tokens(m.tokens ?? null)}`).join(", ")}</>}
                   </div>
+                )}
+                {w.modelQuotas.length > 0 && (
+                  // Open while something is measured; when every quota has reset since, the list is all zeros.
+                  <details className="model-quotas-box" open={w.status === "MEASURED"}>
+                  <summary className="muted">Quote dei {w.modelQuotas.length} modelli</summary>
+                  <ul className="model-quotas" aria-label={`Quote dei modelli — ${w.name}`}>
+                    {w.modelQuotas.map((m) => (
+                      <li key={m.model}>
+                        <span className="model-quota-name">{m.model}</span>
+                        <div className={m.usedPercent > 80 ? "progress warn" : "progress"}>
+                          <span style={{ width: `${Math.min(100, m.usedPercent)}%` }} /></div>
+                        <strong>{m.usedPercent.toFixed(0)}%</strong>
+                        <span className="muted" title={m.resetsAt ? new Date(m.resetsAt).toLocaleString("it-IT") : undefined}>
+                          {m.resetSinceObservation ? "azzerata" : `reset tra ${countdown(m.resetsAt, now)}`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  </details>
                 )}
                 {w.detail && <div className="muted" style={{ fontSize: 12 }}>{w.detail}</div>}
                 <div className="row" style={{ fontSize: 12 }}>

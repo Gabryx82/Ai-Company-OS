@@ -19,12 +19,15 @@ import { DailyWork } from "./views/DailyWork";
 import { SecondBrain } from "./views/SecondBrain";
 import { MockupHub } from "./views/MockupHub";
 import { GlobalSearch } from "./components/GlobalSearch";
+import { FileExplorer, FileViewer, type OpenedFile } from "./components/FileExplorer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Icon, type IconName } from "./components/icons";
 import { displayName } from "./preferences";
 
 // ADR-037: three.js and the 3D view load only when its tab is opened.
 const Ecosystem3D = lazy(() => import("./views/ecosystem3d/Ecosystem3D").then((m) => ({ default: m.Ecosystem3D })));
+
+const FILES_OPEN_KEY = "aicos.files.open";
 
 // The sections of the ecosystem, grouped as the operator works: the work
 // itself, the tools that do it, and the resources behind them.
@@ -75,6 +78,19 @@ export function App() {
   const [terminalKept, setTerminalKept] = useState(() => storedTerminals().length > 0);
   const [terminalsRunning, setTerminalsRunning] = useState(0);
   useEffect(() => { if (route.page === "terminal") setTerminalKept(true); }, [route.page]);
+  // PHASE 33 (ADR-039): the file explorer on the left, opened with the button in the top bar;
+  // a file opens where the page was, and going to another page closes it.
+  const [filesOpen, setFilesOpen] = useState(() => {
+    try { return localStorage.getItem(FILES_OPEN_KEY) === "1"; } catch { return false; }
+  });
+  const [opened, setOpened] = useState<OpenedFile | null>(null);
+  useEffect(() => { setOpened(null); }, [route.page, route.detail]);
+  const toggleFiles = useCallback(() => {
+    setFilesOpen((open) => {
+      try { localStorage.setItem(FILES_OPEN_KEY, open ? "0" : "1"); } catch { /* the panel still toggles */ }
+      return !open;
+    });
+  }, []);
 
   // A refreshed anti-forgery token (another tab signed in) is kept for the next reload.
   const api = useMemo(() => (session ? new ControlPlane(session, undefined, saveSession) : null), [session]);
@@ -148,12 +164,13 @@ export function App() {
   const user = session.user;
   const name = user?.displayName || user?.username || displayName();
   const { page, detail } = route;
+  const projectInView = page === "projects" && detail && /^\d+$/.test(detail) ? Number(detail) : null;
   const pageLabel = NAV.flatMap((g) => g.items).find((item) => item.key === page)?.label ?? page;
 
   return (
     <ApiContext.Provider value={api}>
       <SessionContext.Provider value={session}>
-      <div className="app">
+      <div className={filesOpen ? "app files-open" : "app"}>
         <nav className="sidebar" aria-label="Sections">
           <div className="brand">
             <span className="brand-mark"><Icon name="sparkle" size={18} /></span>
@@ -184,8 +201,17 @@ export function App() {
             <button className="btn btn-small" onClick={logout}><Icon name="logout" size={14} /> Esci</button>
           </div>
         </nav>
+        {filesOpen && (
+          <ErrorBoundary label="File">
+            <FileExplorer projectHint={projectInView} opened={opened} onOpen={setOpened} onClose={toggleFiles} />
+          </ErrorBoundary>
+        )}
         <main className="main">
           <header className="topbar">
+            <button className="btn files-toggle" aria-pressed={filesOpen} onClick={toggleFiles}
+                    title={filesOpen ? "Chiudi il pannello dei file" : "Apri i file dei progetti"}>
+              <Icon name="files" size={15} /> File
+            </button>
             <GlobalSearch navigate={navigate} />
             <span className="spacer" />
             <span className="muted">{new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</span>
@@ -211,7 +237,12 @@ export function App() {
               <button className="btn btn-small" onClick={() => navigate("settings", "account")}>Cambiala ora</button>
             </div>
           )}
-          <div className="content">
+          {opened && (
+            <ErrorBoundary label="File">
+              <FileViewer file={opened} onClose={() => setOpened(null)} />
+            </ErrorBoundary>
+          )}
+          <div className="content" hidden={opened !== null}>
             <ErrorBoundary key={page} label={pageLabel}>
             {page === "dashboard" && <Dashboard navigate={navigate} />}
             {page === "projects" && <Projects selected={detail} navigate={navigate} />}

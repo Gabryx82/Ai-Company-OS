@@ -3,10 +3,12 @@ package com.aicompany.backend.usage.service;
 import com.aicompany.backend.api.Precondition;
 import com.aicompany.backend.api.RequestValidationException;
 import com.aicompany.backend.usage.exception.QuotaPlanNotFoundException;
+import com.aicompany.backend.usage.local.AntigravityQuota;
 import com.aicompany.backend.usage.local.ClaudeCodeUsage;
 import com.aicompany.backend.usage.local.CodexRateLimits;
 import com.aicompany.backend.usage.model.QuotaPlan;
 import com.aicompany.backend.usage.model.WindowKind;
+import com.aicompany.backend.usage.remote.KimiCodeUsage;
 import com.aicompany.backend.usage.repository.QuotaPlanRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -21,12 +23,15 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -56,10 +61,26 @@ public class UsageService {
     public record ModelTokens(String model, long tokens) {
     }
 
+    /**
+     * PHASE 33 (ADR-038): one model's quota where every model has its own (Antigravity).
+     * {@code resetSinceObservation}: its reset passed after the app last saved it.
+     */
+    public record ModelQuota(String model, double usedPercent, Instant resetsAt, boolean resetSinceObservation) {
+    }
+
     public record Window(QuotaPlan plan, Status status, Double usedPercent, Long tokens, Long outputTokens,
                          Instant windowStart, Instant nextResetAt, Instant observedAt, String detail,
-                         List<ModelTokens> byModel) {
+                         List<ModelTokens> byModel, List<ModelQuota> modelQuotas) {
+
+        public Window(QuotaPlan plan, Status status, Double usedPercent, Long tokens, Long outputTokens,
+                      Instant windowStart, Instant nextResetAt, Instant observedAt, String detail,
+                      List<ModelTokens> byModel) {
+            this(plan, status, usedPercent, tokens, outputTokens, windowStart, nextResetAt, observedAt, detail,
+                    byModel, List.of());
+        }
     }
+
+    private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("d/M/yyyy HH:mm");
 
     private static final Duration CACHE = Duration.ofSeconds(30);
 
@@ -67,17 +88,21 @@ public class UsageService {
     private final JdbcTemplate jdbc;
     private final CodexRateLimits codex;
     private final ClaudeCodeUsage claude;
+    private final List<AntigravityQuota> antigravity;
+    private final KimiCodeUsage kimi;
     private final Clock clock;
 
     private volatile List<ClaudeCodeUsage.Entry> claudeEntries;
     private volatile Instant claudeReadAt = Instant.MIN;
 
     public UsageService(QuotaPlanRepository plans, JdbcTemplate jdbc, CodexRateLimits codex, ClaudeCodeUsage claude,
-                        Clock clock) {
+                        List<AntigravityQuota> antigravity, KimiCodeUsage kimi, Clock clock) {
         this.plans = plans;
         this.jdbc = jdbc;
         this.codex = codex;
         this.claude = claude;
+        this.antigravity = antigravity;
+        this.kimi = kimi;
         this.clock = clock;
     }
 
@@ -99,6 +124,8 @@ public class UsageService {
                 case CLAUDE_CODE_LOCAL -> out.add(claudeWindow(plan, now));
                 case ENGINE_RUNS -> out.add(engineWindow(plan, now));
                 case MANUAL -> out.add(manualWindow(plan, now));
+                case ANTIGRAVITY_LOCAL -> out.add(antigravityWindow(plan, now));
+                case KIMI_CODE_API -> out.add(kimiWindow(plan));
             }
         }
         return out;
@@ -196,6 +223,70 @@ public class UsageService {
                         .toList());
     }
 
+    /**
+     * PHASE 33 (ADR-038): the quotas the app last saved, one per model. A model whose reset
+     * has passed since is shown at zero with no reset: the app has not been opened since.
+     */
+    private Window antigravityWindow(QuotaPlan plan, Instant now) {
+        Optional<AntigravityQuota.Snapshot> snapshot = antigravity.stream()
+                .filter(source -> source.subject().equals(plan.getSubject()))
+                .findFirst()
+                .flatMap(AntigravityQuota::latest);
+        if (snapshot.isEmpty()) {
+            return new Window(plan, Status.NO_DATA, null, null, null, null, null, null,
+                    "Nessuno stato salvato da questa app su questa macchina: si scrive quando l'app è aperta e connessa",
+                    List.of());
+        }
+        Instant saved = snapshot.get().observedAt();
+        if (snapshot.get().models().isEmpty()) {
+            return new Window(plan, Status.NO_DATA, null, null, null, null, null, saved,
+                    "Lo stato salvato non contiene quote dei modelli in una forma riconosciuta", List.of());
+        }
+        List<ModelQuota> models = snapshot.get().models().stream()
+                .map(m -> m.resetsAt() != null && !now.isBefore(m.resetsAt())
+                        ? new ModelQuota(m.model(), 0.0, null, true)
+                        : new ModelQuota(m.model(), m.usedPercent(), m.resetsAt(), false))
+                .toList();
+        String savedText = "Stato salvato dall'app il " + WHEN.format(saved.atZone(ZoneId.systemDefault()));
+        if (models.stream().allMatch(ModelQuota::resetSinceObservation)) {
+            return new Window(plan, Status.RESET_SINCE_OBSERVATION, 0.0, null, null, null, null, saved,
+                    savedText + "; da allora ogni quota si è azzerata e l'app non è stata riaperta", List.of(), models);
+        }
+        double used = models.stream().mapToDouble(ModelQuota::usedPercent).max().orElse(0);
+        Instant nextReset = models.stream()
+                .filter(m -> m.resetsAt() != null && m.usedPercent() > 0)
+                .map(ModelQuota::resetsAt)
+                .min(Comparator.naturalOrder())
+                .orElseGet(() -> models.stream().map(ModelQuota::resetsAt).filter(Objects::nonNull)
+                        .min(Comparator.naturalOrder()).orElse(null));
+        return new Window(plan, Status.MEASURED, used, null, null, null, nextReset, saved,
+                savedText + ". La percentuale in alto è quella del modello più consumato", List.of(), models);
+    }
+
+    /** PHASE 33 (ADR-038): Kimi Code's own figures, the weekly quota or the five-hour window. */
+    private Window kimiWindow(QuotaPlan plan) {
+        Optional<KimiCodeUsage.Report> report = kimi.report();
+        if (report.isEmpty()) {
+            return new Window(plan, Status.CONFIGURATION_NEEDED, null, null, null, null, null, null,
+                    "Aggiungi la tua chiave Kimi Code (console di Kimi Code, API Keys) come AICOS_KIMI_CODE_API_KEY "
+                            + "nel file local.env e riavvia il backend", List.of());
+        }
+        KimiCodeUsage.Report r = report.get();
+        if (r.problem() != null) {
+            return new Window(plan, Status.NO_DATA, null, null, null, null, null, r.observedAt(), r.problem(), List.of());
+        }
+        boolean fiveHours = plan.getWindowKind() == WindowKind.ROLLING_5H;
+        Optional<KimiCodeUsage.Quota> quota = fiveHours ? r.window(300) : r.weekly();
+        if (quota.isEmpty()) {
+            return new Window(plan, Status.NO_DATA, null, null, null, null, null, r.observedAt(),
+                    "Kimi Code non ha restituito questa finestra", List.of());
+        }
+        KimiCodeUsage.Quota q = quota.get();
+        Instant start = q.resetsAt() == null ? null : q.resetsAt().minus(fiveHours ? Duration.ofHours(5) : Duration.ofDays(7));
+        return new Window(plan, Status.MEASURED, q.usedPercent(), null, null, start, q.resetsAt(), r.observedAt(),
+                "Risposta di Kimi Code", List.of());
+    }
+
     private Window manualWindow(QuotaPlan plan, Instant now) {
         Optional<Instant[]> bounds = anchoredBounds(plan, now);
         return bounds
@@ -268,7 +359,7 @@ public class UsageService {
                 }
                 yield Optional.of(new Instant[]{start.toInstant(), start.plusMonths(1).toInstant()});
             }
-            case ROLLING_5H -> Optional.empty();
+            case ROLLING_5H, PER_MODEL -> Optional.empty();
         };
     }
 
@@ -288,7 +379,7 @@ public class UsageService {
                 ZonedDateTime start = local.truncatedTo(ChronoUnit.DAYS).withDayOfMonth(1);
                 yield new Instant[]{start.toInstant(), start.plusMonths(1).toInstant()};
             }
-            case ROLLING_5H -> new Instant[]{now.minus(Duration.ofHours(5)), null};
+            case ROLLING_5H, PER_MODEL -> new Instant[]{now.minus(Duration.ofHours(5)), null};
         };
     }
 }

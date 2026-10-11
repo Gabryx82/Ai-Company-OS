@@ -36,6 +36,24 @@ class UsageApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$[?(@.key == 'anthropic-api-daily')].nextResetAt", hasItems(notNullValue())));
     }
 
+    /** PHASE 33 (ADR-038): no Antigravity state, no Kimi key, and Copilot has nothing on this machine. */
+    @Test
+    void theNewSourcesSayWhatIsMissingInsteadOfShowingANumber() throws Exception {
+        mockMvc.perform(get("/api/usage"))
+                .andExpect(jsonPath("$[?(@.key == 'antigravity-models')].status").value("NO_DATA"))
+                .andExpect(jsonPath("$[?(@.key == 'antigravity-ide-models')].status").value("NO_DATA"))
+                .andExpect(jsonPath("$[?(@.key == 'antigravity-models')].modelQuotas[*]").isEmpty())
+                .andExpect(jsonPath("$[?(@.key == 'kimi-code-weekly')].status").value("CONFIGURATION_NEEDED"))
+                .andExpect(jsonPath("$[?(@.key == 'kimi-code-5h')].detail",
+                        hasItems(org.hamcrest.Matchers.containsString("AICOS_KIMI_CODE_API_KEY"))))
+                .andExpect(jsonPath("$[?(@.key == 'kimi-code-5h')].usedPercent", hasItems(org.hamcrest.Matchers.nullValue())))
+                // Copilot: no figure, but its documented reset -- the first of the month, 00:00 UTC
+                .andExpect(jsonPath("$[?(@.key == 'copilot-monthly')].status").value("NO_DATA"))
+                .andExpect(jsonPath("$[?(@.key == 'copilot-monthly')].resetZone").value("UTC"))
+                .andExpect(jsonPath("$[?(@.key == 'copilot-monthly')].nextResetAt",
+                        hasItems(org.hamcrest.Matchers.matchesPattern("\\d{4}-\\d{2}-01T00:00:00Z"))));
+    }
+
     @Test
     void aWeeklyWindowWithoutAnAnchorAsksForOneThenCountsFromIt() throws Exception {
         String etag = currentTag();

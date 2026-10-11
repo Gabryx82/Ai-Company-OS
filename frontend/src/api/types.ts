@@ -124,6 +124,12 @@ export type CatalogModel = S["ModelResponse"] & {
   lifecycle: NonNullable<S["ModelResponse"]["lifecycle"]>;
   version: number;
 };
+// --- PHASE 33: the file explorer (ADR-039) ------------------------------------
+export type ProjectFileEntry = S["ProjectFileEntry"];
+export type ProjectDirectoryListing = S["ProjectDirectoryListing"];
+export type ProjectFileView = S["ProjectFileView"];
+export type ModelQuota = S["ModelQuotaResponse"];
+
 export type ModelCatalog = {
   models: CatalogModel[];
   uncatalogued: { key: string; provider: string; available: boolean; billed: boolean }[];

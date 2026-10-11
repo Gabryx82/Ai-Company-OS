@@ -14,6 +14,10 @@ public enum UsageSource {
     CLAUDE_CODE_LOCAL,
     /** {@code task_runs}: tokens of the runs this control plane sent to a billed provider. */
     ENGINE_RUNS,
+    /** PHASE 33 (ADR-038): the model quotas an Antigravity app keeps in its state database. */
+    ANTIGRAVITY_LOCAL,
+    /** PHASE 33 (ADR-038): Kimi Code's own answer to {@code GET /usages}, with the operator's key. */
+    KIMI_CODE_API,
     /** Nothing to measure: the window is shown with its configured reset only. */
     MANUAL
 }

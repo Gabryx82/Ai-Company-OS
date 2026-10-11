@@ -1364,6 +1364,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/browse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["browse"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/browse/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["browseFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/browse/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["browseImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/code-graph": {
         parameters: {
             query?: never;
@@ -3734,6 +3782,14 @@ export interface components {
             defaultModel: string | null;
             models: components["schemas"]["ModelInfo"][];
         };
+        ModelQuotaResponse: {
+            model: string;
+            resetSinceObservation: boolean;
+            /** Format: date-time */
+            resetsAt: string | null;
+            /** Format: double */
+            usedPercent: number;
+        };
         ModelRef: {
             catalogued: boolean;
             displayName: string;
@@ -3963,6 +4019,34 @@ export interface components {
             description?: string;
             name: string;
         };
+        ProjectDirectoryListing: {
+            entries: components["schemas"]["ProjectFileEntry"][];
+            path: string;
+            truncated: boolean;
+        };
+        ProjectFileEntry: {
+            /** @enum {string} */
+            kind: "DIRECTORY" | "FILE" | "LINK";
+            /** Format: date-time */
+            modifiedAt: string | null;
+            name: string;
+            path: string;
+            /** Format: int64 */
+            size: number | null;
+        };
+        ProjectFileView: {
+            content: string | null;
+            contentType: string | null;
+            /** @enum {string} */
+            kind: "TEXT" | "IMAGE" | "BINARY" | "WITHHELD" | "TOO_LARGE";
+            /** Format: date-time */
+            modifiedAt: string | null;
+            name: string;
+            path: string;
+            reason: string | null;
+            /** Format: int64 */
+            size: number;
+        };
         ProjectProfileRequest: {
             /** @enum {string} */
             autonomyLevel?: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
@@ -4093,20 +4177,20 @@ export interface components {
         };
         Report: {
             /** Format: int32 */
-            added: number;
+            added?: number;
             /** Format: date-time */
-            at: string;
-            events: components["schemas"]["Event"][];
-            firstRun: boolean;
-            libraryCreated: string[];
-            libraryInvalid: string[];
-            libraryUpdated: string[];
+            at?: string;
+            events?: components["schemas"]["Event"][];
+            firstRun?: boolean;
+            libraryCreated?: string[];
+            libraryInvalid?: string[];
+            libraryUpdated?: string[];
             /** Format: int32 */
-            modified: number;
+            modified?: number;
             /** Format: int32 */
-            removed: number;
+            removed?: number;
             /** Format: int32 */
-            total: number;
+            total?: number;
         };
         ResourceRef: {
             configuration: string;
@@ -4629,6 +4713,7 @@ export interface components {
             detail: string | null;
             key: string;
             limitNote: string | null;
+            modelQuotas: components["schemas"]["ModelQuotaResponse"][];
             name: string;
             /** Format: date-time */
             nextResetAt: string | null;
@@ -4641,7 +4726,7 @@ export interface components {
             resetWeekday: number | null;
             resetZone: string | null;
             /** @enum {string} */
-            source: "CODEX_LOCAL" | "CLAUDE_CODE_LOCAL" | "ENGINE_RUNS" | "MANUAL";
+            source: "CODEX_LOCAL" | "CLAUDE_CODE_LOCAL" | "ENGINE_RUNS" | "ANTIGRAVITY_LOCAL" | "KIMI_CODE_API" | "MANUAL";
             /** @enum {string} */
             status: "MEASURED" | "COUNTED" | "RESET_SINCE_OBSERVATION" | "NO_DATA" | "CONFIGURATION_NEEDED";
             subject: string;
@@ -4653,7 +4738,7 @@ export interface components {
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            windowKind: "ROLLING_5H" | "DAILY" | "WEEKLY" | "MONTHLY";
+            windowKind: "ROLLING_5H" | "DAILY" | "WEEKLY" | "MONTHLY" | "PER_MODEL";
             /** Format: date-time */
             windowStart: string | null;
         };
@@ -7233,6 +7318,78 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["BlueprintScanReport"][];
+                };
+            };
+        };
+    };
+    browse: {
+        parameters: {
+            query?: {
+                path?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectDirectoryListing"];
+                };
+            };
+        };
+    };
+    browseFile: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectFileView"];
+                };
+            };
+        };
+    };
+    browseImage: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
                 };
             };
         };

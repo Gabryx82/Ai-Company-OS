@@ -35,6 +35,11 @@ const PATHS: Record<string, string> = {
   network: "M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM5 4.5a1.5 1.5 0 1 0 0 .1M19 4.5a1.5 1.5 0 1 0 0 .1M4 18a1.5 1.5 0 1 0 0 .1M20 18a1.5 1.5 0 1 0 0 .1M12 21.5a1 1 0 1 0 0 .1M6 5.5l4.2 4.6M18 5.5l-4.2 4.6M5.3 17.2l4.7-3.4M18.7 17.2l-4.7-3.4M12 14.5v6",
   // PHASE 30: the one icon of every delete.
   trash: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
+  // PHASE 33 (ADR-039): the file explorer -- the folder tree, a link, copying a path.
+  files: "M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2H3zM3 10h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 14h6",
+  chevron: "M9 6l6 6-6 6",
+  link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
+  copy: "M8 8h11v11H8zM16 8V5H5v11h3",
 };
 
 export type IconName = keyof typeof PATHS;

@@ -36,5 +36,35 @@
     "source": "MANUAL", "windowKind": "DAILY",
     "limitNote": "Nessun dato locale: imposta l'ora del reset se vuoi il conto alla rovescia.",
     "usageUrl": "https://gemini.google.com/app"
+  },
+  {
+    "key": "antigravity-models", "name": "Antigravity — quote dei modelli", "subject": "antigravity",
+    "source": "ANTIGRAVITY_LOCAL", "windowKind": "PER_MODEL",
+    "limitNote": "Ogni modello ha la sua quota e il suo reset; l'app li riceve da Google e li salva mentre è aperta.",
+    "usageUrl": "https://antigravity.google"
+  },
+  {
+    "key": "antigravity-ide-models", "name": "Antigravity IDE — quote dei modelli", "subject": "antigravity-ide",
+    "source": "ANTIGRAVITY_LOCAL", "windowKind": "PER_MODEL",
+    "limitNote": "Ogni modello ha la sua quota e il suo reset; l'IDE li riceve da Google e li salva mentre è aperto.",
+    "usageUrl": "https://antigravity.google"
+  },
+  {
+    "key": "copilot-monthly", "name": "GitHub Copilot — premium request del mese", "subject": "copilot",
+    "source": "MANUAL", "windowKind": "MONTHLY", "resetTime": "00:00", "resetZone": "UTC",
+    "limitNote": "Le premium request si azzerano il primo del mese alle 00:00 UTC. Né VS Code né la CLI di Copilot ne salvano il conteggio su questa macchina.",
+    "usageUrl": "https://github.com/settings/copilot"
+  },
+  {
+    "key": "kimi-code-5h", "name": "Kimi Code — finestra di 5 ore", "subject": "kimi",
+    "source": "KIMI_CODE_API", "windowKind": "ROLLING_5H",
+    "limitNote": "Chiesta a Kimi con la tua chiave Kimi Code (AICOS_KIMI_CODE_API_KEY nel local.env).",
+    "usageUrl": "https://www.kimi.com/code/console"
+  },
+  {
+    "key": "kimi-code-weekly", "name": "Kimi Code — quota settimanale", "subject": "kimi",
+    "source": "KIMI_CODE_API", "windowKind": "WEEKLY",
+    "limitNote": "Si rinnova ogni 7 giorni dalla data dell'abbonamento; chiesta a Kimi con la tua chiave Kimi Code.",
+    "usageUrl": "https://www.kimi.com/code/console"
   }
 ]

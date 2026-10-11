@@ -22,7 +22,7 @@ import type {
   BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
   BlueprintVocabulary, HubInstalled, HubFoundDetail, HubSyncReport, HubSyncEvent, HubMarketplace, HubSearchResults,
   HubResult, HubPreview, HubInstallResult, HubCopyTarget, HubDeployResult, HubUpdates, HubApplied,
-  HubOfferKind, HubExtensionPreview, HubInstallOutcome,
+  HubOfferKind, HubExtensionPreview, HubInstallOutcome, ProjectDirectoryListing, ProjectFileView,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -388,6 +388,27 @@ export class ControlPlane {
 
   documents(id: number): Promise<WorkspaceDocuments> {
     return this.plain("GET", `/api/projects/${id}/documents`);
+  }
+
+  // --- PHASE 33: the file explorer (ADR-039), read-only ------------------------
+
+  /** One folder of the project; an empty path is the project folder itself. */
+  browse(id: number, path = ""): Promise<ProjectDirectoryListing> {
+    return this.plain("GET", `/api/projects/${id}/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`);
+  }
+
+  browseFile(id: number, path: string): Promise<ProjectFileView> {
+    return this.plain("GET", `/api/projects/${id}/browse/file?path=${encodeURIComponent(path)}`);
+  }
+
+  /** An image of the project as an object URL the caller revokes. */
+  async browseImage(id: number, path: string): Promise<string> {
+    const response = await this.send(this.base() + `/api/projects/${id}/browse/image?path=${encodeURIComponent(path)}`);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new ApiProblem(response.status, (text ? safeJson(text) : {}) as object);
+    }
+    return URL.createObjectURL(await response.blob());
   }
 
   async readFile(id: number, path: string): Promise<string> {

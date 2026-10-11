@@ -75,6 +75,12 @@
 			<version>3.28.2</version>
 		</dependency>
 		<dependency>
+			<!-- PHASE 33 (ADR-038): Antigravity keeps the quotas Google sends it in its
+			     state database (SQLite); read only, the version managed by Spring Boot. -->
+			<groupId>org.xerial</groupId>
+			<artifactId>sqlite-jdbc</artifactId>
+		</dependency>
+		<dependency>
 			<!-- TASK-021: the OpenAPI description of the API, API only (no UI).
 			     Served authenticated at /v3/api-docs, and exported to
 			     docs/api/openapi.json by OpenApiContractTest, from which the
