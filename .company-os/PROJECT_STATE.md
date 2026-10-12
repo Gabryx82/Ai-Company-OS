@@ -44,15 +44,21 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶▶▶▶▶▶▶▶▶▶ PHASE 33 — Consumi di Antigravity, Kimi Code e Copilot; i file dei progetti — 2026-10-11, in attesa di Human Final Review
+## ▶▶▶▶▶▶▶▶▶▶ PHASE 33 — Consumi di Antigravity, Kimi Code e Copilot; i file dei progetti — 2026-10-11/13, integrata in `master` e pushata il 2026-10-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
 
 - **Direttive** dell'operatore del 2026-10-11: «aggiungere nella scheda dei consumi i consumi di Antigravity, GitHub
   Copilot da VS Code e Kimi»; «un file tree explorer, in modo che io possa visualizzare tutti i file, di ogni progetto,
-  senza dover aprire gli IDE [...] aprire il file manager sulla sinistra cliccando un bottone».
+  senza dover aprire gli IDE [...] aprire il file manager sulla sinistra cliccando un bottone»; del 2026-10-12: «un
+  pulsante "Apri con" [...] tra quelli del software hub [...] suggerire automaticamente il programma più adatto»,
+  «un menu a tendina con rinomina, rimuovi ecc. se clicco con il tasto destro su un file».
 - **Branch**: `autonomous/phase-33-usage-and-files`, dalla punta di `master` locale (`3e6e5ec`, PHASE 30–32 e la
-  chiusura del registro, non ancora pushata). Non pushato; `master` intoccato.
+  chiusura del registro). **Merge e push autorizzati** dall'operatore il 2026-10-13 («mergia in master e pusha»):
+  `master` avanza alla punta del branch (`1bf38b1`) con un **fast-forward** e `origin/master` va da `f4c69b3` a
+  `1bf38b1` — con questa fase salgono anche i 38 commit di PHASE 30–32, che erano solo locali. Nessun merge commit,
+  nessun force. Prima del push i commit sono stati scorsi in cerca di credenziali: solo valori finti di test e fixture.
+  Il branch resta locale, fermo alla sua punta.
 - **Consumi (ADR-038)**: Antigravity e Antigravity IDE — le quote per modello che l'app salva nel suo database di stato
   (SQLite, chiave `antigravityUnifiedStateSync.userStatus`, protobuf osservato), in sola lettura, senza mai leggere nome
   ed email dell'account; Kimi Code — `GET https://api.kimi.com/coding/v1/usages` (la richiesta della CLI ufficiale per
@@ -87,7 +93,16 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Suite**: Java **751 (0 falliti; 2 saltati: i test dei link simbolici, che Windows non crea senza privilegi, girano in CI)**, console **168**, engine **73** (non toccato).
 - **Da sapere**: un test della Blueprint (`BlueprintView.test.tsx`, «shows the numbers…») è fallito una volta su
   cinque esecuzioni della suite sotto carico, poi verde: attese di un secondo; non toccato da questa fase.
-- **Prossimo passo**: Human Final Review della fase; poi il merge in `master` e il push, insieme a quello già pronto.
+- **Fuori dal repository** (direttive dell'operatore del 2026-10-13, sulla sua macchina): i progetti di AntiGravity,
+  ClaudeCode, Codex, Devin, Idea, NetBeans, Pycharm, Verdent, VSCode, Warp e Webstorm `…Projects` spostati in
+  `C:\Users\gabry\AI-Company-Projects` (struttura piatta; i doppioni con suffisso d'origine), il contenuto di
+  «Progetti Personali» portato su di un livello; le cartelle svuotate nel Cestino. I virtualenv di MoviesESeries e
+  PyCharmMiscProject ricreati con gli stessi pacchetti; IntelliJ, PyCharm, WebStorm e NetBeans aprono i nuovi progetti
+  in quella cartella e i loro percorsi (recenti, attendibili, interpreti) sono stati riscritti. Nel database `aicompany`
+  ogni progetto spostato è un progetto registrato, archiviato come l'operatore ha scelto (47 progetti, ogni cartella
+  esistente); i cinque la cui cartella l'operatore ha messo nel Cestino sono stati tolti, con un `DATA_DELETED` nel
+  registro di sicurezza.
+- **Prossimo passo**: nessuno in sospeso; si attendono nuove direttive.
 
 ## ▶▶▶▶▶▶▶▶▶ Registro chiuso e PHASE 30–32 in `master` — 2026-10-11
 
@@ -114,7 +129,8 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Pulizia dei documenti**: titoli delle fasi già integrate (non più «in attesa di Human Final Review»), sezioni
   storiche «Debito aperto rilevante» e «Domande di contratto» allineate al registro, percorso del file dei segreti in
   `docs/RUNNING.md` (TD-79), handoff `docs/handoff/FINAL_HANDOFF_PHASE_32.md`.
-- **Prossimo passo**: il push di `master` su `origin`, quando l'operatore lo autorizza.
+- **Prossimo passo**: il push di `master` su `origin`, quando l'operatore lo autorizza. *Fatto il 2026-10-13, insieme
+  a PHASE 33 (sezione sopra).*
 
 ## ▶▶▶▶▶▶▶▶ PHASE 32 — Debito zero — COMPLETATA il 2026-10-08, integrata in `master` il 2026-10-11
 
