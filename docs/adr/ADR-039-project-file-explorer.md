@@ -65,3 +65,12 @@ apertura nel visualizzatore, credenziali, immagine, `Esc`, il bottone della barr
 cambia sezione). Mutazioni viste rosse: credenziali lette, cartella fuori elencata, BOM conservato. Smoke dal vivo
 (porta 8091, console 5180): un progetto sulla cartella di AI Company OS, `frontend/` aperta, `package.json` mostrato;
 a 375 px il pannello si sovrappone senza scorrimento orizzontale.
+
+## Revisione (ADR-040, 2026-10-13) — non più di sola lettura
+
+Su direttiva dell'operatore del 2026-10-12 l'explorer ha un menu contestuale (tasto destro, tasto menu, Maiusc+F10):
+Rinomina (F2), Nuovo file, Nuova cartella, Sposta nel Cestino (Canc), Mostra in Esplora risorse, Copia percorso e
+percorso relativo, e «Apri con» il programma del Software Hub che il tipo di file suggerisce — anche come pulsante del
+visualizzatore. Il §5 non vale più per rinominare, creare e togliere: si toglie solo verso il **Cestino di Windows**,
+mai sopra un nome esistente, mai la struttura del workspace, `.git` o un documento a cui punta un record. Il
+visualizzatore resta di sola lettura. Regole e API: ADR-040.

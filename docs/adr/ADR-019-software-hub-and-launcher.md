@@ -73,3 +73,11 @@ servizi di terze parti è una shell desktop con WebView, rinviata a PHASE 18 die
   oggi; il control plane sa già lanciare processi. Da riconsiderare se il terminale integrato
   (PHASE 15) lo richiede.
 - **Salvare «installato» nel DB**: diventa falso (ADR-018 §5).
+
+## Revisione PHASE 33 (ADR-040, 2026-10-13) — I2 con un file
+
+«Apri con» aggiunge **un** argomento variabile, e solo per le voci il cui catalogo lo prevede (`file_args`, V41): un
+file della cartella del progetto, indicato con un percorso **relativo** che il server risolve dentro la cartella
+(ADR-020 W2, link compresi) e passa **assoluto** dove il catalogo mette `{file}`, come argomento intero. Lo riceve
+solo un `.exe` risolto dal rilevamento — mai un `.cmd`/`.bat` (passerebbe da `cmd.exe`), mai un AppID, mai il
+programma predefinito di Windows (che per `.py` è l'interprete). Il resto di I1–I6 è com'era.

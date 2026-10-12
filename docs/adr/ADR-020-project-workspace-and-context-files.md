@@ -81,3 +81,10 @@ L'explorer dei file della console legge **ogni** file della cartella del progett
 l'operatore vuole vedere il codice senza aprire un IDE. W2 vale com'è (nessuna uscita dalla cartella, link compresi);
 i file di credenziali sono elencati ma mai letti; solo le immagini sono servite come byte. **La scrittura non cambia**:
 l'API scrive ancora soltanto i documenti elencati in W3.
+
+## Revisione PHASE 33 (ADR-040, 2026-10-13) — W3 in scrittura, dall'explorer
+
+Dal menu contestuale dell'explorer l'operatore rinomina, crea file e cartelle vuoti e sposta nel Cestino di Windows
+**qualsiasi** elemento della cartella del progetto, uno alla volta. Restano fuori: la struttura del workspace
+(`MASTER_PROMPT.md`, `AGENTS.md`, `CLAUDE.md`, `.aicos/`), `.git`, i documenti a cui punta un record, i collegamenti.
+W2 e W4 valgono come prima. Il contenuto dei file si scrive ancora solo per i documenti di W3.

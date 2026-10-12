@@ -239,3 +239,13 @@ Disabilitare (software) e scollegare (libreria) restano i gesti reversibili senz
 di «spedita» resta la presenza della chiave nel file del catalogo, non il campo `origin`.
 Test: `CatalogRetirementApiTest` (rosso con un `CatalogBootstrap` che ignora i congedi),
 `ResourceDeletionApiTest`, `SoftwareHubApiTest`; console `Models.test.tsx`, `Settings.test.tsx`.
+
+## Revisione PHASE 33 (ADR-040, 2026-10-13) — i file del progetto, verso il Cestino
+
+Il §5 diceva che non esiste un'API capace di togliere percorsi arbitrari. Ora l'explorer toglie un file o una cartella
+scelti dall'operatore nella cartella del progetto — ma **non li elimina**: `ProjectFileOperations` li sposta nel Cestino
+di Windows (`SHFileOperation` con `FOF_ALLOWUNDO`, solo dischi fissi, cartelle oltre 10.000 elementi o 1 GB rifiutate),
+da dove si ripristinano. `ManagedFiles` resta l'unico punto che elimina davvero, per le cartelle che AI Company OS
+gestisce. La forma è quella del §3: `GET …/browse/deletion` è un `DeletionPreview`, `DELETE …/browse` risponde `204`,
+i blocchi sono la struttura del workspace, `.git`, i collegamenti, i documenti dei record, l'assenza di un Cestino.
+Nella tabella del §9 si aggiunge: *File o cartella del progetto* — Elimina: **verso il Cestino**, operatore.

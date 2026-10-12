@@ -64,7 +64,17 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   sinistra con l'albero (cartelle lette quando si aprono), file aperto al posto della pagina che resta montata;
   `GET /api/projects/{id}/browse`, `…/browse/file`, `…/browse/image`, sola lettura, dentro la cartella (W2), file di
   credenziali elencati ma mai letti, testo UTF-8 fino a 2 MB, solo le immagini come byte.
-- **Migrazione**: V40 (allarga `quota_plans_source_check` e `quota_plans_window_check`), additiva.
+- **«Apri con» e menu contestuale (ADR-040, direttive del 2026-10-12; rivede ADR-039 §5, ADR-019 I2, ADR-020 W3 in
+  scrittura, ADR-035 §5)**: nel visualizzatore «Apri con ‹programma consigliato›» e l'elenco dei programmi del Software
+  Hub che aprono file, consigliati per nome, estensione e tipo (testo/binario), ricalcolati a ogni file; nell'albero il
+  tasto destro apre Apri, Apri con, Mostra in Esplora risorse (`SHOpenFolderAndSelectItems`), Copia percorso, Rinomina
+  (F2), Nuovo file/cartella, Sposta nel Cestino (Canc) — **nel Cestino di Windows, mai eliminato per sempre**; mai sopra
+  un nome; struttura del workspace, `.git`, collegamenti e documenti dei record protetti. `file_args`/`file_types` nel
+  catalogo (V41) per dieci programmi; un file passa solo a un `.exe`, dentro la cartella del progetto. Due problemi
+  nuovi: `workspace-entry-exists`, `workspace-entry-in-use`. Dal vivo: Notepad++ avviato su un file, rinomina, Cestino,
+  Esplora risorse con un nome con spazio e virgola (con `explorer /select,` apriva Documenti: corretto).
+- **Migrazione**: V40 (allarga `quota_plans_source_check` e `quota_plans_window_check`) e V41 (`software.file_args`,
+  `software.file_types`, `software_file_args_check`, i valori per le voci spedite), additive.
 - **Contratto**: additivo — `UsageWindowResponse.modelQuotas`, `ModelQuotaResponse`, tre rotte e tre schemi
   (`ProjectDirectoryListing`, `ProjectFileEntry`, `ProjectFileView`); enum allargati (`ANTIGRAVITY_LOCAL`,
   `KIMI_CODE_API`, `PER_MODEL`).
@@ -74,7 +84,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   database reali di Antigravity letti (7 e 14 modelli, azzerati dall'ultimo salvataggio), Copilot con reset al
   1° novembre, Kimi che chiede la chiave; un progetto sulla cartella di AI Company OS sfogliato, `package.json` aperto,
   pannello sovrapposto a 375 px senza scorrimento orizzontale.
-- **Suite**: Java **727 (0 falliti; 2 saltati: i test dei link simbolici, che Windows non crea senza privilegi, girano in CI)**, console **151 (anche con la suite Java in parallelo)**, engine **73** (non toccato).
+- **Suite**: Java **751 (0 falliti; 2 saltati: i test dei link simbolici, che Windows non crea senza privilegi, girano in CI)**, console **168**, engine **73** (non toccato).
 - **Da sapere**: un test della Blueprint (`BlueprintView.test.tsx`, «shows the numbers…») è fallito una volta su
   cinque esecuzioni della suite sotto carico, poi verde: attese di un secondo; non toccato da questa fase.
 - **Prossimo passo**: Human Final Review della fase; poi il merge in `master` e il push, insieme a quello già pronto.

@@ -23,7 +23,8 @@ handoffs and reviews, agents and sub-agents with their Agent → Model → Provi
 binding, prompt engineering and harness, the **Ecosistema 3D** -- every agent and what defines it (model,
 provider, skills, knowledge, MCP, plugins, prompts, directives, roles, sub-agents) as an interactive 3D map
 read from the live configuration (ADR-037) --, a **file explorer** opened from the top bar that shows every file
-of a project's folder, read-only, without an IDE (ADR-039), Daily Work, the Second Brain graph, the Software Hub
+of a project's folder without an IDE (ADR-039) -- with a right-click menu to rename, create, move to the Windows
+Recycle Bin and open a file with the Software Hub program that suits it, suggested from its type (ADR-040) --, Daily Work, the Second Brain graph, the Software Hub
 (detection and launch of the programs installed on this machine), an integrated terminal
 (PowerShell, Claude Code, OpenCode), integrations (Open WebUI and 3D Omniverse embedded, started
 with the system), a Knowledge Hub of skills kept as editable Markdown files -- which also shows the

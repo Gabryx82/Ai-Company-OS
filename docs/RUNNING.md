@@ -457,6 +457,28 @@ della pagina (*Chiudi* o `Esc` per tornare). Sola lettura.
 
 Fuori dalla cartella (`..`, percorsi assoluti, link verso l'esterno): `400 workspace-path-refused`.
 
+### «Apri con» e menu contestuale dei file (PHASE 33, ADR-040)
+
+Nel visualizzatore, **Apri con ‹programma›** apre il file con il programma del Software Hub che il tipo di file
+suggerisce; la freccia accanto li elenca tutti. Nell'albero, il tasto destro (o il tasto menu, o Maiusc+F10) apre il
+menu: Apri, Apri con, Mostra in Esplora risorse, Copia percorso, Rinomina (`F2`), Nuovo file, Nuova cartella, Sposta nel
+Cestino (`Canc`).
+
+| Endpoint | Chi | Note |
+|---|---|---|
+| `POST /api/software/{key}/launch` `{projectId, path}` | tutti | apre il file con la voce del catalogo, dove `fileArgs` mette `{file}`; solo un `.exe`, solo dentro la cartella |
+| `POST /api/projects/{id}/browse/rename` `{path, name}` | tutti | nella stessa cartella; mai sopra un nome (`409 workspace-entry-exists`) |
+| `POST /api/projects/{id}/browse/create` `{parent, name, kind}` | tutti | `FILE` o `DIRECTORY` vuoti, `201` |
+| `GET /api/projects/{id}/browse/deletion?path=` | tutti | `DeletionPreview` dello spostamento nel Cestino |
+| `DELETE /api/projects/{id}/browse?path=` | tutti | nel **Cestino di Windows**, `204`; mai eliminato per sempre |
+| `POST /api/projects/{id}/browse/reveal` `{path}` | tutti | Esplora risorse con l'elemento selezionato |
+
+Non si rinominano né si tolgono la struttura del workspace, `.git`, i collegamenti e i documenti a cui punta una task,
+una fase o un handoff (`409 workspace-entry-in-use` / `409 deletion-blocked`); un progetto archiviato si legge e basta.
+Il catalogo dice come ogni programma apre un file (`fileArgs`) e per quali file è la scelta giusta (`fileTypes`): V41
+li imposta per VS Code, Antigravity IDE, IntelliJ, PyCharm, WebStorm, Visual Studio, NetBeans, Notepad++, Blender e
+MySQL Workbench.
+
 ### Errori
 
 Ogni risposta d'errore è un `ProblemDetail` (RFC 9457) con un `type` **stabile**
