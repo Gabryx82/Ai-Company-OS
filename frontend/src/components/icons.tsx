@@ -40,6 +40,11 @@ const PATHS: Record<string, string> = {
   chevron: "M9 6l6 6-6 6",
   link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
   copy: "M8 8h11v11H8zM16 8V5H5v11h3",
+  // ADR-040: the explorer's context menu -- rename, a new file, a new folder, back to the menu.
+  pencil: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4",
+  "file-plus": "M6 3h8l4 4v14H6zM14 3v4h4M12 11v6M9 14h6",
+  "folder-plus": "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 10v6M9 13h6",
+  back: "M15 6l-6 6 6 6",
 };
 
 export type IconName = keyof typeof PATHS;

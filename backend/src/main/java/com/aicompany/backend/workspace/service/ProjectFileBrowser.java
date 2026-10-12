@@ -190,7 +190,7 @@ public class ProjectFileBrowser {
         return file;
     }
 
-    private static Entry entry(Path root, Path child) {
+    static Entry entry(Path root, Path child) {
         String name = child.getFileName().toString();
         String rel = WorkspacePaths.relativeText(root, child);
         try {

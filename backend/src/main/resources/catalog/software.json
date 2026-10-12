@@ -8,7 +8,8 @@
     "launchKind": "DESKTOP", "appId": "Google.AntigravityIDE",
     "executable": "%LOCALAPPDATA%\\Programs\\Antigravity IDE\\Antigravity IDE.exe", "openFolder": true,
     "executionTarget": true,
-    "configuration": "Nessuna API pubblica: il prompt dell'handoff si trova in .aicos/handoffs/ e va incollato nel pannello agente."
+    "configuration": "Nessuna API pubblica: il prompt dell'handoff si trova in .aicos/handoffs/ e va incollato nel pannello agente.",
+    "fileArgs": ["{folder}", "{file}"]
   },
   {
     "key": "antigravity", "name": "Antigravity", "category": "AGENTIC_IDE",
@@ -32,7 +33,10 @@
     "capabilities": ["java", "kotlin", "spring", "maven", "gradle", "jpa", "debugging", "refactoring", "agent-execution", "sql"],
     "projectTypes": ["BACKEND", "API", "FULL_STACK", "DESKTOP"],
     "launchKind": "DESKTOP",
-    "executable": "%ProgramFiles%\\JetBrains\\IntelliJ IDEA *\\bin\\idea64.exe", "openFolder": true
+    "executable": "%ProgramFiles%\\JetBrains\\IntelliJ IDEA *\\bin\\idea64.exe", "openFolder": true,
+    "fileArgs": ["{file}"],
+    "fileTypes": [".java", ".kt", ".kts", ".groovy", ".gradle", ".properties", ".sql", "pom.xml", "build.gradle",
+      "build.gradle.kts", "settings.gradle", "settings.gradle.kts"]
   },
   {
     "key": "kimi", "name": "Kimi", "category": "AGENTIC_IDE",
@@ -58,7 +62,12 @@
     "projectTypes": ["WEB_APP", "FULL_STACK", "AUTOMATION", "DATA", "AI_ML", "API", "OTHER"],
     "launchKind": "DESKTOP", "appId": "Microsoft.VisualStudioCode",
     "executable": "%LOCALAPPDATA%\\Programs\\Microsoft VS Code\\Code.exe", "openFolder": true,
-    "requirements": "Estensione continue.continue installata (rilevata 2.0.0)"
+    "requirements": "Estensione continue.continue installata (rilevata 2.0.0)",
+    "fileArgs": ["{folder}", "{file}"],
+    "fileTypes": [".md", ".mdx", ".json", ".jsonc", ".json5", ".yml", ".yaml", ".toml", ".xml", ".xsd", ".svg", ".ts",
+      ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".css", ".scss", ".html", ".py", ".java", ".go", ".rs", ".rb", ".php",
+      ".sh", ".bash", ".ps1", ".psm1", ".bat", ".cmd", ".sql", ".graphql", ".prisma", ".env", ".gitignore",
+      ".gitattributes", ".editorconfig", ".dockerignore", "Dockerfile", "docker-compose.yml", "Makefile", "*"]
   },
   {
     "key": "netbeans", "name": "Apache NetBeans", "category": "IDE",
@@ -66,7 +75,9 @@
     "purpose": "Sviluppo Java SE/EE, servlet, progetti Maven e Ant.",
     "capabilities": ["java", "servlet", "jsp", "maven", "ant", "swing"],
     "projectTypes": ["BACKEND", "DESKTOP", "API"],
-    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\NetBeans-*\\netbeans\\bin\\netbeans64.exe"
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\NetBeans-*\\netbeans\\bin\\netbeans64.exe",
+    "fileArgs": ["--open", "{file}"],
+    "fileTypes": [".jsp", ".jspf", ".tag", ".tagx", ".tld", ".form", "build.xml", "nbactions.xml"]
   },
   {
     "key": "pycharm", "name": "PyCharm", "category": "IDE",
@@ -74,7 +85,9 @@
     "purpose": "Sviluppo Python, data science, FastAPI, script e automazioni.",
     "capabilities": ["python", "fastapi", "django", "data", "notebooks", "debugging", "pytest"],
     "projectTypes": ["AI_ML", "DATA", "AUTOMATION", "BACKEND", "API"],
-    "launchKind": "DESKTOP", "executable": "%LOCALAPPDATA%\\JetBrains\\PyCharm *\\bin\\pycharm64.exe", "openFolder": true
+    "launchKind": "DESKTOP", "executable": "%LOCALAPPDATA%\\JetBrains\\PyCharm *\\bin\\pycharm64.exe", "openFolder": true,
+    "fileArgs": ["{file}"],
+    "fileTypes": [".py", ".pyi", ".ipynb", "requirements.txt", "pyproject.toml", "Pipfile", "setup.cfg", "tox.ini"]
   },
   {
     "key": "visual-studio-2022", "name": "Visual Studio 2022", "category": "IDE",
@@ -83,7 +96,10 @@
     "capabilities": ["csharp", "dotnet", "cpp", "wpf", "winforms", "unity", "debugging"],
     "projectTypes": ["DESKTOP", "GAME", "BACKEND"],
     "launchKind": "DESKTOP",
-    "executable": "%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\devenv.exe", "openFolder": true
+    "executable": "%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\devenv.exe", "openFolder": true,
+    "fileArgs": ["{file}"],
+    "fileTypes": [".sln", ".slnx", ".csproj", ".vbproj", ".fsproj", ".vcxproj", ".props", ".targets", ".cs", ".vb",
+      ".fs", ".c", ".cpp", ".cc", ".cxx", ".h", ".hpp", ".xaml", ".razor", ".cshtml", ".resx"]
   },
   {
     "key": "webstorm", "name": "WebStorm", "category": "IDE",
@@ -91,14 +107,19 @@
     "purpose": "Frontend e Node.js: React, Vite, TypeScript, test e debugging web.",
     "capabilities": ["typescript", "javascript", "react", "vite", "node", "css", "frontend", "web"],
     "projectTypes": ["WEB_APP", "FULL_STACK", "MOBILE"],
-    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\JetBrains\\WebStorm *\\bin\\webstorm64.exe", "openFolder": true
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\JetBrains\\WebStorm *\\bin\\webstorm64.exe", "openFolder": true,
+    "fileArgs": ["{file}"],
+    "fileTypes": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".vue", ".svelte", ".astro", ".css", ".scss", ".sass",
+      ".less", ".html", ".htm", "package.json", "tsconfig.json"]
   },
   {
     "key": "notepad-plus-plus", "name": "Notepad++", "category": "EDITOR",
     "role": "Editor di testo rapido",
     "purpose": "Modifiche veloci a file di testo, log, configurazioni.",
     "capabilities": ["text-editing", "logs", "configuration"],
-    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\Notepad++\\notepad++.exe"
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\Notepad++\\notepad++.exe",
+    "fileArgs": ["{file}"],
+    "fileTypes": [".txt", ".log", ".ini", ".cfg", ".conf", ".csv", ".tsv", ".nfo", "*"]
   },
   {
     "key": "warp", "name": "Warp", "category": "TERMINAL",
@@ -206,7 +227,9 @@
     "purpose": "Schema, query, modellazione ER sul MySQL Server 8.0 locale (porta 3306).",
     "capabilities": ["mysql", "sql", "database", "er-modeling", "schema"],
     "projectTypes": ["BACKEND", "FULL_STACK", "DATA", "API", "WEB_APP"],
-    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\MySQL\\MySQL Workbench 8.0 CE\\MySQLWorkbench.exe"
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\MySQL\\MySQL Workbench 8.0 CE\\MySQLWorkbench.exe",
+    "fileArgs": ["{file}"],
+    "fileTypes": [".mwb"]
   },
   {
     "key": "postman", "name": "Postman", "category": "API",
@@ -256,7 +279,9 @@
     "purpose": "Asset 3D, scene, rendering.",
     "capabilities": ["3d", "modeling", "rendering", "animation"],
     "projectTypes": ["THREE_D", "GAME"],
-    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\Blender Foundation\\Blender *\\blender-launcher.exe"
+    "launchKind": "DESKTOP", "executable": "%ProgramFiles%\\Blender Foundation\\Blender *\\blender-launcher.exe",
+    "fileArgs": ["{file}"],
+    "fileTypes": [".blend"]
   },
   {
     "key": "github", "name": "GitHub", "category": "VCS",

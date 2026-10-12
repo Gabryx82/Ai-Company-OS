@@ -91,14 +91,16 @@ public class SoftwareController {
     /**
      * Opens the program on this machine. The body may name a project, whose
      * workspace becomes the program's folder; nothing else about the command
-     * line comes from the caller (ADR-019 I1, I2).
+     * line comes from the caller (ADR-019 I1, I2). PHASE 33 (ADR-040): with a
+     * project, a path opens that file of its folder («Apri con»).
      */
     @PostMapping("/{key}/launch")
     public ResponseEntity<LaunchResponse> launchSoftware(@PathVariable String key,
-                                                 @RequestBody(required = false) LaunchRequest request) {
-        LaunchPlan plan = service.launch(key, request == null ? null : request.projectId());
+                                                 @Valid @RequestBody(required = false) LaunchRequest request) {
+        LaunchPlan plan = service.launch(key, request == null ? null : request.projectId(),
+                request == null ? null : request.path());
         return ResponseEntity.accepted().body(new LaunchResponse(key, plan.command(),
-                plan.workingDirectory().toString(), plan.folderOpened()));
+                plan.workingDirectory().toString(), plan.folderOpened(), plan.file() != null));
     }
 
     /** Forgets the cached detection, so the next read looks at the machine again. */

@@ -50,7 +50,7 @@ class LaunchPlanTest {
                                   String cli, String url, List<String> args, String incompatible, Boolean enabled) {
         return new Software("demo", new SoftwareDefinition("Demo", SoftwareCategory.IDE, "role", null, List.of(),
                 List.of(), kind, appId, executable, args, openFolder, cli, url, null, false, null, false, null, null,
-                null, incompatible, enabled));
+                null, incompatible, enabled, null, null));
     }
 
     private static Software desktop(String appId, String executable, boolean openFolder) {
@@ -189,5 +189,95 @@ class LaunchPlanTest {
                 .hasMessageContaining("not compatible");
         assertThatThrownBy(() -> LaunchPlan.of(running, Detection.of(Availability.RUNNING, null), null,
                 List.of(), host)).hasMessageContaining("already running");
+    }
+
+    // --- PHASE 33 (ADR-040): one file of the project, where the catalog puts {file} ----------
+
+    private static Software opener(String executable, List<String> fileArgs) {
+        return new Software("demo", new SoftwareDefinition("Demo", SoftwareCategory.IDE, "role", null, List.of(),
+                List.of(), LaunchKind.DESKTOP, null, executable, List.of(), true, null, null, null, false, null, false,
+                null, null, null, null, true, fileArgs, List.of(".java")));
+    }
+
+    private Path file() throws IOException {
+        Path file = Files.createDirectories(project.resolve("src")).resolve("App.java");
+        Files.writeString(file, "class App {}");
+        return file;
+    }
+
+    @Test
+    void aFileGoesWhereTheCatalogPutsItAndTheFolderWhereItSays() throws IOException {
+        Path file = file();
+
+        LaunchPlan vscode = LaunchPlan.forFile(opener("Code.exe", List.of("{folder}", "{file}")), INSTALLED_EXE,
+                project, file, host);
+        LaunchPlan netbeans = LaunchPlan.forFile(opener("netbeans64.exe", List.of("--open", "{file}")), INSTALLED_EXE,
+                project, file, host);
+
+        assertThat(vscode.command()).containsExactly("C:\\Apps\\ide.exe", project.toString(), file.toString());
+        assertThat(vscode.folderOpened()).isTrue();
+        assertThat(vscode.file()).isEqualTo(file);
+        assertThat(vscode.workingDirectory()).isEqualTo(project);
+        assertThat(netbeans.command()).containsExactly("C:\\Apps\\ide.exe", "--open", file.toString());
+        assertThat(netbeans.folderOpened()).isFalse();
+    }
+
+    @Test
+    void aFileOutsideTheFolderOrAFolderIsNotOpened() throws IOException {
+        Path outside = Files.writeString(root.resolve("secret.txt"), "x");
+        Software ide = opener("ide.exe", List.of("{file}"));
+
+        assertThatThrownBy(() -> LaunchPlan.forFile(ide, INSTALLED_EXE, project, outside, host))
+                .isInstanceOf(SoftwareNotLaunchableException.class).hasMessageContaining("not a file of the project");
+        assertThatThrownBy(() -> LaunchPlan.forFile(ide, INSTALLED_EXE, project, project.resolve("src/../../secret.txt"), host))
+                .isInstanceOf(SoftwareNotLaunchableException.class);
+        assertThatThrownBy(() -> LaunchPlan.forFile(ide, INSTALLED_EXE, project, project, host))
+                .isInstanceOf(SoftwareNotLaunchableException.class);
+        assertThatThrownBy(() -> LaunchPlan.forFile(ide, INSTALLED_EXE, project, project.resolve("missing.java"), host))
+                .isInstanceOf(SoftwareNotLaunchableException.class);
+    }
+
+    @Test
+    void onlyAnExecutableTheCatalogNamesReceivesAFileAndOnlyAnExe() throws IOException {
+        Path file = file();
+
+        assertThatThrownBy(() -> LaunchPlan.forFile(opener("ide.exe", List.of()), INSTALLED_EXE, project, file, host))
+                .hasMessageContaining("does not open files");
+        // Installed from the Store and found through the Start menu: explorer.exe takes no file for it.
+        assertThatThrownBy(() -> LaunchPlan.forFile(opener("ide.exe", List.of("{file}")),
+                Detection.of(Availability.INSTALLED, "Start menu"), project, file, host))
+                .hasMessageContaining("not installed with an executable");
+        // A batch file would go through cmd.exe, which reads & and % in a file name as commands.
+        assertThatThrownBy(() -> LaunchPlan.forFile(opener("ide.cmd", List.of("{file}")),
+                new Detection(Availability.INSTALLED, null, Path.of("C:\\Apps\\ide.cmd")), project, file, host))
+                .hasMessageContaining("only an .exe");
+        assertThat(LaunchPlan.takesAFile(opener("ide.cmd", List.of("{file}")),
+                new Detection(Availability.INSTALLED, null, Path.of("C:\\Apps\\ide.CMD")))).isFalse();
+        assertThat(LaunchPlan.takesAFile(opener("ide.exe", List.of("{file}")), INSTALLED_EXE)).isTrue();
+    }
+
+    @Test
+    void thePlaceholdersAreWholeArgumentsAndTheFileComesExactlyOnce() {
+        assertThat(LaunchPlan.fileArgumentsProblem(LaunchKind.DESKTOP, "x.exe", List.of("--goto={file}"))).isPresent();
+        assertThat(LaunchPlan.fileArgumentsProblem(LaunchKind.DESKTOP, "x.exe", List.of("{file}", "{file}"))).isPresent();
+        assertThat(LaunchPlan.fileArgumentsProblem(LaunchKind.DESKTOP, "x.exe", List.of("{folder}"))).isPresent();
+        assertThat(LaunchPlan.fileArgumentsProblem(LaunchKind.DESKTOP, "x.exe", List.of("{folder}", "{folder}", "{file}")))
+                .isPresent();
+        assertThat(LaunchPlan.fileArgumentsProblem(LaunchKind.DESKTOP, "x.exe", List.of("{line}", "{file}"))).isPresent();
+        assertThat(LaunchPlan.fileArgumentsProblem(LaunchKind.DESKTOP, null, List.of("{file}"))).isPresent();
+        assertThat(LaunchPlan.fileArgumentsProblem(LaunchKind.CLI, "x.exe", List.of("{file}"))).isPresent();
+        assertThat(LaunchPlan.fileArgumentsProblem(LaunchKind.DESKTOP, "x.exe", List.of("--open", "{file}"))).isEmpty();
+        assertThat(LaunchPlan.fileArgumentsProblem(LaunchKind.DESKTOP, "x.exe", List.of())).isEmpty();
+    }
+
+    @Test
+    void aDisabledEntryOpensNoFile() throws IOException {
+        Path file = file();
+        Software disabled = new Software("demo", new SoftwareDefinition("Demo", SoftwareCategory.IDE, "role", null,
+                List.of(), List.of(), LaunchKind.DESKTOP, null, "ide.exe", List.of(), true, null, null, null, false, null,
+                false, null, null, null, null, false, List.of("{file}"), List.of()));
+
+        assertThatThrownBy(() -> LaunchPlan.forFile(disabled, INSTALLED_EXE, project, file, host))
+                .hasMessageContaining("disabled");
     }
 }

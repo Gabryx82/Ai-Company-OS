@@ -167,6 +167,8 @@ class ApiProblemCoverageTest {
                         "workspace-path-refused",
                         "workspace-file-not-found",
                         "workspace-unavailable",
+                        // PHASE 33 (ADR-040): the explorer renames and creates, never over a name or under a user.
+                        "workspace-entry-exists", "workspace-entry-in-use",
                         "phase-not-found",
                         "phase-not-approved",
                         "master-prompt-missing",

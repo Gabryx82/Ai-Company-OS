@@ -40,12 +40,16 @@ public record SoftwareRequest(
         @Size(max = 1000) String configuration,
         @Size(max = 500) String iconUrl,
         @Size(max = 500) String incompatibleReason,
-        Boolean enabled) {
+        Boolean enabled,
+        // PHASE 33 (ADR-040): the arguments that open one file ({file} once, {folder} at most once,
+        // each a whole argument), and the files the program suits: ".java", "pom.xml", "*".
+        @Size(max = 6) List<@Size(max = 100) String> fileArgs,
+        @Size(max = 80) List<@Size(max = 40) String> fileTypes) {
 
     public SoftwareDefinition definition() {
         return new SoftwareDefinition(name, category, role, purpose, capabilities, projectTypes, launchKind,
                 appId, executable, executableArgs, Boolean.TRUE.equals(openFolder), cliCommand, url, healthUrl,
                 Boolean.TRUE.equals(embeddable), embedNote, Boolean.TRUE.equals(executionTarget), requirements,
-                configuration, iconUrl, incompatibleReason, enabled);
+                configuration, iconUrl, incompatibleReason, enabled, fileArgs, fileTypes);
     }
 }

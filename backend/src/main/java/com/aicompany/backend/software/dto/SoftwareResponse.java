@@ -2,6 +2,7 @@ package com.aicompany.backend.software.dto;
 
 import com.aicompany.backend.software.detect.Availability;
 import com.aicompany.backend.software.detect.Detection;
+import com.aicompany.backend.software.launch.LaunchPlan;
 import com.aicompany.backend.software.model.LaunchKind;
 import com.aicompany.backend.software.model.Software;
 import com.aicompany.backend.software.model.SoftwareCategory;
@@ -48,7 +49,12 @@ public record SoftwareResponse(
         Instant createdAt,
         Instant updatedAt,
         // PHASE 32 (TD-68): an entry of the shipped catalog -- disabled, never deleted.
-        boolean catalog) {
+        boolean catalog,
+        // PHASE 33 (ADR-040): how it opens one file, what it suits, and whether it can right now --
+        // installed, with the executable detection resolved (a Start-menu AppID takes no file).
+        List<String> fileArgs,
+        List<String> fileTypes,
+        boolean opensFiles) {
 
     public static SoftwareResponse from(Software s, Detection d) {
         boolean launchable = s.isEnabled() && switch (s.getLaunchKind()) {
@@ -64,6 +70,7 @@ public record SoftwareResponse(
                 s.getConfiguration(), s.getIconUrl(), s.getIncompatibleReason(), s.isEnabled(),
                 d.availability(), d.detail(), d.executable() == null ? null : d.executable().toString(),
                 launchable, s.getVersion(), s.getCreatedAt(), s.getUpdatedAt(),
-                SoftwareDeletionService.shipped(s.getKey()));
+                SoftwareDeletionService.shipped(s.getKey()), s.getFileArgs(), s.getFileTypes(),
+                launchable && LaunchPlan.takesAFile(s, d));
     }
 }

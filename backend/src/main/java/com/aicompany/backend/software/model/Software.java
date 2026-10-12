@@ -71,6 +71,14 @@ public class Software {
     @Column(name = "open_folder", nullable = false)
     private boolean openFolder;
 
+    // PHASE 33 (ADR-040): how the executable opens one file, one argument per line, with
+    // {file} and {folder} as whole arguments; and what it is the right choice for.
+    @Column(name = "file_args", length = 300)
+    private String fileArgs;
+
+    @Column(name = "file_types", nullable = false, length = 1000)
+    private String fileTypes = "";
+
     @Column(name = "cli_command", length = 200)
     private String cliCommand;
 
@@ -139,6 +147,8 @@ public class Software {
         this.executableArgs = d.executableArgs() == null || d.executableArgs().isEmpty()
                 ? null : String.join("\n", d.executableArgs());
         this.openFolder = d.openFolder();
+        this.fileArgs = d.fileArgs() == null || d.fileArgs().isEmpty() ? null : String.join("\n", d.fileArgs());
+        this.fileTypes = Tags.join(d.fileTypes());
         this.cliCommand = blankToNull(d.cliCommand());
         this.url = blankToNull(d.url());
         this.healthUrl = blankToNull(d.healthUrl());
@@ -184,6 +194,10 @@ public class Software {
         return executableArgs == null ? List.of() : Arrays.stream(executableArgs.split("\n")).toList();
     }
     public boolean isOpenFolder() { return openFolder; }
+    public List<String> getFileArgs() {
+        return fileArgs == null ? List.of() : Arrays.stream(fileArgs.split("\n")).toList();
+    }
+    public List<String> getFileTypes() { return Tags.split(fileTypes); }
     public String getCliCommand() { return cliCommand; }
     public String getUrl() { return url; }
     public String getHealthUrl() { return healthUrl; }

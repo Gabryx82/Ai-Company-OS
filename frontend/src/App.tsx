@@ -203,7 +203,8 @@ export function App() {
         </nav>
         {filesOpen && (
           <ErrorBoundary label="File">
-            <FileExplorer projectHint={projectInView} opened={opened} onOpen={setOpened} onClose={toggleFiles} />
+            <FileExplorer projectHint={projectInView} opened={opened} onOpen={setOpened} onClose={toggleFiles}
+                          onOpenedChange={setOpened} />
           </ErrorBoundary>
         )}
         <main className="main">

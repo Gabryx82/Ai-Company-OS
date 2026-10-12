@@ -653,6 +653,63 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 }
 @media (prefers-reduced-motion: reduce) { .ft-chevron { transition: none; } }
 
+/* --- PHASE 33: the explorer's context menu and «Apri con» (ADR-040) ---------- */
+
+.ctx-menu {
+  position: fixed; z-index: 60; min-width: 264px; max-width: min(380px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px); overflow-y: auto; display: grid; padding: 5px;
+  background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: var(--shadow);
+  animation: ctx-in .09s ease-out;
+}
+@keyframes ctx-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.ctx-item {
+  display: flex; align-items: center; gap: 9px; width: 100%; padding: 6px 9px; border: 0; border-radius: 7px;
+  background: transparent; color: var(--text); text-align: left; font-size: 13px; cursor: pointer;
+}
+.ctx-item:hover:not(:disabled), .ctx-item:focus-visible { background: var(--surface-3); outline: none; }
+.ctx-item:disabled { opacity: .5; cursor: not-allowed; }
+.ctx-item.is-danger { color: var(--danger); }
+.ctx-item.is-danger:hover:not(:disabled), .ctx-item.is-danger:focus-visible { background: var(--danger-soft); }
+.ctx-icon { width: 18px; flex: none; display: inline-grid; place-items: center; color: var(--muted); }
+.ctx-item.is-danger .ctx-icon { color: inherit; }
+.ctx-icon .app-icon { border-radius: 5px; }
+.ctx-text { display: grid; min-width: 0; flex: 1; line-height: 1.3; }
+.ctx-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctx-hint { color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctx-aside { flex: none; color: var(--muted); font-size: 11.5px; }
+.ctx-separator { height: 1px; margin: 4px 6px; background: var(--border); }
+.ctx-heading {
+  padding: 7px 9px 3px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.ft-row.is-menu { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-strong); }
+.ft-editing { cursor: default; flex-wrap: wrap; }
+.ft-editing:hover { background: transparent; }
+.ft-input {
+  flex: 1; min-width: 0; padding: 1px 6px; font-size: 13px; line-height: 1.5; border-radius: 4px;
+  border: 1px solid var(--accent); background: var(--surface); color: var(--text);
+}
+.ft-input-problem { flex-basis: 100%; padding: 4px 0 2px 31px; font-size: 12px; }
+.ft-feedback { padding: 0 12px; }
+.ft-feedback:empty { display: none; }
+.ft-notice { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding: 6px 10px; font-size: 12.5px; }
+.ft-notice-detail { flex-basis: 100%; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ft-problem { padding: 8px 12px 0; font-size: 12.5px; }
+
+.split-button { display: inline-flex; }
+.split-icon { display: inline-flex; }
+.split-button > .btn:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; display: inline-flex; align-items: center; gap: 6px; }
+.split-button > .btn:first-child .app-icon { border-radius: 4px; }
+.split-caret { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; padding-left: 6px; padding-right: 6px; }
+.split-caret-icon { transform: rotate(90deg); }
+.file-outcome {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 28px 0;
+}
+.file-outcome-command { flex: 1; min-width: 0; font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) { .file-outcome { margin-left: 0; margin-right: 0; } }
+@media (prefers-reduced-motion: reduce) { .ctx-menu { animation: none; } }
+
 /* PHASE 33 (ADR-038): a quota per model (Antigravity). */
 .model-quotas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .model-quotas li {

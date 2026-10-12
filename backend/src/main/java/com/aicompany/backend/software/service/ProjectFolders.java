@@ -11,4 +11,11 @@ import java.util.Optional;
 public interface ProjectFolders {
 
     Optional<Path> folderOf(Long projectId);
+
+    /**
+     * PHASE 33 (ADR-040): one regular file of the project's folder, from a path relative
+     * to it -- refused when it leaves the folder (ADR-020 W2, links included), missing
+     * when it is not there. The second argument «Apri con» may carry.
+     */
+    Path fileOf(Long projectId, String relative);
 }

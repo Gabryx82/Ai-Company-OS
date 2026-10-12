@@ -22,7 +22,7 @@ import type {
   BlueprintProposal, BlueprintProposalWrite, BlueprintRelation, BlueprintRelationWrite, BlueprintScanReport, BlueprintSnippet,
   BlueprintVocabulary, HubInstalled, HubFoundDetail, HubSyncReport, HubSyncEvent, HubMarketplace, HubSearchResults,
   HubResult, HubPreview, HubInstallResult, HubCopyTarget, HubDeployResult, HubUpdates, HubApplied,
-  HubOfferKind, HubExtensionPreview, HubInstallOutcome, ProjectDirectoryListing, ProjectFileView,
+  HubOfferKind, HubExtensionPreview, HubInstallOutcome, ProjectDirectoryListing, ProjectFileView, ProjectFileEntry,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -411,6 +411,33 @@ export class ControlPlane {
     return URL.createObjectURL(await response.blob());
   }
 
+  // --- PHASE 33: the explorer's context menu (ADR-040) ----------------------------
+
+  /** A new name in the same folder; answers the entry under it. */
+  renameEntry(id: number, path: string, name: string): Promise<ProjectFileEntry> {
+    return this.plain("POST", `/api/projects/${id}/browse/rename`, { body: { path, name } });
+  }
+
+  /** An empty file or folder; an empty parent is the project folder. */
+  createEntry(id: number, parent: string, name: string, kind: "FILE" | "DIRECTORY"): Promise<ProjectFileEntry> {
+    return this.plain("POST", `/api/projects/${id}/browse/create`, { body: { parent, name, kind } });
+  }
+
+  /** What moving a file or a folder to the Recycle Bin would do, and what stops it. */
+  entryDeletionPreview(id: number, path: string): Promise<DeletionPreview> {
+    return this.plain("GET", `/api/projects/${id}/browse/deletion?path=${encodeURIComponent(path)}`);
+  }
+
+  /** To the Windows Recycle Bin: nothing is destroyed. */
+  async recycleEntry(id: number, path: string): Promise<void> {
+    await this.request("DELETE", `/api/projects/${id}/browse?path=${encodeURIComponent(path)}`);
+  }
+
+  /** An Explorer window on the item; an empty path is the project folder. */
+  async revealEntry(id: number, path: string): Promise<void> {
+    await this.request("POST", `/api/projects/${id}/browse/reveal`, { body: { path } });
+  }
+
   async readFile(id: number, path: string): Promise<string> {
     const response = await this.send(this.base() + `/api/projects/${id}/files?path=${encodeURIComponent(path)}`);
     if (!response.ok) {
@@ -622,10 +649,15 @@ export class ControlPlane {
     return this.versioned("POST", "/api/software", { body: entry });
   }
 
-  /** The body may name a project; the command line always comes from the catalog. */
-  launch(key: string, projectId?: number): Promise<LaunchResult> {
-    return this.plain("POST", `/api/software/${encodeURIComponent(key)}/launch`,
-      { body: projectId ? { projectId } : {} });
+  /**
+   * The body may name a project; the command line always comes from the catalog.
+   * PHASE 33 (ADR-040): with a project, a path opens that file of its folder («Apri con»).
+   */
+  launch(key: string, projectId?: number, path?: string): Promise<LaunchResult> {
+    const body: { projectId?: number; path?: string } = {};
+    if (projectId) body.projectId = projectId;
+    if (path) body.path = path;
+    return this.plain("POST", `/api/software/${encodeURIComponent(key)}/launch`, { body });
   }
 
   refreshSoftware(): Promise<void> {

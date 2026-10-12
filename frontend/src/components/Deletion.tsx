@@ -32,7 +32,7 @@ export function DeleteButton({ label, onClick, disabled, title }: {
 }
 
 /** The lines of a preview, grouped by what happens to them. */
-export function DeletionSummary({ preview }: { preview: DeletionPreview }) {
+export function DeletionSummary({ preview, deletesTitle }: { preview: DeletionPreview; deletesTitle?: string }) {
   const group = (title: string, lines: string[], className?: string) => lines.length > 0 && (
     <div className={className}>
       <div className="section-title">{title}</div>
@@ -41,7 +41,7 @@ export function DeletionSummary({ preview }: { preview: DeletionPreview }) {
   );
   return (
     <div className="stack" style={{ gap: 8 }}>
-      {group("Viene eliminato", preview.deletes)}
+      {group(deletesTitle ?? "Viene eliminato", preview.deletes)}
       {group("Viene scollegato e resta", preview.detaches)}
       {group("Resta", preview.keeps)}
       {preview.files.length > 0 && (
@@ -66,7 +66,7 @@ export function DeletionSummary({ preview }: { preview: DeletionPreview }) {
  * function and lets the effect run again.
  */
 export function ConfirmDeletion({ title, subject, intro, loadPreview, preview: given, onConfirm, onClose, confirmLabel,
-                                  typedName, alternative, children }: {
+                                  typedName, alternative, children, deletesTitle }: {
   title: string;
   /** The name of what is deleted, as the user knows it. */
   subject: string;
@@ -77,6 +77,8 @@ export function ConfirmDeletion({ title, subject, intro, loadPreview, preview: g
   onConfirm: () => Promise<void>;
   onClose: () => void;
   confirmLabel?: string;
+  /** PHASE 33 (ADR-040): the first group's title, when nothing leaves for good ("Va nel Cestino"). */
+  deletesTitle?: string;
   /** Asks to type this name before deleting: for the deletes that take a lot with them. */
   typedName?: string;
   /** The reversible gesture, when there is one (Archivia, Disattiva). */
@@ -140,7 +142,7 @@ export function ConfirmDeletion({ title, subject, intro, loadPreview, preview: g
           </div>
         )}
         {children}
-        {preview ? <DeletionSummary preview={preview} />
+        {preview ? <DeletionSummary preview={preview} deletesTitle={deletesTitle} />
           : !problem && <div className="muted">Calcolo cosa verrebbe eliminato…</div>}
         {typedName && (
           <label className="field">

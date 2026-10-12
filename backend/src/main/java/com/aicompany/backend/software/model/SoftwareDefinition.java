@@ -29,5 +29,8 @@ public record SoftwareDefinition(
         String configuration,
         String iconUrl,
         String incompatibleReason,
-        Boolean enabled) {
+        Boolean enabled,
+        // PHASE 33 (ADR-040): «Apri con».
+        List<String> fileArgs,
+        List<String> fileTypes) {
 }

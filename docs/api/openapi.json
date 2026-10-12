@@ -3020,6 +3020,11 @@
       },
       "LaunchRequest" : {
         "properties" : {
+          "path" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "projectId" : {
             "format" : "int64",
             "type" : "integer"
@@ -3035,6 +3040,9 @@
             },
             "type" : "array"
           },
+          "fileOpened" : {
+            "type" : "boolean"
+          },
           "folderOpened" : {
             "type" : "boolean"
           },
@@ -3045,7 +3053,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "command", "folderOpened", "key", "workingDirectory" ],
+        "required" : [ "command", "fileOpened", "folderOpened", "key", "workingDirectory" ],
         "type" : "object"
       },
       "Learning" : {
@@ -4073,6 +4081,26 @@
         "required" : [ "entries", "path", "truncated" ],
         "type" : "object"
       },
+      "ProjectFileCreate" : {
+        "properties" : {
+          "kind" : {
+            "enum" : [ "DIRECTORY", "FILE", "LINK" ],
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "parent" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "kind", "name" ],
+        "type" : "object"
+      },
       "ProjectFileEntry" : {
         "properties" : {
           "kind" : {
@@ -4095,6 +4123,32 @@
           }
         },
         "required" : [ "kind", "modifiedAt", "name", "path", "size" ],
+        "type" : "object"
+      },
+      "ProjectFileRename" : {
+        "properties" : {
+          "name" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "path" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "path" ],
+        "type" : "object"
+      },
+      "ProjectFileReveal" : {
+        "properties" : {
+          "path" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "ProjectFileView" : {
@@ -5293,6 +5347,26 @@
           "executionTarget" : {
             "type" : "boolean"
           },
+          "fileArgs" : {
+            "items" : {
+              "maxLength" : 100,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 6,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "fileTypes" : {
+            "items" : {
+              "maxLength" : 40,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 80,
+            "minItems" : 0,
+            "type" : "array"
+          },
           "healthUrl" : {
             "maxLength" : 500,
             "minLength" : 0,
@@ -5416,6 +5490,18 @@
           "executionTarget" : {
             "type" : "boolean"
           },
+          "fileArgs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "fileTypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "healthUrl" : {
             "type" : [ "string", "null" ]
           },
@@ -5443,6 +5529,9 @@
             "type" : "string"
           },
           "openFolder" : {
+            "type" : "boolean"
+          },
+          "opensFiles" : {
             "type" : "boolean"
           },
           "projectTypes" : {
@@ -5475,7 +5564,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "appId", "availability", "availabilityDetail", "capabilities", "catalog", "category", "cliCommand", "configuration", "createdAt", "embedNote", "embeddable", "enabled", "executable", "executableArgs", "executionTarget", "healthUrl", "iconUrl", "id", "incompatibleReason", "key", "launchKind", "launchable", "name", "openFolder", "projectTypes", "purpose", "requirements", "resolvedExecutable", "role", "updatedAt", "url", "version" ],
+        "required" : [ "appId", "availability", "availabilityDetail", "capabilities", "catalog", "category", "cliCommand", "configuration", "createdAt", "embedNote", "embeddable", "enabled", "executable", "executableArgs", "executionTarget", "fileArgs", "fileTypes", "healthUrl", "iconUrl", "id", "incompatibleReason", "key", "launchKind", "launchable", "name", "openFolder", "opensFiles", "projectTypes", "purpose", "requirements", "resolvedExecutable", "role", "updatedAt", "url", "version" ],
         "type" : "object"
       },
       "SourceLinked" : {
@@ -9670,6 +9759,31 @@
       }
     },
     "/api/projects/{id}/browse" : {
+      "delete" : {
+        "operationId" : "recycleEntry",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-files-controller" ]
+      },
       "get" : {
         "operationId" : "browse",
         "parameters" : [ {
@@ -9694,6 +9808,77 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProjectDirectoryListing"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-files-controller" ]
+      }
+    },
+    "/api/projects/{id}/browse/create" : {
+      "post" : {
+        "operationId" : "createEntry",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProjectFileCreate"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectFileEntry"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-files-controller" ]
+      }
+    },
+    "/api/projects/{id}/browse/deletion" : {
+      "get" : {
+        "operationId" : "entryDeletion",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionPreview"
                 }
               }
             },
@@ -9766,6 +9951,73 @@
                 }
               }
             },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-files-controller" ]
+      }
+    },
+    "/api/projects/{id}/browse/rename" : {
+      "post" : {
+        "operationId" : "renameEntry",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProjectFileRename"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProjectFileEntry"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "project-files-controller" ]
+      }
+    },
+    "/api/projects/{id}/browse/reveal" : {
+      "post" : {
+        "operationId" : "revealEntry",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProjectFileReveal"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
             "description" : "OK"
           }
         },

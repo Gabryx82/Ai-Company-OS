@@ -89,9 +89,25 @@ public class SoftwareService {
         return new Detected(software, detector.detect(software));
     }
 
-    /** ADR-019 I1/I2: a key and, optionally, a project -- nothing else from the caller. */
+    /**
+     * ADR-019 I1/I2: a key and, optionally, a project -- nothing else from the caller.
+     * PHASE 33 (ADR-040): with a project, a path names one file of its folder, which the
+     * entry opens through its {@code fileArgs}.
+     */
     @Transactional(readOnly = true)
-    public LaunchPlan launch(String key, Long projectId) {
+    public LaunchPlan launch(String key, Long projectId, String path) {
+        if (path != null && !path.isBlank()) {
+            if (projectId == null) {
+                throw new RequestValidationException("projectId", "is required to open a file: the path is relative to its folder");
+            }
+            Software software = load(key);
+            Path folder = projectFolders.folderOf(projectId).orElseThrow(() -> new SoftwareNotLaunchableException(
+                    "Project " + projectId + " has no workspace folder yet"));
+            Path file = projectFolders.fileOf(projectId, path);
+            LaunchPlan plan = LaunchPlan.forFile(software, detector.detect(software), folder, file, host);
+            launcher.start(plan);
+            return plan;
+        }
         Path folder = null;
         if (projectId != null) {
             folder = projectFolders.folderOf(projectId).orElseThrow(() -> new SoftwareNotLaunchableException(
@@ -130,6 +146,10 @@ public class SoftwareService {
 
     /** The same rule as {@code software_launch_target_check}, answered as a 400 instead of a 500. */
     private static void requireLaunchTarget(SoftwareDefinition d) {
+        // PHASE 33 (ADR-040): software_file_args_check, and the placeholders whole.
+        LaunchPlan.fileArgumentsProblem(d.launchKind(), d.executable(), d.fileArgs()).ifPresent(problem -> {
+            throw new RequestValidationException("fileArgs", problem);
+        });
         switch (d.launchKind()) {
             case DESKTOP -> {
                 if (blank(d.appId()) && blank(d.executable())) {

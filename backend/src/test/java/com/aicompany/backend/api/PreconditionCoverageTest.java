@@ -63,7 +63,8 @@ class PreconditionCoverageTest {
                     AgentConfigurationService.class, SkillLibrary.class, DeletionService.class,
                     EcosystemService.class, CostService.class, BlueprintService.class, BlueprintScanService.class,
                     ChangeProposalService.class, AgentDeletionService.class,
-                    com.aicompany.backend.harness.hub.SkillHubService.class);
+                    com.aicompany.backend.harness.hub.SkillHubService.class,
+                    com.aicompany.backend.workspace.service.ProjectFileOperations.class);
 
     /**
      * Creation, and only creation. A row nobody has seen has no state a caller
@@ -224,6 +225,10 @@ class PreconditionCoverageTest {
         // documents write files in the workspace, never the database.
         assertThat(writePaths(ProjectWorkspaceService.class))
                 .containsExactlyInAnyOrder("configure:Precondition");
+
+        // PHASE 33 (ADR-040). The explorer renames, creates and recycles files; it writes no row, so no
+        // path takes a tag -- a name that exists is refused instead of overwritten (409 workspace-entry-exists).
+        assertThat(writePaths(com.aicompany.backend.workspace.service.ProjectFileOperations.class)).isEmpty();
 
         // PHASE 10 (ADR-021). Approvals mutate existing rows and take the tag.
         // generate and importFromWorkspace are exempt the way create is: they

@@ -89,6 +89,15 @@ public class FakeHostConfiguration {
         return MARKETPLACES;
     }
 
+    private static final FakeDesktop DESKTOP = new FakeDesktop();
+
+    /** PHASE 33 (ADR-040): nothing goes to the real Recycle Bin, and no Explorer window opens. */
+    @Bean
+    @Primary
+    FakeDesktop fakeDesktop() {
+        return DESKTOP;
+    }
+
     private static final FakeHubCommands CLIS = new FakeHubCommands();
 
     /** PHASE 31: nor do they ever run Claude Code's or Codex's CLI. */

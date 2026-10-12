@@ -1374,6 +1374,38 @@ export interface paths {
         get: operations["browse"];
         put?: never;
         post?: never;
+        delete: operations["recycleEntry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/browse/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/browse/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["entryDeletion"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1406,6 +1438,38 @@ export interface paths {
         get: operations["browseImage"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/browse/rename": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["renameEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/browse/reveal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["revealEntry"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3665,11 +3729,13 @@ export interface components {
             type: "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN" | "CONNECTOR";
         };
         LaunchRequest: {
+            path?: string;
             /** Format: int64 */
             projectId?: number;
         };
         LaunchResponse: {
             command: string[];
+            fileOpened: boolean;
             folderOpened: boolean;
             key: string;
             workingDirectory: string;
@@ -4024,6 +4090,12 @@ export interface components {
             path: string;
             truncated: boolean;
         };
+        ProjectFileCreate: {
+            /** @enum {string} */
+            kind: "DIRECTORY" | "FILE" | "LINK";
+            name: string;
+            parent?: string;
+        };
         ProjectFileEntry: {
             /** @enum {string} */
             kind: "DIRECTORY" | "FILE" | "LINK";
@@ -4033,6 +4105,13 @@ export interface components {
             path: string;
             /** Format: int64 */
             size: number | null;
+        };
+        ProjectFileRename: {
+            name: string;
+            path: string;
+        };
+        ProjectFileReveal: {
+            path?: string;
         };
         ProjectFileView: {
             content: string | null;
@@ -4445,6 +4524,8 @@ export interface components {
             executable?: string;
             executableArgs?: string[];
             executionTarget?: boolean;
+            fileArgs?: string[];
+            fileTypes?: string[];
             healthUrl?: string;
             iconUrl?: string;
             incompatibleReason?: string;
@@ -4478,6 +4559,8 @@ export interface components {
             executable: string | null;
             executableArgs: string[];
             executionTarget: boolean;
+            fileArgs: string[];
+            fileTypes: string[];
             healthUrl: string | null;
             iconUrl: string | null;
             /** Format: int64 */
@@ -4489,6 +4572,7 @@ export interface components {
             launchable: boolean;
             name: string;
             openFolder: boolean;
+            opensFiles: boolean;
             projectTypes: string[];
             purpose: string | null;
             requirements: string | null;
@@ -7346,6 +7430,78 @@ export interface operations {
             };
         };
     };
+    recycleEntry: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectFileCreate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectFileEntry"];
+                };
+            };
+        };
+    };
+    entryDeletion: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DeletionPreview"];
+                };
+            };
+        };
+    };
     browseFile: {
         parameters: {
             query: {
@@ -7391,6 +7547,56 @@ export interface operations {
                 content: {
                     "*/*": string;
                 };
+            };
+        };
+    };
+    renameEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectFileRename"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectFileEntry"];
+                };
+            };
+        };
+    };
+    revealEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectFileReveal"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

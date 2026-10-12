@@ -209,6 +209,14 @@ public enum ApiProblem {
     WORKSPACE_UNAVAILABLE("workspace-unavailable", HttpStatus.SERVICE_UNAVAILABLE,
             "Workspace unavailable", "The project folder could not be read or written"),
 
+    /** PHASE 33 (ADR-040): a rename, a new file or a new folder onto a name the folder already has. */
+    WORKSPACE_ENTRY_EXISTS("workspace-entry-exists", HttpStatus.CONFLICT,
+            "Name already taken", "The folder already has a file or folder with that name"),
+
+    /** PHASE 33 (ADR-040): a record points at it, or another program holds it open. The detail says which. */
+    WORKSPACE_ENTRY_IN_USE("workspace-entry-in-use", HttpStatus.CONFLICT,
+            "File in use", "Something uses this file or folder: a record of AI Company OS, or another program"),
+
     // --- planning (PHASE 10, ADR-021) --------------------------------------------
 
     PHASE_NOT_FOUND("phase-not-found", HttpStatus.NOT_FOUND,

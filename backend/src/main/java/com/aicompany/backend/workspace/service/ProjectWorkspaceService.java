@@ -138,6 +138,23 @@ public class ProjectWorkspaceService implements ProjectFolders {
                 .filter(Files::isDirectory);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Path fileOf(Long projectId, String relative) {
+        Path workspace = workspaceOf(projectId).toAbsolutePath().normalize();
+        if (!Files.isDirectory(workspace)) {
+            throw new WorkspaceUnavailableException("The project folder " + workspace + " does not exist");
+        }
+        Path file = WorkspacePaths.inside(workspace, relative);
+        if (Files.isDirectory(file)) {
+            throw new WorkspacePathRefusedException("'" + relative + "' is a folder: «Apri con» opens files");
+        }
+        if (!Files.isRegularFile(file)) {
+            throw new WorkspaceFileNotFoundException("No file '" + relative + "' in the project folder");
+        }
+        return file;
+    }
+
     /** The configured folder of a project, whether or not it exists yet. */
     @Transactional(readOnly = true)
     public Path workspaceOf(Long projectId) {
