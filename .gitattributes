@@ -1,0 +1,6 @@
+# The governance templates are written byte for byte into the operator's projects
+# (ADR-020): their line endings are part of what they say. Claude Code imports
+# "@AGENTS.md" and Gemini CLI "@./AGENTS.md" from a line of their own, and a
+# checkout with core.autocrlf=true would turn them into CRLF -- a project made from
+# a Windows clone would differ from one made anywhere else. Always LF.
+backend/src/main/resources/workspace-templates/*.md text eol=lf
