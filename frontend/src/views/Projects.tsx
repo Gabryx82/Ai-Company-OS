@@ -15,6 +15,11 @@ const PLAN_LABEL: Record<string, { label: string; tone: string }> = {
   APPROVED: { label: "Piano approvato", tone: "badge badge-ok" },
 };
 
+/** A path in a description wraps after a separator rather than in the middle of a folder name. */
+function breakAtSeparators(text: string) {
+  return text.split(/(?<=[\\/])/).flatMap((part, i) => (i === 0 ? [part] : [<wbr key={i} />, part]));
+}
+
 export function Projects({ selected, navigate }: { selected: string | null; navigate: (page: string, detail?: string) => void }) {
   const api = useApi();
   const [projects, setProjects] = useState<Project[] | null>(null);
@@ -55,7 +60,7 @@ export function Projects({ selected, navigate }: { selected: string | null; navi
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1>Progetti</h1><p>Idea → Master Prompt → Piano → Fasi → Task → Esecuzione → Review. Archiviare congela i task ed è reversibile; eliminare è definitivo e riservato agli admin.</p></div>
+        <div><h1>Progetti</h1><p>Dall'idea al risultato: master prompt, piano, fasi, task, esecuzione e revisione. Archiviare un progetto è reversibile; eliminarlo è definitivo ed è riservato agli admin.</p></div>
         <div className="row">
           <label className="muted row" style={{ gap: 6 }}>
             <input type="checkbox" style={{ width: "auto" }} checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
@@ -72,17 +77,17 @@ export function Projects({ selected, navigate }: { selected: string | null; navi
           const pct = own.length ? Math.round((done / own.length) * 100) : 0;
           const type = types.find((t) => t.type === project.projectType);
           return (
-            <div key={project.id} className="tile" style={{ justifyItems: "stretch", textAlign: "left" }}
+            <div key={project.id} className="tile project-tile"
                  onClick={() => navigate("projects", String(project.id))} role="button" tabIndex={0}>
-              <div className="row">
-                <span className="kpi-icon glow-violet" style={{ width: 36, height: 36, borderRadius: 10, display: "grid", placeItems: "center" }}>
+              <div className="project-tile-head">
+                <span className="project-tile-icon glow-violet">
                   <Icon name={TYPE_ICON[project.projectType ?? "OTHER"] ?? "projects"} /></span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h3 style={{ margin: 0 }}>{project.name}</h3>
+                <div className="project-tile-title">
+                  <h3>{project.name}</h3>
                   <span className="chip">{type?.label ?? "Tipologia non indicata"}</span>
                 </div>
               </div>
-              {project.description && <div className="muted" style={{ fontSize: 12.5 }}>{project.description}</div>}
+              {project.description && <div className="project-tile-desc" title={project.description}>{breakAtSeparators(project.description)}</div>}
               <div className="row" style={{ fontSize: 12 }}>
                 <span className="muted">Progresso</span><span className="spacer" /><strong>{pct}%</strong>
               </div>
@@ -91,7 +96,7 @@ export function Projects({ selected, navigate }: { selected: string | null; navi
                 <span className="muted">{own.length} task</span><span className="spacer" />
                 <span className={PLAN_LABEL[project.planStatus ?? "NONE"].tone}>{PLAN_LABEL[project.planStatus ?? "NONE"].label}</span>
               </div>
-              <div className="row" onClick={(e) => e.stopPropagation()}>
+              <div className="row project-tile-actions" onClick={(e) => e.stopPropagation()}>
                 {project.status === "ARCHIVED" && <span className="badge">archiviato</span>}
                 <span className="spacer" />
                 <button className="btn btn-small" onClick={() => toggle(project)}>

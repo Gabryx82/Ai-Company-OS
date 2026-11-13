@@ -46,20 +46,20 @@ export function ActivityPanel({ apps, refreshKey }: { apps: HubApp[]; refreshKey
       )}
       {shown.length > 0 && (
         <div className="card">
-          <table className="hub-table">
+          <div className="table-scroll"><table className="hub-table">
             <thead><tr><th>Quando</th><th>Cosa</th><th>Skill</th><th>App</th><th>Dettaglio</th></tr></thead>
             <tbody>
               {shown.map((e) => (
                 <tr key={e.id}>
                   <td className="muted">{when(e.at)}</td>
                   <td><span className={CHANGE[e.change].tone}>{CHANGE[e.change].label}</span></td>
-                  <td><strong>{e.name}</strong><div className="mono muted" style={{ fontSize: 11 }}>{e.path}</div></td>
+                  <td className="cell-wrap"><strong>{e.name}</strong><div className="mono muted" style={{ fontSize: 11 }}>{e.path}</div></td>
                   <td>{appName(e.app)}</td>
-                  <td className="muted">{e.detail ?? ""}</td>
+                  <td className="muted cell-wrap">{e.detail ?? ""}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>

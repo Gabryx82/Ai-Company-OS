@@ -36,7 +36,7 @@ export function TerminalTab({ shell, projectId, attach, onSession, onExit }: {
   useEffect(() => {
     if (!host.current) return;
     const term = new Terminal({ cursorBlink: true, fontFamily: "Cascadia Code, Consolas, monospace", fontSize: 13,
-      theme: { background: "#0b1222", foreground: "#e7ecf7" } });
+      theme: { background: "#070a11", foreground: "#d7deeb" } });
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(host.current);

@@ -35,11 +35,11 @@ export function DailyWork() {
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1>Daily Work</h1><p>Cosa fare oggi e nei prossimi giorni: attività personali e task dei progetti, insieme.</p></div>
+        <div><h1>Agenda</h1><p>Cosa fare oggi e nei prossimi giorni: impegni personali e task dei progetti in un'unica vista.</p></div>
         <div className="row">
-          <button className="btn btn-small" onClick={() => setStart(addDays(start, -7))}>←</button>
+          <button className="btn btn-small" onClick={() => setStart(addDays(start, -7))} aria-label="Settimana precedente"><Icon name="back" size={14} /></button>
           <button className="btn btn-small" onClick={() => setStart(new Date())}>Oggi</button>
-          <button className="btn btn-small" onClick={() => setStart(addDays(start, 7))}>→</button>
+          <button className="btn btn-small" onClick={() => setStart(addDays(start, 7))} aria-label="Settimana successiva"><Icon name="chevron" size={14} /></button>
         </div>
       </div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />

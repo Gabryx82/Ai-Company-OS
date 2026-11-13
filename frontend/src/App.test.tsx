@@ -59,7 +59,9 @@ describe("the Ecosistema 3D tab (ADR-037)", () => {
 
     const nav = await screen.findByRole("navigation", { name: "Sections" });
     const items = [...nav.querySelectorAll("button.nav-item")].map((b) => b.textContent);
-    expect(items.indexOf("Ecosistema 3D")).toBe(items.indexOf("Agenti") + 1);
+    // The 3D views sit with the agents: the office first, then the ecosystem map.
+    expect(items.indexOf("Ufficio 3D")).toBe(items.indexOf("Agenti") + 1);
+    expect(items.indexOf("Ecosistema 3D")).toBe(items.indexOf("Ufficio 3D") + 1);
     // The lazy chunk carries three.js: with the whole suite running, transforming it takes longer than
     // findBy's default second.
     expect(await screen.findByRole("heading", { name: "Ecosistema 3D" }, { timeout: 10000 })).toBeTruthy();

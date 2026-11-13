@@ -12,5 +12,9 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // PHASE 36 (closes TD-99): under load -- the whole suite, after the Java one -- the lazy three.js chunk of
+    // the ecosystem view and the Knowledge Hub's largest render take 6-7 s in jsdom. A timeout fails nothing
+    // that is wrong, only what is slow: 15 s for every test, the same limit the runs of PHASE 35 used by hand.
+    testTimeout: 15_000,
   },
 });

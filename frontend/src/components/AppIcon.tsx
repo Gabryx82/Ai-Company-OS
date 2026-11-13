@@ -37,7 +37,7 @@ export function AppIcon({ software, size = 40 }: { software: Software; size?: nu
 
   return (
     <span className="app-icon" style={{ width: size, height: size,
-      background: src && !failed ? "var(--surface-3)" : `linear-gradient(135deg, hsl(${hue} 70% 45%), hsl(${hue + 30} 70% 32%))` }}>
+      background: "var(--icon-tile)", color: src && !failed ? undefined : `hsl(${hue} 70% 72%)` }}>
       {src && !failed
         ? <img src={src} alt="" width={size * 0.66} height={size * 0.66} onError={() => setFailed(true)} />
         : <span style={{ fontSize: size * 0.36 }}>{initials || "?"}</span>}

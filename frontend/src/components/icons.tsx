@@ -45,6 +45,20 @@ const PATHS: Record<string, string> = {
   "file-plus": "M6 3h8l4 4v14H6zM14 3v4h4M12 11v6M9 14h6",
   "folder-plus": "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 10v6M9 13h6",
   back: "M15 6l-6 6 6 6",
+  // PHASE 37: learning (an open book), the streak (a flame), the review cards.
+  learn: "M12 6.5C10.5 5 8 4.5 4 4.5v13c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2v-13c-4 0-6.5.5-8 2zM12 6.5v13",
+  flame: "M12 3c.5 3 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-1.6.7-2.9 1.6-3.8.2 1.4.9 2.3 1.9 2.3 0-3 .5-5.5 1-8z",
+  cards: "M7 4h11a2 2 0 0 1 2 2v10M4 8h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z",
+  // ADR-045: OpenClaw in the console -- three claw marks.
+  claw: "M6 4c2 4 2 10-1 16M12 3c2 5 2 12 0 18M18 4c2 4 2 10-1 16",
+  // The office of the agents: a desk with its screen.
+  office: "M3 20h18M5 20v-5h14v5M8 15V6h8v9M10.5 10.5h3",
+  // The menu at phone width, the step between two links of a chain.
+  menu: "M4 7h16M4 12h16M4 17h16",
+  arrow: "M5 12h14M13 6l6 6-6 6",
+  // The theme switch in the top bar.
+  sun: "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
+  moon: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z",
 };
 
 export type IconName = keyof typeof PATHS;

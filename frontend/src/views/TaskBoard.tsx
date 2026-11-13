@@ -38,7 +38,7 @@ export function TaskBoard() {
       <div className="page-head">
         <div>
           <h1>Task</h1>
-          <p>Apri una card per assegnarla, orchestrarla, eseguirla e portarla lungo il suo ciclo di vita.</p>
+          <p>Apri una task per assegnarla a un agente, orchestrarla, eseguirla e seguirla fino alla revisione.</p>
         </div>
         <div className="row">
           <label className="row" style={{ gap: 6, fontSize: 13 }}>
@@ -64,11 +64,11 @@ export function TaskBoard() {
                     <span className="mono">#{task.id}</span>
                     <PriorityBadge priority={task.priority} />
                     <span>{agentName(task.agentId) ?? "non assegnata"}</span>
-                    {task.projectId && <span>· {projectName(task.projectId)}</span>}
+                    {task.projectId && <span>{projectName(task.projectId)}</span>}
                   </div>
                 </button>
               ))}
-              {tasks && column.length === 0 && <div className="muted" style={{ padding: 8 }}>Niente qui.</div>}
+              {tasks && column.length === 0 && <div className="muted" style={{ padding: 8 }}>Nessuna task.</div>}
             </section>
           );
         })}

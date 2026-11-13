@@ -30,24 +30,24 @@ export interface CategoryInfo {
 // The colours of the Second Brain (NODE_STYLE) where the two views share a kind,
 // so that an agent, a model or a skill reads the same everywhere in the console.
 export const CATEGORIES: CategoryInfo[] = [
-  { key: "agent", label: "Agenti", color: "#f97316", shape: "icosahedron", hint: "Gli agenti e i sottoagenti" },
-  { key: "model", label: "Modelli LLM", color: "#eab308", shape: "octahedron", hint: "Il modello a cui è legato l'agente" },
-  { key: "provider", label: "Provider", color: "#94a3b8", shape: "hexagon", hint: "Chi serve il modello: locale o cloud" },
-  { key: "target", label: "Esecuzione", color: "#8b5cf6", shape: "torus", hint: "Dove lavora: AI Engine, Claude Code, Codex…" },
-  { key: "skill", label: "Skill", color: "#ec4899", shape: "tetrahedron", hint: "Skill dell'harness e delle app" },
-  { key: "knowledge", label: "Knowledge", color: "#14b8a6", shape: "book", hint: "Knowledge base e documentazione" },
-  { key: "mcp", label: "MCP", color: "#818cf8", shape: "knot", hint: "Server MCP e connettori" },
-  { key: "tool", label: "Tool", color: "#84cc16", shape: "cone", hint: "Strumenti dell'harness" },
-  { key: "framework", label: "Framework", color: "#0ea5e9", shape: "dodecahedron", hint: "Framework dell'harness" },
-  { key: "plugin", label: "Plugin e integrazioni", color: "#fb7185", shape: "capsule", hint: "Plugin delle app in cui lavora, fonti di template" },
-  { key: "software", label: "Software", color: "#06b6d4", shape: "cube", hint: "Software che l'agente può usare" },
-  { key: "prompt", label: "Prompt", color: "#e2e8f0", shape: "card", hint: "System prompt, output atteso, politica di contesto" },
-  { key: "directive", label: "Direttive", color: "#f87171", shape: "pyramid", hint: "Le direttive, nell'ordine in cui valgono" },
-  { key: "role", label: "Ruoli e permessi", color: "#fde047", shape: "coin", hint: "Ruolo, dominio, responsabilità, limiti" },
-  { key: "capability", label: "Capability", color: "#4ade80", shape: "sphere", hint: "Cosa sa fare" },
+  { key: "agent", label: "Agenti", color: "#f2ae86", shape: "icosahedron", hint: "Gli agenti e i sottoagenti" },
+  { key: "model", label: "Modelli LLM", color: "#e6cf8c", shape: "octahedron", hint: "Il modello a cui è legato l'agente" },
+  { key: "provider", label: "Provider", color: "#aab6c8", shape: "hexagon", hint: "Chi serve il modello: locale o cloud" },
+  { key: "target", label: "Esecuzione", color: "#b7a8ec", shape: "torus", hint: "Dove lavora: AI Engine, Claude Code, Codex…" },
+  { key: "skill", label: "Skill", color: "#eba3c4", shape: "tetrahedron", hint: "Skill dell'harness e delle app" },
+  { key: "knowledge", label: "Knowledge", color: "#8dd3c5", shape: "book", hint: "Knowledge base e documentazione" },
+  { key: "mcp", label: "MCP", color: "#a4adf0", shape: "knot", hint: "Server MCP e connettori" },
+  { key: "tool", label: "Tool", color: "#b9da94", shape: "cone", hint: "Strumenti dell'harness" },
+  { key: "framework", label: "Framework", color: "#91c7ea", shape: "dodecahedron", hint: "Framework dell'harness" },
+  { key: "plugin", label: "Plugin e integrazioni", color: "#efa8b0", shape: "capsule", hint: "Plugin delle app in cui lavora, fonti di template" },
+  { key: "software", label: "Software", color: "#8ad1e2", shape: "cube", hint: "Software che l'agente può usare" },
+  { key: "prompt", label: "Prompt", color: "#dde3ee", shape: "card", hint: "System prompt, output atteso, politica di contesto" },
+  { key: "directive", label: "Direttive", color: "#eda59f", shape: "pyramid", hint: "Le direttive, nell'ordine in cui valgono" },
+  { key: "role", label: "Ruoli e permessi", color: "#ecdfa4", shape: "coin", hint: "Ruolo, dominio, responsabilità, limiti" },
+  { key: "capability", label: "Capability", color: "#a0dcb2", shape: "sphere", hint: "Cosa sa fare" },
 ];
 export const CATEGORY: Record<Category, CategoryInfo> = Object.fromEntries(CATEGORIES.map((c) => [c.key, c])) as Record<Category, CategoryInfo>;
-export const SUBAGENT_COLOR = "#fdba74";
+export const SUBAGENT_COLOR = "#f6cdb0";
 
 /** The detail categories an ecosystem view starts without: text that belongs to one agent and crowds the map. */
 export const ECOSYSTEM_HIDDEN: Category[] = ["prompt", "directive", "role"];

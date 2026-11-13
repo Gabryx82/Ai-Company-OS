@@ -196,6 +196,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agentSyncOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent-sync/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["importAgents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent-sync/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["publishAgents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent-sync/{tool}/agents/{agentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["unpublishAgent"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent-templates": {
         parameters: {
             query?: never;
@@ -436,6 +500,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agents/{id}/resource-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["resourceSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agents/{id}/resources/{key}": {
         parameters: {
             query?: never;
@@ -463,6 +543,22 @@ export interface paths {
         put: operations["allow"];
         post?: never;
         delete: operations["disallow"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ask"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -852,6 +948,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/learning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["learningOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/learning/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reviewDeck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/learning/review/{cardId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["turnCard"];
+        put?: never;
+        post: operations["reviewCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/library": {
         parameters: {
             query?: never;
@@ -910,6 +1054,86 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["sync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/openclaw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["openClawOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/openclaw/control-ui": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["openControlUi"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/openclaw/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["openClawMessages"];
+        put?: never;
+        post: operations["sendOpenClawMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/openclaw/messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["openClawMessage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/openclaw/terminal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["openOpenClawTerminal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1444,6 +1668,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/browse/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["recentFiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/browse/rename": {
         parameters: {
             query?: never;
@@ -1564,6 +1804,86 @@ export interface paths {
             cookie?: never;
         };
         get: operations["projectLearning"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/lessons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["projectLessons"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/lessons/exercise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["answerExercise"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/lessons/prediction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["predictOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/lessons/step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["checkStep"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{id}/lessons/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["viewLesson"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2516,6 +2836,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/{id}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["taskReadiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/{id}/reopen": {
         parameters: {
             query?: never;
@@ -2692,6 +3028,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/usage/measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["measurements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/usage/plans/{key}": {
         parameters: {
             query?: never;
@@ -2743,6 +3095,10 @@ export interface components {
             role: string;
             specialization: string;
         };
+        AgentImportRequest: {
+            externalIds?: string[];
+            tool: string;
+        };
         AgentProfileRequest: {
             contextPolicy?: string;
             directives?: string;
@@ -2775,6 +3131,10 @@ export interface components {
             systemPrompt: string | null;
             /** Format: int64 */
             version: number;
+        };
+        AgentPublishRequest: {
+            agentIds?: number[];
+            tools?: string[];
         };
         AgentRef: {
             /** Format: int64 */
@@ -2812,6 +3172,59 @@ export interface components {
             /** Format: int64 */
             tokens: number;
         };
+        AgentSyncCell: {
+            detail: string | null;
+            externalId: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** @enum {string} */
+            state: "IN_SYNC" | "BEHIND" | "NOT_PUBLISHED" | "NOT_APPLICABLE" | "MISSING" | "ADOPTED" | "UNAVAILABLE" | "READING";
+            tool: string;
+        };
+        AgentSyncOverview: {
+            agents: components["schemas"]["AgentSyncRow"][];
+            importable: components["schemas"]["ImportableAgent"][];
+            /** Format: int32 */
+            pending: number;
+            tools: components["schemas"]["AgentSyncTool"][];
+        };
+        AgentSyncReport: {
+            /** Format: int32 */
+            failed: number;
+            results: components["schemas"]["AgentSyncResult"][];
+            /** Format: int32 */
+            written: number;
+        };
+        AgentSyncResult: {
+            agent: string;
+            /** Format: int64 */
+            agentId: number;
+            detail: string;
+            externalId: string | null;
+            notes: string[];
+            /** @enum {string} */
+            outcome: "PUBLISHED" | "UPDATED" | "UNCHANGED" | "SKIPPED" | "FAILED";
+            tool: string;
+        };
+        AgentSyncRow: {
+            /** Format: int64 */
+            agentId: number;
+            cells: components["schemas"]["AgentSyncCell"][];
+            name: string;
+            role: string;
+        };
+        AgentSyncTool: {
+            availability: string;
+            /** Format: date-time */
+            checkedAt: string | null;
+            detail: string;
+            hint: string | null;
+            imports: boolean;
+            key: string;
+            name: string;
+            refreshing: boolean;
+            shape: string;
+        };
         AgentUpdateRequest: {
             model?: string;
             name: string;
@@ -2848,6 +3261,19 @@ export interface components {
         };
         ApplyResponse: {
             results: components["schemas"]["Applied"][];
+        };
+        AssistantAnswer: {
+            answer: string;
+            model: string;
+        };
+        AssistantQuestion: {
+            history?: components["schemas"]["AssistantTurn"][];
+            question: string;
+        };
+        AssistantTurn: {
+            /** @enum {string} */
+            speaker: "USER" | "ASSISTANT";
+            text: string;
         };
         Autostart: {
             autostart: boolean;
@@ -3262,6 +3688,9 @@ export interface components {
             /** Format: int32 */
             methods: number;
         };
+        CardReviewRequest: {
+            known: boolean;
+        };
         Category: {
             key: string;
             label: string;
@@ -3355,6 +3784,10 @@ export interface components {
             statusCodes?: string[];
             table?: string;
             visibility?: string;
+        };
+        Concept: {
+            name: string;
+            text: string;
         };
         ConfigurationRequest: {
             capabilities?: string;
@@ -3578,13 +4011,42 @@ export interface components {
         ExecutionTarget: {
             contextFile: string | null;
             /** @enum {string} */
-            delivery: "ENGINE_RUN" | "CLI_PROMPT" | "IDE_FOLDER" | "APP_PASTE" | "WEB_PASTE" | "MANUAL";
+            delivery: "ENGINE_RUN" | "CLI_PROMPT" | "IDE_FOLDER" | "APP_PASTE" | "APP_LINK" | "WEB_PASTE" | "MANUAL";
             engine?: boolean;
             howItWorks: string;
             key: string;
+            link: string | null;
             name: string;
             providers: string[];
             software: string | null;
+        };
+        ExerciseResult: {
+            /** Format: int32 */
+            attempts: number;
+            correct: boolean | null;
+            done: boolean;
+            explanation: string | null;
+            /** Format: int32 */
+            index: number;
+            keyPoints: string[];
+            solution: string | null;
+        };
+        ExerciseView: {
+            /** Format: int32 */
+            attempts: number;
+            code: string | null;
+            done: boolean;
+            explanation: string | null;
+            firstTryRight: boolean | null;
+            /** Format: int32 */
+            index: number;
+            keyPoints: string[];
+            kind: string;
+            language: string | null;
+            options: string[];
+            prompt: string;
+            solution: string | null;
+            yourAnswer: string | null;
         };
         ExtensionPreview: {
             description: string;
@@ -3627,7 +4089,67 @@ export interface components {
             edges: components["schemas"]["EcosystemEdge"][];
             nodes: components["schemas"]["EcosystemNode"][];
         };
+        GroupMeasure: {
+            /** Format: int64 */
+            agentId: number | null;
+            /** Format: int64 */
+            avgEvalMs: number | null;
+            /** Format: int64 */
+            avgInputTokens: number | null;
+            /** Format: int64 */
+            avgLoadMs: number | null;
+            /** Format: int64 */
+            avgOutputTokens: number | null;
+            /** Format: int64 */
+            avgPromptEvalMs: number | null;
+            /** Format: int64 */
+            avgProviderTotalMs: number | null;
+            /** Format: int64 */
+            avgSystemChars: number;
+            /** Format: int64 */
+            avgUserChars: number;
+            contextWindows: number[];
+            /** Format: int64 */
+            inputTokens: number;
+            key: string;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: double */
+            outputTokensPerSecond: number | null;
+            /** Format: int32 */
+            runs: number;
+            /** Format: int32 */
+            timedRuns: number;
+        };
+        HandoffMeasure: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int64 */
+            handoffId: number;
+            /** Format: int32 */
+            missingFiles: number;
+            /** Format: int32 */
+            optionalChars: number | null;
+            /** Format: int32 */
+            packageChars: number | null;
+            reads: components["schemas"]["HandoffRead"][];
+            /** Format: int32 */
+            requiredChars: number | null;
+            target: string;
+            /** Format: int64 */
+            taskId: number;
+            taskTitle: string;
+        };
+        HandoffRead: {
+            /** Format: int32 */
+            chars: number | null;
+            kind: string;
+            path: string;
+            required: boolean;
+        };
         HandoffRequest: {
+            /** @enum {string} */
+            learning?: "TEACH" | "RECAP" | "NONE";
             target: string;
         };
         HandoffResponse: {
@@ -3649,6 +4171,7 @@ export interface components {
             folder: string;
             fullPrompt: string;
             handoff: components["schemas"]["HandoffResponse"];
+            notOpened: string | null;
             openUrl: string | null;
             prompt: string;
             promptToClipboard: boolean;
@@ -3665,6 +4188,19 @@ export interface components {
         };
         ImportRequest: {
             key?: string;
+        };
+        ImportableAgent: {
+            description: string | null;
+            externalId: string;
+            name: string;
+            tool: string;
+        };
+        ImportedAgent: {
+            /** Format: int64 */
+            agentId: number;
+            externalId: string;
+            name: string;
+            tool: string;
         };
         InstallOutcome: {
             command: string | null;
@@ -3745,6 +4281,7 @@ export interface components {
             changesRequested: number;
             /** Format: int32 */
             firstPassAccepted: number;
+            lessons: components["schemas"]["LessonStats"];
             /** @enum {string} */
             level: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW";
             /** Format: int32 */
@@ -3756,6 +4293,76 @@ export interface components {
             /** Format: int32 */
             reviewedTasks: number;
             suggestion: components["schemas"]["LevelSuggestion"];
+        };
+        LearningOverview: {
+            /** Format: int32 */
+            cards: number;
+            /** Format: int32 */
+            cardsDue: number;
+            projects: components["schemas"]["ProjectLessons"][];
+            stats: components["schemas"]["LessonStats"];
+            /** Format: int32 */
+            streakDays: number;
+        };
+        LessonExerciseRequest: {
+            answer?: string;
+            /** Format: int32 */
+            exercise: number;
+            path: string;
+            reveal?: boolean;
+        };
+        LessonPredictionRequest: {
+            answer: string;
+            path: string;
+        };
+        LessonStats: {
+            /** Format: int32 */
+            exercisesAnswered: number;
+            /** Format: int32 */
+            exercisesRightFirstTry: number;
+            /** Format: int32 */
+            lessons: number;
+            /** Format: int32 */
+            lessonsCompleted: number;
+            /** Format: int32 */
+            predictions: number;
+            /** Format: int32 */
+            stepsWritten: number;
+        };
+        LessonStepRequest: {
+            manual?: boolean;
+            path: string;
+            /** Format: int32 */
+            step: number;
+        };
+        LessonSummary: {
+            completed: boolean;
+            /** Format: int32 */
+            done: number;
+            /** Format: int32 */
+            items: number;
+            /** Format: date-time */
+            modified: string;
+            path: string;
+            problems: string[];
+            task: string | null;
+            title: string;
+        };
+        LessonView: {
+            completed: boolean;
+            concepts: components["schemas"]["Concept"][];
+            /** Format: int32 */
+            done: number;
+            exercises: components["schemas"]["ExerciseView"][];
+            intro: string;
+            /** Format: int32 */
+            items: number;
+            path: string;
+            prediction: components["schemas"]["PredictionView"] | null;
+            problems: string[];
+            steps: components["schemas"]["StepView"][];
+            task: string | null;
+            title: string;
         };
         LevelSuggestion: {
             /** @enum {string} */
@@ -3772,6 +4379,10 @@ export interface components {
             root: string;
             /** Format: int64 */
             skills: number;
+        };
+        Line: {
+            code: string | null;
+            text: string;
         };
         LocationView: {
             /** Format: int32 */
@@ -3803,6 +4414,16 @@ export interface components {
             role: "ADMIN" | "OPERATOR";
             user: components["schemas"]["UserResponse"] | null;
         };
+        MeasuresReport: {
+            byAgent: components["schemas"]["GroupMeasure"][];
+            byModel: components["schemas"]["GroupMeasure"][];
+            /** Format: date */
+            from: string;
+            handoffs: components["schemas"]["HandoffMeasure"][];
+            runs: components["schemas"]["RunMeasure"][];
+            /** Format: date */
+            to: string;
+        };
         MethodCall: {
             from: string;
             /** Format: int64 */
@@ -3830,9 +4451,13 @@ export interface components {
         };
         ModelClassificationRequest: {
             alsoServes?: ("FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST")[];
+            keepAlive?: string;
             /** @enum {string} */
             lifecycle: "ACTIVE" | "CANDIDATE" | "DEPRECATED" | "RETIRED";
             notes?: string;
+            /** Format: int32 */
+            numCtx?: number;
+            quantization?: string;
             replacedBy?: string;
             /** @enum {string} */
             role: "FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST";
@@ -3874,13 +4499,17 @@ export interface components {
             engineAvailable: boolean | null;
             engineDetail: string | null;
             inputPricePerMtok: number | null;
+            keepAlive: string | null;
             key: string;
             /** @enum {string} */
             lifecycle: "ACTIVE" | "CANDIDATE" | "DEPRECATED" | "RETIRED";
             notes: string | null;
+            /** Format: int32 */
+            numCtx: number | null;
             outputPricePerMtok: number | null;
             parameters: string | null;
             providerKey: string;
+            quantization: string | null;
             replacedBy: string | null;
             /** @enum {string} */
             role: "FAST" | "GENERAL" | "CODER" | "PLANNER" | "VISION" | "REASONING" | "PREMIUM" | "EMBEDDING" | "TEST";
@@ -3915,6 +4544,81 @@ export interface components {
             /** @enum {string} */
             role: "ADMIN" | "OPERATOR";
             username: string;
+        };
+        OpenClawAgent: {
+            /** Format: int64 */
+            aicosAgentId: number | null;
+            aicosAgentName: string | null;
+            id: string;
+            isDefault: boolean;
+            madeHere: boolean;
+            name: string;
+        };
+        OpenClawControlUi: {
+            /** Format: date-time */
+            at: string | null;
+            detail: string | null;
+            /** @enum {string} */
+            state: "IDLE" | "OPENING" | "OPENED" | "FAILED";
+        };
+        OpenClawMessage: {
+            agentId: string;
+            detail: string | null;
+            /** Format: date-time */
+            finishedAt: string | null;
+            id: string;
+            message: string;
+            model: string | null;
+            provider: string | null;
+            reply: string | null;
+            sentBy: string;
+            sessionKey: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** @enum {string} */
+            state: "RUNNING" | "DONE" | "FAILED";
+            /** Format: int64 */
+            tokens: number | null;
+        };
+        OpenClawMessageRequest: {
+            agentId: string;
+            message: string;
+        };
+        OpenClawOverview: {
+            agents: components["schemas"]["OpenClawAgent"][];
+            /** @enum {string} */
+            availability: "AVAILABLE" | "NOT_INSTALLED" | "NOT_CONFIGURED" | "UNREACHABLE";
+            controlUi: components["schemas"]["OpenClawControlUi"];
+            detail: string;
+            gatewayUrl: string;
+            hint: string | null;
+            problem: string | null;
+            /** Format: date-time */
+            refreshedAt: string | null;
+            refreshing: boolean;
+            sessions: components["schemas"]["OpenClawSession"][];
+        };
+        OpenClawSession: {
+            agentId: string;
+            console: boolean;
+            key: string;
+            kind: string | null;
+            label: string | null;
+            model: string | null;
+            provider: string | null;
+            /** Format: int64 */
+            taskId: number | null;
+            /** Format: int64 */
+            totalTokens: number | null;
+            /** Format: date-time */
+            updatedAt: string | null;
+        };
+        OpenClawTerminal: {
+            command: string;
+            sessionKey: string;
+        };
+        OpenClawTerminalRequest: {
+            sessionKey: string;
         };
         OpenCodeSession: {
             /** Format: int32 */
@@ -4055,6 +4759,12 @@ export interface components {
                 [key: string]: string;
             };
         };
+        PredictionView: {
+            answer: string | null;
+            answered: boolean;
+            question: string;
+            yourAnswer: string | null;
+        };
         Preview: {
             description: string;
             files: components["schemas"]["PackageFile"][];
@@ -4125,6 +4835,12 @@ export interface components {
             reason: string | null;
             /** Format: int64 */
             size: number;
+        };
+        ProjectLessons: {
+            lessons: components["schemas"]["LessonSummary"][];
+            /** Format: int64 */
+            projectId: number;
+            projectName: string;
         };
         ProjectProfileRequest: {
             /** @enum {string} */
@@ -4245,6 +4961,32 @@ export interface components {
             resetWeekday?: number;
             resetZone?: string;
         };
+        Readiness: {
+            /** Format: int64 */
+            agentId: number | null;
+            agentName: string | null;
+            delivery: string;
+            items: components["schemas"]["ReadinessItem"][];
+            ready: boolean;
+            target: string;
+            targetName: string;
+            /** Format: int64 */
+            taskId: number;
+        };
+        ReadinessAction: {
+            app: string;
+            key: string;
+            type: string;
+        };
+        ReadinessItem: {
+            action: components["schemas"]["ReadinessAction"] | null;
+            area: string;
+            detail: string;
+            key: string;
+            name: string;
+            /** @enum {string} */
+            status: "OK" | "WARNING" | "BLOCKING";
+        };
         Ref: {
             /** Format: int64 */
             id: number;
@@ -4272,8 +5014,8 @@ export interface components {
             total?: number;
         };
         ResourceRef: {
-            configuration: string;
-            description: string;
+            configuration: string | null;
+            description: string | null;
             key: string;
             kind: string;
             name: string;
@@ -4334,6 +5076,29 @@ export interface components {
             retiredAt: string;
             retiredBy: string;
         };
+        ReviewCard: {
+            /** Format: int32 */
+            box: number;
+            /** Format: date */
+            dueOn: string;
+            explanation: string;
+            /** Format: int64 */
+            id: number;
+            lessonPath: string;
+            name: string;
+            /** Format: int64 */
+            projectId: number;
+            projectName: string;
+            /** Format: int32 */
+            reviews: number;
+        };
+        ReviewDeck: {
+            due: components["schemas"]["ReviewCard"][];
+            /** Format: date */
+            nextDue: string | null;
+            /** Format: int32 */
+            total: number;
+        };
         ReviewResponse: {
             /** @enum {string|null} */
             autonomyLevel: "GUIDED" | "SUPERVISED" | "DELEGATED" | "FINAL_REVIEW" | null;
@@ -4362,13 +5127,51 @@ export interface components {
         RunCreateRequest: {
             model?: string;
         };
+        RunMeasure: {
+            /** Format: int64 */
+            agentId: number | null;
+            agentName: string | null;
+            /** Format: int32 */
+            contextWindow: number | null;
+            /** Format: int64 */
+            evalMs: number | null;
+            /** Format: date-time */
+            finishedAt: string | null;
+            /** Format: int32 */
+            inputTokens: number | null;
+            /** Format: int64 */
+            latencyMs: number | null;
+            /** Format: int64 */
+            loadMs: number | null;
+            model: string;
+            /** Format: int32 */
+            outputTokens: number | null;
+            /** Format: int64 */
+            promptEvalMs: number | null;
+            /** Format: int64 */
+            providerTotalMs: number | null;
+            /** Format: int64 */
+            runId: number;
+            status: string;
+            /** Format: int32 */
+            systemChars: number;
+            /** Format: int64 */
+            taskId: number;
+            taskTitle: string;
+            /** Format: int32 */
+            userChars: number;
+        };
         RunResponse: {
             /** Format: int64 */
             agentId: number | null;
+            /** Format: int32 */
+            contextWindow: number | null;
             correlationId: string;
             /** Format: date-time */
             createdAt: string;
             deletedAgentName: string | null;
+            /** Format: int64 */
+            evalMs: number | null;
             failureDetail: string | null;
             failureType: string | null;
             finishReason: string | null;
@@ -4380,9 +5183,15 @@ export interface components {
             inputTokens: number | null;
             /** Format: int64 */
             latencyMs: number | null;
+            /** Format: int64 */
+            loadMs: number | null;
             output: string | null;
             /** Format: int32 */
             outputTokens: number | null;
+            /** Format: int64 */
+            promptEvalMs: number | null;
+            /** Format: int64 */
+            providerTotalMs: number | null;
             requestedBy: string;
             requestedModel: string | null;
             servedModel: string | null;
@@ -4595,6 +5404,25 @@ export interface components {
         SourceRequest: {
             provider: string;
             ref: string;
+        };
+        StepCheck: {
+            detail: string;
+            done: boolean;
+            /** Format: int32 */
+            index: number;
+            status: string;
+        };
+        StepView: {
+            code: string;
+            done: boolean;
+            file: string | null;
+            /** Format: int32 */
+            index: number;
+            language: string | null;
+            lines: components["schemas"]["Line"][];
+            mode: string;
+            title: string;
+            why: string | null;
         };
         Subject: {
             id: string;
@@ -5214,6 +6042,95 @@ export interface operations {
             };
         };
     };
+    agentSyncOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgentSyncOverview"];
+                };
+            };
+        };
+    };
+    importAgents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentImportRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ImportedAgent"][];
+                };
+            };
+        };
+    };
+    publishAgents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentPublishRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgentSyncReport"];
+                };
+            };
+        };
+    };
+    unpublishAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tool: string;
+                agentId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     agentTemplates: {
         parameters: {
             query?: never;
@@ -5684,6 +6601,28 @@ export interface operations {
             };
         };
     };
+    resourceSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceResponse"][];
+                };
+            };
+        };
+    };
     attach: {
         parameters: {
             query?: never;
@@ -5765,6 +6704,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    ask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantQuestion"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AssistantAnswer"];
+                };
             };
         };
     };
@@ -6403,6 +7366,94 @@ export interface operations {
             };
         };
     };
+    learningOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LearningOverview"];
+                };
+            };
+        };
+    };
+    reviewDeck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReviewDeck"];
+                };
+            };
+        };
+    };
+    turnCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cardId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReviewCard"];
+                };
+            };
+        };
+    };
+    reviewCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cardId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReviewCard"];
+                };
+            };
+        };
+    };
     info: {
         parameters: {
             query?: never;
@@ -6487,6 +7538,138 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["SyncResponse"];
+                };
+            };
+        };
+    };
+    openClawOverview: {
+        parameters: {
+            query?: {
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenClawOverview"];
+                };
+            };
+        };
+    };
+    openControlUi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenClawControlUi"];
+                };
+            };
+        };
+    };
+    openClawMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenClawMessage"][];
+                };
+            };
+        };
+    };
+    sendOpenClawMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenClawMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenClawMessage"];
+                };
+            };
+        };
+    };
+    openClawMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenClawMessage"];
+                };
+            };
+        };
+    };
+    openOpenClawTerminal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenClawTerminalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenClawTerminal"];
                 };
             };
         };
@@ -7550,6 +8733,30 @@ export interface operations {
             };
         };
     };
+    recentFiles: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectFileEntry"][];
+                };
+            };
+        };
+    };
     renameEntry: {
         parameters: {
             query?: never;
@@ -7806,6 +9013,130 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Learning"];
+                };
+            };
+        };
+    };
+    projectLessons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LessonSummary"][];
+                };
+            };
+        };
+    };
+    answerExercise: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonExerciseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ExerciseResult"];
+                };
+            };
+        };
+    };
+    predictOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonPredictionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PredictionView"];
+                };
+            };
+        };
+    };
+    checkStep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonStepRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["StepCheck"];
+                };
+            };
+        };
+    };
+    viewLesson: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LessonView"];
                 };
             };
         };
@@ -9527,6 +10858,31 @@ export interface operations {
             };
         };
     };
+    taskReadiness: {
+        parameters: {
+            query?: {
+                target?: string;
+                model?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Readiness"];
+                };
+            };
+        };
+    };
     reopen: {
         parameters: {
             query?: never;
@@ -9821,6 +11177,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["UsageWindowResponse"][];
+                };
+            };
+        };
+    };
+    measurements: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MeasuresReport"];
                 };
             };
         };

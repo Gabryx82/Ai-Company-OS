@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiProblem, ControlPlane, type Session } from "./api/client";
 import { ApiContext, SessionContext } from "./context";
 import { clearSession, DEFAULT_BASE_URL, loadSession, saveSession } from "./session";
@@ -11,52 +11,73 @@ import { Projects } from "./views/Projects";
 import { SoftwareHub } from "./views/SoftwareHub";
 import { Models } from "./views/Models";
 import { Usage } from "./views/Usage";
-import { Integrations } from "./views/Integrations";
+import { Integrations, KeptEmbeds } from "./views/Integrations";
 import { Terminal } from "./views/Terminal";
 import { Settings } from "./views/Settings";
 import { KnowledgeHub } from "./views/KnowledgeHub";
 import { DailyWork } from "./views/DailyWork";
 import { SecondBrain } from "./views/SecondBrain";
 import { MockupHub } from "./views/MockupHub";
+import { Learn } from "./views/Learn";
+import { OpenClaw } from "./views/OpenClaw";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { FileExplorer, FileViewer, type OpenedFile } from "./components/FileExplorer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Icon, type IconName } from "./components/icons";
 import { displayName } from "./preferences";
+import { Ribbon } from "./components/Ribbon";
+import { saveTheme, storedTheme, type Theme } from "./theme";
 
 // ADR-037: three.js and the 3D view load only when its tab is opened.
 const Ecosystem3D = lazy(() => import("./views/ecosystem3d/Ecosystem3D").then((m) => ({ default: m.Ecosystem3D })));
+// The agents' office: its scene loads three.js only when the page opens.
+const Office = lazy(() => import("./views/office/Office").then((m) => ({ default: m.Office })));
 
 const FILES_OPEN_KEY = "aicos.files.open";
 
-// The sections of the ecosystem, grouped as the operator works: the work
-// itself, the tools that do it, and the resources behind them.
-const NAV: { group: string; items: { key: string; label: string; icon: IconName }[] }[] = [
-  { group: "Lavoro", items: [
+type NavItem = { key: string; label: string; icon: IconName };
+
+// The sections, grouped by what the person is doing: the day, the projects,
+// the agents that do the work, the tools they use, and what they know.
+const NAV: { group: string | null; items: NavItem[] }[] = [
+  { group: null, items: [
     { key: "dashboard", label: "Dashboard", icon: "dashboard" },
+    { key: "daily", label: "Agenda", icon: "daily" },
+  ] },
+  { group: "Lavoro", items: [
     { key: "projects", label: "Progetti", icon: "projects" },
     { key: "tasks", label: "Task", icon: "tasks" },
+    // PHASE 37 (ADR-044): the lessons the agents leave, and the review of what they taught.
+    { key: "learn", label: "Impara", icon: "learn" },
+  ] },
+  { group: "Squadra", items: [
     { key: "agents", label: "Agenti", icon: "agents" },
+    { key: "office", label: "Ufficio 3D", icon: "office" },
     { key: "ecosystem3d", label: "Ecosistema 3D", icon: "network" },
-    { key: "daily", label: "Daily Work", icon: "daily" },
-    { key: "brain", label: "Second Brain", icon: "brain" },
+    { key: "models", label: "Modelli", icon: "models" },
+    { key: "openclaw", label: "OpenClaw", icon: "claw" },
   ] },
   { group: "Strumenti", items: [
     { key: "software", label: "Software Hub", icon: "software" },
     { key: "terminal", label: "Terminale", icon: "terminal" },
-    { key: "chat", label: "Chat LLM", icon: "chat" },
+    { key: "chat", label: "Chat", icon: "chat" },
     { key: "integrations", label: "Integrazioni", icon: "integrations" },
   ] },
-  { group: "Risorse", items: [
+  { group: "Conoscenza", items: [
     { key: "knowledge", label: "Knowledge Hub", icon: "knowledge" },
     { key: "mockups", label: "Mockup Hub", icon: "mockups" },
-    { key: "models", label: "Modelli LLM", icon: "models" },
-    { key: "usage", label: "Consumi", icon: "usage" },
-    { key: "settings", label: "Impostazioni", icon: "settings" },
+    { key: "brain", label: "Second Brain", icon: "brain" },
   ] },
 ];
 
-const PAGES = new Set(NAV.flatMap((group) => group.items.map((item) => item.key)));
+// At the foot of the sidebar, apart from the work: what it costs and how it is set up.
+const FOOT: NavItem[] = [
+  { key: "usage", label: "Consumi", icon: "usage" },
+  { key: "settings", label: "Impostazioni", icon: "settings" },
+];
+
+const ALL_ITEMS = [...NAV.flatMap((group) => group.items), ...FOOT];
+const PAGES = new Set(ALL_ITEMS.map((item) => item.key));
 
 export type Navigate = (page: string, detail?: string) => void;
 
@@ -78,6 +99,15 @@ export function App() {
   const [terminalKept, setTerminalKept] = useState(() => storedTerminals().length > 0);
   const [terminalsRunning, setTerminalsRunning] = useState(0);
   useEffect(() => { if (route.page === "terminal") setTerminalKept(true); }, [route.page]);
+  // ADR-046: an application embedded in the console (Open WebUI in Chat LLM, 3D Omniverse) stays loaded once
+  // opened, hidden while the operator is elsewhere -- it used to start again at every visit.
+  const [embedsKept, setEmbedsKept] = useState<string[]>([]);
+  // Before any early return below: a hook is called on every render, or React loses count of them.
+  const embedShown = route.page === "chat" ? "open-webui"
+    : route.page === "integrations" && route.detail ? route.detail : null;
+  useEffect(() => {
+    if (embedShown) setEmbedsKept((kept) => kept.includes(embedShown) ? kept : [...kept, embedShown]);
+  }, [embedShown]);
   // PHASE 33 (ADR-039): the file explorer on the left, opened with the button in the top bar;
   // a file opens where the page was, and going to another page closes it.
   const [filesOpen, setFilesOpen] = useState(() => {
@@ -128,6 +158,27 @@ export function App() {
     Promise.all(closing).then(() => api?.logout()).catch(() => undefined).finally(signOut);
   }, [api, signOut]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(storedTheme);
+  // At phone width the sidebar is a sheet opened from the top bar; it closes on every move.
+  const [navOpen, setNavOpen] = useState(false);
+  const sidebar = useRef<HTMLElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => { setNavOpen(false); }, [route.page, route.detail]);
+  useEffect(() => {
+    if (!navOpen) return;
+    sidebar.current?.querySelector<HTMLElement>("button")?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setNavOpen(false); menuButton.current?.focus(); return; }
+      if (event.key !== "Tab" || !sidebar.current) return;
+      // Focus stays inside the open sheet.
+      const items = [...sidebar.current.querySelectorAll<HTMLElement>("button, [href], [tabindex]:not([tabindex='-1'])")];
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navOpen]);
 
   // Who is signed in, fresh from the server: role and "must change password" can change.
   useEffect(() => {
@@ -164,41 +215,45 @@ export function App() {
   const user = session.user;
   const name = user?.displayName || user?.username || displayName();
   const { page, detail } = route;
+  const embeds = embedShown && !embedsKept.includes(embedShown) ? [...embedsKept, embedShown] : embedsKept;
   const projectInView = page === "projects" && detail && /^\d+$/.test(detail) ? Number(detail) : null;
-  const pageLabel = NAV.flatMap((g) => g.items).find((item) => item.key === page)?.label ?? page;
+  const pageLabel = ALL_ITEMS.find((item) => item.key === page)?.label ?? page;
+  const navButton = (item: NavItem) => (
+    <button key={item.key} className="nav-item" aria-current={page === item.key ? "page" : undefined}
+            onClick={() => navigate(item.key)}>
+      <Icon name={item.icon} size={17} />{item.label}
+      {item.key === "terminal" && terminalsRunning > 0 && (
+        <span className="nav-count" title="Terminali aperti in background">{terminalsRunning}</span>
+      )}
+    </button>
+  );
 
   return (
     <ApiContext.Provider value={api}>
       <SessionContext.Provider value={session}>
-      <div className={filesOpen ? "app files-open" : "app"}>
-        <nav className="sidebar" aria-label="Sections">
+      <div className={`app${filesOpen ? " files-open" : ""}${navOpen ? " nav-open" : ""}`}>
+        {navOpen && <div className="nav-scrim" onClick={() => setNavOpen(false)} aria-hidden="true" />}
+        <nav className="sidebar" aria-label="Sections" id="sections" ref={sidebar}>
           <div className="brand">
-            <span className="brand-mark"><Icon name="sparkle" size={18} /></span>
-            <span>AI Company OS<small>Ecosistema operativo</small></span>
+            <span className="brand-mark"><Icon name="sparkle" size={16} /></span>
+            <span>AI Company OS</span>
           </div>
           {NAV.map((group) => (
-            <div key={group.group} style={{ display: "contents" }}>
-              <div className="nav-group">{group.group}</div>
-              {group.items.map((item) => (
-                <button key={item.key} className="nav-item" aria-current={page === item.key ? "page" : undefined}
-                        onClick={() => navigate(item.key)}>
-                  <Icon name={item.icon} size={17} />{item.label}
-                  {item.key === "terminal" && terminalsRunning > 0 && (
-                    <span className="nav-count" title="Terminali aperti in background">{terminalsRunning}</span>
-                  )}
-                </button>
-              ))}
+            <div key={group.group ?? "home"} style={{ display: "contents" }}>
+              {group.group && <div className="nav-group">{group.group}</div>}
+              {group.items.map(navButton)}
             </div>
           ))}
           <div className="sidebar-foot">
-            <span>
-              Control plane{" "}
-              <span className={backendUp === false ? "badge badge-danger" : backendUp ? "badge badge-ok" : "badge"}>
-                {backendUp === false ? "down" : backendUp ? "up" : "…"}
-              </span>
-            </span>
-            <span className="mono">{session.baseUrl}</span>
-            <button className="btn btn-small" onClick={logout}><Icon name="logout" size={14} /> Esci</button>
+            {FOOT.map(navButton)}
+            <div className="system-card" role="status">
+              <Ribbon />
+              <strong>
+                <span className={`dot ${backendUp === false ? "dot-danger" : backendUp ? "dot-ok" : "dot-off"}`} />
+                {backendUp === false ? "Server non raggiungibile" : backendUp ? "Tutto operativo" : "Verifico il server…"}
+              </strong>
+              <span className="mono" title={session.baseUrl}>{session.baseUrl.replace(/^https?:\/\//, "")}</span>
+            </div>
           </div>
         </nav>
         {filesOpen && (
@@ -209,13 +264,22 @@ export function App() {
         )}
         <main className="main">
           <header className="topbar">
+            <button className="icon-button menu-button" ref={menuButton} onClick={() => setNavOpen(true)}
+                    aria-label="Apri il menu" aria-expanded={navOpen} aria-controls="sections">
+              <Icon name="menu" size={18} />
+            </button>
             <button className="btn files-toggle" aria-pressed={filesOpen} onClick={toggleFiles}
                     title={filesOpen ? "Chiudi il pannello dei file" : "Apri i file dei progetti"}>
               <Icon name="files" size={15} /> File
             </button>
             <GlobalSearch navigate={navigate} />
             <span className="spacer" />
-            <span className="muted">{new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</span>
+            <span className="muted topbar-date">{new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</span>
+            <button className="icon-button" onClick={() => { const next = theme === "dark" ? "light" : "dark"; saveTheme(next); setTheme(next); }}
+                    aria-label={theme === "dark" ? "Passa al tema chiaro" : "Passa al tema scuro"}
+                    title={theme === "dark" ? "Tema chiaro" : "Tema scuro"}>
+              <Icon name={theme === "dark" ? "sun" : "moon"} size={17} />
+            </button>
             <div className="user-menu">
               <button className="user-chip" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen}
                       aria-label="Account">
@@ -248,22 +312,33 @@ export function App() {
             {page === "dashboard" && <Dashboard navigate={navigate} />}
             {page === "projects" && <Projects selected={detail} navigate={navigate} />}
             {page === "tasks" && <TaskBoard />}
-            {page === "agents" && <Agents selected={detail} />}
+            {page === "learn" && <Learn selected={detail} navigate={navigate} />}
+            {page === "agents" && <Agents selected={detail} navigate={navigate} />}
             {page === "ecosystem3d" && (
               <Suspense fallback={<p className="muted">Carico la vista 3D…</p>}><Ecosystem3D navigate={navigate} /></Suspense>
+            )}
+            {page === "office" && (
+              <Suspense fallback={<p className="muted">Apro l'ufficio…</p>}><Office /></Suspense>
             )}
             {page === "daily" && <DailyWork />}
             {page === "brain" && <SecondBrain navigate={navigate} />}
             {page === "software" && <SoftwareHub selected={detail} navigate={navigate} />}
-            {page === "integrations" && <Integrations selected={detail} navigate={navigate} />}
-            {/* Open WebUI inside the console, as the ChatLLM tab of 3D Omniverse does. */}
-            {page === "chat" && <Integrations selected="open-webui" navigate={navigate} />}
+            {page === "integrations" && !detail && <Integrations navigate={navigate} />}
+            {page === "openclaw" && <OpenClaw navigate={navigate} />}
             {page === "knowledge" && <KnowledgeHub />}
             {page === "mockups" && <MockupHub />}
             {page === "models" && <Models />}
             {page === "usage" && <Usage />}
             {page === "settings" && <Settings session={session} onSessionChanged={(next) => { saveSession(next); setSession(next); }} />}
             </ErrorBoundary>
+            {/* Open WebUI inside the console, as the ChatLLM tab of 3D Omniverse does: kept loaded (ADR-046). */}
+            {embeds.length > 0 && (
+              <div hidden={embedShown === null}>
+                <ErrorBoundary label="Integrazioni">
+                  <KeptEmbeds keys={embeds} current={embedShown} navigate={navigate} />
+                </ErrorBoundary>
+              </div>
+            )}
             {terminalKept && (
               <div hidden={page !== "terminal"}>
                 <ErrorBoundary label="Terminale">

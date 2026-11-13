@@ -253,7 +253,7 @@ export function BlockInspector({ projectId, nodeId, vocabulary, editable, action
                         </button>
                       )}
                     </>
-                  : <span className="muted" style={{ fontSize: 12 }}>Nessun esito ancora: arriva con un'esecuzione riuscita o con la sezione Esito del documento della task.</span>}
+                  : <span className="muted" style={{ fontSize: 12 }}>Nessun esito ancora: arriva con un'esecuzione riuscita, con il file dell'esito accanto al documento della task o con la sua sezione Esito.</span>}
               </li>
             ))}
           </ul>

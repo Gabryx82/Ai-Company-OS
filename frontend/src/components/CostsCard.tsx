@@ -37,10 +37,10 @@ export function CostsCard() {
       </div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
       <div className="muted" style={{ fontSize: 12.5 }}>
-        Un provider a consumo esegue solo con un budget mensile e con il prezzo del modello impostati; a budget esaurito le sue
-        esecuzioni si fermano. I modelli locali e gli abbonamenti (Claude Code, Codex…) non costano per esecuzione.
+        Un provider a consumo lavora solo dopo che hai impostato un budget mensile e il prezzo del modello; quando il budget
+        finisce, le sue esecuzioni si fermano. Modelli locali e abbonamenti (Claude Code, Codex…) non hanno costi per esecuzione.
       </div>
-      <table>
+      <div className="table-scroll"><table>
         <thead><tr><th>Provider</th><th>Esecuzioni</th><th>Token</th><th>Costo</th><th>Budget</th><th /></tr></thead>
         <tbody>
           {paid.map((p) => {
@@ -68,11 +68,11 @@ export function CostsCard() {
             );
           })}
         </tbody>
-      </table>
+      </table></div>
       {summary && summary.models.length > 0 && (
         <details>
           <summary>Per modello e per agente</summary>
-          <table>
+          <div className="table-scroll"><table>
             <thead><tr><th>Modello</th><th>Esecuzioni</th><th>Token in / out</th><th>Prezzo /M</th><th>Costo</th></tr></thead>
             <tbody>{summary.models.map((m) => (
               <tr key={m.model}><td className="mono">{m.model}</td><td>{m.runs}</td>
@@ -80,13 +80,13 @@ export function CostsCard() {
                 <td className="muted">{m.inputPricePerMtok !== null ? `${m.inputPricePerMtok} / ${m.outputPricePerMtok}` : "—"}</td>
                 <td>{usd(m.costUsd)}</td></tr>
             ))}</tbody>
-          </table>
-          <table>
+          </table></div>
+          <div className="table-scroll"><table>
             <thead><tr><th>Agente</th><th>Esecuzioni</th><th>Token</th><th>Costo</th></tr></thead>
             <tbody>{summary.agents.map((a) => (
               <tr key={`${a.agentId ?? "deleted"}-${a.agentName}`}><td>{a.agentName}{a.agentId === null && <span className="chip">eliminato</span>}</td><td>{a.runs}</td><td className="muted">{a.tokens}</td><td>{usd(a.costUsd)}</td></tr>
             ))}</tbody>
-          </table>
+          </table></div>
         </details>
       )}
       {removing && (

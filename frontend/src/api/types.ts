@@ -126,6 +126,9 @@ export type CatalogModel = S["ModelResponse"] & {
 };
 // --- PHASE 33: the file explorer (ADR-039) ------------------------------------
 export type ProjectFileEntry = S["ProjectFileEntry"];
+/** The console's quick assistant: what was said, and the answer with the model that gave it. */
+export type AssistantTurn = S["AssistantTurn"];
+export type AssistantAnswer = S["AssistantAnswer"];
 export type ProjectDirectoryListing = S["ProjectDirectoryListing"];
 export type ProjectFileView = S["ProjectFileView"];
 export type ModelQuota = S["ModelQuotaResponse"];
@@ -136,6 +139,12 @@ export type ModelCatalog = {
   engineReachable: boolean;
   engineDefault: string | null;
 };
+
+/** PHASE 35 (ADR-041): what the agents consumed, as measured. */
+export type MeasuresReport = S["MeasuresReport"];
+export type RunMeasure = S["RunMeasure"];
+export type GroupMeasure = S["GroupMeasure"];
+export type HandoffMeasure = S["HandoffMeasure"];
 
 export type UsageWindow = S["UsageWindowResponse"] & {
   key: string;
@@ -163,6 +172,9 @@ export type Phase = S["PhaseResponse"] & { tasks: Task[] };
 export type PlanRun = S["PlanRunResponse"];
 export type Plan = { project: Project; phases: Phase[]; runs: PlanRun[] };
 export type Orchestration = S["Orchestration"];
+/** PHASE 36 (ADR-042): what the agent would find if the task went to a target now. */
+export type Readiness = S["Readiness"];
+export type ReadinessItem = S["ReadinessItem"];
 export type HandoffOutcome = S["HandoffResult"];
 export type Handoff = S["HandoffResponse"];
 /** PHASE 32 (TD-49): what the OpenCode session a handoff opened is doing. */
@@ -210,10 +222,12 @@ export interface SecurityEventInfo {
 
 // --- PHASE 16: Agent -> Model -> Provider -> Execution Target (ADR-025) -----------
 
-export type Delivery = "ENGINE_RUN" | "CLI_PROMPT" | "IDE_FOLDER" | "APP_PASTE" | "WEB_PASTE" | "MANUAL";
+export type Delivery = "ENGINE_RUN" | "CLI_PROMPT" | "IDE_FOLDER" | "APP_PASTE" | "APP_LINK" | "WEB_PASTE" | "MANUAL";
 export interface ExecutionTarget {
   key: string; name: string; software: string | null; delivery: Delivery; providers: string[];
   contextFile: string | null; howItWorks: string;
+  /** PHASE 34: the app's own link, for an APP_LINK target (Claude Desktop's claude://code/new). */
+  link: string | null;
 }
 export interface Binding {
   model: { key: string; displayName: string; role: string | null; lifecycle: string | null; replacedBy: string | null;
@@ -482,3 +496,41 @@ export interface HubUpdateItem {
 }
 export interface HubUpdates { checkedAt: string | null; items: HubUpdateItem[]; errors: string[] }
 export interface HubApplied { id: string; outcome: "UPDATED" | "CONFLICT" | "FAILED" | "SKIPPED"; message: string | null }
+
+// PHASE 37 (ADR-043): the agents made here, in the tools around AI Company OS.
+export type AgentSyncState = "IN_SYNC" | "BEHIND" | "NOT_PUBLISHED" | "NOT_APPLICABLE" | "MISSING" | "ADOPTED" | "UNAVAILABLE"
+  | "READING";
+export type AgentSyncCell = Omit<S["AgentSyncCell"], "state"> & { state: AgentSyncState };
+export type AgentSyncTool = S["AgentSyncTool"];
+export type AgentSyncRow = Omit<S["AgentSyncRow"], "cells"> & { cells: AgentSyncCell[] };
+export type AgentSyncOverview = Omit<S["AgentSyncOverview"], "agents"> & { agents: AgentSyncRow[] };
+export type AgentSyncResult = S["AgentSyncResult"];
+export type AgentSyncReport = S["AgentSyncReport"];
+export type ImportableAgent = S["ImportableAgent"];
+export type ImportedAgent = S["ImportedAgent"];
+
+// ADR-045: OpenClaw inside the console -- its Control UI cannot be framed.
+export type OpenClawAvailability = "AVAILABLE" | "NOT_INSTALLED" | "NOT_CONFIGURED" | "UNREACHABLE";
+export type OpenClawControlUiState = "IDLE" | "OPENING" | "OPENED" | "FAILED";
+export type OpenClawMessageState = "RUNNING" | "DONE" | "FAILED";
+export type OpenClawAgent = S["OpenClawAgent"];
+export type OpenClawSession = S["OpenClawSession"];
+export type OpenClawControlUi = Omit<S["OpenClawControlUi"], "state"> & { state: OpenClawControlUiState };
+export type OpenClawOverview = Omit<S["OpenClawOverview"], "availability" | "controlUi"> & {
+  availability: OpenClawAvailability; controlUi: OpenClawControlUi;
+};
+export type OpenClawMessage = Omit<S["OpenClawMessage"], "state"> & { state: OpenClawMessageState };
+export type OpenClawTerminal = S["OpenClawTerminal"];
+
+// PHASE 37 (ADR-044): learning that is done, not read.
+export type LearningMode = "TEACH" | "RECAP" | "NONE";
+export type LearningOverview = S["LearningOverview"];
+export type LessonSummary = S["LessonSummary"];
+export type LessonView = S["LessonView"];
+export type LessonStep = S["StepView"];
+export type LessonExercise = S["ExerciseView"];
+export type LessonPrediction = S["PredictionView"];
+export type StepCheck = S["StepCheck"];
+export type ExerciseResult = S["ExerciseResult"];
+export type ReviewDeck = S["ReviewDeck"];
+export type ReviewCard = S["ReviewCard"];

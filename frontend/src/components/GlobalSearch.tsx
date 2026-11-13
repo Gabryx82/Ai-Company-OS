@@ -15,6 +15,23 @@ export function GlobalSearch({ navigate }: { navigate: (page: string, detail?: s
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState<Hit[] | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+
+  // Ctrl+K (⌘K on a Mac) reaches the search from anywhere in the console.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        input.current?.focus();
+        input.current?.select();
+      } else if (event.key === "Escape" && document.activeElement === input.current) {
+        setOpen(false);
+        input.current?.blur();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     if (!query || index) return;
@@ -43,13 +60,14 @@ export function GlobalSearch({ navigate }: { navigate: (page: string, detail?: s
   return (
     <div className="search" ref={box}>
       <Icon name="search" size={16} />
-      <input placeholder="Cerca in tutto l'ecosistema…" value={query} aria-label="Cerca"
+      <input ref={input} placeholder="Cerca progetti, task, agenti e software" value={query} aria-label="Cerca"
              onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
              onFocus={() => setOpen(true)} />
+      <kbd className="kbd" aria-hidden="true">{/Mac/.test(navigator.platform) ? "⌘K" : "Ctrl K"}</kbd>
       {open && needle && (
         <div className="search-results">
           {!index && <div className="list-item muted">Carico…</div>}
-          {index && hits.length === 0 && <div className="list-item muted">Nessun risultato</div>}
+          {index && hits.length === 0 && <div className="list-item muted">Nessun risultato per «{query.trim()}»</div>}
           {hits.map((hit, i) => (
             <button key={i} onClick={() => { navigate(hit.page, hit.detail); setOpen(false); setQuery(""); }}>
               <Icon name={hit.icon} size={15} /><span>{hit.label}</span><span className="spacer" />

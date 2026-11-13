@@ -25,6 +25,33 @@ describe("Modelli — the roles a model serves (TD-66)", () => {
   });
 });
 
+describe("Modelli — how a local model runs (ADR-041 §11)", () => {
+  it("shows the window, the keep-alive and the quantization, and saves a change with the model's tag", async () => {
+    const tuned = { ...QWEN, numCtx: 16384, keepAlive: "5m", quantization: "Q4_K_M" };
+    const { fetcher, calls } = fakeFetch({
+      "GET /api/catalog/providers": () => ({ body: [] }),
+      "GET /api/catalog/models": () => ({ body: { models: [tuned, { ...QWEN, key: "claude-subscription:default",
+        displayName: "Claude", providerKey: "claude-subscription", numCtx: null, keepAlive: null, quantization: null }],
+        uncatalogued: [], engineReachable: true, engineDefault: "echo:default" } }),
+      "PUT /api/catalog/models": () => ({ body: { ...tuned, numCtx: 8192 }, etag: '"3"' }),
+    });
+    const api = new ControlPlane({ baseUrl: "http://localhost:8081", token: "t0123456789abcdef" }, fetcher);
+    render(<ApiContext.Provider value={api}><Models /></ApiContext.Provider>);
+
+    expect(await screen.findByText("finestra 16K · in memoria 5m · Q4_K_M")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /Esecuzione di/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Esecuzione di Qwen 3.5 9B" }));
+    fireEvent.change(screen.getByLabelText("Finestra di contesto (num_ctx)"), { target: { value: "8192" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salva" }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
+    const put = calls.find((c) => c.method === "PUT")!;
+    expect(put.path).toBe("/api/catalog/models?key=ollama%3Aqwen3.5%3A9b");
+    expect(put.headers["If-Match"]).toBe('"2"');
+    expect(put.body).toEqual({ role: "PLANNER", lifecycle: "ACTIVE", numCtx: 8192, keepAlive: "5m", quantization: "Q4_K_M" });
+  });
+});
+
 describe("Modelli — retiring a catalog entry (TD-71)", () => {
   function renderAs(role: "ADMIN" | "OPERATOR", routes: Parameters<typeof fakeFetch>[0]) {
     const { fetcher, calls } = fakeFetch(routes);

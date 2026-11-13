@@ -81,7 +81,7 @@ export function SoftwareHub({ selected, navigate }: { selected: string | null; n
       <div className="page-head">
         <div>
           <h1>Software Hub</h1>
-          <p>Tutti gli strumenti dell'ecosistema: ruolo, capability, stato rilevato su questa macchina, apertura.</p>
+          <p>Tutti gli strumenti del tuo ecosistema: a cosa servono, cosa sanno fare, se sono installati su questo computer e come aprirli.</p>
         </div>
         <button className="btn" onClick={refresh}><Icon name="refresh" size={14} /> Rileva di nuovo</button>
       </div>
@@ -94,7 +94,7 @@ export function SoftwareHub({ selected, navigate }: { selected: string | null; n
         </div>
         <div className="tabs" role="tablist">
           <button className="tab" role="tab" aria-selected={category === "ALL"} onClick={() => setCategory("ALL")}>Tutti</button>
-          <button className="tab" role="tab" aria-selected={category === "TARGETS"} onClick={() => setCategory("TARGETS")}>Execution target</button>
+          <button className="tab" role="tab" aria-selected={category === "TARGETS"} onClick={() => setCategory("TARGETS")}>Ambienti di esecuzione</button>
           {categories.map((c) => (
             <button key={c} className="tab" role="tab" aria-selected={category === c} onClick={() => setCategory(c)}>
               {CATEGORY_LABEL[c]}
@@ -131,7 +131,7 @@ export function SoftwareHub({ selected, navigate }: { selected: string | null; n
               <div className="row">
                 <span className={`dot ${AVAILABILITY[current.availability].dot}`} />
                 <strong>{AVAILABILITY[current.availability].label}</strong>
-                {current.executionTarget && <span className="badge badge-accent">Execution target</span>}
+                {current.executionTarget && <span className="badge badge-accent">Ambiente di esecuzione</span>}
                 {current.embeddable && <span className="badge badge-ok">Incorporabile</span>}
               </div>
               {current.purpose && <p style={{ margin: 0 }}>{current.purpose}</p>}

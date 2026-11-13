@@ -4,6 +4,7 @@ import type { UsageWindow } from "../api/types";
 import { Modal, ProblemNote } from "../components/ui";
 import { Icon } from "../components/icons";
 import { CostsCard } from "../components/CostsCard";
+import { MeasuresCard } from "../components/MeasuresCard";
 
 const STATUS: Record<UsageWindow["status"], { label: string; tone: string; hint: string }> = {
   MEASURED: { label: "Misurato", tone: "badge badge-ok", hint: "Registrato dal client del fornitore su questa macchina" },
@@ -63,16 +64,16 @@ export function Usage() {
       <div className="page-head">
         <div>
           <h1>Consumi e quote</h1>
-          <p>Uso dei modelli cloud e degli abbonamenti, e quando si azzerano le finestre giornaliere, di 5 ore e settimanali.</p>
+          <p>Quanto stai usando modelli cloud e abbonamenti, e quando si azzerano i limiti giornalieri, di 5 ore e settimanali.</p>
         </div>
         <button className="btn" onClick={load}><Icon name="refresh" size={14} /> Aggiorna</button>
       </div>
       <ProblemNote problem={problem} />
       <div className="notice">
-        Nessuna API pubblica espone le quote degli abbonamenti Claude, ChatGPT o Copilot. Qui compaiono solo dati reali:
-        i limiti che <strong>Codex</strong> registra nelle sue sessioni locali, i token che <strong>Claude Code</strong>{" "}
-        registra per messaggio, le quote per modello che <strong>Antigravity</strong> salva nel suo stato, la quota che{" "}
-        <strong>Kimi Code</strong> restituisce alla tua chiave, e le run che AI Company OS ha inviato a provider a consumo.
+        Gli abbonamenti Claude, ChatGPT e Copilot non pubblicano le proprie quote, quindi qui trovi solo dati reali letti
+        dagli strumenti: i limiti che <strong>Codex</strong> salva nelle sessioni locali, i token che{" "}
+        <strong>Claude Code</strong> registra per messaggio, le quote per modello di <strong>Antigravity</strong>, la quota
+        della tua chiave <strong>Kimi Code</strong> e le esecuzioni che AI Company OS ha inviato ai provider a consumo.
       </div>
 
       <div className="grid grid-2">
@@ -135,6 +136,7 @@ export function Usage() {
           </div>
         ))}
       </div>
+      <MeasuresCard />
       <CostsCard />
       {editing && <AnchorEditor window={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>

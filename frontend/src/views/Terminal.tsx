@@ -124,7 +124,7 @@ export function Terminal({ visible = true, onRunning }: { visible?: boolean; onR
       <div className="page-head">
         <div>
           <h1>Terminale</h1>
-          <p>Scegli la shell o l'agente da riga di comando; si apre in Windows Terminal nella cartella del progetto.</p>
+          <p>Scegli una shell o un agente da riga di comando: si apre in Windows Terminal, già nella cartella del progetto.</p>
         </div>
         {projects.length > 0 && (
           <select style={{ width: "auto" }} value={projectId} aria-label="Progetto"

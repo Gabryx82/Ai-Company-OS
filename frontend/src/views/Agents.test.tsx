@@ -178,6 +178,154 @@ describe("Agents — deleting (ADR-035 §2)", () => {
   });
 });
 
+describe("Agents — every field saved from the page is read back (PHASE 36)", () => {
+  const TARGETS = [
+    { key: "engine", name: "AI Engine", software: null, delivery: "ENGINE_RUN", providers: ["ollama"], contextFile: null,
+      howItWorks: "Run nell'engine.", link: null },
+    { key: "opencode", name: "OpenCode (CLI)", software: "opencode", delivery: "CLI_PROMPT", providers: ["ollama"],
+      contextFile: "AGENTS.md", howItWorks: "Si apre nel terminale.", link: null },
+  ];
+  const MODELS = [{ key: "ollama:qwen3.5:9b", providerKey: "ollama", displayName: "Qwen 3.5 9B", role: "GENERAL",
+    capabilities: [], lifecycle: "CURRENT", version: 0 }];
+  const RESOURCES = [
+    { key: "p36-skill", kind: "SKILL", name: "Catena Vincoli", description: null, configuration: null },
+    { key: "p36-knowledge", kind: "KNOWLEDGE", name: "Catena Glossario", description: null, configuration: null },
+    { key: "p36-tool", kind: "TOOL", name: "Catena Profiler", description: null, configuration: "profiler --all" },
+    { key: "p36-mcp", kind: "MCP", name: "Catena MCP", description: null, configuration: "npx -y @catena/mcp" },
+  ];
+  const SOFTWARE = [{ key: "docker-desktop", name: "Docker Desktop", role: "Container", launchKind: "EXECUTABLE",
+    availability: "INSTALLED" }];
+
+  /** A server that keeps what it is sent, and answers as the control plane does: lists for line fields. */
+  function statefulServer() {
+    const boss = agent(2, "Capo Bot", { origin: "USER" });
+    let stored = agent(1, "Backend Bot", { origin: "USER" });
+    const lines = (text: unknown) => String(text ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+    const link = (kind: string, key: string, on: boolean) => {
+      const r = RESOURCES.find((x) => x.key === key)!;
+      const now = (stored.resources[kind] ?? []).filter((x) => x.key !== key);
+      stored = { ...stored, resources: { ...stored.resources, [kind]: on ? [...now, r] : now } };
+      return { status: 204 };
+    };
+    const routes: Parameters<typeof fakeFetch>[0] = {
+      "GET /api/ecosystem/bindings": () => ({ body: [stored, boss] }),
+      "GET /api/agents/1/configuration": () => ({ body: stored, etag: `"${stored.version}"` }),
+      "PUT /api/agents/1/configuration": (call) => {
+        const b = call.body as Record<string, unknown>;
+        stored = {
+          ...stored, name: String(b.name), role: String(b.role), specialization: String(b.specialization),
+          description: (b.description as string | null) ?? null, capabilities: lines(b.capabilities),
+          parent: b.parentId === 2 ? { id: 2, name: "Capo Bot", role: "Backend Engineer" } : null,
+          domain: (b.domain as string | null) ?? null, systemPrompt: (b.systemPrompt as string | null) ?? null,
+          responsibilities: (b.responsibilities as string | null) ?? null, limits: (b.limits as string | null) ?? null,
+          outputFormat: (b.outputFormat as string | null) ?? null, directives: lines(b.directives),
+          contextPolicy: (b.contextPolicy as string | null) ?? null, model: (b.model as string | null) ?? null,
+          executionTarget: String(b.executionTarget), version: stored.version + 1,
+        };
+        return { body: stored, etag: `"${stored.version}"` };
+      },
+      "GET /api/execution-targets": () => ({ body: TARGETS }),
+      "GET /api/execution-targets/engine/check": () => ({ body: BINDING }),
+      "GET /api/execution-targets/opencode/check": () => ({ body: BINDING }),
+      "GET /api/catalog/models": () => ({ body: { models: MODELS, uncatalogued: [], engineReachable: true, engineDefault: null } }),
+      "GET /api/catalog/providers": () => ({ body: [{ key: "ollama", name: "Ollama", kind: "LOCAL", billing: "FREE", status: "ACTIVE" }] }),
+      "GET /api/resources": () => ({ body: RESOURCES }),
+      "GET /api/software": () => ({ body: SOFTWARE }),
+    };
+    for (const r of RESOURCES) {
+      routes[`PUT /api/agents/1/resources/${r.key}`] = () => link(r.kind, r.key, true);
+    }
+    routes["PUT /api/agents/1/software/docker-desktop"] = () => {
+      stored = { ...stored, software: [{ key: "docker-desktop", name: "Docker Desktop" }] };
+      return { status: 204 };
+    };
+    return routes;
+  }
+
+  const TEXT: [label: string, value: string][] = [
+    ["Ruolo", "Database Engineer"], ["Specializzazione", "PostgreSQL"], ["Descrizione", "Disegna lo schema."],
+    ["Capability", "migrazioni\nindici"], ["System prompt", "Sei il custode dello schema."],
+    ["Responsabilità", "Le migrazioni del progetto."], ["Direttive", "Prima il test\nPoi la migrazione"],
+    ["Limiti", "Mai DROP senza conferma."], ["Output atteso", "Una migrazione e il suo test."],
+    ["Politica di contesto", "Leggi prima docs/adr."], ["Dominio", "dati"],
+  ];
+  const TAB_OF: Record<string, string> = {
+    Ruolo: "Identità", Specializzazione: "Identità", Descrizione: "Identità", Capability: "Identità",
+    "System prompt": "Prompt e direttive", Responsabilità: "Prompt e direttive", Direttive: "Prompt e direttive",
+    Limiti: "Prompt e direttive", "Output atteso": "Prompt e direttive", "Politica di contesto": "Prompt e direttive",
+    Dominio: "Prompt e direttive",
+  };
+
+  it("saves every field of the page in one write, and the page reopened shows them all", async () => {
+    const calls = renderAgents(statefulServer());
+    fireEvent.click(await screen.findByRole("button", { name: /Backend Bot/ }));
+    await screen.findByRole("button", { name: "Salva configurazione" });
+
+    // Identity and prompt.
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Schema Bot" } });
+    for (const [label, value] of TEXT) {
+      fireEvent.click(screen.getByRole("button", { name: TAB_OF[label] }));
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Identità" }));
+    fireEvent.change(screen.getByLabelText("Sottoagente di"), { target: { value: "2" } });
+    // Model and execution target.
+    fireEvent.click(screen.getByRole("button", { name: "Modello ed esecuzione" }));
+    fireEvent.click(await screen.findByRole("button", { name: /OpenCode \(CLI\)/ }));
+    fireEvent.change(await screen.findByLabelText("Modello"), { target: { value: "ollama:qwen3.5:9b" } });
+
+    const save = screen.getByRole("button", { name: "Salva configurazione" });
+    await waitFor(() => expect((save as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(save);
+    expect(await screen.findByText("Salvato")).toBeTruthy();
+
+    const write = calls.find((c) => c.method === "PUT" && c.path === "/api/agents/1/configuration")!;
+    expect(write.headers["If-Match"]).toBe('"10"');
+    expect(write.body).toEqual({
+      name: "Schema Bot", role: "Database Engineer", specialization: "PostgreSQL", description: "Disegna lo schema.",
+      capabilities: "migrazioni\nindici", parentId: 2, domain: "dati", systemPrompt: "Sei il custode dello schema.",
+      responsibilities: "Le migrazioni del progetto.", limits: "Mai DROP senza conferma.",
+      outputFormat: "Una migrazione e il suo test.", directives: "Prima il test\nPoi la migrazione",
+      contextPolicy: "Leggi prima docs/adr.", model: "ollama:qwen3.5:9b", executionTarget: "opencode",
+    });
+
+    // Harness and software: each box is its own write.
+    fireEvent.click(screen.getByRole("button", { name: "Skill e strumenti" }));
+    for (const r of RESOURCES) {
+      fireEvent.click(await screen.findByRole("checkbox", { name: new RegExp(r.name) }));
+      await waitFor(() => expect(calls.some((c) => c.method === "PUT" && c.path === `/api/agents/1/resources/${r.key}`)).toBe(true));
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Software" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /Docker Desktop/ }));
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT" && c.path === "/api/agents/1/software/docker-desktop")).toBe(true));
+
+    // Closed and opened again: everything comes from a new read.
+    fireEvent.click(screen.getByRole("button", { name: "Chiudi" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Chiudi" })).toBeNull());
+    const reads = calls.filter((c) => c.method === "GET" && c.path === "/api/agents/1/configuration").length;
+    fireEvent.click(await screen.findByRole("button", { name: /Schema Bot/ }));
+    await screen.findByRole("button", { name: "Salva configurazione" });
+    expect(calls.filter((c) => c.method === "GET" && c.path === "/api/agents/1/configuration").length).toBeGreaterThan(reads);
+
+    expect((screen.getByLabelText("Nome") as HTMLInputElement).value).toBe("Schema Bot");
+    for (const [label, value] of TEXT) {
+      fireEvent.click(screen.getByRole("button", { name: TAB_OF[label] }));
+      expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(value);
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Identità" }));
+    expect((screen.getByLabelText("Sottoagente di") as HTMLSelectElement).value).toBe("2");
+    fireEvent.click(screen.getByRole("button", { name: "Modello ed esecuzione" }));
+    expect(screen.getByRole("button", { name: /OpenCode \(CLI\)/ }).getAttribute("aria-pressed")).toBe("true");
+    expect((screen.getByLabelText("Modello") as HTMLSelectElement).value).toBe("ollama:qwen3.5:9b");
+    fireEvent.click(screen.getByRole("button", { name: "Skill e strumenti" }));
+    for (const r of RESOURCES) {
+      expect((screen.getByRole("checkbox", { name: new RegExp(r.name) }) as HTMLInputElement).checked).toBe(true);
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Software" }));
+    expect((screen.getByRole("checkbox", { name: /Docker Desktop/ }) as HTMLInputElement).checked).toBe(true);
+  });
+});
+
 describe("Agents — opened from a link (ADR-037)", () => {
   it("#/agents/{id} opens that agent's editor; without it, none", async () => {
     const { fetcher } = fakeFetch({
@@ -201,5 +349,61 @@ describe("Agents — opened from a link (ADR-037)", () => {
     );
     await screen.findByRole("button", { name: /Backend Bot/ });
     expect(screen.queryByRole("heading", { name: "Frontend Bot" })).toBeNull();
+  });
+});
+
+describe("Agents — what the library proposes, and the ecosystem (PHASE 37)", () => {
+  const RESOURCE = { id: 4, key: "react-typescript", kind: "SKILL", name: "React + TypeScript", description: "Componenti e hook.",
+    tags: ["react"], sourceUrl: null, searchUrl: null, configuration: null, origin: "CATALOG", fileBacked: true, filePath: null, version: 0 };
+
+  it("the editor proposes the skills that suit the agent and attaches one on a click", async () => {
+    let attached = false;
+    const { fetcher, calls } = fakeFetch({
+      "GET /api/ecosystem/bindings": () => ({ body: [agent(2, "Frontend Bot")] }),
+      "GET /api/agents/2/configuration": () => ({ body: agent(2, "Frontend Bot"), etag: attached ? '"21"' : '"20"' }),
+      "GET /api/agents/2/resource-suggestions": () => ({ body: attached ? [] : [RESOURCE] }),
+      "PUT /api/agents/2/resources/react-typescript": () => { attached = true; return { status: 204 }; },
+    });
+    const session: Session = { baseUrl: "http://localhost:8081", token: "t0123456789abcdef",
+      user: { id: 1, username: "admin", displayName: null, role: "ADMIN" } as Session["user"] };
+    render(
+      <SessionContext.Provider value={session}>
+        <ApiContext.Provider value={new ControlPlane(session, fetcher)}><Agents selected="2" /></ApiContext.Provider>
+      </SessionContext.Provider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Skill e strumenti" }));
+    const proposed = await screen.findByLabelText("Consigliate per questo agente");
+    // Proposed, not attached: nothing is written until the operator chooses.
+    expect(calls.some((c) => c.method === "PUT")).toBe(false);
+    fireEvent.click(within(proposed).getByRole("button", { name: /React \+ TypeScript/ }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT" && c.path === "/api/agents/2/resources/react-typescript")).toBe(true));
+    // Read again after the change: what the agent carries is no longer proposed.
+    await waitFor(() => expect(screen.queryByLabelText("Consigliate per questo agente")).toBeNull());
+  });
+
+  it("#/agents/ecosystem is the agents in the tools around AI Company OS, one tab away from the list", async () => {
+    const { fetcher } = fakeFetch({
+      "GET /api/ecosystem/bindings": () => ({ body: [agent(1, "Backend Bot")] }),
+      "GET /api/agent-sync": () => ({ body: { tools: [{ key: "openclaw", name: "OpenClaw", shape: "un agente con il suo spazio di lavoro",
+        availability: "AVAILABLE", detail: "OpenClaw configurato.", hint: null, imports: true }], agents: [], importable: [], pending: 0 } }),
+    });
+    const session: Session = { baseUrl: "http://localhost:8081", token: "t0123456789abcdef",
+      user: { id: 1, username: "admin", displayName: null, role: "ADMIN" } as Session["user"] };
+    const visited: (string | undefined)[] = [];
+    render(
+      <SessionContext.Provider value={session}>
+        <ApiContext.Provider value={new ControlPlane(session, fetcher)}>
+          <Agents selected="ecosystem" navigate={(_page, detail) => visited.push(detail)} /></ApiContext.Provider>
+      </SessionContext.Provider>,
+    );
+
+    expect(await screen.findByText("Un solo ecosistema")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /Ecosistema/ }).getAttribute("aria-selected")).toBe("true");
+    // The list's own actions belong to the list.
+    expect(screen.queryByRole("button", { name: /Nuovo agente/ })).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "I tuoi agenti" }));
+    expect(visited).toEqual([undefined]);
   });
 });

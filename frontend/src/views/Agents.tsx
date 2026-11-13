@@ -10,6 +10,7 @@ import { Icon } from "../components/icons";
 import { BindingChain, DELIVERY_LABEL } from "../components/BindingChain";
 import { alreadyGone, ConfirmDeletion, DeleteButton, SelectionBar, useSelection } from "../components/Deletion";
 import { useIsAdmin } from "../context";
+import { AgentEcosystem } from "./AgentEcosystem";
 
 export const ORIGIN_LABEL = { SEED: "Seed iniziale", TEMPLATE: "Da template", USER: "Creato da te" } as const;
 const KINDS = [
@@ -20,7 +21,7 @@ const FIELD_LABEL: Record<string, string> = {
   role: "ruolo", specialization: "specializzazione", description: "descrizione", capabilities: "capability",
   responsibilities: "responsabilità", systemPrompt: "system prompt", directives: "direttive", limits: "limiti",
   outputFormat: "output", contextPolicy: "politica di contesto", domain: "dominio", parentId: "agente padre",
-  model: "modello", executionTarget: "execution target", resources: "risorse dell'harness", software: "software",
+  model: "modello", executionTarget: "ambiente di esecuzione", resources: "risorse dell'harness", software: "software",
 };
 
 /**
@@ -28,8 +29,12 @@ const FIELD_LABEL: Record<string, string> = {
  * served by which provider, working where -- and, for seed and template agents,
  * what is still the initial configuration and what a person changed.
  */
-export function Agents({ selected: initial = null }: { selected?: string | null } = {}) {
+export function Agents({ selected: initial = null, navigate }: {
+  selected?: string | null; navigate?: (page: string, detail?: string) => void;
+} = {}) {
   const api = useApi();
+  // PHASE 37 (ADR-043): #/agents/ecosystem is the agents in the tools around AI Company OS.
+  const view: "list" | "ecosystem" = initial === "ecosystem" ? "ecosystem" : "list";
   const [agents, setAgents] = useState<AgentConfiguration[] | null>(null);
   // ADR-037: #/agents/{id} opens that agent's editor -- the 3D view links here.
   const [selected, setSelected] = useState<number | null>(() => (initial && /^\d+$/.test(initial) ? Number(initial) : null));
@@ -68,7 +73,7 @@ export function Agents({ selected: initial = null }: { selected?: string | null 
           {depth > 0 && <span className="muted" title="Sottoagente">└</span>}
           <Icon name="agents" size={15} />
           <strong>{a.name}</strong>
-          <span className="muted" style={{ fontSize: 12 }}>{a.role}</span>
+          {a.role && a.role.toLowerCase() !== a.name.toLowerCase() && <span className="muted" style={{ fontSize: 12 }}>{a.role}</span>}
           <span className="spacer" />
           <span className="chip origin-badge">{ORIGIN_LABEL[a.origin]}</span>
           {a.modified.length > 0 && <span className="badge badge-warn" title={a.modified.map((f) => FIELD_LABEL[f] ?? f).join(", ")}>
@@ -86,7 +91,8 @@ export function Agents({ selected: initial = null }: { selected?: string | null 
     <div className="stack">
       <div className="page-head">
         <div><h1>Agenti</h1>
-          <p>Ogni agente: chi è, con quale modello, servito da quale provider, e dove lavora — il motore interno o un'app/CLI come Claude Code e Codex.</p></div>
+          <p>Ogni agente con il suo modello, il provider che lo serve e il posto in cui lavora: il motore AI integrato o un'app come Claude Code e Codex.</p></div>
+        {view === "list" && (
         <div className="row">
           {isAdmin && (agents?.length ?? 0) > 0 && (
             <button className="btn" aria-pressed={selecting} onClick={() => { setSelecting(!selecting); selection.clear(); setSelected(null); }}>
@@ -95,7 +101,20 @@ export function Agents({ selected: initial = null }: { selected?: string | null 
           <button className="btn" onClick={() => setTemplates(true)}><Icon name="plus" size={14} /> Da template</button>
           <button className="btn btn-primary" onClick={() => setCreating(true)}><Icon name="plus" size={14} /> Nuovo agente</button>
         </div>
+        )}
       </div>
+      {navigate && (
+        <div className="tabs" role="tablist" aria-label="Viste degli agenti">
+          <button className="tab" role="tab" aria-selected={view === "list"} onClick={() => navigate("agents")}>I tuoi agenti</button>
+          <button className="tab" role="tab" aria-selected={view === "ecosystem"} onClick={() => navigate("agents", "ecosystem")}>
+            Ecosistema: OpenClaw, Open WebUI, LiteLLM</button>
+        </div>
+      )}
+      {view === "ecosystem" && (
+        <AgentEcosystem isAdmin={isAdmin} onAgentsChanged={() => reload()}
+                        onOpenAgent={(id) => navigate?.("agents", String(id))} />
+      )}
+      {view === "list" && (<>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
       {done && <div className="notice row" role="status"><Icon name="check" size={13} /> {done}<span className="spacer" />
         <button className="btn btn-small" onClick={() => setDone(null)}>Chiudi</button></div>}
@@ -121,6 +140,7 @@ export function Agents({ selected: initial = null }: { selected?: string | null 
       {creating && <NewAgentModal onClose={() => setCreating(false)}
                                   onCreated={(id) => { setCreating(false); reload().then(() => setSelected(id)); }} />}
       {templates && <TemplatesModal onClose={() => setTemplates(false)} onInstalled={() => reload()} />}
+      </>)}
     </div>
   );
 }
@@ -159,6 +179,13 @@ function AgentEditor({ id, agents, onClose, onSaved, onDelete }: {
   const [resources, setResources] = useState<Resource[]>([]);
   const [software, setSoftware] = useState<Software[]>([]);
   const [preview, setPreview] = useState<Binding | null>(null);
+  // PHASE 37: what the library proposes for this agent, read again whenever its harness changes.
+  const [suggested, setSuggested] = useState<Resource[]>([]);
+  const harnessTag = current?.etag ?? null;
+  useEffect(() => {
+    if (tab !== "harness") return;
+    api.resourceSuggestions(id).then(setSuggested).catch(() => setSuggested([]));
+  }, [api, id, tab, harnessTag]);
   const [problem, setProblem] = useState<unknown>(null);
   const [saved, setSaved] = useState(false);
 
@@ -305,7 +332,7 @@ function AgentEditor({ id, agents, onClose, onSaved, onDelete }: {
 
         {tab === "binding" && (
           <>
-            <Labelled label="Execution target — dove lavora" state={state("executionTarget")}>
+            <Labelled label="Ambiente di esecuzione" state={state("executionTarget")}>
               <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
                 {targets.map((t) => {
                   const sw = software.find((s) => s.key === t.software);
@@ -363,6 +390,19 @@ function AgentEditor({ id, agents, onClose, onSaved, onDelete }: {
         {tab === "harness" && (
           <div className="stack">
             {c.modified.includes("resources") && <span className="badge badge-warn">risorse modificate rispetto all'iniziale</span>}
+            {suggested.length > 0 && (
+              <div className="suggested" aria-label="Consigliate per questo agente">
+                <div className="section-title">Consigliate per questo agente</div>
+                <p className="muted">Dalla libreria, per quello che l'agente è: ruolo, specializzazione, capability.</p>
+                <div className="row">
+                  {suggested.map((r) => (
+                    <button key={r.key} className="btn btn-small" title={r.description ?? ""}
+                            onClick={() => membership(api.attachResource(id, r.key))}>
+                      <Icon name="plus" size={12} /> {r.name}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             {KINDS.map((kind) => (
               <div key={kind.key}>
                 <div className="section-title">{kind.label} <span className="muted">({(c.resources[kind.key] ?? []).length})</span></div>
@@ -456,7 +496,7 @@ function NewAgentModal({ onClose, onCreated }: { onClose: () => void; onCreated:
         <Field label="Nome" error={errors.name}><input value={name} onChange={(e) => setName(e.target.value)} required autoFocus /></Field>
         <Field label="Ruolo" error={errors.role}><input value={role} onChange={(e) => setRole(e.target.value)} required placeholder="Backend Engineer" /></Field>
         <Field label="Specializzazione" error={errors.specialization}><input value={specialization} onChange={(e) => setSpecialization(e.target.value)} required /></Field>
-        <div className="muted" style={{ fontSize: 12.5 }}>Modello, execution target, prompt e skill si configurano subito dopo, nell'editor dell'agente.</div>
+        <div className="muted" style={{ fontSize: 12.5 }}>Modello, ambiente di esecuzione, prompt e skill si configurano subito dopo, nell'editor dell'agente.</div>
         <ProblemNote problem={problem} />
         <div className="row modal-actions"><span className="spacer" /><button className="btn" type="button" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" type="submit">Crea e configura</button></div>

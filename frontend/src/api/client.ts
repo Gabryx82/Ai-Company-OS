@@ -12,9 +12,9 @@
 //  - every error is a problem detail with a stable `type` (ADR-007), turned
 //    into an ApiProblem the views can branch on.
 import type {
-  Agent, AgentProfile, AgentTemplate, AgentWrite, AutonomyLevel, DailyItem, InstalledAgent, Resource, Handoff, HandoffOutcome, OpenCodeSession, LaunchResult, ModelCatalog, ModelList, Orchestration,
+  Agent, AgentProfile, AgentTemplate, AgentWrite, AutonomyLevel, DailyItem, InstalledAgent, Resource, Handoff, HandoffOutcome, OpenCodeSession, LaunchResult, ModelCatalog, CatalogModel, ModelList, Orchestration, Readiness,
   Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry, TaskMove, TaskOutcome, Learning,
-  Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument,
+  Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument, MeasuresReport,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
   ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, TasksPolicy, DeletionPreview, SubAgentsPolicy, CatalogRetirement,
   InProgressPolicy, PlannedAgent, EcosystemServiceInfo, TerminalShell, TerminalTicket, TerminalSession, CodeGraph, CostSummary,
@@ -23,6 +23,9 @@ import type {
   BlueprintVocabulary, HubInstalled, HubFoundDetail, HubSyncReport, HubSyncEvent, HubMarketplace, HubSearchResults,
   HubResult, HubPreview, HubInstallResult, HubCopyTarget, HubDeployResult, HubUpdates, HubApplied,
   HubOfferKind, HubExtensionPreview, HubInstallOutcome, ProjectDirectoryListing, ProjectFileView, ProjectFileEntry,
+  AssistantTurn, AssistantAnswer,
+  AgentSyncOverview, AgentSyncReport, ImportedAgent, OpenClawControlUi, OpenClawMessage, OpenClawOverview, OpenClawTerminal, LearningMode, LearningOverview, LessonSummary, LessonView,
+  LessonPrediction, StepCheck, ExerciseResult, ReviewDeck, ReviewCard,
 } from "./types";
 
 const PROBLEM = "urn:ai-company-os:problem:";
@@ -397,6 +400,16 @@ export class ControlPlane {
     return this.plain("GET", `/api/projects/${id}/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`);
   }
 
+  /** The files changed most recently in the project folder, newest first: what an agent is writing now. */
+  recentFiles(id: number, limit = 8): Promise<ProjectFileEntry[]> {
+    return this.plain("GET", `/api/projects/${id}/browse/recent?limit=${limit}`);
+  }
+
+  /** A quick question to the console's assistant, answered by a local model; nothing is stored. */
+  askAssistant(question: string, history: AssistantTurn[] = []): Promise<AssistantAnswer> {
+    return this.plain("POST", "/api/assistant/ask", { body: { question, history } });
+  }
+
   browseFile(id: number, path: string): Promise<ProjectFileView> {
     return this.plain("GET", `/api/projects/${id}/browse/file?path=${encodeURIComponent(path)}`);
   }
@@ -507,8 +520,19 @@ export class ControlPlane {
     return this.plain("GET", `/api/tasks/${taskId}/orchestration`);
   }
 
-  handoff(taskId: number, etag: string, target: string): Promise<HandoffOutcome> {
-    return this.plain("POST", `/api/tasks/${taskId}/handoffs`, { body: { target }, ifMatch: etag });
+  /** PHASE 36 (ADR-042): the check before a handoff or a run; without a target, the agent's own. */
+  readiness(taskId: number, target?: string, model?: string): Promise<Readiness> {
+    const params = new URLSearchParams();
+    if (target) params.set("target", target);
+    if (model) params.set("model", model);
+    const query = params.toString();
+    return this.plain("GET", `/api/tasks/${taskId}/readiness${query ? `?${query}` : ""}`);
+  }
+
+  /** `learning` (PHASE 37, ADR-044): TEACH, RECAP or NONE; left out, the project's level decides. */
+  handoff(taskId: number, etag: string, target: string, learning?: LearningMode): Promise<HandoffOutcome> {
+    return this.plain("POST", `/api/tasks/${taskId}/handoffs`,
+      { body: learning ? { target, learning } : { target }, ifMatch: etag });
   }
 
   handoffs(taskId: number): Promise<Handoff[]> {
@@ -532,6 +556,99 @@ export class ControlPlane {
   /** PHASE 32 (TD-45): learning metrics and the suggested level; applying it is the operator's choice. */
   learning(projectId: number): Promise<Learning> {
     return this.plain("GET", `/api/projects/${projectId}/learning`);
+  }
+
+  // --- PHASE 37 (ADR-044): lessons, exercises and review ---------------------
+
+  /** Every project's lessons, the cards due today and how the learning is going. */
+  learningOverview(): Promise<LearningOverview> {
+    return this.plain("GET", "/api/learning");
+  }
+
+  lessons(projectId: number): Promise<LessonSummary[]> {
+    return this.plain("GET", `/api/projects/${projectId}/lessons`);
+  }
+
+  /** One lesson with the operator's progress; an item's solution arrives once the item is done. */
+  lesson(projectId: number, path: string): Promise<LessonView> {
+    return this.plain("GET", `/api/projects/${projectId}/lessons/view?path=${encodeURIComponent(path)}`);
+  }
+
+  predict(projectId: number, path: string, answer: string): Promise<LessonPrediction> {
+    return this.plain("POST", `/api/projects/${projectId}/lessons/prediction`, { body: { path, answer } });
+  }
+
+  /** Whether the step's code is in its file, in the project's folder; `manual` marks it done on the operator's word. */
+  checkStep(projectId: number, path: string, step: number, manual = false): Promise<StepCheck> {
+    return this.plain("POST", `/api/projects/${projectId}/lessons/step`, { body: { path, step, manual } });
+  }
+
+  /** An answer to an exercise; `reveal` gives the solution up. */
+  answerExercise(projectId: number, path: string, exercise: number, answer: string | null, reveal = false): Promise<ExerciseResult> {
+    return this.plain("POST", `/api/projects/${projectId}/lessons/exercise`,
+      { body: answer === null ? { path, exercise, reveal } : { path, exercise, answer, reveal } });
+  }
+
+  reviewDeck(): Promise<ReviewDeck> {
+    return this.plain("GET", "/api/learning/review");
+  }
+
+  /** The back of a card. */
+  turnCard(cardId: number): Promise<ReviewCard> {
+    return this.plain("GET", `/api/learning/review/${cardId}`);
+  }
+
+  reviewCard(cardId: number, known: boolean): Promise<ReviewCard> {
+    return this.plain("POST", `/api/learning/review/${cardId}`, { body: { known } });
+  }
+
+  // --- PHASE 37 (ADR-043): the agents in the tools around AI Company OS ------
+
+  agentSync(): Promise<AgentSyncOverview> {
+    return this.plain("GET", "/api/agent-sync");
+  }
+
+  /** Brings the tools up to date; with nothing named, every active agent in every tool that is available. */
+  publishAgents(selection: { agentIds?: number[]; tools?: string[] } = {}): Promise<AgentSyncReport> {
+    return this.plain("POST", "/api/agent-sync/publish", { body: selection });
+  }
+
+  importAgents(tool: string, externalIds?: string[]): Promise<ImportedAgent[]> {
+    return this.plain("POST", "/api/agent-sync/import", { body: externalIds ? { tool, externalIds } : { tool } });
+  }
+
+  async unpublishAgent(tool: string, agentId: number): Promise<void> {
+    await this.request("DELETE", `/api/agent-sync/${encodeURIComponent(tool)}/agents/${agentId}`);
+  }
+
+  // --- ADR-045: OpenClaw inside the console -------------------------------------
+
+  /** The gateway, its agents and sessions as last read; `refresh` starts a new reading in the background. */
+  openClaw(refresh = false): Promise<OpenClawOverview> {
+    return this.plain("GET", refresh ? "/api/openclaw?refresh=true" : "/api/openclaw");
+  }
+
+  /** OpenClaw opens its full Control UI in the browser, paired by itself; the outcome is in the overview. */
+  openOpenClawControlUi(): Promise<OpenClawControlUi> {
+    return this.plain("POST", "/api/openclaw/control-ui");
+  }
+
+  /** `openclaw tui` on one session, in Windows Terminal. */
+  openOpenClawTerminal(sessionKey: string): Promise<OpenClawTerminal> {
+    return this.plain("POST", "/api/openclaw/terminal", { body: { sessionKey } });
+  }
+
+  /** Sends a message to an agent and returns at once; the answer is read with `openClawMessage`. */
+  sendOpenClawMessage(agentId: string, message: string): Promise<OpenClawMessage> {
+    return this.plain("POST", "/api/openclaw/messages", { body: { agentId, message } });
+  }
+
+  openClawMessages(): Promise<OpenClawMessage[]> {
+    return this.plain("GET", "/api/openclaw/messages");
+  }
+
+  openClawMessage(id: string): Promise<OpenClawMessage> {
+    return this.plain("GET", `/api/openclaw/messages/${encodeURIComponent(id)}`);
   }
 
   /** PHASE 32 (TD-55): what the task produced, the most recent first; empty while nothing has. */
@@ -589,6 +706,11 @@ export class ControlPlane {
 
   configureAgent(id: number, etag: string, profile: Record<string, unknown>): Promise<Versioned<AgentProfile>> {
     return this.versioned("PUT", `/api/agents/${id}/profile`, { body: profile, ifMatch: etag });
+  }
+
+  /** PHASE 37: the skills and knowledge of the library that suit the agent and that it does not carry yet. */
+  resourceSuggestions(agentId: number): Promise<Resource[]> {
+    return this.plain("GET", `/api/agents/${agentId}/resource-suggestions`);
   }
 
   attachResource(agentId: number, key: string): Promise<void> {
@@ -704,6 +826,12 @@ export class ControlPlane {
   setBudget(provider: string, monthlyLimitUsd: number, alertPercent: number, etag?: string): Promise<unknown> {
     return this.plain("PUT", `/api/admin/costs/budgets/${encodeURIComponent(provider)}`,
       { body: { monthlyLimitUsd, alertPercent }, ifMatch: etag });
+  }
+
+  /** PHASE 35 (ADR-041 §11): how a model runs -- window, keep-alive, quantization -- with its role and lifecycle as they are. */
+  tuneModel(model: CatalogModel, settings: { numCtx: number | null; keepAlive: string | null; quantization: string | null }): Promise<CatalogModel> {
+    return this.plain("PUT", `/api/catalog/models?key=${encodeURIComponent(model.key)}`,
+      { body: { role: model.role, lifecycle: model.lifecycle, ...settings }, ifMatch: `"${model.version}"` });
   }
 
   setModelPrice(model: string, version: number, inputPricePerMtok: number | null, outputPricePerMtok: number | null): Promise<unknown> {
@@ -1186,6 +1314,11 @@ export class ControlPlane {
 
   usage(): Promise<UsageWindow[]> {
     return this.plain("GET", "/api/usage");
+  }
+
+  /** PHASE 35 (ADR-041): runs, models, agents and handoffs, as measured; this month by default. */
+  measurements(): Promise<MeasuresReport> {
+    return this.plain("GET", "/api/usage/measurements");
   }
 
   anchorQuota(key: string, etag: string, anchor: { resetWeekday?: number | null; resetTime?: string | null;

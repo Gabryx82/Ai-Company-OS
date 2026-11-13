@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApi } from "../context";
-import type { Binding, Handoff, HandoffOutcome, Orchestration, Review, Task } from "../api/types";
+import type {
+  Binding, Handoff, HandoffOutcome, LearningMode, Orchestration, Readiness, ReadinessItem, Review, Task,
+} from "../api/types";
 import { Modal, ProblemNote, when } from "../components/ui";
 import { Icon } from "../components/icons";
 import { BindingChain } from "../components/BindingChain";
@@ -14,11 +16,72 @@ const DELIVERY_HINT: Record<string, string> = {
   CLI_PROMPT: "si apre nel terminale, nella cartella, con il prompt",
   IDE_FOLDER: "si apre sulla cartella; prompt negli appunti",
   APP_PASTE: "si apre l'app; prompt negli appunti",
+  APP_LINK: "si apre l'app sulla cartella, con il prompt già scritto",
   WEB_PASTE: "si apre nel browser; prompt negli appunti",
   MANUAL: "nessuno strumento: pacchetto e prompt pronti",
 };
 
 type Target = Orchestration["targets"][number];
+
+/**
+ * PHASE 37 (ADR-044): what a handoff asks of the agent as far as learning goes. The code is
+ * the agent's in every case; what changes is who puts it in the files.
+ */
+const LEARNING: { mode: LearningMode; title: string; detail: string }[] = [
+  { mode: "TEACH", title: "Imparo",
+    detail: "L'agente scrive il codice e lo spiega riga per riga in una lezione; nei file lo porti tu, un passo alla volta." },
+  { mode: "RECAP", title: "Non posso seguire ora",
+    detail: "L'agente lavora da solo e ti lascia la lezione su quello che ha costruito, da ripercorrere quando torni." },
+  { mode: "NONE", title: "Solo il lavoro", detail: "Nessuna lezione: implementa, prova e prepara la review." },
+];
+
+/** What the server would choose with nothing said: the project's level decides. */
+function defaultLearning(level: string | null | undefined): LearningMode {
+  return level === "GUIDED" || !level ? "TEACH" : level === "SUPERVISED" ? "RECAP" : "NONE";
+}
+
+const AREA_LABEL: Record<string, string> = {
+  TASK: "Task", BINDING: "Strumento", MODEL: "Modello", CONTEXT: "Contesto", SKILL: "Skill", KNOWLEDGE: "Knowledge",
+  MCP: "MCP", TOOL: "Tool", SOFTWARE: "Software",
+};
+const STATUS_BADGE: Record<string, { tone: string; label: string }> = {
+  OK: { tone: "badge badge-ok", label: "ok" }, WARNING: { tone: "badge badge-warn", label: "avviso" },
+  BLOCKING: { tone: "badge badge-danger", label: "bloccante" },
+};
+
+/**
+ * PHASE 36 (ADR-042): what the agent would find on this target -- each item ok, a warning
+ * or blocking, with the copy of a skill into the tool when that is what is missing.
+ */
+export function ReadinessList({ readiness, onCopy }: {
+  readiness: Readiness; onCopy?: (item: ReadinessItem) => void;
+}) {
+  const blocking = readiness.items.filter((i) => i.status === "BLOCKING");
+  const warnings = readiness.items.filter((i) => i.status === "WARNING");
+  return (
+    <div className="stack" style={{ gap: 6 }} aria-label={`Verifica per ${readiness.targetName}`}>
+      <div className={blocking.length ? "notice notice-danger" : warnings.length ? "notice notice-warn" : "notice"}>
+        {blocking.length
+          ? <><strong>Ferma:</strong> {blocking.map((b) => b.detail).join(" ")}</>
+          : <><strong>Pronta per {readiness.targetName}</strong>
+            {warnings.length ? ` — ${warnings.length} avvis${warnings.length === 1 ? "o" : "i"}` : ""}</>}
+      </div>
+      <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "grid", gap: 4 }}>
+        {readiness.items.map((i) => (
+          <li key={`${i.area}:${i.key}`} style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: 12.5 }}>
+            <span className={STATUS_BADGE[i.status].tone} style={{ flex: "none", minWidth: 64, textAlign: "center" }}>{STATUS_BADGE[i.status].label}</span>
+            <span style={{ flex: "1 1 0", minWidth: 0, overflowWrap: "anywhere" }}>
+              <span className="muted">{AREA_LABEL[i.area] ?? i.area}</span> <strong>{i.name}</strong> — {i.detail}
+              {i.action?.type === "HUB_COPY" && onCopy && (
+                <button className="btn btn-small" style={{ marginLeft: 6 }} onClick={() => onCopy(i)}>Copia nello strumento</button>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /**
  * The Master Orchestrator's view of one task (ADR-021 §3–5, ADR-025 §4): the
@@ -38,6 +101,10 @@ export function OrchestratorPanel({ task, busy, act }: {
   const [confirming, setConfirming] = useState<Target | null>(null);
   const [outcome, setOutcome] = useState<(HandoffOutcome & { copied: boolean }) | null>(null);
   const [document, setDocument] = useState<string | null>(null);
+  const [checkTarget, setCheckTarget] = useState<string | null>(null);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
+  const [confirmReadiness, setConfirmReadiness] = useState<Readiness | null>(null);
+  const [learning, setLearning] = useState<LearningMode | null>(null);
 
   const load = useCallback(() => {
     api.orchestration(task.id).then(setDecision).catch(setProblem);
@@ -48,10 +115,36 @@ export function OrchestratorPanel({ task, busy, act }: {
   // Reload whenever the task changed (its tag moves with every write).
   useEffect(load, [load, task.status, task.agentId]);
 
+  // PHASE 36: the check for the target in view -- the agent's own unless the operator picks another.
+  const viewed = checkTarget ?? decision?.binding?.target.key ?? null;
+  const assigned = decision?.agent.assigned ?? false;
+  const check = useCallback(() => {
+    if (!viewed || !assigned) { setReadiness(null); return; }
+    api.readiness(task.id, viewed).then(setReadiness).catch(() => setReadiness(null));
+  }, [api, task.id, viewed, assigned]);
+  useEffect(check, [check, task.status]);
+
+  useEffect(() => {
+    setConfirmReadiness(null);
+    setLearning(null);
+    if (confirming) api.readiness(task.id, confirming.key).then(setConfirmReadiness).catch(setProblem);
+  }, [api, task.id, confirming]);
+
+  async function copyToTool(item: ReadinessItem) {
+    if (!item.action) return;
+    try {
+      await api.hubDeploy(item.action.key, item.action.app);
+    } catch (error) {
+      setProblem(error);
+    }
+    check();
+    if (confirming) api.readiness(task.id, confirming.key).then(setConfirmReadiness).catch(setProblem);
+  }
+
   async function handoff(target: Target) {
     setConfirming(null);
     await act(async (etag) => {
-      const result = await api.handoff(task.id, etag, target.key);
+      const result = await api.handoff(task.id, etag, target.key, learning ?? undefined);
       let copied = false;
       if (result.promptToClipboard) {
         const text = target.delivery === "APP_PASTE" || target.delivery === "WEB_PASTE" ? result.fullPrompt || result.prompt : result.prompt;
@@ -139,11 +232,31 @@ export function OrchestratorPanel({ task, busy, act }: {
         </details>
       )}
 
+      {decision.agent.assigned && (
+        <details open={readiness !== null && !readiness.ready}>
+          <summary>Verifica prima della consegna{readiness ? ` — ${readiness.ready ? "pronta" : "ferma"} per ${readiness.targetName}` : ""}</summary>
+          <div className="stack" style={{ gap: 6, marginTop: 6 }}>
+            <label className="row" style={{ gap: 6, fontSize: 12.5 }}>Strumento
+              <select aria-label="Strumento da verificare" value={viewed ?? ""} onChange={(e) => setCheckTarget(e.target.value)}>
+                {decision.targets.map((t) => <option key={t.key} value={t.key}>{t.kind === "ENGINE" ? `${t.name} (run)` : t.name}</option>)}
+              </select>
+            </label>
+            {readiness && <ReadinessList readiness={readiness} onCopy={copyToTool} />}
+          </div>
+        </details>
+      )}
+
       {decision.prompt && (
-        <div className="notice">
-          <div className="muted" style={{ fontSize: 12 }}>Prompt compatto</div>
-          <code>{decision.prompt}</code>
-        </div>
+        <details>
+          <summary>Prompt da incollare a mano</summary>
+          <div className="notice" style={{ marginTop: 6 }}>
+            <code>{decision.prompt}</code>
+            <div className="muted" style={{ fontSize: 12 }}>
+              Porta l'agente al pacchetto della consegna; se la task non è ancora stata consegnata, l'agente chiede di
+              consegnarla. La strada che dà all'agente ruolo, skill e knowledge è «Prepara e apri» qui sotto.</div>
+            <button className="btn btn-small" onClick={() => copy(decision.prompt)}>Copia</button>
+          </div>
+        </details>
       )}
 
       <div>
@@ -166,9 +279,18 @@ export function OrchestratorPanel({ task, busy, act }: {
           <div className="notice" style={{ marginTop: 8, display: "grid", gap: 6 }}>
             <div><Icon name="check" size={13} /> Pronto in <code>{outcome.folder}</code>
               {(outcome.written ?? []).length > 0 && <> — scritti: {(outcome.written ?? []).map((w) => <code key={w} style={{ marginRight: 6 }}>{w}</code>)}</>}</div>
-            {outcome.promptToClipboard
+            {outcome.notOpened
+              ? <div className="notice notice-warn">Lo strumento non è stato aperto: {outcome.notOpened}. Aprilo tu nella
+                cartella; {outcome.copied ? "il prompt è già negli appunti." : "copia il prompt qui sotto."}</div>
+              : outcome.promptToClipboard && outcome.delivery !== "APP_LINK"
               ? <div>{outcome.copied ? "Il prompt è già negli appunti: incollalo nello strumento." : "Copia il prompt e incollalo nello strumento."}</div>
-              : <div>Aperto nel terminale, nella cartella, con il prompt.</div>}
+              : outcome.delivery === "APP_LINK"
+                ? <div>Aperto nell'app, con il prompt già scritto: conferma la cartella e invia.</div>
+                : <div>Aperto nel terminale, nella cartella, con il prompt.</div>}
+            {!outcome.notOpened && outcome.delivery === "APP_LINK" && outcome.promptToClipboard && (
+              <div className="muted" style={{ fontSize: 12 }}>{outcome.copied
+                ? "Il prompt è anche negli appunti, se l'app non lo mostra." : "Se l'app non lo mostra, copialo qui sotto."}</div>
+            )}
             <div className="row">
               <button className="btn btn-small" onClick={() => copy(outcome.prompt)}>Copia prompt compatto</button>
               {outcome.fullPrompt && <button className="btn btn-small" onClick={() => copy(outcome.fullPrompt)}>Copia prompt completo</button>}
@@ -229,9 +351,24 @@ export function OrchestratorPanel({ task, busy, act }: {
               <strong>Attraverso {confirming.name}</strong>: {DELIVERY_HINT[confirming.delivery] ?? ""}.
               <div className="muted" style={{ fontSize: 12.5 }}>{confirming.detail}</div>
             </div>
+            <fieldset className="learn-mode">
+              <legend>Come vuoi lavorarci?</legend>
+              {LEARNING.map((option) => (
+                <label key={option.mode}>
+                  <input type="radio" name="learning-mode" checked={(learning ?? defaultLearning(decision.autonomyLevel)) === option.mode}
+                         onChange={() => setLearning(option.mode)} />
+                  <span><strong>{option.title}</strong>
+                    {option.mode === defaultLearning(decision.autonomyLevel) && <span className="badge" style={{ marginLeft: 6 }}>il solito per questo progetto</span>}
+                    <small>{option.detail}</small></span>
+                </label>
+              ))}
+            </fieldset>
+            {confirmReadiness ? <ReadinessList readiness={confirmReadiness} onCopy={copyToTool} />
+              : <div className="muted" style={{ fontSize: 12.5 }}>Verifico che cosa troverà l'agente…</div>}
             <div className="row modal-actions"><span className="spacer" />
               <button className="btn" onClick={() => setConfirming(null)}>Annulla</button>
-              <button className="btn btn-primary" onClick={() => handoff(confirming)}>Prepara e apri</button></div>
+              <button className="btn btn-primary" disabled={!confirmReadiness || !confirmReadiness.ready}
+                      onClick={() => handoff(confirming)}>Prepara e apri</button></div>
           </div>
         </Modal>
       )}

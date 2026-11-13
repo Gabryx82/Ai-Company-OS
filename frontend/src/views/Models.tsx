@@ -26,6 +26,7 @@ export function Models() {
   const [problem, setProblem] = useState<unknown>(null);
   const [pricing, setPricing] = useState<CatalogModel | null>(null);
   const [retiring, setRetiring] = useState<CatalogModel | null>(null);
+  const [tuning, setTuning] = useState<CatalogModel | null>(null);
   const isAdmin = useIsAdmin();
 
   const load = () => {
@@ -41,12 +42,12 @@ export function Models() {
     <div className="stack">
       <div className="page-head">
         <div>
-          <h1>Modelli LLM</h1>
-          <p>Provider e modelli sono cataloghi distinti. Il ruolo guida l'orchestratore; la disponibilità viene dall'AI Engine.</p>
+          <h1>Modelli</h1>
+          <p>I modelli a disposizione dei tuoi agenti e i provider che li servono. Il ruolo orienta le scelte dell'orchestratore; la disponibilità è verificata dal motore AI.</p>
         </div>
         {catalog && (
           <span className={catalog.engineReachable ? "badge badge-ok" : "badge badge-danger"}>
-            AI Engine {catalog.engineReachable ? `raggiungibile · default ${catalog.engineDefault}` : "non raggiungibile"}
+            Motore AI {catalog.engineReachable ? `attivo · predefinito ${catalog.engineDefault}` : "non raggiungibile"}
           </span>
         )}
       </div>
@@ -54,8 +55,8 @@ export function Models() {
 
       <div className="card">
         <div className="card-head"><h2>Modelli</h2></div>
-        <table>
-          <thead><tr><th>Modello</th><th>Ruolo</th><th>Ciclo di vita</th><th>Capability</th><th>Dimensione</th><th>Prezzo /M token</th><th>Ora</th>{isAdmin && <th aria-label="Azioni" />}</tr></thead>
+        <div className="table-scroll"><table>
+          <thead><tr><th>Modello</th><th>Ruolo</th><th>Ciclo di vita</th><th>Capability</th><th>Dimensione</th><th title="Come Ollama esegue il modello: finestra di contesto, quanto resta in memoria, quantizzazione consigliata">Esecuzione</th><th>Prezzo /M token</th><th>Ora</th>{isAdmin && <th aria-label="Azioni" />}</tr></thead>
           <tbody>
             {catalog?.models.map((m) => (
               <tr key={m.key}>
@@ -70,6 +71,12 @@ export function Models() {
                 <td>{m.capabilities.map((c) => <span key={c} className="chip">{c}</span>)}</td>
                 <td className="muted">{m.sizeGb ? `${m.sizeGb} GB` : "—"}{m.parameters ? ` · ${m.parameters}` : ""}
                   {m.contextWindow ? <div>{Math.round(m.contextWindow / 1024)}K ctx</div> : null}</td>
+                <td style={{ fontSize: 12.5 }}>{m.numCtx != null || m.keepAlive || m.quantization ? (
+                  <div className="stack" style={{ gap: 4 }}>
+                    <span className="muted">{runsWith(m)}</span>
+                    <div><button className="btn btn-small" aria-label={`Esecuzione di ${m.displayName}`}
+                                 onClick={() => setTuning(m)}>Modifica</button></div>
+                  </div>) : <span className="muted">—</span>}</td>
                 <td>{paid.has(m.providerKey) ? (
                   <div style={{ fontSize: 12.5 }}>
                     {m.inputPricePerMtok != null ? <>${m.inputPricePerMtok} in · ${m.outputPricePerMtok} out</> : <span className="badge badge-warn">da impostare</span>}
@@ -82,7 +89,7 @@ export function Models() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {retiring && (
@@ -97,6 +104,7 @@ export function Models() {
                          }} />
       )}
       {pricing && <PriceModal model={pricing} onClose={() => setPricing(null)} onSaved={() => { setPricing(null); load(); }} />}
+      {tuning && <TuneModal model={tuning} onClose={() => setTuning(null)} onSaved={() => { setTuning(null); load(); }} />}
       {served.length > 0 && (
         <div className="card">
           <div className="card-head"><h2>Serviti dall'engine ma non catalogati</h2></div>
@@ -112,7 +120,7 @@ export function Models() {
         <div className="card-head"><h2>Provider</h2></div>
         {providers?.map((p) => (
           <div key={p.key} className="list-item" style={{ alignItems: "flex-start" }}>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div className="row"><strong>{p.name}</strong><span className="chip">{p.kind}</span><span className="chip">{p.billing}</span></div>
               {p.notes && <div className="muted" style={{ fontSize: 12.5 }}>{p.notes}</div>}
             </div>
@@ -122,6 +130,55 @@ export function Models() {
         ))}
       </div>
     </div>
+  );
+}
+
+/** PHASE 35: "finestra 16K · in memoria 5m · Q4_K_M" -- what is set, nothing invented. */
+function runsWith(m: CatalogModel): string {
+  return [m.numCtx != null ? `finestra ${Math.round(m.numCtx / 1024)}K` : null, m.keepAlive ? `in memoria ${m.keepAlive}` : null,
+    m.quantization ?? null].filter(Boolean).join(" · ");
+}
+
+/**
+ * PHASE 35 (ADR-041 §11): how Ollama runs a model. The window and the keep-alive go to Ollama with every
+ * request; the quantization is the one recommended for this machine -- the model file decides it.
+ */
+function TuneModal({ model, onClose, onSaved }: { model: CatalogModel; onClose: () => void; onSaved: () => void }) {
+  const api = useApi();
+  const [numCtx, setNumCtx] = useState(model.numCtx != null ? String(model.numCtx) : "");
+  const [keepAlive, setKeepAlive] = useState(model.keepAlive ?? "");
+  const [quantization, setQuantization] = useState(model.quantization ?? "");
+  const [problem, setProblem] = useState<unknown>(null);
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    try {
+      await api.tuneModel(model, { numCtx: numCtx === "" ? null : Number(numCtx), keepAlive: keepAlive || null,
+        quantization: quantization || null });
+      onSaved();
+    } catch (error) {
+      setProblem(error);
+    }
+  }
+  return (
+    <Modal title={`Esecuzione — ${model.displayName}`} onClose={onClose}>
+      <form className="stack" onSubmit={submit}>
+        <ProblemNote problem={problem} />
+        <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>
+          Cambiare la finestra fa ricaricare il modello a Ollama alla richiesta successiva. «0» in memoria lo scarica subito
+          dopo la risposta, «-1» lo tiene sempre.
+        </p>
+        <Field label="Finestra di contesto (num_ctx)">
+          <input type="number" min={512} value={numCtx} onChange={(e) => setNumCtx(e.target.value)} />
+        </Field>
+        <Field label="Quanto resta in memoria (keep_alive)">
+          <input value={keepAlive} placeholder="5m" onChange={(e) => setKeepAlive(e.target.value)} />
+        </Field>
+        <Field label="Quantizzazione consigliata">
+          <input value={quantization} placeholder="Q4_K_M" onChange={(e) => setQuantization(e.target.value)} />
+        </Field>
+        <div className="row"><span className="spacer" /><button className="btn btn-primary" type="submit">Salva</button></div>
+      </form>
+    </Modal>
   );
 }
 

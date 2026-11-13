@@ -25,7 +25,7 @@ export function Settings({ session, onSessionChanged }: { session: Session; onSe
   return (
     <div className="stack" style={{ maxWidth: 980 }}>
       <div className="page-head"><div><h1>Impostazioni</h1>
-        <p>Il tuo account, l'ecosistema all'avvio e, per gli admin, utenti e registro di sicurezza.</p></div></div>
+        <p>Il tuo account, cosa si avvia insieme al sistema e, per gli admin, utenti e registro di sicurezza.</p></div></div>
       {session.user ? (
         <div className="grid grid-2" id="account">
           <ProfileCard session={session} onChanged={onSessionChanged} />
@@ -213,12 +213,12 @@ function UsersCard({ self }: { self: UserInfo }) {
       <div className="row"><div className="section-title" style={{ margin: 0 }}>Utenti</div><span className="spacer" />
         <button className="btn btn-small btn-primary" onClick={() => setCreating(true)}><Icon name="plus" size={13} /> Nuovo utente</button></div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-      <table className="table">
+      <div className="table-scroll"><table className="table">
         <thead><tr><th>Utente</th><th>Ruolo</th><th>Stato</th><th>Ultimo accesso</th><th /></tr></thead>
         <tbody>
           {users.map((u) => (
             <tr key={u.id}>
-              <td><strong>{u.username}</strong>{u.displayName && <span className="muted"> · {u.displayName}</span>}
+              <td><strong>{u.username}</strong>{u.displayName && u.displayName.toLowerCase() !== u.username.toLowerCase() && <span className="muted"> · {u.displayName}</span>}
                 {u.mustChangePassword && <span className="chip">password iniziale</span>}</td>
               <td>
                 <select value={u.role} aria-label={`Ruolo di ${u.username}`} onChange={(e) => change(u, { role: e.target.value as Role })}>
@@ -235,7 +235,7 @@ function UsersCard({ self }: { self: UserInfo }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
       {creating && <NewUserModal onClose={() => setCreating(false)} onCreated={() => { setCreating(false); load(); }} />}
       {resetting && <ResetModal user={resetting} onClose={() => setResetting(null)} onDone={() => { setResetting(null); load(); }} />}
     </div>
@@ -331,7 +331,7 @@ function RetiredEntriesCard() {
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
       {entries && entries.length === 0 && <div className="muted">Nessuna voce congedata.</div>}
       {entries && entries.length > 0 && (
-        <table className="table">
+        <div className="table-scroll"><table className="table">
           <thead><tr><th>Catalogo</th><th>Voce</th><th>Da</th><th>Quando</th><th aria-label="Azioni" /></tr></thead>
           <tbody>
             {entries.map((e) => (
@@ -342,9 +342,32 @@ function RetiredEntriesCard() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
     </div>
+  );
+}
+
+/** The control plane writes a few details as plain English words; the log shows them in the console's language. */
+function eventDetail(detail: string): string {
+  const session = /^session (\d+)$/.exec(detail);
+  if (session) return `Sessione ${session[1]}`;
+  return ({ "wrong password": "Password errata", "unknown user": "Utente sconosciuto", "account disabled": "Account disattivato",
+    "account locked": "Account bloccato" } as Record<string, string>)[detail] ?? detail;
+}
+
+/** A long detail (a command line) shows two lines, and all of it on request. */
+function LogDetail({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 90;
+  const command = /[\\/].*\.(exe|ps1|cmd|bat|sh)\b/i.test(text);
+  if (!long) return <span className={command ? "mono" : undefined}>{text}</span>;
+  return (
+    <span className="log-detail">
+      <span className={`${command ? "mono " : ""}${open ? "" : "log-clamp"}`} title={open ? undefined : text}>{text}</span>
+      <button type="button" className="link-button log-more" onClick={() => setOpen(!open)} aria-expanded={open}>
+        {open ? "Mostra meno" : "Mostra tutto"}</button>
+    </span>
   );
 }
 
@@ -359,19 +382,20 @@ function SecurityLogCard() {
       <div className="row"><div className="section-title" style={{ margin: 0 }}>Registro di sicurezza</div><span className="spacer" />
         <button className="btn btn-small" onClick={load}><Icon name="refresh" size={13} /> Aggiorna</button></div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
-      <table className="table">
+      <div className="table-scroll log-scroll" tabIndex={0} aria-label="Eventi di sicurezza"><table className="table">
         <thead><tr><th>Quando</th><th>Evento</th><th>Chi</th><th>Da</th><th>Dettaglio</th></tr></thead>
         <tbody>
           {events.map((e) => (
             <tr key={e.id}>
-              <td className="muted">{when(e.occurredAt)}</td>
+              <td className="muted log-when">{when(e.occurredAt)}</td>
               <td><span className={e.type.includes("FAILED") || e.type.includes("DENIED") || e.type.includes("LOCKED") ? "badge badge-danger" : "badge"}>
                 {EVENT_LABELS[e.type] ?? e.type}</span></td>
-              <td>{e.principal ?? "—"}</td><td className="mono muted">{e.source ?? "—"}</td><td className="muted">{e.detail ?? ""}</td>
+              <td>{e.principal === "startup" ? "Avvio di sistema" : e.principal ?? "—"}</td><td className="mono muted">{e.source ?? "—"}</td>
+              <td className="muted cell-wrap">{e.detail ? <LogDetail text={eventDetail(e.detail)} /> : ""}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </div>
   );
 }

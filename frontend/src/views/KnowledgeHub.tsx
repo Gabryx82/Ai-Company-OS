@@ -140,8 +140,8 @@ export function KnowledgeHub() {
     <div className="stack">
       <div className="page-head">
         <div><h1>Knowledge Hub</h1>
-          <p>Tutte le skill e le knowledge dei tuoi agenti in un posto: la libreria di AI Company OS, Claude Code, Claude Desktop,
-            Codex e le altre app di questo PC, sincronizzate, con gli aggiornamenti e i marketplace online.</p></div>
+          <p>Le skill e la knowledge di tutti i tuoi agenti in un unico posto: la libreria di AI Company OS e quelle di Claude Code,
+            Claude Desktop, Codex e delle altre app installate, sempre sincronizzate, con aggiornamenti e marketplace.</p></div>
         <div className="row">
           <button className="btn" onClick={sync} disabled={busy !== null} title="Rilegge la libreria e le cartelle di tutte le app">
             <Icon name="refresh" size={14} /> {busy === "sync" ? "Sincronizzo…" : "Sincronizza ora"}</button>
@@ -150,16 +150,16 @@ export function KnowledgeHub() {
         </div>
       </div>
       <div className="hub-kpis">
-        <div className="card kpi"><div className="kpi-icon" style={{ background: "var(--accent)" }}><Icon name="knowledge" /></div>
+        <div className="card kpi"><div className="kpi-icon"><Icon name="knowledge" /></div>
           <div><strong>{summary?.total ?? "…"}</strong><small>
             {summary ? `${summary.skills} skill · ${summary.plugins} plugin · ${summary.connectors} connettori · ${summary.knowledge} knowledge, in ${summary.apps} app`
               : "elementi installati"}</small></div></div>
-        <div className="card kpi"><div className="kpi-icon" style={{ background: "var(--accent-2)" }}><Icon name="folder" /></div>
+        <div className="card kpi"><div className="kpi-icon"><Icon name="folder" /></div>
           <div><strong>{summary?.libraryEntries ?? "…"}</strong><small>nella libreria · {summary?.copies ?? 0} copie nelle app</small></div></div>
         <button className="card kpi hub-kpi-button" onClick={() => setTab("updates")}>
-          <div className="kpi-icon" style={{ background: summary && summary.updates > 0 ? "#d97706" : "#059669" }}><Icon name="refresh" /></div>
+          <div className="kpi-icon" style={{ color: summary && summary.updates > 0 ? "var(--warn)" : "var(--ok)" }}><Icon name="refresh" /></div>
           <div><strong>{summary?.updates ?? "…"}</strong><small>aggiornamenti da fare</small></div></button>
-        <div className="card kpi"><div className="kpi-icon" style={{ background: "#0e7490" }}><Icon name="clock" /></div>
+        <div className="card kpi"><div className="kpi-icon"><Icon name="clock" /></div>
           <div><strong style={{ fontSize: 16 }}>{installed ? new Date(installed.lastSync ?? installed.scannedAt).toLocaleTimeString() : "…"}</strong>
             <small>ultima lettura{minutes ? ` · automatica ogni ${minutes} min` : ""}</small></div></div>
       </div>
@@ -246,8 +246,8 @@ function LibraryPanel({ onChanged }: { onChanged?: () => void }) {
     <div className="stack">
       <div className="page-head">
         <div><h2>Libreria e catalogo</h2>
-          <p>Skill e knowledge sono file Markdown che puoi leggere e modificare qui o nel tuo editor, versionare con git e importare dal web.
-            Framework, MCP e tool sono voci di catalogo con la loro configurazione.</p></div>
+          <p>Skill e knowledge sono file Markdown: leggili e modificali qui o nel tuo editor, versionali con git o importali dal web.
+            Framework, server MCP e tool sono voci di catalogo con la propria configurazione.</p></div>
         <div className="row">
           <button className="btn" onClick={sync} title="Indicizza i file aggiunti o modificati a mano"><Icon name="refresh" size={14} /> Rileggi cartella</button>
           <button className="btn" onClick={() => setImporting(true)}><Icon name="external" size={14} /> Importa da URL</button>

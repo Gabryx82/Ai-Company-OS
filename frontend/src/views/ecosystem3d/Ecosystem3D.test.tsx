@@ -17,7 +17,8 @@ vi.mock("./EcosystemScene", () => ({
       {props.visible.nodes.map((n) => (
         <button key={n.id} onClick={() => props.onSelect(n.id)} onDoubleClick={() => props.onActivate(n.id)}>{`nodo ${n.label}`}</button>
       ))}
-      <output data-testid="camera">{props.camera ? (props.camera.kind === "focus" ? `focus:${props.camera.id}` : "fit") : ""}</output>
+      <output data-testid="camera">{!props.camera ? "" : props.camera.kind === "focus" ? `focus:${props.camera.id}`
+        : props.camera.kind === "fit" ? (props.camera.view ? `fit:${props.camera.view}` : "fit") : props.camera.kind}</output>
     </div>
   ),
 }));
@@ -68,7 +69,7 @@ describe("Ecosistema 3D (ADR-037)", () => {
     const { navigate } = renderView(ROUTES);
     fireEvent.click(await screen.findByRole("button", { name: "nodo Backend Bot" }));
     const panel = screen.getByLabelText("Proprietà di Backend Bot");
-    expect(within(panel).getByLabelText("Catena agente, modello, provider, execution target")).toBeTruthy();
+    expect(within(panel).getByLabelText("Catena agente, modello, provider, ambiente di esecuzione")).toBeTruthy();
     expect(within(panel).getByText("Sottoagenti:")).toBeTruthy();
     fireEvent.click(within(panel).getByRole("button", { name: /Apri nella scheda Agenti/ }));
     expect(navigate).toHaveBeenCalledWith("agents", "1");
@@ -160,6 +161,52 @@ describe("Ecosistema 3D (ADR-037)", () => {
     renderView(ROUTES);
     expect(await screen.findByText(/WebGL non disponibile/)).toBeTruthy();
     expect(screen.queryByTestId("scene")).toBeNull();
+  });
+
+  it("moves the camera from the keyboard and from the controls on the map", async () => {
+    renderView(ROUTES);
+    await screen.findByRole("button", { name: "nodo Backend Bot" });
+    const stage = screen.getByRole("region", { name: /Mappa 3D/ });
+    const camera = () => screen.getByTestId("camera").textContent;
+    fireEvent.keyDown(stage, { key: "+" });
+    expect(camera()).toBe("zoom");
+    fireEvent.keyDown(stage, { key: "ArrowLeft" });
+    expect(camera()).toBe("orbit");
+    fireEvent.keyDown(stage, { key: "ArrowUp", shiftKey: true });
+    expect(camera()).toBe("pan");
+    fireEvent.keyDown(stage, { key: "2" });
+    expect(camera()).toBe("fit:top");
+    fireEvent.keyDown(stage, { key: "f" });
+    expect(camera()).toBe("fit");
+    fireEvent.click(screen.getByRole("button", { name: "Vista laterale (3)" }));
+    expect(camera()).toBe("fit:side");
+    fireEvent.click(screen.getByRole("button", { name: "Allontana (−)" }));
+    expect(camera()).toBe("zoom");
+    fireEvent.click(screen.getByRole("button", { name: "Rotazione automatica (R)" }));
+    expect(screen.getByRole("button", { name: "Rotazione automatica (R)" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.keyDown(stage, { key: "?" });
+    expect(screen.getByRole("dialog", { name: "Scorciatoie da tastiera" })).toBeTruthy();
+  });
+
+  it("keeps a trail of what was chosen: Backspace and the arrow go back along it, Esc lets go", async () => {
+    renderView(ROUTES);
+    fireEvent.click(await screen.findByRole("button", { name: "nodo Backend Bot" }));
+    const panel = screen.getByLabelText("Proprietà di Backend Bot");
+    fireEvent.click(within(panel).getByRole("button", { name: /clean code/ }));
+    expect(screen.getByLabelText("Proprietà di clean code")).toBeTruthy();
+    const trail = screen.getByRole("navigation", { name: "Percorso" });
+    expect(within(trail).getByRole("button", { name: "clean code" }).getAttribute("aria-current")).toBe("location");
+
+    const stage = screen.getByRole("region", { name: /Mappa 3D/ });
+    fireEvent.keyDown(stage, { key: "Backspace" });
+    expect(screen.getByLabelText("Proprietà di Backend Bot")).toBeTruthy();
+    expect(screen.getByTestId("camera").textContent).toBe("focus:agent:1");
+    expect((within(trail).getByRole("button", { name: "Indietro" }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.keyDown(stage, { key: "Escape" });
+    expect(screen.queryByLabelText("Proprietà di Backend Bot")).toBeNull();
+    fireEvent.click(within(trail).getByRole("button", { name: "Indietro" }));
+    expect(screen.getByLabelText("Proprietà di Backend Bot")).toBeTruthy();
   });
 
   it("invites to create an agent when there is none", async () => {

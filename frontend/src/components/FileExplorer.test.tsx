@@ -152,7 +152,7 @@ describe("the File button of the top bar (ADR-039)", () => {
     expect(await screen.findByText("# Shop")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Consumi e quote", hidden: true }).closest(".content")!.hasAttribute("hidden")).toBe(true);
 
-    fireEvent.click(screen.getByRole("button", { name: /Modelli LLM/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Modelli" }));
     await waitFor(() => expect(screen.queryByText("# Shop")).toBeNull());
   });
 });

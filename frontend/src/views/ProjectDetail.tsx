@@ -435,7 +435,7 @@ function PhaseCard({ phase, agents, onOpenTask, onReview }: {
       </div>
       {phase.objective && <div className="card-body muted" style={{ paddingBottom: 0 }}>{phase.objective}</div>}
       {phase.approvalNote && <div className="card-body" style={{ paddingBottom: 0, fontSize: 12.5 }}>Nota: {phase.approvalNote}</div>}
-      <table>
+      <div className="table-scroll"><table>
         <thead><tr><th>Codice</th><th>Task</th><th>Agente</th><th>Stato</th><th>Priorità</th></tr></thead>
         <tbody>
           {phase.tasks.map((task) => (
@@ -448,7 +448,7 @@ function PhaseCard({ phase, agents, onOpenTask, onReview }: {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </div>
   );
 }
@@ -724,6 +724,8 @@ function Tools({ project, type }: { project: Project; type: ProjectTypeInfo | un
       {outcome}
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
       <div className="section-title">Skill, knowledge e framework adottati</div>
+      <div className="muted" style={{ fontSize: 12 }}>
+        Arrivano a ogni agente che lavora al progetto, dopo le sue: nel pacchetto di handoff e nelle esecuzioni dell'AI Engine.</div>
       {adopted.length === 0 ? <div className="muted" style={{ fontSize: 12.5 }}>Nessuno: si adottano dal Knowledge Hub («Associa»).</div> : (
         <div className="row" style={{ flexWrap: "wrap" }}>
           {adopted.map((r) => (

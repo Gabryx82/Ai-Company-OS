@@ -6,6 +6,7 @@ export const DELIVERY_LABEL: Record<Delivery, string> = {
   CLI_PROMPT: "CLI nel terminale, con il prompt",
   IDE_FOLDER: "IDE sulla cartella del progetto",
   APP_PASTE: "app desktop, prompt negli appunti",
+  APP_LINK: "app desktop sulla cartella, con il prompt già scritto",
   WEB_PASTE: "web, prompt negli appunti",
   MANUAL: "lavoro manuale",
 };
@@ -23,7 +24,7 @@ export function BindingChain({ agentName, agentRole, binding, compact }: {
   const provider = binding.provider;
   const target = binding.target;
   return (
-    <div className={compact ? "chain chain-compact" : "chain"} aria-label="Catena agente, modello, provider, execution target">
+    <div className={compact ? "chain chain-compact" : "chain"} aria-label="Catena agente, modello, provider, ambiente di esecuzione">
       {agentName && (
         <>
           <div className="chain-step">
@@ -31,7 +32,7 @@ export function BindingChain({ agentName, agentRole, binding, compact }: {
             <strong>{agentName}</strong>
             {agentRole && <small>{agentRole}</small>}
           </div>
-          <span className="chain-arrow" aria-hidden="true">→</span>
+          <span className="chain-arrow" aria-hidden="true"><Icon name="arrow" size={14} /></span>
         </>
       )}
       <div className="chain-step">
@@ -40,15 +41,15 @@ export function BindingChain({ agentName, agentRole, binding, compact }: {
         {model && <small className="mono">{model.key}</small>}
         {model?.lifecycle === "DEPRECATED" && <span className="badge badge-warn">superato</span>}
       </div>
-      <span className="chain-arrow" aria-hidden="true">→</span>
+      <span className="chain-arrow" aria-hidden="true"><Icon name="arrow" size={14} /></span>
       <div className="chain-step">
         <span className="chain-label">Provider</span>
-        <strong>{provider ? provider.name : "—"}</strong>
+        <strong>{provider ? provider.name : target.delivery === "ENGINE_RUN" ? "Quello del modello" : "Nessuno, decide l'app"}</strong>
         {provider?.billing && <small>{BILLING_LABEL[provider.billing] ?? provider.billing}</small>}
       </div>
-      <span className="chain-arrow" aria-hidden="true">→</span>
+      <span className="chain-arrow" aria-hidden="true"><Icon name="arrow" size={14} /></span>
       <div className="chain-step">
-        <span className="chain-label">Execution target</span>
+        <span className="chain-label">Ambiente</span>
         <strong>{target.name}</strong>
         {target.delivery && <small>{DELIVERY_LABEL[target.delivery]}</small>}
         {target.availability && target.availability !== "INSTALLED" && target.availability !== "RUNNING" && (

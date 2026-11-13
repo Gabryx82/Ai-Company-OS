@@ -7,15 +7,33 @@
 //    buffers; React re-renders only when the data or the view change;
 //  - every geometry, material and texture made here is disposed on unmount,
 //    and the WebGL context goes with the canvas when the tab is left.
+// The look is soft and translucent: pastel glass lit by a studio environment,
+// fresnel bubbles around agents and clusters, hairline edges that let the map
+// show through, a polar floor that gives the space a ground.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { CATEGORY, SUBAGENT_COLOR, agentOf, type Category, type EcoNode, type Shape, type VisibleGraph } from "./ecosystemModel";
 import { bounds, nodeRadius, spawnPoint, type Vec3 } from "./ecosystemLayout";
+import { horizontalSwipe } from "../../components/graphGestures";
 
-/** Frame the whole map, or fly to one node; `instant` jumps there (the first framing, and always with reduced motion). */
-export type CameraRequest = { seq: number; kind: "fit"; instant?: boolean } | { seq: number; kind: "focus"; id: string; instant?: boolean };
+/** Where the camera looks from when asked for a view. */
+export type CameraView = "front" | "top" | "side";
+
+/**
+ * What the camera is asked to do: frame the whole map (from a chosen side, if given),
+ * fly to one node, zoom by a factor, orbit by angles (radians), pan by a fraction of
+ * the distance. `instant` jumps there (the first framing, and always with reduced motion).
+ */
+export type CameraAsk =
+  | { kind: "fit"; instant?: boolean; view?: CameraView }
+  | { kind: "focus"; id: string; instant?: boolean }
+  | { kind: "zoom"; factor: number }
+  | { kind: "orbit"; azimuth: number; polar: number }
+  | { kind: "pan"; x: number; y: number };
+export type CameraRequest = CameraAsk & { seq: number };
 
 export interface SceneProps {
   visible: VisibleGraph;
@@ -33,12 +51,24 @@ export interface SceneProps {
   onHover: (id: string | null) => void;
   onSelect: (id: string | null) => void;
   onActivate: (id: string) => void;
+  /** A double click on empty space. */
+  onBackground?: () => void;
 }
 
-const BACKGROUND = "#050a15";
+/** The haze the map fades into: the middle of the stage's gradient (ecosystem3d.css). */
+const BACKGROUND = "#141d30";
 const SEGMENTS = 8;
 const MAX_PARTICLES = 1400;
 const MAX_LABELS = 320;
+const MIN_DISTANCE = 2.5;
+const MAX_DISTANCE = 900;
+const WHITE = new THREE.Color("#ffffff");
+
+const VIEW_DIRECTION: Record<CameraView, THREE.Vector3> = {
+  front: new THREE.Vector3(0, 0.32, 1).normalize(),
+  top: new THREE.Vector3(0, 1, 0.04).normalize(),
+  side: new THREE.Vector3(1, 0.32, 0).normalize(),
+};
 
 function hash(text: string): number {
   let h = 2166136261;
@@ -51,31 +81,109 @@ function makeGeometry(shape: Shape): THREE.BufferGeometry {
     case "icosahedron": return new THREE.IcosahedronGeometry(1, 1);
     case "octahedron": return new THREE.OctahedronGeometry(1.15, 0);
     case "hexagon": return new THREE.CylinderGeometry(0.95, 0.95, 0.8, 6);
-    case "torus": return new THREE.TorusGeometry(0.85, 0.3, 10, 28);
+    case "torus": return new THREE.TorusGeometry(0.85, 0.3, 16, 40);
     case "tetrahedron": return new THREE.TetrahedronGeometry(1.25, 0);
     case "book": return new THREE.BoxGeometry(1.25, 1.55, 0.42);
-    case "knot": return new THREE.TorusKnotGeometry(0.62, 0.2, 56, 8);
-    case "cone": return new THREE.ConeGeometry(0.8, 1.6, 16);
+    case "knot": return new THREE.TorusKnotGeometry(0.62, 0.2, 80, 10);
+    case "cone": return new THREE.ConeGeometry(0.8, 1.6, 24);
     case "dodecahedron": return new THREE.DodecahedronGeometry(1.05, 0);
     case "cube": return new THREE.BoxGeometry(1.3, 1.3, 1.3);
-    case "capsule": return new THREE.CapsuleGeometry(0.5, 0.9, 6, 12);
+    case "capsule": return new THREE.CapsuleGeometry(0.5, 0.9, 8, 16);
     case "card": return new THREE.BoxGeometry(1.5, 1.0, 0.16);
     case "pyramid": return new THREE.ConeGeometry(0.95, 1.5, 4);
-    case "coin": return new THREE.CylinderGeometry(0.95, 0.95, 0.3, 24).rotateX(Math.PI / 2);
-    case "sphere": return new THREE.IcosahedronGeometry(0.95, 2);
+    case "coin": return new THREE.CylinderGeometry(0.95, 0.95, 0.3, 32).rotateX(Math.PI / 2);
+    case "sphere": return new THREE.IcosahedronGeometry(0.95, 3);
   }
 }
 
-/** Instance colours also light the shape from within: the nodes glow in their own colour. */
-function glowingMaterial(): THREE.MeshStandardMaterial {
-  const material = new THREE.MeshStandardMaterial({ roughness: 0.35, metalness: 0.25, color: "#ffffff" });
+/**
+ * Pastel glass: a clear-coated, slightly see-through surface lit by the environment,
+ * with a soft inner light in the node's own colour and a brighter rim where it turns
+ * away from the eye -- the shape reads at any distance without shouting.
+ */
+function glassMaterial(): THREE.MeshPhysicalMaterial {
+  const material = new THREE.MeshPhysicalMaterial({
+    color: "#ffffff", roughness: 0.3, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.2,
+    sheen: 0.35, sheenRoughness: 0.6, sheenColor: new THREE.Color("#dfe8ff"),
+    transparent: true, opacity: 0.86, envMapIntensity: 0.9,
+  });
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uGlow = { value: 0.42 };
-    shader.fragmentShader = `uniform float uGlow;\n${shader.fragmentShader.replace("#include <emissivemap_fragment>",
-      "#include <emissivemap_fragment>\n#ifdef USE_COLOR\n\ttotalEmissiveRadiance += vColor.rgb * uGlow;\n#endif")}`;
+    shader.uniforms.uGlow = { value: 0.1 };
+    shader.uniforms.uRim = { value: 0.5 };
+    shader.fragmentShader = `uniform float uGlow;\nuniform float uRim;\n${shader.fragmentShader.replace("#include <emissivemap_fragment>",
+      `#include <emissivemap_fragment>
+#ifdef USE_COLOR
+  float aicosRim = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 2.6);
+  totalEmissiveRadiance += vColor.rgb * (uGlow + aicosRim * uRim);
+#endif`)}`;
   };
-  material.customProgramCacheKey = () => "aicos-eco-glow";
+  material.customProgramCacheKey = () => "aicos-eco-glass";
   return material;
+}
+
+/** A soap bubble around agents and clusters: clear in the middle, a tinted rim. */
+function bubbleMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: { uOpacity: { value: 0.32 } },
+    vertexShader: `
+      varying vec3 vNormalV;
+      varying vec3 vView;
+      varying vec3 vTint;
+      void main() {
+        vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        vNormalV = normalize(normalMatrix * mat3(instanceMatrix) * normal);
+        vView = normalize(-mv.xyz);
+        #ifdef USE_INSTANCING_COLOR
+          vTint = instanceColor;
+        #else
+          vTint = vec3(1.0);
+        #endif
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform float uOpacity;
+      varying vec3 vNormalV;
+      varying vec3 vView;
+      varying vec3 vTint;
+      void main() {
+        float facing = abs(dot(normalize(vNormalV), normalize(vView)));
+        float rim = pow(1.0 - facing, 2.4);
+        vec3 tint = mix(vTint, vec3(1.0), 0.5);
+        gl_FragColor = vec4(tint, rim * uOpacity + 0.02);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  });
+}
+
+/** The ground: a polar grid that fades out, and a faint pool of light under the map. */
+function floorMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color("#a3b6da") }, uRings: { value: 9 } },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uRings;
+      varying vec2 vUv;
+      void main() {
+        vec2 p = vUv * 2.0 - 1.0;
+        float r = length(p);
+        if (r > 1.0) discard;
+        float d = r * uRings;
+        float ring = 1.0 - min(abs(fract(d - 0.5) - 0.5) / max(fwidth(d), 1e-4), 1.0);
+        float a = atan(p.y, p.x) / 6.2831853 * 24.0;
+        float spoke = (1.0 - min(abs(fract(a - 0.5) - 0.5) / max(fwidth(a), 1e-4), 1.0)) * smoothstep(0.12, 0.35, r);
+        float fade = smoothstep(1.0, 0.15, r);
+        float pool = 0.08 * (1.0 - smoothstep(0.0, 0.85, r));
+        gl_FragColor = vec4(uColor, (max(ring, spoke * 0.5) * 0.15 + pool) * fade);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false,
+  });
 }
 
 /** Soft round points with a size each, added to what is behind them: glows and signals. */
@@ -101,6 +209,8 @@ function pointsMaterial(intensity: number): THREE.ShaderMaterial {
         float a = smoothstep(0.5, 0.0, d);
         a = a * a;
         gl_FragColor = vec4(vColor * a * uIntensity, a);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
       }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
@@ -110,6 +220,7 @@ const capacityFor = (n: number) => Math.max(16, 2 ** Math.ceil(Math.log2(Math.ma
 
 export default function EcosystemScene(props: SceneProps) {
   const tooltip = useRef<HTMLDivElement>(null);
+  const nodeClick = useRef(0);
   const [hovered, setHovered] = useState<string | null>(null);
   const hoveredNode = hovered ? props.visible.nodes.find((n) => n.id === hovered) ?? null : null;
   const onHover = (id: string | null) => {
@@ -124,19 +235,21 @@ export default function EcosystemScene(props: SceneProps) {
   };
 
   return (
-    <div className="eco-canvas-wrap" onPointerMove={follow} style={{ cursor: hovered ? "pointer" : "grab" }}>
+    <div className="eco-canvas-wrap" onPointerMove={follow} style={{ cursor: hovered ? "pointer" : "grab" }}
+         onDoubleClick={() => { if (performance.now() - nodeClick.current > 80) props.onBackground?.(); }}>
       <Canvas dpr={[1, 2]} frameloop={props.animate ? "always" : "demand"}
-              camera={{ fov: 50, near: 0.1, far: 5000, position: [0, 26, 70] }}
-              gl={{ antialias: true, powerPreference: "high-performance" }}
+              camera={{ fov: 45, near: 0.1, far: 5000, position: [0, 26, 70] }}
+              gl={{ antialias: true, powerPreference: "high-performance", toneMapping: THREE.NeutralToneMapping }}
               onPointerMissed={() => props.onSelect(null)}>
-        <color attach="background" args={[BACKGROUND]} />
-        <fog attach="fog" args={[BACKGROUND, 90, 380]} />
-        <ambientLight intensity={0.55} />
-        <hemisphereLight args={["#7c9cff", "#1a0f2e", 0.6]} />
-        <directionalLight position={[40, 60, 30]} intensity={1.1} />
-        <pointLight position={[0, 0, 0]} intensity={60} distance={70} color="#8b5cf6" />
-        <Starfield />
-        <Graph {...props} onHover={onHover} />
+        <Backdrop />
+        <fog attach="fog" args={[BACKGROUND, 140, 620]} />
+        <ambientLight intensity={0.3} />
+        <hemisphereLight args={["#e6eeff", "#1d2638", 0.75]} />
+        <directionalLight position={[50, 80, 40]} intensity={1.1} color="#fff5e8" />
+        <directionalLight position={[-60, 18, -45]} intensity={0.45} color="#bcd0f7" />
+        <StudioLight />
+        <Dust />
+        <Graph {...props} onHover={onHover} onNodeDoubleClick={() => { nodeClick.current = performance.now(); }} />
       </Canvas>
       <div ref={tooltip} className="eco-tooltip" hidden={!hoveredNode} role="tooltip">
         {hoveredNode && (
@@ -151,11 +264,65 @@ export default function EcosystemScene(props: SceneProps) {
   );
 }
 
-/** A far, still field of stars: depth without cost. */
-function Starfield() {
+/**
+ * The night haze behind the map, painted by the scene itself: an opaque canvas
+ * keeps its last frame when nothing moves (a transparent one can come back blank
+ * while the frame loop is idle). The same gradient as the stage in ecosystem3d.css.
+ */
+function Backdrop() {
+  const { scene } = useThree();
+  useEffect(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { scene.background = new THREE.Color(BACKGROUND); return; }
+    const base = ctx.createRadialGradient(256, 205, 0, 256, 205, 400);
+    base.addColorStop(0, "#1c283d");
+    base.addColorStop(0.5, BACKGROUND);
+    base.addColorStop(1, "#0c1220");
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, 512, 512);
+    const glow = ctx.createRadialGradient(256, 195, 0, 256, 195, 230);
+    glow.addColorStop(0, "rgba(160, 182, 226, 0.12)");
+    glow.addColorStop(1, "rgba(160, 182, 226, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 512, 512);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    scene.background = texture;
+    return () => {
+      if (scene.background === texture) scene.background = null;
+      texture.dispose();
+    };
+  }, [scene]);
+  return null;
+}
+
+/** A studio light the glass reflects: made once, from a procedural room. */
+function StudioLight() {
+  const { gl, scene } = useThree();
+  useEffect(() => {
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const room = new RoomEnvironment();
+    const map = pmrem.fromScene(room, 0.04).texture;
+    scene.environment = map;
+    scene.environmentIntensity = 0.55;
+    return () => {
+      if (scene.environment === map) scene.environment = null;
+      map.dispose();
+      pmrem.dispose();
+      room.dispose();
+    };
+  }, [gl, scene]);
+  return null;
+}
+
+/** Far, still dust: depth without cost. */
+function Dust() {
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
-    const n = 1400;
+    const n = 1100;
     const p = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const u = hash(`s${i}`) * 2 - 1, theta = hash(`t${i}`) * Math.PI * 2, r = 420 + hash(`r${i}`) * 900;
@@ -165,8 +332,8 @@ function Starfield() {
     g.setAttribute("position", new THREE.BufferAttribute(p, 3));
     return g;
   }, []);
-  const material = useMemo(() => new THREE.PointsMaterial({ color: "#5b6b8f", size: 1.5, sizeAttenuation: false, transparent: true,
-    opacity: 0.55, depthWrite: false, fog: false }), []);
+  const material = useMemo(() => new THREE.PointsMaterial({ color: "#aebfdf", size: 1.4, sizeAttenuation: false, transparent: true,
+    opacity: 0.26, depthWrite: false, fog: false }), []);
   useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
   return <points geometry={geometry} material={material} />;
 }
@@ -181,7 +348,7 @@ interface Item {
 /** A label keeps a world size, but stays between `minPx` and `maxPx` tall on screen: readable far, not huge near. */
 interface LabelEntry { sprite: THREE.Sprite; key: string; lift: number; height: number; aspect: number; minPx: number; maxPx: number }
 
-function Graph(props: SceneProps) {
+function Graph(props: SceneProps & { onNodeDoubleClick: () => void }) {
   const { visible, positions } = props;
   const { camera, gl, invalidate, scene } = useThree();
 
@@ -191,16 +358,17 @@ function Graph(props: SceneProps) {
     for (const c of Object.values(CATEGORY)) if (!map.has(c.shape)) map.set(c.shape, makeGeometry(c.shape));
     return map;
   }, []);
-  const shellGeometry = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
+  const shellGeometry = useMemo(() => new THREE.IcosahedronGeometry(1, 4), []);
+  const floorGeometry = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
   const hitGeometry = useMemo(() => new THREE.IcosahedronGeometry(1, 0), []);
-  const solid = useMemo(glowingMaterial, []);
-  const shell = useMemo(() => new THREE.MeshBasicMaterial({ wireframe: true, transparent: true, opacity: 0.35, depthWrite: false,
-    blending: THREE.AdditiveBlending, color: "#ffffff" }), []);
+  const solid = useMemo(glassMaterial, []);
+  const shell = useMemo(bubbleMaterial, []);
+  const floor = useMemo(floorMaterial, []);
   const hitMaterial = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
-  const glowMaterial = useMemo(() => pointsMaterial(0.55), []);
-  const signalMaterial = useMemo(() => pointsMaterial(1.0), []);
-  const lineMaterial = useMemo(() => new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false,
-    blending: THREE.AdditiveBlending }), []);
+  const glowMaterial = useMemo(() => pointsMaterial(0.26), []);
+  const signalMaterial = useMemo(() => pointsMaterial(0.85), []);
+  // Colours with alpha: an edge fades instead of darkening, and the map shows through it.
+  const lineMaterial = useMemo(() => new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }), []);
   const labels = useMemo(() => new LabelCache(), []);
   const labelGroup = useMemo(() => new THREE.Group(), []);
   useEffect(() => {
@@ -208,10 +376,12 @@ function Graph(props: SceneProps) {
     return () => {
       scene.remove(labelGroup);
       for (const g of geometries.values()) g.dispose();
-      shellGeometry.dispose(); hitGeometry.dispose(); solid.dispose(); shell.dispose(); hitMaterial.dispose();
+      shellGeometry.dispose(); floorGeometry.dispose(); hitGeometry.dispose();
+      solid.dispose(); shell.dispose(); floor.dispose(); hitMaterial.dispose();
       glowMaterial.dispose(); signalMaterial.dispose(); lineMaterial.dispose(); labels.dispose();
     };
-  }, [scene, labelGroup, geometries, shellGeometry, hitGeometry, solid, shell, hitMaterial, glowMaterial, signalMaterial, lineMaterial, labels]);
+  }, [scene, labelGroup, geometries, shellGeometry, floorGeometry, hitGeometry, solid, shell, floor, hitMaterial, glowMaterial,
+    signalMaterial, lineMaterial, labels]);
 
   // --- what the view shows now ---
   const items: Item[] = useMemo(() => visible.nodes.map((node) => {
@@ -235,7 +405,7 @@ function Graph(props: SceneProps) {
   const lineGeometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(edgeCapacity * SEGMENTS * 6), 3).setUsage(THREE.DynamicDrawUsage));
-    g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(edgeCapacity * SEGMENTS * 6), 3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(edgeCapacity * SEGMENTS * 8), 4).setUsage(THREE.DynamicDrawUsage));
     return g;
   }, [edgeCapacity]);
   const glowGeometry = useMemo(() => pointGeometry(nodeCapacity), [nodeCapacity]);
@@ -243,6 +413,17 @@ function Graph(props: SceneProps) {
   useEffect(() => () => lineGeometry.dispose(), [lineGeometry]);
   useEffect(() => () => glowGeometry.dispose(), [glowGeometry]);
   useEffect(() => () => signalGeometry.dispose(), [signalGeometry]);
+
+  // The floor sits under the map, wide enough for it, and glides there when the map changes.
+  const ground = useMemo(() => {
+    const points = [...positions.values()];
+    if (points.length === 0) return null;
+    const { center, radius } = bounds(points);
+    let low = Infinity;
+    for (const p of points) low = Math.min(low, p[1]);
+    return { x: center[0], y: low - Math.max(4, radius * 0.22), z: center[2], size: Math.max(60, radius * 3.4) };
+  }, [positions]);
+  const floorMesh = useRef<THREE.Mesh>(null);
 
   const meshes = useRef(new Map<Category, THREE.InstancedMesh>());
   const shellMesh = useRef<THREE.InstancedMesh | null>(null);
@@ -252,13 +433,14 @@ function Graph(props: SceneProps) {
   const current = useRef(new Map<string, THREE.Vector3>());
   const grown = useRef(new Map<string, number>());
   const shown = useRef<THREE.Vector3[]>([]);
+  const labelFade = useRef(new Map<string, number>());
   const colors = useRef<{ node: THREE.Color[]; glow: number[]; edge: Float32Array; dirty: boolean }>({ node: [], glow: [], edge: new Float32Array(0), dirty: true });
   const settled = useRef(false);
 
   // New nodes grow out of what they hang from; gone ones are forgotten. Before the next frame draws.
   useLayoutEffect(() => {
     const now = current.current;
-    for (const id of [...now.keys()]) if (!indexOf.has(id)) { now.delete(id); grown.current.delete(id); }
+    for (const id of [...now.keys()]) if (!indexOf.has(id)) { now.delete(id); grown.current.delete(id); labelFade.current.delete(id); }
     for (const it of items) {
       if (now.has(it.node.id)) continue;
       const from = spawnPoint(visible, it.node.id, (id) => {
@@ -276,7 +458,6 @@ function Graph(props: SceneProps) {
   // Colours change with the focus, the search and the data: computed once, written in the next frame.
   useLayoutEffect(() => {
     const background = new THREE.Color(BACKGROUND);
-    const white = new THREE.Color("#ffffff");
     const { focusSet, focusId, matches, selected } = props;
     const node: THREE.Color[] = [];
     const glow: number[] = [];
@@ -284,24 +465,25 @@ function Graph(props: SceneProps) {
       const id = it.node.id;
       const c = it.base.clone();
       let g = it.node.category === "agent" ? 1 : 0.65;
-      if (it.node.status === "inactive") { c.lerp(new THREE.Color("#64748b"), 0.65); g *= 0.4; }
+      if (it.node.status === "inactive") { c.lerp(new THREE.Color("#7a8699"), 0.6); g *= 0.4; }
       if (it.node.status === "warning") g *= 1.2;
       const dimmed = (focusSet && !focusSet.has(id)) || (!focusSet && matches && !matches.has(id));
-      if (dimmed) { c.lerp(background, 0.8); g *= 0.08; }
-      if (id === selected || id === focusId) { c.lerp(white, 0.22); g *= 1.6; }
+      if (dimmed) { c.lerp(background, 0.72); g *= 0.1; }
+      if (id === selected || id === focusId) { c.lerp(WHITE, 0.18); g *= 1.7; }
       if (matches?.has(id) && !dimmed) g *= 1.4;
       node.push(c);
       glow.push(g);
     });
     const edge = new Float32Array(edges.length * 2);
     edges.forEach(({ edge: e }, i) => {
-      let k = e.kind === "subagent" ? 0.9 : e.kind === "member" || e.kind === "offers" ? 0.22 : 0.34;
+      // The edge's opacity: owner to subagent strongest, membership faintest; focus and search lift theirs.
+      let k = e.kind === "subagent" ? 0.62 : e.kind === "member" || e.kind === "offers" ? 0.16 : 0.26;
       if (focusSet) {
-        if (e.source === focusId || e.target === focusId) k = 1.1;
-        else if (focusSet.has(e.source) && focusSet.has(e.target)) k = 0.3;
-        else k = 0.04;
+        if (e.source === focusId || e.target === focusId) k = 0.85;
+        else if (focusSet.has(e.source) && focusSet.has(e.target)) k = 0.22;
+        else k = 0.035;
       } else if (matches) {
-        k = matches.has(e.source) || matches.has(e.target) ? 0.55 : 0.06;
+        k = matches.has(e.source) || matches.has(e.target) ? 0.5 : 0.05;
       }
       edge[i * 2] = k;
       edge[i * 2 + 1] = k;
@@ -315,8 +497,8 @@ function Graph(props: SceneProps) {
     const list: { edge: number; phase: number; speed: number }[] = [];
     edges.forEach(({ edge: e }, i) => {
       const focused = props.focusId !== null && (e.source === props.focusId || e.target === props.focusId);
-      const copies = focused ? 4 : props.focusSet ? 0 : e.kind === "subagent" ? 2 : 1;
-      for (let k = 0; k < copies; k++) list.push({ edge: i, phase: hash(`${e.id}#${k}`), speed: 0.12 + hash(`${e.id}$${k}`) * 0.16 });
+      const copies = focused ? 3 : props.focusSet ? 0 : e.kind === "subagent" ? 2 : 1;
+      for (let k = 0; k < copies; k++) list.push({ edge: i, phase: hash(`${e.id}#${k}`), speed: 0.1 + hash(`${e.id}$${k}`) * 0.14 });
     });
     return list.slice(0, MAX_PARTICLES);
   }, [edges, props.focusId, props.focusSet]);
@@ -346,13 +528,13 @@ function Graph(props: SceneProps) {
       if (!texture) continue;
       const material = new THREE.SpriteMaterial({ map: texture.texture, transparent: true, depthTest: false, depthWrite: false, fog: false });
       const sprite = new THREE.Sprite(material);
-      const height = it.node.category === "agent" ? 1.05 : it.node.isGroup ? 0.8 : 0.62;
+      const height = it.node.category === "agent" ? 1.0 : it.node.isGroup ? 0.78 : 0.6;
       sprite.scale.set(height * texture.aspect, height, 1);
       sprite.center.set(0.5, 0);
       sprite.renderOrder = 10;
       labelGroup.add(sprite);
-      live.set(id, { sprite, key, lift: it.radius + 0.25, height, aspect: texture.aspect,
-        minPx: it.node.category === "agent" ? 15 : it.node.isGroup ? 13 : 12,
+      live.set(id, { sprite, key, lift: it.radius + 0.3, height, aspect: texture.aspect,
+        minPx: it.node.category === "agent" ? 16 : it.node.isGroup ? 14 : 13,
         maxPx: it.node.category === "agent" ? 24 : it.node.isGroup ? 20 : 18 });
     }
     invalidate();
@@ -362,17 +544,18 @@ function Graph(props: SceneProps) {
     labelSprites.current.clear();
   }, [labels]);
 
-  // --- camera: orbit, pan, zoom; and a goal it glides to when asked to frame or focus ---
+  // --- camera: orbit, pan, zoom towards the pointer; and a goal it glides to when asked ---
   const controls = useMemo(() => new OrbitControls(camera, gl.domElement), [camera, gl]);
-  const goal = useRef<{ target: THREE.Vector3; distance: number } | null>(null);
+  const goal = useRef<Goal | null>(null);
   useEffect(() => {
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.rotateSpeed = 0.6;
     controls.zoomSpeed = 0.9;
     controls.screenSpacePanning = true;
-    controls.minDistance = 2.5;
-    controls.maxDistance = 900;
+    controls.zoomToCursor = true;
+    controls.minDistance = MIN_DISTANCE;
+    controls.maxDistance = MAX_DISTANCE;
     controls.autoRotateSpeed = 0.35;
     const stop = () => { goal.current = null; };
     const change = () => invalidate();
@@ -386,6 +569,29 @@ function Graph(props: SceneProps) {
   }, [controls, invalidate]);
   useEffect(() => { controls.autoRotate = props.autoRotate; invalidate(); }, [controls, props.autoRotate, invalidate]);
 
+  // Two fingers to the right or left on a touchpad (or Shift + wheel): the view moves along x,
+  // the map following the fingers at the depth of the target. Caught on the way down to the
+  // canvas, before the orbit controls would read it as a zoom; up and down still zoom.
+  useEffect(() => {
+    const host = gl.domElement.parentElement ?? gl.domElement;
+    const right = new THREE.Vector3();
+    const onWheel = (event: WheelEvent) => {
+      const dx = horizontalSwipe(event);
+      if (dx === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const fov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
+      const perPixel = (2 * camera.position.distanceTo(controls.target) * Math.tan(fov / 2)) / Math.max(1, gl.domElement.clientHeight);
+      right.setFromMatrixColumn(camera.matrix, 0).multiplyScalar(dx * perPixel);
+      camera.position.add(right);
+      controls.target.add(right);
+      goal.current = null;
+      controls.update();
+      invalidate();
+    };
+    host.addEventListener("wheel", onWheel, { capture: true, passive: false });
+    return () => host.removeEventListener("wheel", onWheel, { capture: true });
+  }, [gl, camera, controls, invalidate]);
   // A request is answered in the frame loop, once the canvas has its size: framing needs the real aspect.
   const pending = useRef<CameraRequest | null>(null);
   const request = props.camera;
@@ -434,6 +640,19 @@ function Graph(props: SceneProps) {
       }
     });
 
+    // The floor.
+    const fm = floorMesh.current;
+    if (fm && ground) {
+      temp.a.set(ground.x, ground.y, ground.z);
+      if (fm.position.distanceToSquared(temp.a) > 1e-4 || Math.abs(fm.scale.x - ground.size) > 0.01) {
+        const kf = fm.scale.x === 1 ? 1 : k;
+        fm.position.lerp(temp.a, kf);
+        const size = fm.scale.x + (ground.size - fm.scale.x) * kf;
+        fm.scale.set(size, size, 1);
+        moving = true;
+      }
+    }
+
     const paint = colors.current.dirty;
     // Shapes, one instanced mesh per category.
     for (const [category, indices] of byCategory) {
@@ -445,7 +664,7 @@ function Graph(props: SceneProps) {
         const s = it.radius * (grown.current.get(it.node.id) ?? 1)
           * (it.node.id === props.selected ? 1.22 + (animate ? Math.sin(t * 3) * 0.05 : 0) : it.node.id === props.focusId ? 1.12 : 1)
           * (props.matches?.has(it.node.id) && animate ? 1 + Math.sin(t * 4 + it.phase) * 0.08 : 1);
-        euler.set(animate ? Math.sin(t * 0.3 + it.phase) * 0.35 : 0, (animate ? t * 0.35 : 0) + it.phase, 0);
+        euler.set(animate ? Math.sin(t * 0.3 + it.phase) * 0.35 : 0, (animate ? t * 0.3 : 0) + it.phase, 0);
         quaternion.setFromEuler(euler);
         matrix.compose(shown.current[i], quaternion, scaleVector.setScalar(s));
         mesh.setMatrixAt(slot, matrix);
@@ -456,14 +675,14 @@ function Graph(props: SceneProps) {
       if (paint && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
 
-    // The wire shells of agents and clusters, turning slowly.
+    // The bubbles of agents and clusters.
     const shellM = shellMesh.current;
     if (shellM) {
       shells.forEach((i, slot) => {
         const it = items[i];
         if (!shown.current[i]) return;
-        const s = it.radius * 1.55 * (grown.current.get(it.node.id) ?? 1);
-        euler.set(animate ? t * 0.12 : 0, animate ? -t * 0.18 + it.phase : it.phase, 0);
+        const s = it.radius * 1.6 * (grown.current.get(it.node.id) ?? 1);
+        euler.set(0, it.phase, 0);
         quaternion.setFromEuler(euler);
         matrix.compose(shown.current[i], quaternion, scaleVector.setScalar(s));
         shellM.setMatrixAt(slot, matrix);
@@ -487,7 +706,7 @@ function Graph(props: SceneProps) {
       hit.boundingSphere = null;
     }
 
-    // Edges: a gentle curve towards the centre, from owner to owned.
+    // Edges: a gentle curve towards the centre, from owner to owned; colour and alpha per vertex.
     const linePos = lineGeometry.getAttribute("position") as THREE.BufferAttribute;
     const lineCol = lineGeometry.getAttribute("color") as THREE.BufferAttribute;
     const lp = linePos.array as Float32Array;
@@ -497,27 +716,31 @@ function Graph(props: SceneProps) {
       if (!pa || !pb) return;
       control(pa, pb, temp.c);
       let o = e * SEGMENTS * 6;
+      let oc = e * SEGMENTS * 8;
       for (let s = 0; s < SEGMENTS; s++) {
         bezier(pa, temp.c, pb, s / SEGMENTS, temp.a);
         bezier(pa, temp.c, pb, (s + 1) / SEGMENTS, temp.b);
         lp[o] = temp.a.x; lp[o + 1] = temp.a.y; lp[o + 2] = temp.a.z;
         lp[o + 3] = temp.b.x; lp[o + 4] = temp.b.y; lp[o + 5] = temp.b.z;
         if (paint) {
-          const ka = colors.current.edge[e * 2] ?? 0.3;
+          const ka = colors.current.edge[e * 2] ?? 0.25;
           const ca = colors.current.node[a] ?? items[a].base, cb = colors.current.node[b] ?? items[b].base;
-          for (const [offset, u] of [[0, s / SEGMENTS], [3, (s + 1) / SEGMENTS]] as const) {
-            temp.color.copy(ca).lerp(cb, u).multiplyScalar(ka);
-            lc[o + offset] = temp.color.r; lc[o + offset + 1] = temp.color.g; lc[o + offset + 2] = temp.color.b;
+          for (const [offset, u] of [[0, s / SEGMENTS], [4, (s + 1) / SEGMENTS]] as const) {
+            temp.color.copy(ca).lerp(cb, u).lerp(WHITE, 0.2);
+            lc[oc + offset] = temp.color.r; lc[oc + offset + 1] = temp.color.g; lc[oc + offset + 2] = temp.color.b;
+            // A little fainter at the ends, where the edge meets the glass.
+            lc[oc + offset + 3] = ka * (0.6 + 0.4 * Math.sin(Math.PI * u));
           }
         }
         o += 6;
+        oc += 8;
       }
     });
     lineGeometry.setDrawRange(0, edges.length * SEGMENTS * 2);
     linePos.needsUpdate = true;
     if (paint) lineCol.needsUpdate = true;
 
-    // Glows.
+    // Glows: a soft halo, not a flare.
     const gp = glowGeometry.getAttribute("position") as THREE.BufferAttribute;
     const gc = glowGeometry.getAttribute("color") as THREE.BufferAttribute;
     const gs = glowGeometry.getAttribute("size") as THREE.BufferAttribute;
@@ -528,7 +751,7 @@ function Graph(props: SceneProps) {
       const g = (colors.current.glow[i] ?? 0.6) * (grown.current.get(it.node.id) ?? 1);
       const c = colors.current.node[i] ?? it.base;
       gc.setXYZ(i, c.r * g, c.g * g, c.b * g);
-      gs.setX(i, it.radius * (it.node.category === "agent" ? 3.4 : 3.2));
+      gs.setX(i, it.radius * (it.node.category === "agent" ? 3.0 : 2.6));
     });
     glowGeometry.setDrawRange(0, items.length);
     gp.needsUpdate = true; gc.needsUpdate = true; gs.needsUpdate = true;
@@ -549,23 +772,29 @@ function Graph(props: SceneProps) {
         bezier(pa, temp.c, pb, u, temp.a);
         sp.setXYZ(count, temp.a.x, temp.a.y, temp.a.z);
         const c = colors.current.node[link.b] ?? items[link.b].base;
-        const fade = Math.sin(u * Math.PI) * Math.min(1, (colors.current.edge[signal.edge * 2] ?? 0.3) * 2.2);
+        const fade = Math.sin(u * Math.PI) * Math.min(1, (colors.current.edge[signal.edge * 2] ?? 0.25) * 2.4);
         sc.setXYZ(count, c.r * fade, c.g * fade, c.b * fade);
-        ss.setX(count, 0.42);
+        ss.setX(count, 0.34);
         count++;
       }
     }
     signalGeometry.setDrawRange(0, count);
     sp.needsUpdate = true; sc.needsUpdate = true; ss.needsUpdate = true;
 
-    // Labels above their nodes.
+    // Labels above their nodes; those outside the focus or the search step back.
     for (const [id, entry] of labelSprites.current) {
       const i = indexOf.get(id);
       if (i === undefined || !shown.current[i]) continue;
       const g = grown.current.get(id) ?? 1;
       entry.sprite.position.copy(shown.current[i]);
       entry.sprite.position.y += entry.lift * g;
-      entry.sprite.material.opacity = g;
+      const back = props.focusSet ? !props.focusSet.has(id) : props.matches ? !props.matches.has(id) : false;
+      const want = back ? 0.16 : 1;
+      const was = labelFade.current.get(id) ?? want;
+      const now = Math.abs(want - was) < 0.01 ? want : was + (want - was) * k;
+      if (now !== want) moving = true;
+      labelFade.current.set(id, now);
+      entry.sprite.material.opacity = g * now;
       const pxToWorld = (state.viewport.dpr * camera.position.distanceTo(entry.sprite.position)) / perUnit;
       const h = Math.min(Math.max(entry.height, entry.minPx * pxToWorld), entry.maxPx * pxToWorld);
       entry.sprite.scale.set(h * entry.aspect, h, 1);
@@ -577,30 +806,29 @@ function Graph(props: SceneProps) {
     const asked = pending.current;
     if (asked && state.size.width > 0 && state.size.height > 0) {
       pending.current = null;
-      if (asked.kind === "fit") {
-        goal.current = framing(camera as THREE.PerspectiveCamera, state.size.width / state.size.height, [...positions.values()]);
-      } else {
-        const p = positions.get(asked.id);
-        const node = items.find((it) => it.node.id === asked.id)?.node;
-        if (p) goal.current = { target: new THREE.Vector3(...p), distance: node?.category === "agent" ? 18 : node?.isGroup ? 14 : 9 };
-      }
-      if (goal.current && (asked.instant || !animate)) {
-        temp.d.copy(camera.position).sub(controls.target);
-        if (temp.d.lengthSq() < 1e-6) temp.d.set(0, 0.35, 1);
+      const next = answer(asked, goal.current, camera as THREE.PerspectiveCamera, controls.target,
+        state.size.width / state.size.height, positions, items);
+      if (next) goal.current = next;
+      const instant = (asked.kind === "fit" || asked.kind === "focus") && asked.instant;
+      if (goal.current && (instant || !animate)) {
+        const dir = (goal.current.direction ?? offsetDirection(camera.position, controls.target, temp.d)).clone();
         controls.target.copy(goal.current.target);
-        camera.position.copy(temp.d.normalize().multiplyScalar(goal.current.distance).add(controls.target));
+        camera.position.copy(dir.multiplyScalar(goal.current.distance).add(controls.target));
         goal.current = null;
       }
       moving = true;
     }
     if (goal.current) {
-      const kc = 1 - Math.exp(-dt * 3.2);
-      controls.target.lerp(goal.current.target, kc);
-      temp.d.copy(camera.position).sub(controls.target);
-      if (temp.d.lengthSq() < 1e-6) temp.d.set(0, 0.35, 1);
-      temp.d.normalize().multiplyScalar(goal.current.distance).add(controls.target);
-      camera.position.lerp(temp.d, kc);
-      if (camera.position.distanceTo(temp.d) < 0.05 && controls.target.distanceTo(goal.current.target) < 0.05) goal.current = null;
+      const kc = 1 - Math.exp(-dt * 3.6);
+      const want = goal.current;
+      controls.target.lerp(want.target, kc);
+      const distance = camera.position.distanceTo(controls.target);
+      const dir = offsetDirection(camera.position, controls.target, temp.d);
+      if (want.direction) dir.lerp(want.direction, kc).normalize();
+      const nextDistance = distance + (want.distance - distance) * kc;
+      camera.position.copy(dir).multiplyScalar(nextDistance).add(controls.target);
+      if (Math.abs(nextDistance - want.distance) < 0.03 && controls.target.distanceTo(want.target) < 0.03
+          && (!want.direction || dir.angleTo(want.direction) < 0.002)) goal.current = null;
       moving = true;
     }
     controls.update();
@@ -617,6 +845,8 @@ function Graph(props: SceneProps) {
 
   return (
     <>
+      <mesh ref={floorMesh} geometry={floorGeometry} material={floor} rotation-x={-Math.PI / 2} renderOrder={-1}
+            visible={ground !== null} raycast={() => null} />
       {byCategory.map(([category, indices]) => (
         <instancedMesh key={`${category}:${capacityFor(indices.length)}`} frustumCulled={false}
                        args={[geometries.get(CATEGORY[category].shape)!, solid, capacityFor(indices.length)]}
@@ -625,7 +855,7 @@ function Graph(props: SceneProps) {
                        }} />
       ))}
       {shells.length > 0 && (
-        <instancedMesh key={`shell:${capacityFor(shells.length)}`} frustumCulled={false}
+        <instancedMesh key={`shell:${capacityFor(shells.length)}`} frustumCulled={false} renderOrder={2}
                        args={[shellGeometry, shell, capacityFor(shells.length)]}
                        ref={(mesh: THREE.InstancedMesh | null) => { shellMesh.current = mesh; colors.current.dirty = true; }} />
       )}
@@ -640,25 +870,81 @@ function Graph(props: SceneProps) {
                        if (id && id === hoveredRef.current) { hoveredRef.current = null; props.onHover(null); }
                      }}
                      onClick={(e) => { e.stopPropagation(); const id = idAt(e); if (id) props.onSelect(id); }}
-                     onDoubleClick={(e) => { e.stopPropagation(); const id = idAt(e); if (id) props.onActivate(id); }} />
-      <lineSegments geometry={lineGeometry} material={lineMaterial} frustumCulled={false} />
-      <points geometry={glowGeometry} material={glowMaterial} frustumCulled={false} />
-      <points geometry={signalGeometry} material={signalMaterial} frustumCulled={false} />
+                     onDoubleClick={(e) => {
+                       e.stopPropagation();
+                       props.onNodeDoubleClick();
+                       const id = idAt(e);
+                       if (id) props.onActivate(id);
+                     }} />
+      <lineSegments geometry={lineGeometry} material={lineMaterial} frustumCulled={false} renderOrder={1} />
+      <points geometry={glowGeometry} material={glowMaterial} frustumCulled={false} renderOrder={3} />
+      <points geometry={signalGeometry} material={signalMaterial} frustumCulled={false} renderOrder={3} />
     </>
   );
 }
 
+interface Goal { target: THREE.Vector3; distance: number; direction?: THREE.Vector3 }
+
+/** The unit vector from the target to the camera, into `out`; a sane one when they coincide. */
+function offsetDirection(position: THREE.Vector3, target: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+  out.copy(position).sub(target);
+  if (out.lengthSq() < 1e-6) out.set(0, 0.35, 1);
+  return out.normalize();
+}
+
 /**
- * Where the camera goes to show the map, looking the way it looks now: every node
- * projected on the view plane, the target in the middle of what is there, the
- * distance at which nineteen in twenty fit -- a far straggler does not shrink the rest.
+ * Where a request sends the camera. Zoom, orbit and pan build on the goal in flight,
+ * so pressing a key again goes further instead of starting over.
  */
-function framing(camera: THREE.PerspectiveCamera, aspect: number, points: Vec3[]): { target: THREE.Vector3; distance: number } {
+function answer(asked: CameraAsk, inFlight: Goal | null, camera: THREE.PerspectiveCamera, target: THREE.Vector3, aspect: number,
+                positions: Map<string, Vec3>, items: Item[]): Goal | null {
+  const dir = inFlight?.direction?.clone() ?? offsetDirection(camera.position, target, new THREE.Vector3());
+  const distance = inFlight?.distance ?? camera.position.distanceTo(target);
+  const center = inFlight?.target.clone() ?? target.clone();
+  switch (asked.kind) {
+    case "fit": {
+      const from = asked.view ? VIEW_DIRECTION[asked.view] : undefined;
+      return { ...framing(camera, aspect, [...positions.values()], from), direction: from?.clone() };
+    }
+    case "focus": {
+      const p = positions.get(asked.id);
+      if (!p) return null;
+      const node = items.find((it) => it.node.id === asked.id)?.node;
+      return { target: new THREE.Vector3(...p), distance: node?.category === "agent" ? 18 : node?.isGroup ? 14 : 9,
+        direction: inFlight?.direction };
+    }
+    case "zoom":
+      return { target: center, distance: THREE.MathUtils.clamp(distance * asked.factor, MIN_DISTANCE, MAX_DISTANCE),
+        direction: inFlight?.direction };
+    case "orbit": {
+      const s = new THREE.Spherical().setFromVector3(dir);
+      s.theta += asked.azimuth;
+      s.phi = THREE.MathUtils.clamp(s.phi + asked.polar, 0.04, Math.PI - 0.04);
+      return { target: center, distance, direction: new THREE.Vector3().setFromSpherical(s).normalize() };
+    }
+    case "pan": {
+      const right = new THREE.Vector3(0, 1, 0).cross(dir);
+      if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
+      right.normalize();
+      const up = dir.clone().cross(right).normalize();
+      return { target: center.addScaledVector(right, asked.x * distance).addScaledVector(up, asked.y * distance), distance,
+        direction: inFlight?.direction };
+    }
+  }
+}
+
+/**
+ * Where the camera goes to show the map, looking the way it looks now (or from the
+ * side it is asked to): every node projected on the view plane, the target in the
+ * middle of what is there, the distance at which nineteen in twenty fit -- a far
+ * straggler does not shrink the rest.
+ */
+function framing(camera: THREE.PerspectiveCamera, aspect: number, points: Vec3[], from?: THREE.Vector3): { target: THREE.Vector3; distance: number } {
   if (points.length === 0) return { target: new THREE.Vector3(), distance: 40 };
   const { center, radius } = bounds(points);
   const c = new THREE.Vector3(...center);
-  // The axes the camera will have once it looks at the centre from where it is.
-  const back = camera.position.clone().sub(c);
+  // The axes the camera will have once it looks at the centre.
+  const back = from ? from.clone() : camera.position.clone().sub(c);
   if (back.lengthSq() < 1e-6) back.set(0, 0.35, 1);
   back.normalize();
   const right = new THREE.Vector3(0, 1, 0).cross(back);
@@ -731,29 +1017,29 @@ class LabelCache {
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
     const label = text().length > 48 ? `${text().slice(0, 47)}…` : text();
-    const font = "600 30px Inter, 'Segoe UI', system-ui, sans-serif";
+    const font = "500 30px 'Geist Variable', Inter, 'Segoe UI', system-ui, sans-serif";
     ctx.font = font;
-    const width = Math.ceil(ctx.measureText(label).width) + 64;
+    const width = Math.ceil(ctx.measureText(label).width) + 66;
     const height = 52;
     canvas.width = width;
     canvas.height = height;
     ctx.font = font;
-    ctx.fillStyle = "rgba(7, 12, 24, 0.82)";
+    // Frosted: a translucent pill, a hairline in the category's colour, light text.
+    ctx.fillStyle = "rgba(20, 29, 48, 0.62)";
     ctx.strokeStyle = color;
-    ctx.globalAlpha = 1;
-    ctx.lineWidth = 2;
-    roundRect(ctx, 1, 1, width - 2, height - 2, 14);
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, 1, 1, width - 2, height - 2, (height - 2) / 2);
     ctx.fill();
-    ctx.globalAlpha = 0.7;
+    ctx.globalAlpha = 0.45;
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(24, height / 2, 7, 0, Math.PI * 2);
+    ctx.arc(26, height / 2, 6.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#e7ecf7";
+    ctx.fillStyle = "#eef2f9";
     ctx.textBaseline = "middle";
-    ctx.fillText(label, 40, height / 2 + 1);
+    ctx.fillText(label, 42, height / 2 + 1);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 4;

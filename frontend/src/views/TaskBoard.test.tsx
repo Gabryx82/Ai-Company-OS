@@ -31,7 +31,7 @@ describe("TaskBoard", () => {
     const working = screen.getByRole("region", { name: "In corso" });
     expect(within(working).getByText("Working on it")).toBeTruthy();
     expect(within(working).getByText("Code Architect")).toBeTruthy();
-    expect(within(working).getByText("· Company OS")).toBeTruthy();
+    expect(within(working).getByText("Company OS")).toBeTruthy();
 
     expect(within(screen.getByRole("region", { name: "Completate" })).getByText("Shipped")).toBeTruthy();
   });

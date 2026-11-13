@@ -28,7 +28,8 @@ export function StatusBadge({ status }: { status: TaskStatus | RunStatus }) {
 
 export function PriorityBadge({ priority }: { priority: TaskPriority }) {
   const tone = priority === "HIGH" ? "badge badge-danger" : priority === "MEDIUM" ? "badge badge-warn" : "badge";
-  return <span className={tone}>{priority.toLowerCase()}</span>;
+  const label = priority === "HIGH" ? "Alta" : priority === "MEDIUM" ? "Media" : "Bassa";
+  return <span className={tone} title={`Priorità ${label.toLowerCase()}`}>{label}</span>;
 }
 
 /** Explains a refusal in words, and keeps its stable type visible for whoever debugs. */

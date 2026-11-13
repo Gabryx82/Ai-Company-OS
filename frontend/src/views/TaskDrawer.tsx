@@ -47,8 +47,8 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
     api.taskOutcomes(taskId).then(setOutcomes).catch(() => setOutcomes([]));
   }, [api, taskId]);
 
-  // PHASE 32 (TD-55): an agent working elsewhere writes its Esito in the task document; while the
-  // task is in progress the drawer looks again, so the outcome comes back without a reload.
+  // PHASE 32 (TD-55), PHASE 35: an agent working elsewhere writes its outcome in TASK-NNN.esito.md (or the Esito of
+  // the task document); while the task is in progress the drawer looks again, so the outcome comes back without a reload.
   const inProgress = version?.body.status === "IN_PROGRESS";
   useEffect(() => {
     if (!inProgress) return;

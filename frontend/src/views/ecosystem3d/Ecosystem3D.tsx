@@ -4,7 +4,8 @@ import type { AgentConfiguration, HubInstalled } from "../../api/types";
 import { ProblemNote } from "../../components/ui";
 import { Icon } from "../../components/icons";
 import type { Navigate } from "../../App";
-import EcosystemScene, { type CameraRequest } from "./EcosystemScene";
+import { GraphKeys, GraphNav, GraphTrail } from "../../components/GraphNav";
+import EcosystemScene, { type CameraAsk, type CameraRequest } from "./EcosystemScene";
 import { webglAvailable } from "./webgl";
 import { NodeInspector } from "./NodeInspector";
 import {
@@ -17,6 +18,23 @@ import "./ecosystem3d.css";
 /** How often the view reads the agents again, and every how many reads the Hub too. */
 export const REFRESH_MS = 15_000;
 const HUB_EVERY = 4;
+
+/** The keys the map answers to while it has the focus. */
+const KEYS: [string, string][] = [
+  ["← → ↑ ↓", "Ruota attorno al centro"],
+  ["Maiusc + frecce", "Sposta la vista"],
+  ["Due dita ← →", "Sposta a destra e a sinistra (touchpad; col mouse Maiusc + rotella)"],
+  ["Due dita sullo schermo", "Trascina la vista e ingrandisci"],
+  ["+  −", "Avvicina, allontana"],
+  ["F  ·  Home", "Inquadra tutto"],
+  ["1  2  3", "Vista frontale, dall'alto, laterale"],
+  ["Invio", "Espandi o apri l'elemento scelto"],
+  ["Backspace", "Torna all'elemento precedente"],
+  ["Esc", "Deseleziona"],
+  ["/", "Cerca nella mappa"],
+  ["R", "Rotazione automatica"],
+];
+const STEP = Math.PI / 12;
 
 const reducedMotion = () => typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -52,9 +70,10 @@ export function Ecosystem3D({ navigate }: { navigate: Navigate }) {
   const [autoRotate, setAutoRotate] = useState(false);
   const [camera, setCamera] = useState<CameraRequest | null>(null);
   const [showAgents, setShowAgents] = useState(false);
+  const [showKeys, setShowKeys] = useState(false);
+  const searchInput = useRef<HTMLInputElement>(null);
   const cameraSeq = useRef(0);
-  const ask = useCallback((request: { kind: "fit"; instant?: boolean } | { kind: "focus"; id: string }) =>
-    setCamera({ ...request, seq: ++cameraSeq.current }), []);
+  const ask = useCallback((request: CameraAsk) => setCamera({ ...request, seq: ++cameraSeq.current }), []);
   const canDraw = useMemo(() => webglAvailable(), []);
 
   // --- data: read now, then again while the tab is visible; an unchanged answer changes nothing ---
@@ -189,6 +208,49 @@ export function Ecosystem3D({ navigate }: { navigate: Navigate }) {
     if (event.key === "Escape") { setQuery(""); setSearchOpen(false); }
   };
 
+  // --- the trail: every element chosen, in order; Backspace and the arrow go back along it ---
+  const [trail, setTrail] = useState<string[]>([]);
+  const goingBack = useRef(false);
+  useEffect(() => {
+    if (!selected) return;
+    if (goingBack.current) { goingBack.current = false; return; }
+    setTrail((t) => (t[t.length - 1] === selected ? t : [...t.filter((id) => id !== selected), selected].slice(-30)));
+  }, [selected]);
+  const known = useMemo(() => trail.filter((id) => graph?.byId.has(id)), [trail, graph]);
+  const canBack = known.length >= 2 || (known.length === 1 && selected !== known[0]);
+  const back = () => {
+    if (!canBack) return;
+    const top = known[known.length - 1];
+    const rest = selected === top ? known.slice(0, -1) : known;
+    setTrail(rest);
+    goingBack.current = true;
+    goTo(rest[rest.length - 1]);
+  };
+
+  const onStageKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("button, input, select, textarea, a")) return;
+    const shift = event.shiftKey;
+    const done = () => { event.preventDefault(); event.stopPropagation(); };
+    switch (event.key) {
+      case "ArrowLeft": done(); ask(shift ? { kind: "pan", x: -0.08, y: 0 } : { kind: "orbit", azimuth: -STEP, polar: 0 }); return;
+      case "ArrowRight": done(); ask(shift ? { kind: "pan", x: 0.08, y: 0 } : { kind: "orbit", azimuth: STEP, polar: 0 }); return;
+      case "ArrowUp": done(); ask(shift ? { kind: "pan", x: 0, y: 0.08 } : { kind: "orbit", azimuth: 0, polar: -STEP * 0.7 }); return;
+      case "ArrowDown": done(); ask(shift ? { kind: "pan", x: 0, y: -0.08 } : { kind: "orbit", azimuth: 0, polar: STEP * 0.7 }); return;
+      case "+": case "=": done(); ask({ kind: "zoom", factor: 0.78 }); return;
+      case "-": case "_": done(); ask({ kind: "zoom", factor: 1.28 }); return;
+      case "f": case "F": case "Home": case "0": done(); ask({ kind: "fit" }); return;
+      case "1": done(); ask({ kind: "fit", view: "front" }); return;
+      case "2": done(); ask({ kind: "fit", view: "top" }); return;
+      case "3": done(); ask({ kind: "fit", view: "side" }); return;
+      case "r": case "R": done(); setAutoRotate((on) => !on); return;
+      case "Enter": if (selected) { done(); activate(selected); } return;
+      case "Backspace": done(); back(); return;
+      case "Escape": done(); if (showKeys) setShowKeys(false); else setSelected(null); return;
+      case "/": done(); searchInput.current?.focus(); return;
+      case "?": done(); setShowKeys((on) => !on); return;
+    }
+  };
+
   const selectedNode = selected && graph ? graph.byId.get(selected) ?? null : null;
   const agents = useMemo(() => (data?.agents ?? []).slice().sort((a, b) => a.name.localeCompare(b.name)), [data]);
   const focusAgent = view.focus !== null ? agents.find((a) => a.id === view.focus) ?? null : null;
@@ -198,8 +260,8 @@ export function Ecosystem3D({ navigate }: { navigate: Navigate }) {
       <div className="page-head">
         <div>
           <h1>Ecosistema 3D</h1>
-          <p>Gli agenti e tutto ciò che li definisce — modello, skill, knowledge, MCP, plugin, prompt, direttive, ruoli — come una mappa
-            navigabile, letta dalla configurazione reale.</p>
+          <p>Gli agenti e tutto ciò che li definisce (modelli, skill, knowledge, server MCP, plugin, prompt e ruoli) in una mappa 3D
+            da esplorare, letta dalla configurazione reale.</p>
         </div>
         <div className="row">
           <label className="bp-check" title="Rilegge agenti e risorse ogni 15 secondi mentre la scheda è visibile">
@@ -234,7 +296,7 @@ export function Ecosystem3D({ navigate }: { navigate: Navigate }) {
           )}
           <div className="search eco-search">
             <Icon name="search" size={15} />
-            <input aria-label="Cerca nella mappa" placeholder="Cerca agenti, skill, MCP, prompt, direttive…" value={query}
+            <input ref={searchInput} aria-label="Cerca nella mappa" placeholder="Cerca agenti, skill, MCP, prompt, direttive…" value={query}
                    onChange={(e) => { setQuery(e.target.value); setSearchOpen(true); }} onFocus={() => setSearchOpen(true)}
                    onKeyDown={onSearchKey} />
             {query && <button className="btn btn-small" aria-label="Svuota la ricerca" onClick={() => { setQuery(""); setSearchOpen(false); }}>
@@ -269,8 +331,6 @@ export function Ecosystem3D({ navigate }: { navigate: Navigate }) {
             Etichette: {labels === "all" ? "tutte" : "essenziali"}</button>
           <button className="btn btn-small" aria-pressed={animate} onClick={() => setAnimate(!animate)}>
             Animazioni {animate ? "attive" : "ferme"}</button>
-          <button className="btn btn-small" aria-pressed={autoRotate} onClick={() => setAutoRotate(!autoRotate)}>Rotazione</button>
-          <button className="btn btn-small" onClick={() => ask({ kind: "fit" })}><Icon name="dashboard" size={13} /> Centra</button>
         </div>
 
         <div className="eco-legend" role="group" aria-label="Categorie">
@@ -314,8 +374,9 @@ export function Ecosystem3D({ navigate }: { navigate: Navigate }) {
       </div>
 
       <div className={selectedNode ? "bp-stage has-inspector" : "bp-stage"}>
-        <div className="card eco-stage" role="img"
-             aria-label={visible ? `Mappa 3D: ${visible.nodes.length} elementi e ${visible.edges.length} connessioni` : "Mappa 3D"}>
+        <div className="card eco-stage graph-stage-focus" role="region" tabIndex={0} onKeyDown={onStageKey}
+             aria-label={visible ? `Mappa 3D: ${visible.nodes.length} elementi e ${visible.edges.length} connessioni` : "Mappa 3D"}
+             aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown + - F 1 2 3 Enter Backspace Escape /">
           {!canDraw && (
             <div className="bp-empty">
               <Icon name="warning" size={28} />
@@ -336,7 +397,8 @@ export function Ecosystem3D({ navigate }: { navigate: Navigate }) {
           {canDraw && visible && visible.nodes.length > 0 && (
             <EcosystemScene visible={visible} positions={positions} focusId={focusId} focusSet={focusSet} matches={matches}
                             selected={selected} labels={labels} animate={animate} autoRotate={autoRotate} camera={camera}
-                            onHover={setHovered} onSelect={setSelected} onActivate={activate} />
+                            onHover={setHovered} onSelect={setSelected} onActivate={activate}
+                            onBackground={() => ask({ kind: "fit" })} />
           )}
           {canDraw && data && data.agents.length > 0 && visible?.nodes.length === 0 && (
             <div className="bp-empty"><strong>Nessun agente scelto.</strong>
@@ -344,14 +406,40 @@ export function Ecosystem3D({ navigate }: { navigate: Navigate }) {
           )}
           {visible && visible.nodes.length > 0 && (
             <>
-              <div className="eco-overlay eco-overlay-top">
-                {view.mode === "agent" && focusAgent
-                  ? <span><strong>{focusAgent.name}</strong> · vista agente singolo</span>
-                  : <span>{agentsShown.length} agenti · {visible.nodes.length} elementi · {visible.edges.length} connessioni</span>}
+              <GraphTrail canBack={canBack} onBack={back} steps={[
+                { key: "eco", label: "Ecosistema", current: view.mode === "ecosystem" && !selectedNode,
+                  onClick: () => { ecosystem(); setSelected(null); ask({ kind: "fit" }); } },
+                ...(view.mode === "agent" && focusAgent ? [{ key: "agent", label: focusAgent.name, color: CATEGORY.agent.color,
+                  current: !selectedNode || selectedNode.id === agentId(focusAgent.id),
+                  onClick: () => { single(focusAgent.id); ask({ kind: "fit" }); } }] : []),
+                ...(selectedNode && !(view.mode === "agent" && focusAgent && selectedNode.id === agentId(focusAgent.id))
+                  ? [{ key: "node", label: selectedNode.label, color: CATEGORY[selectedNode.category].color, current: true,
+                    onClick: () => ask({ kind: "focus", id: selectedNode.id }) }] : []),
+              ]} />
+              <div className="eco-stats">
+                {agentsShown.length} agenti · {visible.nodes.length} elementi · {visible.edges.length} connessioni
               </div>
-              <div className="eco-overlay eco-overlay-bottom muted">
-                Trascina per ruotare · tasto destro per spostare · rotella per lo zoom · clic per le proprietà · doppio clic per espandere o aprire l'agente
+              <div className="eco-overlay eco-overlay-bottom">
+                Trascina per ruotare · tasto destro per spostare · rotella per lo zoom verso il puntatore · due dita a destra o a sinistra per spostarti · doppio clic sul vuoto per
+                inquadrare tutto · <kbd>?</kbd> per i tasti
               </div>
+              <GraphNav label="Navigazione della mappa 3D" groups={[
+                [
+                  { glyph: "plus", label: "Avvicina (+)", onClick: () => ask({ kind: "zoom", factor: 0.72 }) },
+                  { glyph: "minus", label: "Allontana (−)", onClick: () => ask({ kind: "zoom", factor: 1.38 }) },
+                  { glyph: "fit", label: "Inquadra tutto (F)", onClick: () => ask({ kind: "fit" }) },
+                ],
+                [
+                  { glyph: "front", label: "Vista frontale (1)", onClick: () => ask({ kind: "fit", view: "front" }) },
+                  { glyph: "top", label: "Vista dall'alto (2)", onClick: () => ask({ kind: "fit", view: "top" }) },
+                  { glyph: "side", label: "Vista laterale (3)", onClick: () => ask({ kind: "fit", view: "side" }) },
+                ],
+                [
+                  { glyph: "rotate", label: "Rotazione automatica (R)", pressed: autoRotate, onClick: () => setAutoRotate(!autoRotate) },
+                  { glyph: "keys", label: "Scorciatoie da tastiera (?)", pressed: showKeys, onClick: () => setShowKeys(!showKeys) },
+                ],
+              ]} />
+              {showKeys && <GraphKeys keys={KEYS} onClose={() => setShowKeys(false)} />}
             </>
           )}
         </div>

@@ -34,7 +34,7 @@ export function MockupHub() {
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1>Mockup Hub</h1><p>Cerca mockup, UI kit, template e reference fra i provider; salva ciò che scegli nelle reference del progetto.</p></div>
+        <div><h1>Mockup Hub</h1><p>Cerca mockup, UI kit, template e reference tra più provider e salva quelli che scegli nelle reference del progetto.</p></div>
       </div>
       <ProblemNote problem={problem} />
       <div className="card card-body stack">
