@@ -130,3 +130,55 @@ Orchestrator mostra la sessione dell'ultimo handoff seguibile e la rilegge ogni 
 API verificata su OpenCode 1.18.18 (`/session`, `/session/status`, `/session/{id}/message`). Test:
 `OrchestratorApiTest` (un OpenCode finto in HTTP sulla porta scelta; rosso se si segue un sotto-agente),
 console `OrchestratorPanel.test.tsx` (rosso se si segue un handoff non seguibile).
+
+## Revisione PHASE 34 (2026-11-07) — Claude Code nell'app desktop, consegnato come la CLI
+
+Direttiva dell'operatore del 2026-11-07: «aggiungi Claude Code app desktop come soluzione per consegnare la task come
+per la cli». Il motivo è nei fatti: delle 17 sessioni di Claude Code sul progetto *interfaccia-movieseseries* solo una
+era partita da una consegna, e dal 3 novembre tutte venivano da Claude Desktop, che non era un execution target. Quelle
+sessioni partivano da «Esegui TASK-NNN…» incollato a mano, senza pacchetto: l'agente non riceveva ruolo, skill,
+knowledge né MCP, e nessun handoff restava registrato.
+
+- **Nuovo target `claude-desktop`** («Claude Code (app desktop)»), provider `claude-subscription`, file di contesto
+  `CLAUDE.md`, sul software `claude-desktop` del catalogo.
+- **Nuova delivery `APP_LINK`**: l'app si apre con il suo link, sulla cartella e con il prompt già nel compositore.
+  Per Claude Desktop è `claude://code/new?folder=<cartella>&q=<prompt>`, documentato da Anthropic (articolo di
+  supporto 14729294) e verificato nel codice dell'app installata (4.23118: legge `q` o `prompt`, `folder`, `file`).
+  Il prompt non parte da solo e l'app chiede sempre di confermare la cartella: l'operatore conferma e invia. Il
+  prompt è quello compatto, «Leggi .aicos/handoffs/<TASK>-claude-desktop.md ed esegui la task che descrive.»;
+  `promptToClipboard` è falso, come per la CLI.
+- **Il link è del catalogo** (`execution-targets.json`, campo `link`, solo per `APP_LINK`, e un `APP_LINK` ne ha
+  sempre uno e un software: lo impone il record). `LaunchPlan.forLink` mantiene gli invarianti di ADR-019 come
+  per la CLI: il programma è `explorer.exe`, che passa il link al gestore che Windows ha registrato per lo schema
+  (I1); lo schema deve essere di un'app — rifiutati web, `file:`, `ms-settings:`, `shell:` e un link del catalogo
+  con query o frammento; la cartella è quella risolta dal control plane ed esiste (I2); nessuna shell, e i due
+  valori sono codificati per cento (RFC 3986, spazio come `%20`), così il link contiene solo lettere, cifre,
+  `%._*-` e i separatori `?=&` (I3); il prompt ha al più 14.000 caratteri, quanti l'app ne tiene.
+
+Test: `LaunchPlanTest` (link, prompt ostile che resta un solo valore, schemi rifiutati, app non installata o
+disabilitata, cartella mancante, prompt vuoto o troppo lungo), `ExecutionTargetCatalogTest`, `AgentBindingApiTest`
+(il target nell'elenco, l'abbonamento valido e un modello locale no), `HandoffAnywhereApiTest` (pacchetto,
+`explorer.exe` con il link, task in corso, handoff registrato); console `OrchestratorPanel.test.tsx` (la consegna
+all'app non copia nulla negli appunti e dice di confermare e inviare).
+
+## Revisione PHASE 36 (2026-11-08) — la consegna si verifica prima, e porta tutto (ADR-042)
+
+- **§4, il pacchetto**: il modello è descritto sul target della consegna, non su quello dell'agente: a uno strumento
+  che non usa il provider del modello dell'agente il pacchetto dice «scelto nell'app o nella CLI» invece di dichiarare
+  un modello che non può usare. Porta anche il software dell'agente, le capability, il dominio e il genitore.
+- **Claude Code nell'app desktop**: scrive `.mcp.json` come la CLI (è Claude Code, legge lo stesso file del progetto),
+  e il prompt, oltre che nel compositore tramite il link, è **negli appunti** (`promptToClipboard = true`): la revisione
+  di PHASE 34 diceva il contrario.
+- **Prima della consegna**: `GET /api/tasks/{id}/readiness` dice, per quel target, che cosa troverà l'agente — ogni
+  voce ok, avviso o bloccante — e la consegna rifiuta i bloccanti con `409 delivery-not-ready` **prima** di scrivere il
+  pacchetto o aprire lo strumento (prima uno strumento non installato faceva scrivere i file e poi falliva al lancio).
+  La run fa lo stesso. Il pannello del Master Orchestrator mostra la verifica e la conferma «Prepara e apri» resta
+  disabilitata finché c'è un bloccante.
+- **Il prompt mostrato** (documento della task, pannello, `CONTEXT_MAP.md`) porta al pacchetto della consegna; se la
+  task non è stata consegnata, l'agente chiede la consegna invece di partire senza ruolo, skill e knowledge.
+- **Con il launcher spento** (`aicos.launcher.enabled=false`, o un host non Windows) la consegna non fallisce più con
+  `503` dopo aver scritto il pacchetto: prepara tutto, registra il comando che avrebbe eseguito, mette il prompt negli
+  appunti e risponde con `notOpened`; la verifica lo dice prima, come avviso (ADR-042 §6.1).
+
+Test: `HarnessChainApiTest`, `TaskReadinessApiTest`, `DeliveryPathApiTest`, `HandoffAnywhereApiTest`,
+`OrchestratorPanel.test.tsx`.

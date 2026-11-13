@@ -37,7 +37,17 @@ per provare senza toccare i dati, clonare prima (vedi l'intestazione dello scrip
 6. **Task**: «Assegna agente» mostra COSA → A CHI → CON QUALE MODELLO → ATTRAVERSO; il pannello
    **Master Orchestrator** propone il target dell'agente. Esegui con l'AI Engine oppure «Prepara e
    apri»: cartella, documento della task, regole dello strumento e pacchetto di handoff vengono
-   scritti, lo strumento si apre, il prompt è negli appunti.
+   scritti, lo strumento si apre, il prompt è negli appunti. Claude Code si apre nel terminale
+   (CLI) oppure **nell'app desktop**: Claude Desktop apre una sessione Code sulla cartella con il
+   prompt già scritto (ed è anche negli appunti), chiede di confermare la cartella e aspetta che tu invii.
+   Prima di aprire, **«Verifica prima della consegna»** dice per quello strumento che cosa troverà l'agente —
+   contesto, skill e knowledge (e la loro copia nella cartella dello strumento, con «Copia nello strumento»),
+   MCP, modello, software — ogni voce ok, avviso o bloccante; con un bloccante «Prepara e apri» resta spento
+   (PHASE 36). Il prompt da incollare a mano porta l'agente al pacchetto; se la task non è stata consegnata,
+   l'agente chiede la consegna. La consegna scrive anche, dove mancano, i file che ogni strumento legge —
+   `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` — porta all'agente le skill, knowledge e MCP adottati dal progetto,
+   dopo le sue, e aggiorna i testi che AI Company OS aveva scritto in un progetto iniziato prima (copia in
+   `.aicos/upgrades/`).
 7. **Review**: «Accetta e completa» o «Richiedi modifiche», con nota.
 8. Altro: **Knowledge Hub** (tutte le skill e knowledge della libreria, di Claude Code, Claude Desktop,
    Codex e delle altre app, divise per app e tipologia; marketplace; copie sincronizzate; aggiornamenti —
@@ -444,6 +454,150 @@ La chiave va solo a `https://api.kimi.com/coding/v1/usages` (`aicos.usage.kimi-c
 la scheda dice come aggiungerla. **GitHub Copilot**: nessun dato sul PC, solo il reset del primo del mese (00:00 UTC) e
 la pagina ufficiale.
 
+### Misure degli agenti (PHASE 35, ADR-041)
+
+```bash
+curl -s "http://127.0.0.1:8081/api/usage/measurements?from=2026-11-01&to=2026-11-30" -H "Authorization: Bearer $TOKEN"
+```
+
+Per le run a cui l'AI Engine ha risposto (le ultime 50, e raggruppate per modello e per agente) e per gli handoff (gli
+ultimi 50): token in ingresso e in uscita (per Ollama `prompt_eval_count`, `eval_count`), le durate che il provider
+riporta (totale, caricamento, lettura del prompt, generazione), la finestra di contesto chiesta (`num_ctx`, un
+valore di configurazione), i caratteri del prompt di sistema e del messaggio; per un handoff i caratteri del pacchetto
+e di ogni file che il pacchetto chiede di leggere (`null` se mancava). Senza date, il mese corrente. Solo valori
+misurati: un valore che il provider non riporta è `null`, le medie sono sulle sole run che lo hanno, i caratteri non
+diventano token. Nella console: **Consumi e quote → Misure degli agenti**. Le run e gli handoff precedenti a V42 non
+hanno misure. Le durate arrivano solo da un engine aggiornato (campo `metrics` della risposta v1): con un engine
+vecchio restano `null`.
+
+### Skill nelle run e negli handoff (PHASE 35, ADR-041 §7–§8)
+
+Una run dell'AI Engine riceve al più **due** skill o knowledge, quelle pertinenti alla task per parole chiave, e di
+ciascuna solo la sezione `## Essenziale` (o il corpo fino al primo `##`), entro `aicos.runs.skill-essential-chars`
+(default `1500`; per esempio `-Daicos.runs.skill-essential-chars=2500`). Un handoff a Claude Code, Codex, OpenCode,
+Antigravity o Verdent nomina le skill invece di farle leggere: perché lo strumento le carichi, copiale prima nella sua
+cartella dal **Knowledge Hub → Libreria → skill → Nelle app**; il pacchetto dice quali mancano.
+
+### Prima della consegna e della run: la verifica (PHASE 36, ADR-042)
+
+`GET /api/tasks/{id}/readiness?target=<target>&model=<modello>` (senza `target`: quello dell'agente; `engine` per una
+run) elenca che cosa troverà l'agente, voce per voce, con stato `OK`, `WARNING` o `BLOCKING` e il motivo: task
+(archiviata, completata, fase non approvata, nessun agente), strumento (si apre?), modello, contesto (`AGENTS.md`,
+`CLAUDE.md`, `GEMINI.md`, documento della task e della fase), skill e knowledge (file in libreria, copia del Knowledge
+Hub nella cartella dello strumento), MCP (scritto o da configurare a mano), tool, software. `POST /api/tasks/{id}/handoffs`
+e `POST /api/tasks/{id}/runs` rifiutano ciò che blocca con `409 delivery-not-ready`, prima di scrivere o aprire.
+
+Con il launcher spento (`aicos.launcher.enabled=false`) la consegna prepara comunque cartella, pacchetto e prompt (negli
+appunti), registra il comando che avrebbe eseguito e risponde con `notOpened`: lo strumento lo apri tu.
+
+Alla consegna i passaggi che AI Company OS aveva scritto in `AGENTS.md`, `.aicos/CONTEXT_MAP.md` e `tasks/*.md` di
+un progetto iniziato prima, se sono ancora identici, si aggiornano al modo di consegnare di oggi; il file com'era resta
+in `.aicos/upgrades/<data-ora>/`. Un passaggio cambiato a mano resta com'è.
+
+### L'esito di una task in un file suo (PHASE 35, ADR-041 §10)
+
+L'agente scrive l'esito completo in `tasks/TASK-NNN.esito.md` (`TASK.esito.md` per una task senza progetto) e nella
+sezione *Esito* del documento della task un riassunto con il link. `GET /api/tasks/{id}/outcomes` legge prima il file,
+poi la sezione: i documenti con l'esito dentro restano validi. Una run dell'AI Engine legge del documento della task le
+sezioni di lavoro (obiettivo, scope, implementazione, contratti, file, test, criteri), non l'esito; implementazione, test
+e criteri arrivano compattati, ciascuno entro `aicos.runs.task-section-chars` (default `800`).
+
+### Come Ollama esegue ogni modello, e quale modello per quale task (PHASE 35, ADR-041 §11–§12)
+
+Nella pagina **Modelli**, colonna *Esecuzione*: per ogni modello locale la finestra (`num_ctx`), quanto resta in memoria
+(`keep_alive`) e la quantizzazione consigliata; «Modifica» li cambia (`PUT /api/catalog/models?key=…` con `numCtx`,
+`keepAlive`, `quantization`, `If-Match`). Arrivano a Ollama con ogni richiesta dell'AI Engine (campi `context_window` e
+`keep_alive` della richiesta v1); un engine vecchio li ignora. Cambiare la finestra fa ricaricare il modello.
+
+Una task per cui nessuno ha scelto un modello (né la run né l'agente) va al modello del suo ruolo secondo
+`backend/src/main/resources/catalog/model-routing.json`: compiti brevi (classificazione, riassunti, controlli) a
+`qwen3.5:4b`, pianificazione e codice a `qwen3.5:9b`; la decisione del Master Orchestrator dice quale regola ha deciso.
+Le run dei modelli locali girano una alla volta (`aicos.runs.local-concurrency`, default `1`) e aspettano in coda.
+
+### Un ecosistema solo: gli agenti in OpenClaw, Open WebUI, LiteLLM (PHASE 37, ADR-043; ADR-045)
+
+AI Company OS è dove gli agenti si creano; da **Agenti → Ecosistema** arrivano agli strumenti, quando lo chiedi.
+
+| Rotta | Chi | Effetto |
+|---|---|---|
+| `GET /api/agent-sync` | chiunque abbia fatto l'accesso | per ogni agente attivo e ogni strumento: `IN_SYNC`, `BEHIND`, `NOT_PUBLISHED`, `NOT_APPLICABLE` (con il motivo), `MISSING`, `ADOPTED`, `UNAVAILABLE`; che cosa manca a ogni strumento; gli agenti che uno strumento ha già. Non scrive niente |
+| `POST /api/agent-sync/publish {agentIds?, tools?}` | admin | pubblica o aggiorna; senza elenchi, tutti gli agenti attivi in tutti gli strumenti pronti. Un esito per agente e strumento |
+| `POST /api/agent-sync/import {tool, externalIds?}` | admin | porta qui gli agenti che OpenClaw ha già: restano suoi, collegati |
+| `DELETE /api/agent-sync/{tool}/agents/{id}` | admin | toglie dallo strumento ciò che è stato pubblicato; un agente portato da lì viene solo scollegato |
+| `GET /api/agents/{id}/resource-suggestions` | chiunque | le skill e le knowledge della libreria adatte all'agente che ancora non ha |
+
+Che cosa serve a ogni strumento:
+
+- **OpenClaw**: la CLI `openclaw` sul `PATH`, una configurazione (`openclaw onboard`) e **il gateway acceso**
+  (`openclaw daemon start`): con il gateway spento ogni comando di OpenClaw aspetta mezzo minuto, quindi il control
+  plane gli chiede prima se c'è (`/healthz`, senza credenziali) e, se non c'è, lo dice. Indirizzo diverso da
+  `http://127.0.0.1:18789`: `AICOS_OPENCLAW_GATEWAY_URL` (vuoto: nessun gateway, non viene chiesto). Il control plane
+  usa i comandi di OpenClaw e non apre il suo file di configurazione. Cartella di stato diversa da `~/.openclaw`:
+  `AICOS_OPENCLAW_STATE_DIR` (oppure `OPENCLAW_STATE_DIR`, che vale anche per la CLI).
+- **Open WebUI**: una chiave API (in Open WebUI: Impostazioni → Account → Chiavi API; le chiavi vanno abilitate dal
+  pannello di amministrazione) nel `local.env`, poi riavvia il backend:
+
+  ```
+  AICOS_OPENWEBUI_API_KEY=<la tua chiave di Open WebUI>
+  ```
+
+  Indirizzo diverso da `http://localhost:3000`: `AICOS_OPENWEBUI_URL`. La chiave va solo a quell'indirizzo.
+- **LiteLLM**: il file di configurazione del gateway. Senza `AICOS_LITELLM_CONFIG` è quello di 3D Omniverse
+  (`%USERPROFILE%\3D Omniverse\config\litellm_config.yaml`). Gli alias stanno in un blocco marcato in fondo a
+  `model_list`; alla prima scrittura il file è copiato accanto a sé (`….aicos-backup-<data>`). Il gateway legge il file
+  all'avvio: dopo una sincronizzazione, `docker restart litellm-gateway`.
+- LM Studio non c'è più (ADR-045 §2): non è installato su questa macchina.
+
+Una task si consegna a OpenClaw come a ogni altro strumento (target `openclaw`): si apre `openclaw tui` su una sessione
+della task, con il prompt già inviato all'agente di OpenClaw che corrisponde al tuo.
+
+### OpenClaw dentro la console (ADR-045)
+
+La pagina **OpenClaw** (barra laterale, accanto a «Chat LLM»; anche in Integrazioni) mostra il gateway, gli agenti, una
+conversazione con l'agente scelto e le sessioni recenti. La Control UI di OpenClaw non si incorpora: rifiuta di stare in
+un'altra pagina (`X-Frame-Options: DENY`, non configurabile), e «Apri la Control UI» la fa aprire a
+`openclaw dashboard` nel browser predefinito, già accoppiata.
+
+| Rotta | Chi | Effetto |
+|---|---|---|
+| `GET /api/openclaw[?refresh=true]` | chiunque abbia fatto l'accesso | stato del gateway, agenti, sessioni dell'ultima lettura; una lettura nuova parte in background se quella è più vecchia di 30 s o se la chiedi |
+| `POST /api/openclaw/messages {agentId, message}` | admin | `202`: il messaggio parte nella sessione `agent:<id>:aicos-console`; la risposta con `GET /api/openclaw/messages/{id}` |
+| `GET /api/openclaw/messages` | chiunque | i messaggi inviati dalla console da quando il backend è acceso (al massimo 100) |
+| `POST /api/openclaw/terminal {sessionKey}` | admin | apre `openclaw tui --session <chiave>` in Windows Terminal |
+| `POST /api/openclaw/control-ui` | admin | `202`: `openclaw dashboard` apre la Control UI; l'esito è in `controlUi` della lettura |
+
+**Lentezza**: ogni comando di OpenClaw su questa macchina impiega 12–60 s anche con il gateway acceso; la pagina mostra
+l'ultima lettura con l'ora e dice quando ne sta facendo una. Una risposta di un agente arriva dopo quel tempo più il suo.
+
+### Nessuna pagina aspetta (ADR-046)
+
+- Appena il backend è pronto legge in background il catalogo dei programmi e gli agenti e le sessioni di OpenClaw
+  (log: `Warm-up: catalog detected in … ms`). Solo letture; `aicos.warm-up=false` lo spegne.
+- Agenti → Ecosistema mostra subito la matrice: OpenClaw risponde con l'ultima lettura (tenuta 30 s, poi rinnovata
+  dietro) e, finché non è mai stato letto, le sue celle dicono «lettura…» e la pagina chiede di nuovo ogni 3 s. La stessa
+  lettura serve la pagina OpenClaw. Pubblicare o portare qui rilegge prima se la lettura ha più di 60 s.
+- Il Software Hub tiene l'elenco del menu Start 10 minuti (rinnovato in background), le risposte dei servizi e dove
+  stanno i programmi 60 s; «Aggiorna» guarda di nuovo tutto.
+- Open WebUI in Chat LLM, e le altre app incorporate, restano caricate dopo la prima apertura; «Ricarica» le ricarica.
+
+### Imparare facendo: lezioni, esercizi, ripasso (PHASE 37, ADR-044)
+
+Alla consegna di una task scegli **come lavorarci**: «Imparo» (l'agente scrive la lezione, i file li tocchi tu), «Non
+posso seguire ora» (l'agente lavora da solo e lascia la lezione di ripasso), «Solo il lavoro». Sull'API è il campo
+`learning` (`TEACH`, `RECAP`, `NONE`) di `POST /api/tasks/{id}/handoffs`; senza, decide il livello del progetto.
+
+La lezione è un file del progetto, `lessons/<TASK>.lezione.md`, nel formato che il pacchetto di consegna dà all'agente.
+La pagina **Impara** la fa vivere:
+
+| Rotta | Effetto |
+|---|---|
+| `GET /api/learning` | le lezioni di tutti i progetti, le carte dovute oggi, i giorni di fila |
+| `GET /api/projects/{id}/lessons` · `…/lessons/view?path=` | l'elenco; una lezione, senza le risposte di ciò che non hai ancora fatto |
+| `POST …/lessons/prediction {path, answer}` | la tua previsione; la risposta attesa arriva qui |
+| `POST …/lessons/step {path, step, manual?}` | controlla che il codice del passo sia nel file indicato, nella cartella del progetto |
+| `POST …/lessons/exercise {path, exercise, answer?, reveal?}` | controlla la risposta; `reveal` mostra la soluzione |
+| `GET /api/learning/review` · `GET|POST /api/learning/review/{id}` | le carte da ripassare; il retro di una carta; «lo sapevo» o no |
+
 ### File dei progetti (PHASE 33, ADR-039)
 
 Il bottone **File** nella barra in alto apre a sinistra l'albero della cartella di un progetto; un file si apre al posto
@@ -540,6 +694,7 @@ Modelli locali (PHASE 29, ADR-034):
 | `AICOS_ENGINE_OLLAMA_NUM_CTX` | `16384` | finestra di contesto chiesta a Ollama. Senza GPU Ollama userebbe 4096 token: un modello che ragiona (le run testuali lasciano il *thinking* attivo) riempiva la finestra col ragionamento e chiudeva con `finish_reason: length` e risposta vuota. `0` lascia il default di Ollama |
 | `AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL` | `deepseek-coder-v2:16b=4096,llama3.2:3b=4096` | finestra più piccola per i modelli con una cache di contesto pesante: a 16K DeepSeek passa da 9,4 a 12,6 GB e Llama 3.2 da 2,4 a 3,7, contro +0,15–0,4 GB di Qwen 3.5, Gemma 4 e LFM2.5 |
 | `AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL` | `lfm2.5:8b=0` | quanti layer di un modello vanno sulla GPU (`num_gpu` di Ollama); un modello non elencato è lasciato a Ollama. Ollama accende l'iGPU per tutti i modelli insieme (`OLLAMA_IGPU_ENABLE=1`, **accesa su questo PC dal 2026-10-10**): misurato sull'Arc 140V, Qwen 3.5 e Gemma 4 elaborano il prompt 2–3,7× più in fretta, LFM2.5 genera a metà velocità — per questo resta sulla CPU (TD-67) |
+| `AICOS_ENGINE_OLLAMA_MODELS_DIR` | `OLLAMA_MODELS`, altrimenti `~/.ollama/models` | dove Ollama tiene i modelli scaricati. Se Ollama è acceso (`/api/version` risponde) ma il suo elenco `/api/tags` non arriva entro 3 s, l'engine dà come disponibili i modelli dell'ultimo elenco, o quelli di questa cartella, e lo dice nel dettaglio di ciascuno; solo un Ollama che non risponde a niente è «non raggiungibile» (PHASE 36, ADR-042 §6.3) |
 | `AICOS_ENGINE_OLLAMA_THINK` | `false` | se una risposta testuale «ragiona» prima di rispondere. Misurato su questa CPU: con il ragionamento acceso Qwen 3.5 consumava 4–6 mila token (10–20 minuti) senza arrivare alla risposta, spento rispondeva giusto in ~740 token. `true` lo riaccende, `model` lo lascia al modello. Le risposte JSON non ragionano mai |
 | `AICOS_ENGINE_OLLAMA_FALLBACKS` | `lfm2.5:8b=qwen3.5:4b,gemma4:e4b=gemma4:e4b-legacy,qwen3.5:9b=qwen3.5:4b` | se Ollama non ha un modello (404) risponde il successivo della catena; la risposta dice quale modello ha davvero lavorato (`model`). Vuota = nessun ripiego |
 
@@ -565,7 +720,7 @@ torna solo allo stesso nome host.
 
 | Comando | |
 |---|---|
-| `npm test` | 14 test (Vitest, `fetch` finto: nessun backend necessario) |
+| `npm test` | 177 test (Vitest, `fetch` finto: nessun backend necessario; timeout di 15 s per test, `vite.config.ts`) |
 | `npm run typecheck` / `npm run build` | controllo dei tipi / build di produzione in `dist/` |
 | `npm run api:types` | rigenera `src/api/schema.d.ts` da `docs/api/openapi.json` |
 

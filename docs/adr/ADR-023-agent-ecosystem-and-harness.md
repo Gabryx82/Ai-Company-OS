@@ -41,3 +41,17 @@ l'elenco del proprio harness. Un agente **senza** profilo produce il prompt di P
 
 `PUT` aggiunge, `DELETE` toglie, entrambi idempotenti; non mutano la riga dell'agente o del progetto,
 quindi non richiedono il suo tag (esenzione motivata in `PreconditionCoverageTest`).
+
+## Revisione PHASE 36 (2026-11-08) — ogni campo del profilo arriva all'agente (ADR-042)
+
+§4 diceva che un agente con profilo porta nel system prompt «istruzioni, limiti, output, direttive e l'elenco del
+proprio harness». Un test campo per campo (`HarnessChainApiTest`) ha mostrato che non bastava: la politica di contesto,
+la descrizione, le capability, il dominio, il genitore di un sottoagente e il software consentito si salvavano e non
+arrivavano alla run (e capability, dominio, genitore e software nemmeno al pacchetto di handoff). Da PHASE 36 la parte
+stabile del prompt di sistema di una run porta, quando ci sono: descrizione, capability, dominio, «You are a sub-agent of
+X», istruzioni, responsabilità, limiti, output, direttive, politica di contesto, l'harness per nome e «Software you may
+use». Il pacchetto di handoff porta gli stessi campi in italiano, nell'ordine della pagina. Un agente senza nessuno di
+questi campi e senza harness produce ancora il prompt di PHASE 6 (regressione in `OrchestratorApiTest`).
+
+La pagina della console salva ogni campo in una sola scrittura e lo rilegge alla riapertura (`Agents.test.tsx`, vista
+rossa con un campo non inviato e con un campo non riletto).

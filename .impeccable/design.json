@@ -1,0 +1,1131 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-12T17:37:03+00:00",
+  "title": "Design System: AI Company OS",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Notte profonda",
+        "theme": "dark",
+        "canonical": "oklch(12.8% 0.005 254.2)",
+        "tonalRamp": [
+          "oklch(15% 0.005 254.2)",
+          "oklch(27% 0.005 254.2)",
+          "oklch(39% 0.005 254.2)",
+          "oklch(51% 0.005 254.2)",
+          "oklch(63% 0.005 254.2)",
+          "oklch(75% 0.005 254.2)",
+          "oklch(86% 0.005 254.2)",
+          "oklch(95% 0.005 254.2)"
+        ]
+      },
+      "bg-raised": {
+        "role": "neutral",
+        "displayName": "Notte rialzata",
+        "theme": "dark",
+        "canonical": "oklch(15.0% 0.007 260.3)",
+        "tonalRamp": [
+          "oklch(15% 0.007 260.3)",
+          "oklch(27% 0.007 260.3)",
+          "oklch(39% 0.007 260.3)",
+          "oklch(51% 0.007 260.3)",
+          "oklch(63% 0.007 260.3)",
+          "oklch(75% 0.007 260.3)",
+          "oklch(86% 0.007 260.3)",
+          "oklch(95% 0.007 260.3)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Pannello",
+        "theme": "dark",
+        "canonical": "oklch(17.3% 0.009 261.1)",
+        "tonalRamp": [
+          "oklch(15% 0.009 261.1)",
+          "oklch(27% 0.009 261.1)",
+          "oklch(39% 0.009 261.1)",
+          "oklch(51% 0.009 261.1)",
+          "oklch(63% 0.009 261.1)",
+          "oklch(75% 0.009 261.1)",
+          "oklch(86% 0.009 261.1)",
+          "oklch(95% 0.009 261.1)"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Pannello sollevato",
+        "theme": "dark",
+        "canonical": "oklch(20.6% 0.013 263.5)",
+        "tonalRamp": [
+          "oklch(15% 0.013 263.5)",
+          "oklch(27% 0.013 263.5)",
+          "oklch(39% 0.013 263.5)",
+          "oklch(51% 0.013 263.5)",
+          "oklch(63% 0.013 263.5)",
+          "oklch(75% 0.013 263.5)",
+          "oklch(86% 0.013 263.5)",
+          "oklch(95% 0.013 263.5)"
+        ]
+      },
+      "surface-3": {
+        "role": "neutral",
+        "displayName": "Pannello alto",
+        "theme": "dark",
+        "canonical": "oklch(24.6% 0.017 266.5)",
+        "tonalRamp": [
+          "oklch(15% 0.017 266.5)",
+          "oklch(27% 0.017 266.5)",
+          "oklch(39% 0.017 266.5)",
+          "oklch(51% 0.017 266.5)",
+          "oklch(63% 0.017 266.5)",
+          "oklch(75% 0.017 266.5)",
+          "oklch(86% 0.017 266.5)",
+          "oklch(95% 0.017 266.5)"
+        ]
+      },
+      "edge-light": {
+        "role": "neutral",
+        "displayName": "edge (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(100.0% 0.053 90.0 / 0.045)",
+        "tonalRamp": [
+          "oklch(15% 0.053 90.0)",
+          "oklch(27% 0.053 90.0)",
+          "oklch(39% 0.053 90.0)",
+          "oklch(51% 0.053 90.0)",
+          "oklch(63% 0.053 90.0)",
+          "oklch(75% 0.053 90.0)",
+          "oklch(86% 0.053 90.0)",
+          "oklch(95% 0.053 90.0)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Bordo a capello",
+        "theme": "dark",
+        "canonical": "oklch(71.1% 0.010 142.5 / 0.13)",
+        "tonalRamp": [
+          "oklch(15% 0.010 142.5)",
+          "oklch(27% 0.010 142.5)",
+          "oklch(39% 0.010 142.5)",
+          "oklch(51% 0.010 142.5)",
+          "oklch(63% 0.010 142.5)",
+          "oklch(75% 0.010 142.5)",
+          "oklch(86% 0.010 142.5)",
+          "oklch(95% 0.010 142.5)"
+        ]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Bordo deciso",
+        "theme": "dark",
+        "canonical": "oklch(71.1% 0.010 142.5 / 0.24)",
+        "tonalRamp": [
+          "oklch(15% 0.010 142.5)",
+          "oklch(27% 0.010 142.5)",
+          "oklch(39% 0.010 142.5)",
+          "oklch(51% 0.010 142.5)",
+          "oklch(63% 0.010 142.5)",
+          "oklch(75% 0.010 142.5)",
+          "oklch(86% 0.010 142.5)",
+          "oklch(95% 0.010 142.5)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Testo",
+        "theme": "dark",
+        "canonical": "oklch(95.8% 0.043 91.1)",
+        "tonalRamp": [
+          "oklch(15% 0.043 91.1)",
+          "oklch(27% 0.043 91.1)",
+          "oklch(39% 0.043 91.1)",
+          "oklch(51% 0.043 91.1)",
+          "oklch(63% 0.043 91.1)",
+          "oklch(75% 0.043 91.1)",
+          "oklch(86% 0.043 91.1)",
+          "oklch(95% 0.043 91.1)"
+        ]
+      },
+      "text-soft": {
+        "role": "neutral",
+        "displayName": "Testo morbido",
+        "theme": "dark",
+        "canonical": "oklch(83.8% 0.025 94.6)",
+        "tonalRamp": [
+          "oklch(15% 0.025 94.6)",
+          "oklch(27% 0.025 94.6)",
+          "oklch(39% 0.025 94.6)",
+          "oklch(51% 0.025 94.6)",
+          "oklch(63% 0.025 94.6)",
+          "oklch(75% 0.025 94.6)",
+          "oklch(86% 0.025 94.6)",
+          "oklch(95% 0.025 94.6)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Attenuato",
+        "theme": "dark",
+        "canonical": "oklch(67.2% 0.008 106.7)",
+        "tonalRamp": [
+          "oklch(15% 0.008 106.7)",
+          "oklch(27% 0.008 106.7)",
+          "oklch(39% 0.008 106.7)",
+          "oklch(51% 0.008 106.7)",
+          "oklch(63% 0.008 106.7)",
+          "oklch(75% 0.008 106.7)",
+          "oklch(86% 0.008 106.7)",
+          "oklch(95% 0.008 106.7)"
+        ]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Tenue",
+        "theme": "dark",
+        "canonical": "oklch(58.6% 0.002 153.1)",
+        "tonalRamp": [
+          "oklch(15% 0.002 153.1)",
+          "oklch(27% 0.002 153.1)",
+          "oklch(39% 0.002 153.1)",
+          "oklch(51% 0.002 153.1)",
+          "oklch(63% 0.002 153.1)",
+          "oklch(75% 0.002 153.1)",
+          "oklch(86% 0.002 153.1)",
+          "oklch(95% 0.002 153.1)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Blu di sistema",
+        "theme": "dark",
+        "canonical": "oklch(65.2% 0.141 253.2)",
+        "tonalRamp": [
+          "oklch(15% 0.141 253.2)",
+          "oklch(27% 0.141 253.2)",
+          "oklch(39% 0.141 253.2)",
+          "oklch(51% 0.141 253.2)",
+          "oklch(63% 0.141 253.2)",
+          "oklch(75% 0.141 253.2)",
+          "oklch(86% 0.141 253.2)",
+          "oklch(95% 0.141 253.2)"
+        ]
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "Blu profondo",
+        "theme": "dark",
+        "canonical": "oklch(56.4% 0.152 255.9)",
+        "tonalRamp": [
+          "oklch(15% 0.152 255.9)",
+          "oklch(27% 0.152 255.9)",
+          "oklch(39% 0.152 255.9)",
+          "oklch(51% 0.152 255.9)",
+          "oklch(63% 0.152 255.9)",
+          "oklch(75% 0.152 255.9)",
+          "oklch(86% 0.152 255.9)",
+          "oklch(95% 0.152 255.9)"
+        ]
+      },
+      "accent-text": {
+        "role": "primary",
+        "displayName": "Blu per il testo",
+        "theme": "dark",
+        "canonical": "oklch(72.9% 0.095 249.7)",
+        "tonalRamp": [
+          "oklch(15% 0.095 249.7)",
+          "oklch(27% 0.095 249.7)",
+          "oklch(39% 0.095 249.7)",
+          "oklch(51% 0.095 249.7)",
+          "oklch(63% 0.095 249.7)",
+          "oklch(75% 0.095 249.7)",
+          "oklch(86% 0.095 249.7)",
+          "oklch(95% 0.095 249.7)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Velo blu",
+        "theme": "dark",
+        "canonical": "oklch(65.2% 0.141 253.2 / 0.14)",
+        "tonalRamp": [
+          "oklch(15% 0.141 253.2)",
+          "oklch(27% 0.141 253.2)",
+          "oklch(39% 0.141 253.2)",
+          "oklch(51% 0.141 253.2)",
+          "oklch(63% 0.141 253.2)",
+          "oklch(75% 0.141 253.2)",
+          "oklch(86% 0.141 253.2)",
+          "oklch(95% 0.141 253.2)"
+        ]
+      },
+      "accent-ring": {
+        "role": "primary",
+        "displayName": "Anello blu",
+        "theme": "dark",
+        "canonical": "oklch(65.2% 0.141 253.2 / 0.55)",
+        "tonalRamp": [
+          "oklch(15% 0.141 253.2)",
+          "oklch(27% 0.141 253.2)",
+          "oklch(39% 0.141 253.2)",
+          "oklch(51% 0.141 253.2)",
+          "oklch(63% 0.141 253.2)",
+          "oklch(75% 0.141 253.2)",
+          "oklch(86% 0.141 253.2)",
+          "oklch(95% 0.141 253.2)"
+        ]
+      },
+      "on-accent": {
+        "role": "neutral",
+        "displayName": "Su accento",
+        "theme": "dark",
+        "canonical": "oklch(100.0% 0.053 90.0)",
+        "tonalRamp": [
+          "oklch(15% 0.053 90.0)",
+          "oklch(27% 0.053 90.0)",
+          "oklch(39% 0.053 90.0)",
+          "oklch(51% 0.053 90.0)",
+          "oklch(63% 0.053 90.0)",
+          "oklch(75% 0.053 90.0)",
+          "oklch(86% 0.053 90.0)",
+          "oklch(95% 0.053 90.0)"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "Verde operativo",
+        "theme": "dark",
+        "canonical": "oklch(76.1% 0.176 146.8)",
+        "tonalRamp": [
+          "oklch(15% 0.176 146.8)",
+          "oklch(27% 0.176 146.8)",
+          "oklch(39% 0.176 146.8)",
+          "oklch(51% 0.176 146.8)",
+          "oklch(63% 0.176 146.8)",
+          "oklch(75% 0.176 146.8)",
+          "oklch(86% 0.176 146.8)",
+          "oklch(95% 0.176 146.8)"
+        ]
+      },
+      "ok-soft": {
+        "role": "status",
+        "displayName": "Velo verde",
+        "theme": "dark",
+        "canonical": "oklch(76.1% 0.176 146.8 / 0.13)",
+        "tonalRamp": [
+          "oklch(15% 0.176 146.8)",
+          "oklch(27% 0.176 146.8)",
+          "oklch(39% 0.176 146.8)",
+          "oklch(51% 0.176 146.8)",
+          "oklch(63% 0.176 146.8)",
+          "oklch(75% 0.176 146.8)",
+          "oklch(86% 0.176 146.8)",
+          "oklch(95% 0.176 146.8)"
+        ]
+      },
+      "warn": {
+        "role": "status",
+        "displayName": "Ambra d'attenzione",
+        "theme": "dark",
+        "canonical": "oklch(81.7% 0.173 82.0)",
+        "tonalRamp": [
+          "oklch(15% 0.173 82.0)",
+          "oklch(27% 0.173 82.0)",
+          "oklch(39% 0.173 82.0)",
+          "oklch(51% 0.173 82.0)",
+          "oklch(63% 0.173 82.0)",
+          "oklch(75% 0.173 82.0)",
+          "oklch(86% 0.173 82.0)",
+          "oklch(95% 0.173 82.0)"
+        ]
+      },
+      "warn-soft": {
+        "role": "status",
+        "displayName": "Velo ambra",
+        "theme": "dark",
+        "canonical": "oklch(81.7% 0.173 82.0 / 0.13)",
+        "tonalRamp": [
+          "oklch(15% 0.173 82.0)",
+          "oklch(27% 0.173 82.0)",
+          "oklch(39% 0.173 82.0)",
+          "oklch(51% 0.173 82.0)",
+          "oklch(63% 0.173 82.0)",
+          "oklch(75% 0.173 82.0)",
+          "oklch(86% 0.173 82.0)",
+          "oklch(95% 0.173 82.0)"
+        ]
+      },
+      "danger": {
+        "role": "status",
+        "displayName": "Rosso di pericolo",
+        "theme": "dark",
+        "canonical": "oklch(71.2% 0.196 31.6)",
+        "tonalRamp": [
+          "oklch(15% 0.196 31.6)",
+          "oklch(27% 0.196 31.6)",
+          "oklch(39% 0.196 31.6)",
+          "oklch(51% 0.196 31.6)",
+          "oklch(63% 0.196 31.6)",
+          "oklch(75% 0.196 31.6)",
+          "oklch(86% 0.196 31.6)",
+          "oklch(95% 0.196 31.6)"
+        ]
+      },
+      "danger-soft": {
+        "role": "status",
+        "displayName": "Velo rosso",
+        "theme": "dark",
+        "canonical": "oklch(71.2% 0.196 31.6 / 0.13)",
+        "tonalRamp": [
+          "oklch(15% 0.196 31.6)",
+          "oklch(27% 0.196 31.6)",
+          "oklch(39% 0.196 31.6)",
+          "oklch(51% 0.196 31.6)",
+          "oklch(63% 0.196 31.6)",
+          "oklch(75% 0.196 31.6)",
+          "oklch(86% 0.196 31.6)",
+          "oklch(95% 0.196 31.6)"
+        ]
+      },
+      "ink": {
+        "role": "ink",
+        "displayName": "Inchiostro",
+        "theme": "dark",
+        "canonical": "oklch(14.5% 0.008 258.6)",
+        "tonalRamp": [
+          "oklch(15% 0.008 258.6)",
+          "oklch(27% 0.008 258.6)",
+          "oklch(39% 0.008 258.6)",
+          "oklch(51% 0.008 258.6)",
+          "oklch(63% 0.008 258.6)",
+          "oklch(75% 0.008 258.6)",
+          "oklch(86% 0.008 258.6)",
+          "oklch(95% 0.008 258.6)"
+        ]
+      },
+      "ink-2": {
+        "role": "ink",
+        "displayName": "Inchiostro rialzato",
+        "theme": "dark",
+        "canonical": "oklch(18.2% 0.011 257.4)",
+        "tonalRamp": [
+          "oklch(15% 0.011 257.4)",
+          "oklch(27% 0.011 257.4)",
+          "oklch(39% 0.011 257.4)",
+          "oklch(51% 0.011 257.4)",
+          "oklch(63% 0.011 257.4)",
+          "oklch(75% 0.011 257.4)",
+          "oklch(86% 0.011 257.4)",
+          "oklch(95% 0.011 257.4)"
+        ]
+      },
+      "ink-text": {
+        "role": "ink",
+        "displayName": "Testo su inchiostro",
+        "theme": "dark",
+        "canonical": "oklch(89.9% 0.030 94.5)",
+        "tonalRamp": [
+          "oklch(15% 0.030 94.5)",
+          "oklch(27% 0.030 94.5)",
+          "oklch(39% 0.030 94.5)",
+          "oklch(51% 0.030 94.5)",
+          "oklch(63% 0.030 94.5)",
+          "oklch(75% 0.030 94.5)",
+          "oklch(86% 0.030 94.5)",
+          "oklch(95% 0.030 94.5)"
+        ]
+      },
+      "ink-muted": {
+        "role": "ink",
+        "displayName": "Attenuato su inchiostro",
+        "theme": "dark",
+        "canonical": "oklch(63.2% 0.003 188.8)",
+        "tonalRamp": [
+          "oklch(15% 0.003 188.8)",
+          "oklch(27% 0.003 188.8)",
+          "oklch(39% 0.003 188.8)",
+          "oklch(51% 0.003 188.8)",
+          "oklch(63% 0.003 188.8)",
+          "oklch(75% 0.003 188.8)",
+          "oklch(86% 0.003 188.8)",
+          "oklch(95% 0.003 188.8)"
+        ]
+      },
+      "ink-border": {
+        "role": "ink",
+        "displayName": "Bordo su inchiostro",
+        "theme": "dark",
+        "canonical": "oklch(71.1% 0.010 142.5 / 0.16)",
+        "tonalRamp": [
+          "oklch(15% 0.010 142.5)",
+          "oklch(27% 0.010 142.5)",
+          "oklch(39% 0.010 142.5)",
+          "oklch(51% 0.010 142.5)",
+          "oklch(63% 0.010 142.5)",
+          "oklch(75% 0.010 142.5)",
+          "oklch(86% 0.010 142.5)",
+          "oklch(95% 0.010 142.5)"
+        ]
+      },
+      "icon-tile": {
+        "role": "ink",
+        "displayName": "Tessera d'icona",
+        "theme": "dark",
+        "canonical": "oklch(23.1% 0.013 259.8)",
+        "tonalRamp": [
+          "oklch(15% 0.013 259.8)",
+          "oklch(27% 0.013 259.8)",
+          "oklch(39% 0.013 259.8)",
+          "oklch(51% 0.013 259.8)",
+          "oklch(63% 0.013 259.8)",
+          "oklch(75% 0.013 259.8)",
+          "oklch(86% 0.013 259.8)",
+          "oklch(95% 0.013 259.8)"
+        ]
+      },
+      "ribbon-core": {
+        "role": "signature",
+        "displayName": "Cuore del nastro",
+        "theme": "dark",
+        "canonical": "oklch(92.3% 0.017 118.9)",
+        "tonalRamp": [
+          "oklch(15% 0.017 118.9)",
+          "oklch(27% 0.017 118.9)",
+          "oklch(39% 0.017 118.9)",
+          "oklch(51% 0.017 118.9)",
+          "oklch(63% 0.017 118.9)",
+          "oklch(75% 0.017 118.9)",
+          "oklch(86% 0.017 118.9)",
+          "oklch(95% 0.017 118.9)"
+        ]
+      },
+      "bg-light": {
+        "role": "neutral",
+        "displayName": "Notte profonda (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(97.0% 0.046 90.7)",
+        "tonalRamp": [
+          "oklch(15% 0.046 90.7)",
+          "oklch(27% 0.046 90.7)",
+          "oklch(39% 0.046 90.7)",
+          "oklch(51% 0.046 90.7)",
+          "oklch(63% 0.046 90.7)",
+          "oklch(75% 0.046 90.7)",
+          "oklch(86% 0.046 90.7)",
+          "oklch(95% 0.046 90.7)"
+        ]
+      },
+      "bg-raised-light": {
+        "role": "neutral",
+        "displayName": "Notte rialzata (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(99.1% 0.050 90.3)",
+        "tonalRamp": [
+          "oklch(15% 0.050 90.3)",
+          "oklch(27% 0.050 90.3)",
+          "oklch(39% 0.050 90.3)",
+          "oklch(51% 0.050 90.3)",
+          "oklch(63% 0.050 90.3)",
+          "oklch(75% 0.050 90.3)",
+          "oklch(86% 0.050 90.3)",
+          "oklch(95% 0.050 90.3)"
+        ]
+      },
+      "surface-light": {
+        "role": "neutral",
+        "displayName": "Pannello (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(100.0% 0.053 90.0)",
+        "tonalRamp": [
+          "oklch(15% 0.053 90.0)",
+          "oklch(27% 0.053 90.0)",
+          "oklch(39% 0.053 90.0)",
+          "oklch(51% 0.053 90.0)",
+          "oklch(63% 0.053 90.0)",
+          "oklch(75% 0.053 90.0)",
+          "oklch(86% 0.053 90.0)",
+          "oklch(95% 0.053 90.0)"
+        ]
+      },
+      "surface-2-light": {
+        "role": "neutral",
+        "displayName": "Pannello sollevato (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(96.7% 0.046 90.7)",
+        "tonalRamp": [
+          "oklch(15% 0.046 90.7)",
+          "oklch(27% 0.046 90.7)",
+          "oklch(39% 0.046 90.7)",
+          "oklch(51% 0.046 90.7)",
+          "oklch(63% 0.046 90.7)",
+          "oklch(75% 0.046 90.7)",
+          "oklch(86% 0.046 90.7)",
+          "oklch(95% 0.046 90.7)"
+        ]
+      },
+      "surface-3-light": {
+        "role": "neutral",
+        "displayName": "Pannello alto (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(93.4% 0.041 90.6)",
+        "tonalRamp": [
+          "oklch(15% 0.041 90.6)",
+          "oklch(27% 0.041 90.6)",
+          "oklch(39% 0.041 90.6)",
+          "oklch(51% 0.041 90.6)",
+          "oklch(63% 0.041 90.6)",
+          "oklch(75% 0.041 90.6)",
+          "oklch(86% 0.041 90.6)",
+          "oklch(95% 0.041 90.6)"
+        ]
+      },
+      "border-light": {
+        "role": "neutral",
+        "displayName": "Bordo a capello (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(20.8% 0.026 263.5 / 0.09)",
+        "tonalRamp": [
+          "oklch(15% 0.026 263.5)",
+          "oklch(27% 0.026 263.5)",
+          "oklch(39% 0.026 263.5)",
+          "oklch(51% 0.026 263.5)",
+          "oklch(63% 0.026 263.5)",
+          "oklch(75% 0.026 263.5)",
+          "oklch(86% 0.026 263.5)",
+          "oklch(95% 0.026 263.5)"
+        ]
+      },
+      "border-strong-light": {
+        "role": "neutral",
+        "displayName": "Bordo deciso (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(20.8% 0.026 263.5 / 0.17)",
+        "tonalRamp": [
+          "oklch(15% 0.026 263.5)",
+          "oklch(27% 0.026 263.5)",
+          "oklch(39% 0.026 263.5)",
+          "oklch(51% 0.026 263.5)",
+          "oklch(63% 0.026 263.5)",
+          "oklch(75% 0.026 263.5)",
+          "oklch(86% 0.026 263.5)",
+          "oklch(95% 0.026 263.5)"
+        ]
+      },
+      "text-light": {
+        "role": "neutral",
+        "displayName": "Testo (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(17.9% 0.015 263.8)",
+        "tonalRamp": [
+          "oklch(15% 0.015 263.8)",
+          "oklch(27% 0.015 263.8)",
+          "oklch(39% 0.015 263.8)",
+          "oklch(51% 0.015 263.8)",
+          "oklch(63% 0.015 263.8)",
+          "oklch(75% 0.015 263.8)",
+          "oklch(86% 0.015 263.8)",
+          "oklch(95% 0.015 263.8)"
+        ]
+      },
+      "text-soft-light": {
+        "role": "neutral",
+        "displayName": "Testo morbido (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(31.7% 0.014 257.9)",
+        "tonalRamp": [
+          "oklch(15% 0.014 257.9)",
+          "oklch(27% 0.014 257.9)",
+          "oklch(39% 0.014 257.9)",
+          "oklch(51% 0.014 257.9)",
+          "oklch(63% 0.014 257.9)",
+          "oklch(75% 0.014 257.9)",
+          "oklch(86% 0.014 257.9)",
+          "oklch(95% 0.014 257.9)"
+        ]
+      },
+      "muted-light": {
+        "role": "neutral",
+        "displayName": "Attenuato (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(49.2% 0.005 234.8)",
+        "tonalRamp": [
+          "oklch(15% 0.005 234.8)",
+          "oklch(27% 0.005 234.8)",
+          "oklch(39% 0.005 234.8)",
+          "oklch(51% 0.005 234.8)",
+          "oklch(63% 0.005 234.8)",
+          "oklch(75% 0.005 234.8)",
+          "oklch(86% 0.005 234.8)",
+          "oklch(95% 0.005 234.8)"
+        ]
+      },
+      "faint-light": {
+        "role": "neutral",
+        "displayName": "Tenue (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(54.4% 0.005 228.9)",
+        "tonalRamp": [
+          "oklch(15% 0.005 228.9)",
+          "oklch(27% 0.005 228.9)",
+          "oklch(39% 0.005 228.9)",
+          "oklch(51% 0.005 228.9)",
+          "oklch(63% 0.005 228.9)",
+          "oklch(75% 0.005 228.9)",
+          "oklch(86% 0.005 228.9)",
+          "oklch(95% 0.005 228.9)"
+        ]
+      },
+      "accent-light": {
+        "role": "primary",
+        "displayName": "Blu di sistema (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(56.3% 0.171 256.4)",
+        "tonalRamp": [
+          "oklch(15% 0.171 256.4)",
+          "oklch(27% 0.171 256.4)",
+          "oklch(39% 0.171 256.4)",
+          "oklch(51% 0.171 256.4)",
+          "oklch(63% 0.171 256.4)",
+          "oklch(75% 0.171 256.4)",
+          "oklch(86% 0.171 256.4)",
+          "oklch(95% 0.171 256.4)"
+        ]
+      },
+      "accent-strong-light": {
+        "role": "primary",
+        "displayName": "Blu profondo (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(52.5% 0.158 256.3)",
+        "tonalRamp": [
+          "oklch(15% 0.158 256.3)",
+          "oklch(27% 0.158 256.3)",
+          "oklch(39% 0.158 256.3)",
+          "oklch(51% 0.158 256.3)",
+          "oklch(63% 0.158 256.3)",
+          "oklch(75% 0.158 256.3)",
+          "oklch(86% 0.158 256.3)",
+          "oklch(95% 0.158 256.3)"
+        ]
+      },
+      "accent-text-light": {
+        "role": "primary",
+        "displayName": "Blu per il testo (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(51.4% 0.155 256.4)",
+        "tonalRamp": [
+          "oklch(15% 0.155 256.4)",
+          "oklch(27% 0.155 256.4)",
+          "oklch(39% 0.155 256.4)",
+          "oklch(51% 0.155 256.4)",
+          "oklch(63% 0.155 256.4)",
+          "oklch(75% 0.155 256.4)",
+          "oklch(86% 0.155 256.4)",
+          "oklch(95% 0.155 256.4)"
+        ]
+      },
+      "accent-soft-light": {
+        "role": "primary",
+        "displayName": "Velo blu (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(56.3% 0.171 256.4 / 0.09)",
+        "tonalRamp": [
+          "oklch(15% 0.171 256.4)",
+          "oklch(27% 0.171 256.4)",
+          "oklch(39% 0.171 256.4)",
+          "oklch(51% 0.171 256.4)",
+          "oklch(63% 0.171 256.4)",
+          "oklch(75% 0.171 256.4)",
+          "oklch(86% 0.171 256.4)",
+          "oklch(95% 0.171 256.4)"
+        ]
+      },
+      "ok-light": {
+        "role": "status",
+        "displayName": "Verde operativo (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(52.9% 0.138 145.5)",
+        "tonalRamp": [
+          "oklch(15% 0.138 145.5)",
+          "oklch(27% 0.138 145.5)",
+          "oklch(39% 0.138 145.5)",
+          "oklch(51% 0.138 145.5)",
+          "oklch(63% 0.138 145.5)",
+          "oklch(75% 0.138 145.5)",
+          "oklch(86% 0.138 145.5)",
+          "oklch(95% 0.138 145.5)"
+        ]
+      },
+      "warn-light": {
+        "role": "status",
+        "displayName": "Ambra d'attenzione (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(53.1% 0.138 68.7)",
+        "tonalRamp": [
+          "oklch(15% 0.138 68.7)",
+          "oklch(27% 0.138 68.7)",
+          "oklch(39% 0.138 68.7)",
+          "oklch(51% 0.138 68.7)",
+          "oklch(63% 0.138 68.7)",
+          "oklch(75% 0.138 68.7)",
+          "oklch(86% 0.138 68.7)",
+          "oklch(95% 0.138 68.7)"
+        ]
+      },
+      "danger-light": {
+        "role": "status",
+        "displayName": "Rosso di pericolo (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(55.5% 0.197 31.8)",
+        "tonalRamp": [
+          "oklch(15% 0.197 31.8)",
+          "oklch(27% 0.197 31.8)",
+          "oklch(39% 0.197 31.8)",
+          "oklch(51% 0.197 31.8)",
+          "oklch(63% 0.197 31.8)",
+          "oklch(75% 0.197 31.8)",
+          "oklch(86% 0.197 31.8)",
+          "oklch(95% 0.197 31.8)"
+        ]
+      },
+      "ink-light": {
+        "role": "ink",
+        "displayName": "Inchiostro (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(18.7% 0.012 260.9)",
+        "tonalRamp": [
+          "oklch(15% 0.012 260.9)",
+          "oklch(27% 0.012 260.9)",
+          "oklch(39% 0.012 260.9)",
+          "oklch(51% 0.012 260.9)",
+          "oklch(63% 0.012 260.9)",
+          "oklch(75% 0.012 260.9)",
+          "oklch(86% 0.012 260.9)",
+          "oklch(95% 0.012 260.9)"
+        ]
+      },
+      "ink-2-light": {
+        "role": "ink",
+        "displayName": "Inchiostro rialzato (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(22.3% 0.013 260.2)",
+        "tonalRamp": [
+          "oklch(15% 0.013 260.2)",
+          "oklch(27% 0.013 260.2)",
+          "oklch(39% 0.013 260.2)",
+          "oklch(51% 0.013 260.2)",
+          "oklch(63% 0.013 260.2)",
+          "oklch(75% 0.013 260.2)",
+          "oklch(86% 0.013 260.2)",
+          "oklch(95% 0.013 260.2)"
+        ]
+      },
+      "ribbon-core-light": {
+        "role": "signature",
+        "displayName": "Cuore del nastro (tema chiaro)",
+        "theme": "light",
+        "canonical": "oklch(72.0% 0.104 244.8)",
+        "tonalRamp": [
+          "oklch(15% 0.104 244.8)",
+          "oklch(27% 0.104 244.8)",
+          "oklch(39% 0.104 244.8)",
+          "oklch(51% 0.104 244.8)",
+          "oklch(63% 0.104 244.8)",
+          "oklch(75% 0.104 244.8)",
+          "oklch(86% 0.104 244.8)",
+          "oklch(95% 0.104 244.8)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Solo il saluto del benvenuto nella dashboard."
+      },
+      "headline": {
+        "displayName": "Titolo di pagina",
+        "purpose": "Il titolo di ogni pagina; 22px nell'accesso."
+      },
+      "figure": {
+        "displayName": "Cifra",
+        "purpose": "Le cifre della striscia di sintesi; 24px in KPI e statistiche."
+      },
+      "title": {
+        "displayName": "Titolo di sezione",
+        "purpose": "Titoli di sezione e intestazioni di carta (14.5px)."
+      },
+      "body": {
+        "displayName": "Corpo",
+        "purpose": "Testo corrente; righe introduttive fino a 72ch."
+      },
+      "label": {
+        "displayName": "Etichetta",
+        "purpose": "Etichette dei campi, titoli attenuati, bottoni piccoli."
+      },
+      "caption": {
+        "displayName": "Didascalia",
+        "purpose": "Gruppi della barra laterale, badge, chip."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Percorsi, indirizzi, codice."
+      }
+    },
+    "themes": {
+      "default": "dark",
+      "switch": "data-theme=\"light\" sull'elemento html, scelto prima del primo render e salvato nel browser (aicos.theme)",
+      "lightTokenSuffix": "-light",
+      "alwaysDark": [
+        "ink",
+        "ink-2",
+        "ink-text",
+        "ink-muted",
+        "ink-border",
+        "icon-tile"
+      ]
+    },
+    "shadows": [
+      {
+        "name": "edge-light",
+        "value": "inset 0 1px 0 var(--edge-light)",
+        "purpose": "Filo di luce sul lato superiore di carte e tessere."
+      },
+      {
+        "name": "shadow",
+        "value": "0 18px 40px -18px rgba(0, 0, 0, 0.7)",
+        "light": "0 12px 32px -16px rgba(15, 23, 42, 0.18)",
+        "purpose": "Pannelli secondari sollevati: Inspector, menu contestuali."
+      },
+      {
+        "name": "shadow-float",
+        "value": "0 24px 60px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(148, 163, 184, 0.14)",
+        "light": "0 24px 60px -14px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.08)",
+        "purpose": "Ciò che galleggia: cassetto, modale, menu, risultati della ricerca, foglio di navigazione, carta dell'accesso."
+      },
+      {
+        "name": "focus-halo",
+        "value": "0 0 0 3px var(--accent-soft)",
+        "purpose": "Alone dei campi a fuoco."
+      },
+      {
+        "name": "overlay",
+        "value": "rgba(2, 4, 9, 0.62) + blur(3px)",
+        "light": "rgba(15, 23, 42, 0.32)",
+        "purpose": "Velo dietro cassetti, modali e foglio di navigazione."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Curva d'uscita per cassetti, modali, menu, foglio laterale e nastro."
+      },
+      {
+        "name": "state",
+        "value": "0.15s",
+        "purpose": "Hover di sfondo, bordo e colore."
+      },
+      {
+        "name": "drawer-in",
+        "value": "0.28s translateX(24px) -> 0",
+        "purpose": "Ingresso del cassetto e del foglio di navigazione."
+      },
+      {
+        "name": "modal-in",
+        "value": "0.22s translateY(8px) scale(.985) -> 0",
+        "purpose": "Ingresso di modali (0.16s per i menu)."
+      },
+      {
+        "name": "ribbon-draw",
+        "value": "1.6s, 35ms di sfasamento per linea",
+        "purpose": "Il nastro si disegna una volta all'apertura della vista; spento con il movimento ridotto."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "single-column",
+        "value": "1100px",
+        "purpose": "Dashboard e viste divise a una colonna."
+      },
+      {
+        "name": "topbar-date",
+        "value": "1080px",
+        "purpose": "La data lascia la barra superiore."
+      },
+      {
+        "name": "sheet",
+        "value": "900px",
+        "purpose": "La barra laterale diventa un foglio; margini a 16px."
+      }
+    ],
+    "layout": {
+      "sidebar": "244px",
+      "contentMax": "1480px",
+      "contentPadding": "28px 32px 48px",
+      "sheetWidth": "min(300px, 86vw)"
+    },
+    "icons": {
+      "grid": "24",
+      "strokeWidth": 1.8,
+      "linecap": "round",
+      "linejoin": "round",
+      "sizes": [
+        "14px",
+        "15px",
+        "16px",
+        "17px",
+        "18px"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Bottone primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "L'azione che porta avanti il lavoro; uno per vista.",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg> Nuovo progetto</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); padding: 6px 13px; border-radius: 9px; font: 500 13px/1.4 var(--sans); cursor: pointer; transition: background-color .15s, border-color .15s, color .15s, transform .1s; } .ds-btn:active { transform: translateY(0.5px); } .ds-btn:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; } .ds-btn-primary { background: var(--accent-strong); border-color: transparent; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); } .ds-btn-primary:hover { background: var(--accent); }"
+    },
+    {
+      "name": "Bottone secondario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Le azioni ordinarie: un gradino di pannello con bordo deciso.",
+      "html": "<button class=\"ds-btn-secondary\">Apri le task</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); padding: 6px 13px; border-radius: 9px; font: 500 13px/1.4 var(--sans); cursor: pointer; transition: background-color .15s, transform .1s; } .ds-btn-secondary:hover { background: var(--surface-3); } .ds-btn-secondary:active { transform: translateY(0.5px); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Bottone ghost",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Azioni d'intestazione di carta, piccole e attenuate.",
+      "html": "<button class=\"ds-btn-ghost\">Vedi tutti</button>",
+      "css": ".ds-btn-ghost { background: transparent; border: 1px solid transparent; color: var(--muted); padding: 3px 10px; border-radius: 8px; font: 500 12.5px/1.4 var(--sans); cursor: pointer; transition: background-color .15s, color .15s; } .ds-btn-ghost:hover { background: var(--surface-2); color: var(--text); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo con etichetta; a fuoco bordo blu e alone di 3px.",
+      "html": "<label class=\"ds-field\"><span>Utente</span><input class=\"ds-input\" placeholder=\"nome utente\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; font: 500 12.5px/1.5 var(--sans); color: var(--text-soft); } .ds-input { border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); border-radius: 9px; padding: 7px 11px; font: 400 14px/1.5 var(--sans); transition: border-color .15s, box-shadow .15s; } .ds-input::placeholder { color: var(--faint); } .ds-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }"
+    },
+    {
+      "name": "Voce della barra laterale",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Voci attenuate; la corrente ha pannello sollevato, anello a capello e la sola icona blu.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-nav-group\">Lavoro</div><button class=\"ds-nav-item\" aria-current=\"page\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg>Progetti</button><button class=\"ds-nav-item\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l2 2 4-4M4 4h16v16H4z\"/></svg>Task</button></nav>",
+      "css": ".ds-nav { display: grid; gap: 1px; width: 220px; padding: 12px; background: var(--bg-raised); border-right: 1px solid var(--border); } .ds-nav-group { font: 500 11.5px/1.5 var(--sans); color: var(--faint); padding: 14px 10px 5px; } .ds-nav-item { display: flex; align-items: center; gap: 11px; border: 0; background: none; text-align: left; padding: 6px 10px; border-radius: 9px; color: var(--muted); font: 500 13.5px/1.5 var(--sans); cursor: pointer; transition: background-color .15s, color .15s; } .ds-nav-item svg { opacity: .9; } .ds-nav-item:hover { background: var(--surface-2); color: var(--text); } .ds-nav-item[aria-current=page] { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); } .ds-nav-item[aria-current=page] svg { color: var(--accent); opacity: 1; } .ds-nav-item:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Badge e chip",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Pillole di stato col proprio velo; chip rettangolari per tipi e appartenenze.",
+      "html": "<span class=\"ds-badge\">Bozza</span> <span class=\"ds-badge ds-badge-ok\">Fatta</span> <span class=\"ds-badge ds-badge-accent\">In corso</span> <span class=\"ds-chip\">Progetto</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 1px 9px; border-radius: 999px; font: 500 11.5px/1.5 var(--sans); background: var(--surface-2); color: var(--muted); box-shadow: inset 0 0 0 1px var(--border); } .ds-badge-ok { background: var(--ok-soft); color: var(--ok); box-shadow: none; } .ds-badge-accent { background: var(--accent-soft); color: var(--accent-text); box-shadow: none; } .ds-chip { display: inline-block; padding: 1px 8px; border-radius: 6px; font: 400 11.5px/1.5 var(--sans); background: var(--surface-2); color: var(--text-soft); box-shadow: inset 0 0 0 1px var(--border); }"
+    },
+    {
+      "name": "Carta con elenco",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Pannello a capello con filo di luce superiore, intestazione e righe separate da filetti.",
+      "html": "<section class=\"ds-card\"><div class=\"ds-card-head\"><h2>Task da seguire</h2><span class=\"ds-muted\">prima quelle in corso</span></div><div class=\"ds-row\">#12 Configura il control plane</div><div class=\"ds-row\">#13 Scrivi i test del contratto</div></section>",
+      "css": ".ds-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: inset 0 1px 0 var(--edge-light); color: var(--text); font: 400 14px/1.5 var(--sans); overflow: hidden; } .ds-card-head { display: flex; gap: 8px; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); } .ds-card-head h2 { margin: 0; font-size: 14.5px; font-weight: 600; letter-spacing: -0.015em; } .ds-muted { color: var(--muted); font-size: 12.5px; } .ds-row { padding: 11px 18px; border-bottom: 1px solid var(--border); transition: background-color .12s; } .ds-row:last-child { border-bottom: 0; } .ds-row:hover { background: var(--surface-2); }"
+    },
+    {
+      "name": "Ricerca globale",
+      "kind": "input",
+      "refersTo": "search",
+      "description": "La casella della barra superiore, con lente e tasto Ctrl K.",
+      "html": "<div class=\"ds-search\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3\"/></svg><input placeholder=\"Cerca progetti, task, agenti e software\"><kbd class=\"ds-kbd\">Ctrl K</kbd></div>",
+      "css": ".ds-search { display: flex; align-items: center; gap: 9px; max-width: 560px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px; padding: 0 8px 0 11px; color: var(--muted); transition: border-color .15s, box-shadow .15s; } .ds-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); } .ds-search input { flex: 1; border: 0; background: transparent; color: var(--text); padding: 7px 0; outline: none; font: 400 14px/1.5 var(--sans); } .ds-search input::placeholder { color: var(--faint); } .ds-kbd { font: 400 11px/1.5 var(--sans); color: var(--faint); padding: 1px 6px; border-radius: 6px; border: 1px solid var(--border-strong); }"
+    },
+    {
+      "name": "Striscia di sintesi",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Cinque cifre in una carta, separate da filetti; ognuna apre la sua pagina.",
+      "html": "<nav class=\"ds-metrics\"><button class=\"ds-metric\"><span>Progetti attivi</span><strong>4</strong></button><button class=\"ds-metric\"><span>Task in corso</span><strong>7</strong></button><button class=\"ds-metric\"><span>Agenti abilitati</span><strong>12</strong></button></nav>",
+      "css": ".ds-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: inset 0 1px 0 var(--edge-light); } .ds-metric { display: grid; gap: 4px; padding: 16px 20px; text-align: left; background: transparent; border: 0; color: var(--text); cursor: pointer; box-shadow: -1px 0 0 var(--border), 0 -1px 0 var(--border); transition: background-color .15s; font-family: var(--sans); } .ds-metric:hover { background: var(--surface-2); } .ds-metric:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: -2px; } .ds-metric span { color: var(--muted); font-size: 12.5px; } .ds-metric strong { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.2; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Tessera d'icona",
+      "kind": "custom",
+      "refersTo": "icon-tile",
+      "description": "L'icona di un programma su un quadrato scuro in entrambi i temi.",
+      "html": "<span class=\"ds-icon-tile\">CC</span>",
+      "css": ".ds-icon-tile { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--icon-tile); border: 1px solid rgba(255,255,255,.08); color: hsl(220 70% 72%); font: 700 14px/1 var(--sans); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Lo strumento di notte",
+    "overview": "La console è uno strumento professionale usato a lungo, di sera, accanto all'IDE: lavorata come una macchina, non decorata. Un fondo blu-nero quasi assoluto, pannelli un solo gradino più chiari, ciascuno chiuso da un bordo sottile come un capello e da un filo di luce sul lato superiore. Il colore ha un solo compito, e lo svolge un solo blu: dire che cosa è selezionato, qual è l'azione principale, che cosa è in corso. La luce vera, quella che si vede, compare una volta sola: il nastro luminoso disegnato dietro il benvenuto, nella scheda di sistema e nell'accesso.\n\nLa densità è quella di uno strumento: testo a 14px, righe di elenco separate da filetti, cifre tabellari, nessuna superficie che si sforzi di attirare l'attenzione. La console rifiuta in modo esplicito il cruscotto \"neon\" di default, con tessere di icone colorate e luminose e sfumature dappertutto: le tessere di icone sono neutre, le icone sono tratti singoli, i gradienti restano fuori dai pannelli. Il tema chiaro rispecchia lo stesso mondo su un bianco carta freddo, ridefinendo i token e nient'altro; codice, terminali e tele restano scuri in entrambi i temi.",
+    "keyCharacteristics": [
+      "Fondo blu-nero, superfici a gradini tonali, bordi a capello invece delle ombre.",
+      "Un solo accento blu per selezione, azione primaria e avanzamento.",
+      "La luce usata una volta: il nastro, in tre posti soltanto.",
+      "Geist con tracking stretto e misurato; cifre tabellari ovunque si conta.",
+      "Icone a tratto singolo da 1.8, su tessere neutre.",
+      "Tema scuro di default, variante chiara sugli stessi token; l'\"inchiostro\" resta scuro in entrambi."
+    ],
+    "rules": [
+      {
+        "name": "La Regola del Blu Unico",
+        "body": "Il blu significa \"selezionato, primario, in corso\" e niente altro. Nessun secondo accento, nessun blu decorativo: se un elemento è blu, l'operatore deve poterci leggere uno di questi tre significati.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regola dei Token Soltanto",
+        "body": "Ogni colore è un token su `:root`; il tema chiaro ridefinisce i token e nient'altro. Un colore scritto a mano dentro una regola è un difetto, non una variante.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regola dell'Inchiostro",
+        "body": "Codice, terminali, diff e tele usano l'inchiostro, mai le superfici: restano scuri in entrambi i temi.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regola del Tracking Misurato",
+        "body": "Più grande è il testo, più stretto è il tracking: da −0.015em sui titoli piccoli a −0.03em sul display. Il corpo resta a spaziatura normale.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regola delle Cifre Tabellari",
+        "body": "Ogni numero che si confronta — tabelle, cifre, percentuali, conti alla rovescia — usa cifre tabellari.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regola del Capello",
+        "body": "Le carte si separano con un bordo di 1px e un gradino di tonalità, mai con un'ombra ampia. Un'ombra dice \"questo galleggia\", non \"questo è importante\".",
+        "section": "elevation"
+      },
+      {
+        "name": "La Regola della Luce Unica",
+        "body": "La luce visibile — il nastro — compare solo dietro il benvenuto della dashboard, nella scheda di sistema ai piedi della barra laterale e nella pagina d'accesso. Da nessun'altra parte: niente bagliori, alonature colorate o sfondi luminosi altrove.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** usa il blu (`accent`) solo per selezione, azione primaria e avanzamento; un solo bottone primario per vista.",
+      "**Do** separa le carte con un bordo di 1px (`border`) e un gradino di superficie; riserva `--shadow-float` a ciò che galleggia.",
+      "**Do** dichiara ogni nuovo colore come token su `:root` e ridefiniscilo in `:root[data-theme=\"light\"]`.",
+      "**Do** metti codice, terminali, diff e tele sull'inchiostro (`ink`), che resta scuro in entrambi i temi.",
+      "**Do** posa le icone dei programmi sulla tessera scura (`icon-tile`) e tieni neutre le tessere d'icona decorative.",
+      "**Do** usa le icone a tratto singolo del set della console, compresa la freccia disegnata nelle catene.",
+      "**Do** dai a ogni elemento interattivo il contorno di fuoco di 2px con `accent-ring`.",
+      "**Do** rispetta il movimento ridotto: le animazioni d'ingresso e il disegno del nastro si spengono."
+    ],
+    "donts": [
+      "**Don't** aggiungere un secondo accento o tessere d'icona colorate e luminose: è il cruscotto \"neon\" che la console rifiuta.",
+      "**Don't** usare il nastro, bagliori o sfondi luminosi fuori dal benvenuto della dashboard, dalla scheda di sistema e dall'accesso.",
+      "**Don't** dare alle carte ombre ampie a riposo né riempire pannelli con gradienti.",
+      "**Don't** scrivere colori esadecimali dentro le regole dei componenti al posto dei token.",
+      "**Don't** usare caratteri tipografici come icone (frecce, triangoli) al posto delle icone disegnate.",
+      "**Don't** usare titoletti in maiuscolo spaziato sopra i titoli o le sezioni.",
+      "**Don't** mettere codice o terminali su una superficie che diventa chiara con il tema chiaro."
+    ]
+  }
+}

@@ -109,3 +109,13 @@ quote e costi, artefatti strutturati oltre al testo.
   token ha speso; modello servito, token e latenza restano sulla run e il costo è contabilizzato come per
   ogni altra run conclusa.
 - Tipi del control plane aggiunti a §4: `cancelled`, `budget`, `no-answer`.
+
+## Revisione PHASE 35 (2026-11-08) — il modello di una run senza modello, e le run locali in fila (ADR-041 §11–§12)
+
+- **§6**: il modello di una run è quello chiesto, altrimenti quello dell'agente, altrimenti — novità — quello che il
+  catalogo assegna al ruolo della task (`catalog/model-routing.json`: compiti brevi al modello piccolo, pianificazione
+  e codice al 9B), e solo senza un modello del catalogo servito il default dell'engine. Il modello scelto così passa
+  dallo stesso controllo del budget ed è inviato per nome. Il modello legato a un agente non cambia.
+- **§3**: le run di un modello locale vanno su un loro esecutore a un thread e aspettano il turno in `QUEUED`; le altre
+  restano sui due thread di sempre. La run e la generazione di piano su un modello locale non girano insieme.
+- Ogni richiesta porta la finestra e il `keep_alive` che il catalogo dà al suo modello.

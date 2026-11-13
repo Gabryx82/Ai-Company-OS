@@ -44,6 +44,306 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Due grafi più chiari, e come muoversi dentro — 2026-11-13, fatta, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Solo console; nessun ADR nuovo:
+> la scena resta quella di ADR-037, cambiano aspetto e navigazione.
+
+- **Direttiva** dell'operatore del 2026-11-13: «Rendi più realistico e chiaro, tendente a colori tenui e trasparenti il
+  grafo in ecosistema 3D. Fai lo stesso per la visione a grafo della second brain. Migliora anche il sistema di
+  navigazione delle due schede». Stesso branch e working tree; **nessun commit**.
+- **Aspetto**: una palette pastello condivisa (`CATEGORY` in `ecosystemModel.ts` e `NODE_STYLE` in `SecondBrain.tsx`,
+  stessi colori per agente, modello, skill…). 3D: vetro traslucido (`MeshPhysicalMaterial` con clearcoat e bordo
+  fresnel) illuminato da un `RoomEnvironment`, bolle trasparenti al posto dei wireframe, archi con alfa per vertice,
+  pavimento a griglia polare, sfondo a foschia dipinto dalla scena (un canvas trasparente in `frameloop="demand"`
+  tornava vuoto: verificato in headless), tone mapping Neutral, etichette smerigliate che si attenuano fuori dal focus.
+  Second Brain: sfere traslucide pre-renderizzate per colore, archi tinti, griglia a puntini, dissolvenze dolci.
+- **Navigazione** (componente condiviso `components/GraphNav.tsx`): controlli sulla mappa (avvicina, allontana,
+  inquadra; nel 3D viste frontale/alto/laterale e rotazione; nel Second Brain «solo i vicini» e «ridisponi»), percorso
+  degli elementi scelti con Indietro, tastiera con pannello delle scorciatoie (`?`), doppio clic sul vuoto per
+  inquadrare. 3D: zoom verso il puntatore, camera che continua da dove sta andando. Second Brain: zoom verso il
+  puntatore, inquadratura automatica, minimappa cliccabile, ricerca con risultati, collegamenti cliccabili raggruppati,
+  vista locale a due passi, posizioni conservate quando cambiano i filtri.
+- **Dita** (seconda direttiva dello stesso giorno: «spostarsi sull'asse x tramite le dita, destra e sinistra, in
+  entrambe le schede»): due dita a destra o a sinistra sul touchpad spostano la vista lungo x, la mappa segue le dita
+  (col mouse, Maiusc + rotella); su e giù restano lo zoom, il pinch del touchpad pure. Nel 3D l'evento è preso prima
+  di OrbitControls e sposta camera e bersaglio insieme, 1:1 alla profondità del bersaglio; sul touchscreen le due dita
+  di OrbitControls spostavano già. Nel Second Brain due dita sul touchscreen trascinano e ingrandiscono. Lo
+  scorrimento laterale non arriva al browser (non torna alla pagina precedente). Funzioni pure in
+  `components/graphGestures.ts`.
+- **Verifica**: anteprima temporanea su dati finti in Chrome headless (SwiftShader), poi rimossa; la console reale non
+  è stata aperta (serve l'accesso dell'operatore). I gesti con le dita sono coperti dai test delle funzioni pure, non
+  provati su un touchpad vero.
+- **Suite** (2026-11-13): console **216 su 216**, typecheck pulito; 10 test nuovi (2 nel 3D, 4 nel primo
+  `SecondBrain.test.tsx`, 4 dei gesti), visti rossi togliendo la funzione che proteggono. Backend ed engine non toccati.
+- **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Un ecosistema che non fa aspettare — 2026-11-12, fatta, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Decisioni in
+> `docs/adr/ADR-046-ecosystem-without-waiting.md`.
+
+- **Direttiva** dell'operatore del 2026-11-12: «L'ecosistema è lento, mostra gli agenti in modo troppo lento. Velocizza
+  le integrazioni e l'ecosistema openWebUI, LiteLLM, Ollama». Stesso branch e working tree; **nessun commit**.
+- **Misurato prima di cambiare**: la scheda Ecosistema aspettava `openclaw agents list` (28 s; 12–58 s a comando, con o
+  senza gateway), di nuovo a ogni scadenza della lista (10 s); il catalogo ricaricava il menu Start con PowerShell ogni
+  60 s dentro la richiesta (~2 s) e cercava ogni comando su disco a ogni lettura; Open WebUI ripartiva a ogni visita.
+  Open WebUI, LiteLLM, Ollama e il gateway rispondono in 1–40 ms: non erano loro.
+- **Fatto**: lettura degli agenti di OpenClaw in background, condivisa da Ecosistema e pagina OpenClaw (stato
+  `READING`, `checkedAt`, `refreshing`; contratto additivo); strumenti chiesti insieme; rilevamento con servizi in
+  parallelo, menu Start tenuto 10 min e rinnovato dietro, posizioni dei programmi tenute 60 s; riscaldamento all'avvio
+  (`aicos.warm-up`); app incorporate tenute caricate. Una lettura iniziata prima di una pubblicazione non la cancella.
+- **Smoke dal vivo** (8099/5184, OpenClaw vero in sola lettura): Ecosistema 28 s → **258 ms** dalla navigazione alle
+  righe; pagina OpenClaw 12–60 s → **184 ms** (20 agenti); `/api/software` a caldo 0,2–0,37 s → **27–46 ms**; Open
+  WebUI in Chat LLM resta la stessa iframe uscendo e rientrando.
+- **Non toccato**: i tempi di Ollama sono quelli dei modelli nell'AI Engine (il `keep_alive` per modello c'è già); con
+  9–13 GB di RAM libera tenerli caricati più a lungo è una scelta dell'operatore.
+- **Suite** (2026-11-12): Java **934 (0 falliti, 2 saltati: i link simbolici)**; console **201 su 201**, typecheck
+  pulito; engine non toccato. Viste rosse prima del verde: 6 nel backend, 2 nella console.
+- **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — OpenClaw dentro la console, LM Studio fuori — 2026-11-12, fatta, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Decisioni in
+> `docs/adr/ADR-045-openclaw-in-the-console.md`.
+
+- **Direttiva** dell'operatore del 2026-11-12: «elimina LM Studio come voce dato che non è installato sul pc e integra
+  l'interfaccia di OpenClaw in AI-COMPANY-OS». Stesso branch `autonomous/phase-37-one-ecosystem`, stesso working tree
+  non committato di PHASE 34–37. **Nessun commit**: non è stato chiesto.
+- **LM Studio fuori**: tolti `LmStudioConnector`, la voce `lm-studio` di `software.json` e le menzioni nella console;
+  la sincronizzazione ha tre strumenti. **V46** toglie la riga dai database già riempiti (quello dell'operatore l'ha, id
+  42) se nessun agente la usa. **TD-100 chiuso** senza lavoro. ADR-043 rivista (§2, §4, §7).
+- **OpenClaw dentro la console**: la Control UI **non si può incorporare** (`X-Frame-Options: DENY`,
+  `frame-ancestors 'none'`, non configurabile; misurato sul gateway dell'operatore). Un proxy che tolga le intestazioni
+  è scartato. Nuova pagina **OpenClaw** (barra laterale, accanto a «Chat LLM», e tessera in Integrazioni): gateway e suo
+  avvio, agenti col legame all'agente di AI Company OS, conversazione con un agente (sessione `aicos-console`), sessioni
+  recenti con il numero della task, «Riprendi» in `openclaw tui`, «Apri la Control UI» con `openclaw dashboard` (si
+  accoppia da sé: il token non passa dal control plane). Backend: pacchetto `openclaw/`, rotte `/api/openclaw/**`
+  (`POST` solo admin), problema `openclaw-item-not-found`.
+- **Lentezza misurata**: un comando di OpenClaw impiega 30–60 s anche con il gateway acceso (`agents list` 58 s,
+  `sessions` 57 s): letture in background tenute 30 s, risposte raccolte in background, la pagina chiede ogni 3 s.
+- **Console**: il limite delle attese di Testing Library portato a 5 s in `src/test/setup.ts` (un test non toccato era
+  fallito una volta a 1,17 s nella suite intera).
+- **Suite** (2026-11-12): Java **927 (0 falliti, 2 saltati: i link simbolici)**; console **197 su 197**, typecheck
+  pulito; engine non toccato. Mutazioni viste rosse: 6 nel backend, 2 nella console, più V46 rossa prima di scriverla.
+- **Smoke dal vivo isolato** (backend 8099, console 5184, database `aicompany_p45`, launcher spento; OpenClaw **vero**
+  in sola lettura): V46 applicata, nessun `lm-studio`; la pagina risponde subito e in circa un minuto mostra i **20
+  agenti** reali (il predefinito per primo, 17 «da qui») e le **2 sessioni** reali con modello ed etichetta; la tessera
+  in Integrazioni porta alla pagina; la scheda Ecosistema non nomina più LM Studio; a 375 px nessuno sforamento.
+  Durante lo smoke Docker Desktop era chiuso: riaperto, i tre container dell'operatore sono ripartiti.
+- **Non verificato dal vivo**: una conversazione vera con un agente (userebbe l'abbonamento dell'operatore), l'apertura
+  della Control UI con `openclaw dashboard` (accoppierebbe un browser come amministratore), `openclaw tui`.
+- **Per usarla**: riavviare il backend (applica V46) e ricaricare la console; gateway acceso (`openclaw daemon start`).
+- **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37 — Un ecosistema solo, e imparare facendo — 2026-11-10/11, fatta, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttive** dell'operatore del 2026-11-10, in quattro messaggi: integrare OpenClaw (appena installato) nel workflow
+  e migliorare creazione e uso di agenti e skill e l'interfaccia; sincronizzare gli agenti («un unico ecosistema»);
+  esperienza semplice e apprendimento **attivo** — il codice lo scrive l'agente, con spiegazione riga per riga, e
+  l'operatore lo copia nei file; l'agente lavora in autonomia quando l'operatore non può seguire; AI Company OS come
+  sistema principale da cui gli agenti arrivano a Open WebUI, LiteLLM, LM Studio e OpenClaw. Decisioni in
+  `docs/adr/ADR-043-one-ecosystem-agent-sync.md` e `docs/adr/ADR-044-active-learning.md`.
+- **Branch**: `autonomous/phase-37-one-ecosystem`, dalla punta di `master` (`6a50288`) con il working tree di PHASE 34,
+  35 e 36 ancora non committato. Il diff com'era prima di PHASE 37 è in
+  `%USERPROFILE%\.aicos\backups\phase-37-baseline-20261110-104840\` (diff tracciato, tar dei non tracciati, HEAD).
+  **Nessun commit**: non è stato chiesto.
+- **OpenClaw nel flusso**: programmi `openclaw`, `openclaw-gateway`, `litellm`, `lm-studio` nel Software Hub; target
+  di esecuzione `openclaw` (`openclaw tui --session agent:<id>:aicos-task-<n> --message …`, prompt con la cartella per
+  intero perché l'agente gira nel gateway); cartelle di skill di OpenClaw nel Knowledge Hub; voce nella verifica prima
+  della consegna.
+- **Sincronizzazione degli agenti** (`sync/`, V44 `agent_publications`): un connettore per strumento. OpenClaw con i
+  suoi comandi e i tre file dello spazio di lavoro; Open WebUI con la sua API e una chiave dell'operatore
+  (`AICOS_OPENWEBUI_API_KEY`); LiteLLM con un blocco marcato nel file del gateway; **LM Studio dichiarato e fermo**
+  (TD-100). Stato calcolato dalle impronte; scrive solo l'amministratore, solo su richiesta, solo ciò che ha il prefisso
+  `aicos-`; gli agenti che OpenClaw aveva già si portano qui e restano suoi. Console: **Agenti → Ecosistema**.
+- **Apprendimento attivo** (`hitl/lesson/`, V45 `lesson_progress`, `learning_concepts`, `task_handoffs.learning_mode`):
+  la lezione è un file `lessons/<TASK>.lezione.md` in un formato dato agli agenti nel pacchetto; la consegna chiede
+  «Imparo» / «Non posso seguire ora» / «Solo il lavoro»; le regole di `GUIDED` sono riscritte (rivede ADR-022 §3–§5).
+  Console: pagina **Impara** (lezioni, lettore un atto alla volta con controllo del passo sul file vero, esercizi,
+  ripasso a carte), «Adesso» nella Dashboard.
+- **Agenti e skill**: le skill della libreria adatte a un agente, proposte nella sua scheda
+  (`GET /api/agents/{id}/resource-suggestions`).
+- **Smoke dal vivo isolato** (backend 8097, console 5183, database `aicompany_p37`, CLI vera di OpenClaw su stato
+  proprio, Open WebUI 0.11.0 usa e getta): **42 controlli su 42**, dopo tre correzioni trovate solo lì (HTTP/1.1 verso
+  Open WebUI; rimozione a metà di OpenClaw; gateway spento = 33 s per comando, ora una sonda da mezzo secondo). Dettaglio
+  in ADR-043 §9. **Non verificato**: la sincronizzazione sull'installazione reale di OpenClaw, l'apertura di
+  `openclaw tui`, il riavvio del gateway LiteLLM, l'aspetto delle pagine (il browser dell'agente non ha prodotto
+  immagini: letti struttura, testi e larghezze a 1440 e 375 px).
+- **Per usarla**: riavviare il backend; accendere il gateway di OpenClaw (`openclaw daemon start`); per Open WebUI
+  aggiungere `AICOS_OPENWEBUI_API_KEY` a `local.env`; poi Agenti → Ecosistema → «Sincronizza tutto». Dopo una
+  sincronizzazione verso LiteLLM, `docker restart litellm-gateway`.
+- **Debito**: aperto **TD-100** (LOW) — i preset di LM Studio: il formato non è documentato e LM Studio non è
+  installato sulla macchina. Prossimo id libero **TD-101**.
+- **Contratto**: additivo (ADR-043 §10, ADR-044 §7). Migrazioni V44 e V45, additive.
+- **Suite finali** (2026-11-11): Java **914 (0 falliti, 2 saltati: i link simbolici)**; console **192 su 192**,
+  typecheck pulito; engine non toccato (82). Mutazioni viste rosse: 21 (ADR-043 §11, ADR-044 §8).
+- **Prossimo passo**: review dell'operatore e decisione su come committare PHASE 34–37 (stessi file; i diff di partenza
+  sono nei backup in `%USERPROFILE%\.aicos\backups`). Poi, in ordine di valore: provare la sincronizzazione vera con
+  OpenClaw acceso; TD-100 quando LM Studio è installato; misurare se un modello locale tiene il formato della lezione
+  (ADR-044 §6).
+
+## ▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 36 — Garanzia dell'harness — 2026-11-08, fatta, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttiva** dell'operatore del 2026-11-08: ogni agente (AI Engine, Claude Code CLI e app, Codex, OpenCode,
+  Antigravity) riceve per ogni task contesto, risorse e skill giuste, e ciò che si configura nella pagina dell'agente
+  si salva, si rilegge e si carica; quattro punti (catena campo per campo; lacune note; verifica prima della consegna;
+  smoke isolato), ADR, revisione di ADR-023/025/026, stato; fermarsi dopo il punto 1 (fatto: via dell'operatore «Sì,
+  correggi»); **nessun commit senza richiesta**; «non rimanere debiti aperti». Decisioni in
+  `docs/adr/ADR-042-harness-guarantee.md`.
+- **Branch**: `autonomous/phase-36-harness-guarantee`, dalla punta di `master` (`6a50288`) con il working tree di
+  PHASE 34 e 35 ancora non committato (stessi file). Il diff di PHASE 34+35 com'era prima di PHASE 36 è salvato fuori dal
+  repository in `%USERPROFILE%\.aicos\backups\phase-36-baseline-20261108-163437\` (diff tracciato, tar dei non
+  tracciati, HEAD), per separare le tre fasi quando l'operatore decide come committare.
+- **Punto 1 — la catena campo per campo**: `HarnessChainApiTest` (28 casi; API → colonna → rilettura → pacchetto per
+  `claude-code`, `claude-desktop`, `codex`, `opencode`, `antigravity`, `antigravity-ide`, `manual` → prompt
+  registrato della run) trovò 7 difetti, tutti corretti: software dell'agente mai consegnato; politica di contesto e
+  descrizione assenti dalla run; capability, dominio e genitore assenti da pacchetto e run; knowledge non pertinente tolta
+  dal pacchetto degli strumenti con skill native (ora nominata, lettura facoltativa); modello dichiarato a strumenti che non
+  lo usano (ora descritto sul target della consegna); `.mcp.json` non scritto per Claude Code nell'app desktop. Console:
+  `Agents.test.tsx` salva ogni campo dalla pagina e lo rilegge.
+- **Punto 2 — lacune note**: risorse adottate dal progetto (già in PHASE 34) verificate per ogni target, una volta
+  ciascuna; Claude Desktop con pacchetto, `.mcp.json` e prompt anche negli appunti; il prompt mostrato (documento della
+  task, pannello, `CONTEXT_MAP.md`, `AGENTS.md`) porta al pacchetto, e se la task non è consegnata l'agente chiede la
+  consegna; nei progetti già iniziati i passaggi generati ancora identici si aggiornano alla prima consegna, con copia in
+  `.aicos/upgrades/` (`GeneratedTextUpgrades`, rivede ADR-020 W1); copia del Knowledge Hub nella cartella dello strumento
+  verificata prima di aprirlo, con «Copia nello strumento»; skill senza file o con frontmatter non valido dette nel
+  pacchetto («⚠») e nella verifica (`SkillLibrary.check`).
+- **Punto 3 — verifica**: `GET /api/tasks/{id}/readiness?target=&model=` (`ReadinessService`): task, strumento,
+  modello, contesto, skill, knowledge, MCP, tool, software, ciascuna voce `OK`/`WARNING`/`BLOCKING`; consegna e run
+  rifiutano i bloccanti con `409 delivery-not-ready` prima di scrivere o aprire (senza chiamare l'engine dentro la
+  transazione); pannello del Master Orchestrator con «Verifica prima della consegna» e «Prepara e apri» disabilitato da un
+  bloccante. Con il launcher spento la consegna prepara tutto, non apre lo strumento e lo dice (`notOpened`; prima
+  `503` dopo aver scritto il pacchetto — trovato dallo smoke).
+- **Punto 4 — smoke dal vivo isolato** (backend 8095, engine 8096, console 5182, database `aicompany_p36`, home nello
+  scratchpad, launcher spento; l'8081 e il `~/.aicos` dell'operatore non toccati): **79 controlli su 79** — ogni campo e
+  ogni risorsa in ogni pacchetto dei sette target, MCP nei file giusti, governance, run con `qwen3.5:4b` riuscita con
+  tutto nel prompt registrato, una copia dei file di *interfaccia-movieseseries* aggiornata (34 documenti col prompt
+  generato aggiornati, 2 riscritti dall'operatore intatti); in console verifica, copia nello strumento e 375 px. Dettaglio
+  in ADR-042 §9. **Non verificato**: l'apertura reale degli strumenti (launcher acceso), che aprirebbe sessioni vere
+  sull'abbonamento dell'operatore.
+- **Dopo la chiusura, segnalato dall'operatore il 2026-11-09** («modelli pronti 1 solo echo default»): Ollama acceso con
+  `/api/tags` appeso 12–55 s e in `500` (il suo aggiornamento dei «model recommendations» da `ollama.com` scaduto) e
+  l'engine che dopo 3 s lo dava per spento. Corretto nell'engine: con `/api/version` che risponde, i modelli dell'ultimo
+  elenco o della cartella di Ollama (`AICOS_ENGINE_OLLAMA_MODELS_DIR`, altrimenti `OLLAMA_MODELS`, altrimenti
+  `~/.ollama/models`), detto nel dettaglio (ADR-042 §6.3). **L'engine dell'operatore sull'8090 gira ancora il codice di
+  prima: va riavviato** perché la correzione valga.
+- **Debito**: TD-97, TD-98, TD-99 chiusi (ADR-042 §7); **nessun debito aperto**. Prossimo id libero **TD-100**.
+- **Contratto**: additivo — `GET /api/tasks/{id}/readiness` (`Readiness`, `ReadinessItem`, `ReadinessAction`),
+  `HandoffResult.notOpened`, problema `delivery-not-ready`; `ResourceRef.description`/`configuration` annullabili (lo
+  erano già nei dati: `ResponseContractTest` lo ha visto). Nessuna migrazione.
+- **Suite finali** (2026-11-08): Java **845 (0 falliti, 2 saltati: i link simbolici)**; console **177 su 177** con `npm test` (timeout di 15 s in
+  `vite.config.ts`) e typecheck pulito; engine **82** (77 + 5 della correzione su Ollama). Mutazioni viste rosse: 11 del backend, 4 della console
+  (ADR-042 §8).
+- **Prossimo passo**: review dell'operatore e decisione su come committare PHASE 34, 35 e 36 (stessi file; i diff di
+  partenza sono nei due backup in `%USERPROFILE%\.aicos\backups`). I progetti reali si aggiornano alla loro prima
+  consegna.
+
+## ▶▶▶▶▶▶▶▶▶▶▶ PHASE 35 — Consumi degli agenti: misurare, poi ridurre — 2026-11-07/08, quattro fasi fatte, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttiva** dell'operatore del 2026-11-07: ridurre i consumi degli agenti, soprattutto dei modelli locali
+  (Ollama), senza cambiare il comportamento accettato; quattro fasi, **una alla volta, fermandosi dopo ciascuna** per
+  riassumere; **nessun commit senza richiesta**. Decisioni in `docs/adr/ADR-041-agent-consumption.md`.
+- **Branch**: `autonomous/phase-35-agent-consumption`, creato dalla punta di `master` (`6a50288`) **con il working
+  tree di PHASE 34 ancora non committato**: le due fasi toccano gli stessi file (HandoffPackager, ExecutionService,
+  RunContext, PlanMarkdown). Il diff di PHASE 34 com'era prima di PHASE 35 è salvato fuori dal repository
+  (scratchpad della sessione, `phase34-baseline/`), per poterle separare quando l'operatore decide come committare.
+- **Fase 1 — misurare: fatta.** Contratto v1 dell'engine con `metrics` opzionale (durate di Ollama e `num_ctx`
+  chiesto); V42 (`task_runs`: `provider_total_ms`, `load_ms`, `prompt_eval_ms`, `eval_ms`, `context_window`;
+  `task_handoffs.package_chars`; `task_handoff_reads`); `GET /api/usage/measurements`; scheda «Misure degli agenti»
+  nella pagina Consumi e quote. Solo valori misurati: nulli dove il provider non riporta, caratteri mai convertiti in
+  token. Debito nuovo: **TD-97** (schemi OpenAPI con lo stesso nome fusi in silenzio), **TD-98** (console più larga dello
+  schermo a 375 px, preesistente). Prossimo id libero **TD-99**.
+- **Misure di riferimento** (smoke isolato, 2026-11-08: backend 8093, engine 8094, database `aicompany_p35`, home in
+  scratchpad; task di piano reale «Progettare la migrazione dei prestiti», Database Specialist con 4 skill + 1 adottata,
+  `qwen3.5:9b`, 7,5 GB liberi): run a freddo 5.392 token in / 421 out, 76,2 s (caricamento 19,9 s, lettura del prompt
+  18,8 s); run identica subito dopo 42,6 s, lettura del prompt **0,43 s** con lo stesso `prompt_eval_count` — il riuso
+  della cache si vede dalla durata, non dai token; prompt di sistema 17.916 caratteri, **91% corpi di skill**. Handoff:
+  pacchetto 4.132 caratteri, file da leggere **85.271**, di cui skill **80.220 (94%)**. Dettaglio in ADR-041 §6; lo
+  script dello smoke è ripetibile per il «dopo» (scratchpad della sessione, `p35/`).
+- **Suite dopo la Fase 1**: Java **767 (0 falliti, 2 saltati: link simbolici)**, console **172**, engine **75**.
+  Mutazioni viste rosse 5/5 (ADR-041 §4).
+- **Fase 2 — skill pertinenti, caricate quando servono: fatta** (2026-11-08, via dell'operatore «Sì, Fase 2»; rivede
+  ADR-026 §3). Run: al più 2 skill/knowledge pertinenti per parole chiave (`Pertinence`), di ciascuna la sezione
+  `## Essenziale` o il corpo fino al primo `##` entro `aicos.runs.skill-essential-chars` (1500); prompt di sistema con
+  parte stabile prima (ruolo, profilo, harness per nome, adozioni, autonomia) e ordine dell'harness con spareggio.
+  Handoff a Claude Code (CLI e app), Codex, OpenCode, Antigravity, Verdent: skill per nome dopo `copyForTarget` del Hub
+  (copia allineata → «usa la skill»; mancante/indietro/estranea → detto, copia proposta, file «intanto, se
+  pertinente»); knowledge solo pertinenti; nessuna scrittura nelle cartelle delle app. Misure (ADR-041 §6): run a
+  freddo 5.392 → 1.283 token, lettura del prompt 13,1 → 3,3 s; handoff a Claude Code, letture obbligatorie 85.271 →
+  5.051 caratteri; fra task diverse a caldo nessun guadagno (1,17 → 1,49 s). Le skill della libreria dell'operatore non
+  hanno `## Essenziale`: di `sql-modeling` arriva solo la descrizione.
+- **Suite dopo la Fase 2**: Java **782 (0 falliti, 2 saltati)**; console e engine non toccati dalla Fase 2.
+- **Fase 3 — esito separato dal documento della task: fatta** (2026-11-08, via «Sì, Fase 3»; rivede ADR-021/TD-55).
+  Esito completo in `tasks/TASK-NNN.esito.md` (`TASK.esito.md` nell'inbox), riassunto con link nella sezione Esito;
+  `TaskOutcomes` legge prima il file, poi la sezione (documenti vecchi validi); pacchetto, prompt completo,
+  segnaposto, governance dell'inbox, template `AGENTS.md` e `CONTEXT_MAP.md` aggiornati; testo dell'Inspector.
+  Una run legge del documento della task le sezioni di lavoro; su richiesta dell'operatore del 2026-11-08
+  («non eliminare… rendile più compatte») implementazione, test e criteri restano, compattati voce per voce (senza i
+  «perché») entro `aicos.runs.task-section-chars` (800), sezioni «—» saltate. Misura (ADR-041 §10): sui 37 documenti
+  reali di *interfaccia-movieseseries* una run leggeva in media 8.527 caratteri del documento (14 tagliati a 12k), ora
+  2.257. Gli `AGENTS.md` dei progetti esistenti non sono riscritti (W1).
+- **Suite dopo la Fase 3**: Java **787 (0 falliti, 2 saltati)**, console **172**, engine **75** (non toccato).
+- **Fase 4 — Ollama per modello e per ruolo: fatta** (2026-11-08, via «passa a fase 4»). V43 (`llm_models.num_ctx`,
+  `keep_alive`, `quantization`, valori per i modelli locali dove nulli); `catalog/models.json` con gli stessi valori;
+  contratto v1 dell'engine con `context_window` e `keep_alive` opzionali passati a Ollama; `ModelSettings` li aggiunge a
+  run e generazioni di piano; pagina Modelli con colonna e dialogo «Esecuzione» (`PUT /api/catalog/models` con i tre
+  campi). Instradamento per ruolo nel catalogo (`catalog/model-routing.json`, `ModelRouter`): compiti brevi →
+  `qwen3.5:4b`, pianificazione e codice → `qwen3.5:9b`; vale per la decisione dell'orchestratore e per le run senza
+  modello (né chiesto né dell'agente), non tocca il modello di un agente. Run dei modelli LOCAL su un esecutore a un
+  thread (`localRunExecutor`, `aicos.runs.local-concurrency`) più un cancello comune con le generazioni di piano
+  (`LocalModelGate`). Valori: 9B 16384/5m, 4B e LFM 8192/2m, Gemma 8192/5m, DeepSeek e Llama 4096/1m. ADR-041 §11–§12;
+  revisioni di ADR-016 e ADR-034.
+- **Sezioni `## Essenziale` nella libreria dell'operatore** (su sua richiesta del 2026-11-08: «scrivila tu, rendi ogni
+  skill utilizzabile da qualsiasi LLM locale e non»): aggiunte alle 13 skill e alle 2 knowledge di
+  `%USERPROFILE%\.aicos\library` (260–1.347 caratteri, tutte entro i 1.500 di `aicos.runs.skill-essential-chars`), prima
+  del primo titolo di secondo livello, frontmatter intatto. Copia dei file prima della modifica in
+  `%USERPROFILE%\.aicos\backups\phase-35-essenziale-20261108-123343`. Conseguenze: le copie del Hub nelle cartelle delle
+  app risultano «da aggiornare» (si aggiornano da Knowledge Hub → Aggiornamenti); `impeccable`, `emil-design-eng`,
+  `frontend-design` e `find-skills`, installate da marketplace, risultano modificate in libreria (un aggiornamento a
+  monte chiederà conferma e terrà un backup).
+- **Debito**: TD-97 (schemi OpenAPI con lo stesso nome), TD-98 (console più larga dello schermo a 375 px), TD-99 (due
+  test della console in timeout a 5 s nella suite intera); prossimo id libero **TD-100**.
+- **Suite finali** (2026-11-08): Java **799 (0 falliti, 2 saltati)**; engine **77 passati**; console **173 su 173** con
+  `--testTimeout=15000` e typecheck pulito — con il limite predefinito di 5 s un test diverso a ogni giro va in timeout
+  (TD-99, file non toccati dalla fase). Misure prima/dopo in ADR-041 §6; punti aperti in §13. **Prossimo passo**: review dell'operatore e decisione su come committare PHASE 34 e PHASE 35.
+
+## ▶▶▶▶▶▶▶▶▶▶ PHASE 34 — Claude Code nell'app desktop come target di consegna — 2026-11-07, nel working tree di `master`, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
+
+- **Direttive** dell'operatore del 2026-11-07: ricostruire dove un agente Claude trova skill e informazioni e
+  come agisce dopo il prompt; «controlla perché non vengono creati gli handoff alla fine di ogni task»; «correggi»;
+  «aggiungi Claude Code app desktop come soluzione per consegnare la task come per la cli».
+- **Causa trovata**: il pacchetto di handoff si scrive solo con «Prepara e apri» (`POST /api/tasks/{id}/handoffs`).
+  Su *interfaccia-movieseseries* (37 task, 22 chiuse) c'erano solo `PLAN` e `TASK-008`: delle 17 sessioni di Claude
+  Code una sola partiva dal pacchetto, le altre da «Esegui TASK-NNN…» incollato a mano — il prompt che il documento
+  della task, il pannello e `CONTEXT_MAP.md` mostravano — e dal 3 novembre da Claude Desktop, che non era un target.
+- **Fatto**: target `claude-desktop` con delivery `APP_LINK` (`claude://code/new?folder=…&q=…` aperto da
+  `explorer.exe`, `LaunchPlan.forLink`); «Come si consegna» al posto di «Prompt compatto» nei documenti di task;
+  «Prompt senza consegna» con avvertenza nel pannello; `CLAUDE.md` con `@AGENTS.md`; `AGENTS.md` che mette il
+  pacchetto per primo; `CONTEXT_MAP.md` con il prompt della consegna. ADR-025, ADR-020, ADR-021 rivisti; RUNNING.
+- **Poi, su richiesta dell'operatore** («sostituisci la riga di CLAUDE.md con @AGENTS.md per i progetti esistenti»;
+  «fai in modo che le project_resources arrivino all'agente»; «se claude ha bisogno di claude.md fai in modo che lo
+  abbia a disposizione app e cli, stessa cosa per codex antigravity»):
+  - dei 47 progetti nel database solo *interfaccia-movieseseries* aveva `CLAUDE.md` e `AGENTS.md`: la riga è
+    diventata `@AGENTS.md` (copia del file prima in `%USERPROFILE%\.aicos\backups\phase-34-claude-md`) e ha
+    ricevuto `GEMINI.md`; gli altri 46 (MoviesESeries e 45 archiviati) sono cartelle senza governance, che la
+    ricevono al primo handoff;
+  - le risorse adottate dal progetto arrivano nel pacchetto (con i loro MCP) e nelle run (ADR-026);
+  - `GEMINI.md` nella struttura del workspace, e all'handoff `ensureGovernance` scrive i file mancanti di ogni
+    strumento anche in una cartella già esistente (ADR-020); `AGENTS.md`, `CLAUDE.md` e `GEMINI.md` alla radice
+    di questo repository.
+- **Non fatto**: gli `AGENTS.md` dei progetti esistenti non hanno il passo «pacchetto per primo» (W1). Il link di
+  Claude Desktop è stato aperto una volta su questa macchina (`explorer.exe` lo accetta); che l'app mostri la
+  sessione con cartella e prompt lo conferma l'operatore.
+
 ## ▶▶▶▶▶▶▶▶▶▶ PHASE 33 — Consumi di Antigravity, Kimi Code e Copilot; i file dei progetti — 2026-10-11/13, integrata in `master` e pushata il 2026-10-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.

@@ -88,3 +88,42 @@ Dal menu contestuale dell'explorer l'operatore rinomina, crea file e cartelle vu
 **qualsiasi** elemento della cartella del progetto, uno alla volta. Restano fuori: la struttura del workspace
 (`MASTER_PROMPT.md`, `AGENTS.md`, `CLAUDE.md`, `.aicos/`), `.git`, i documenti a cui punta un record, i collegamenti.
 W2 e W4 valgono come prima. Il contenuto dei file si scrive ancora solo per i documenti di W3.
+
+## Revisione PHASE 34 (2026-11-07) — `CLAUDE.md` importa `AGENTS.md`; il pacchetto per primo
+
+- Il `CLAUDE.md` dello scaffold contiene `@AGENTS.md`: Claude Code importa la governance all'avvio, invece di doverla
+  aprire perché una riga in prosa glielo chiede.
+- `AGENTS.md` mette al primo passo di «Come si lavora su una task» il pacchetto di handoff della task, se esiste in
+  `.aicos/handoffs/`, e lo elenca in «Dove sta cosa»: anche un agente partito da «Esegui TASK-NNN…» trova ruolo,
+  skill e knowledge, quando la task è stata consegnata.
+- `.aicos/CONTEXT_MAP.md` dà come prompt tipo quello della consegna, e dice che cosa lascia fuori l'altro.
+
+Per W1 valgono solo per le cartelle nuove: lo scaffold non riscrive i `CLAUDE.md` e gli `AGENTS.md` che esistono.
+
+### Ogni strumento trova il suo file, anche in una cartella portata dall'operatore
+
+- **`GEMINI.md`** si aggiunge alla struttura (template, scaffold, W3 in scrittura, struttura che l'explorer non
+  rinomina né cestina): è il file di Antigravity e di Gemini CLI, e importa `AGENTS.md` con `@./AGENTS.md`.
+  Antigravity legge anche `AGENTS.md` dalla 1.20.3; `GEMINI.md` copre le versioni precedenti e Gemini CLI.
+- **All'handoff** `ProjectWorkspaceService.ensureGovernance` scrive, dove mancano, `AGENTS.md`, `CLAUDE.md`,
+  `GEMINI.md`, `.aicos/CONTEXT_MAP.md` e `.aicos/project.json`. Prima lo scaffold partiva solo se la cartella non
+  esisteva: in una cartella già esistente (un repository dell'operatore, i progetti importati) il pacchetto mandava
+  l'agente a un `AGENTS.md` che non c'era, e Claude Code non trovava `CLAUDE.md`. A differenza dello scaffold non
+  aggiunge `docs/`, `references/` né `MASTER_PROMPT.md`, e un file dell'operatore resta com'è (W1). Una task senza
+  progetto riceve anche `GEMINI.md` nella sua cartella inbox.
+- **Il repository di AI Company OS** ha i suoi `AGENTS.md`, `CLAUDE.md` e `GEMINI.md` alla radice: dicono dove
+  stanno lo stato, il charter e i comandi, senza ripeterli.
+
+Test: `HandoffAnywhereApiTest` (cartella dell'operatore: i tre file scritti, il suo `CLAUDE.md` intatto, niente
+`docs/`, `references/`, `MASTER_PROMPT.md`; un secondo handoff non riscrive nulla; inbox con `GEMINI.md`),
+`ProjectWorkspaceApiTest`, `WorkspacePathsTest`, `WorkspaceDeletionApiTest`.
+
+## Revisione PHASE 36 (2026-11-08) — i testi generati si aggiornano dove sono ancora com'erano (ADR-042 §5)
+
+W1 resta per lo scaffold. In più, **alla consegna**, `ProjectWorkspaceService.upgradeGenerated` confronta `AGENTS.md`,
+`.aicos/CONTEXT_MAP.md` e i documenti `tasks/*.md` (non gli esiti) con i passaggi che AI Company OS vi scriveva prima
+(`GeneratedTextUpgrades`): un passaggio trovato **identico** è sostituito con la versione corrente, gli a capo del file
+restano, il resto del file è intatto; il file com'era è prima copiato in `.aicos/upgrades/<data-ora>/`. Un passaggio
+che l'operatore ha cambiato non è più identico e resta com'è; la verifica prima della consegna lo segnala. È ciò che
+porta i progetti iniziati prima di PHASE 34 (`AGENTS.md` senza il pacchetto per primo, «Prompt compatto» nei documenti
+delle task) alla consegna di oggi. Test: `GeneratedTextUpgradesTest`, `DeliveryPathApiTest`.

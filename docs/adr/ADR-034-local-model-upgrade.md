@@ -311,3 +311,11 @@ con le richieste che l'engine fa: `qwen3.5:4b` carica 2,9 GB su 2,9 in GPU; `lfm
 di `AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL`) carica 4,9 GB tutti in CPU e genera a 33 tok/s. Gli altri modelli sono
 lasciati a Ollama, che li mette in GPU quanto la memoria condivisa consente. Per spegnerla: togliere la variabile e
 riavviare Ollama.
+
+## Revisione PHASE 35 (2026-11-08) — finestra e permanenza in memoria per modello, nel catalogo (ADR-041 §11–§12)
+
+`num_ctx` e `keep_alive` di ogni modello locale stanno ora nel catalogo (`llm_models`, V43) e arrivano a Ollama con
+ogni richiesta; l'engine tiene i suoi default (`AICOS_ENGINE_OLLAMA_NUM_CTX`, `…_BY_MODEL`) per le richieste che non li
+portano. Valori: `qwen3.5:9b` 16384 / 5m (pianifica anche), `qwen3.5:4b` e `lfm2.5:8b` 8192 / 2m, `gemma4:e4b`
+8192 / 5m, DeepSeek e Llama 3.2 4096 / 1m. La quantizzazione consigliata (Q4_K_M, Q4_0 per DeepSeek) è informativa. I
+modelli locali girano uno alla volta, run e generazioni di piano comprese (§3.7). `lfm2.5:8b` resta sulla CPU.

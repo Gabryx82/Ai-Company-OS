@@ -119,3 +119,21 @@ cartella del progetto, `TASK.md` nella cartella inbox di una task senza progetto
 fine, segnaposto escluso. Il pannello della task lo mostra in «Esito» e, mentre la task è in corso, lo
 rilegge da solo ogni 15 secondi: l'operatore non deve aprire il documento. Accettarlo o rimandarlo resta la
 review (§5). Lo stesso servizio dà l'esito delle azioni AI del Blueprint (ADR-033, TD-63).
+
+## Revisione PHASE 34 (2026-11-07) — si parte dalla consegna
+
+Il documento di una task del piano non ha più la sezione «Prompt compatto», ma **«Come si consegna»**: dalla console,
+Master Orchestrator → strumento → «Prepara e apri», che scrive il pacchetto con ruolo, skill, knowledge e regole e
+apre lo strumento con il prompt che lo legge; il prompt «Esegui TASK-NNN…» incollato a mano dà all'agente solo la
+governance e il documento. Il pannello mostra quel prompt come «Prompt senza consegna», con la stessa avvertenza.
+Il campo `prompt` della decisione (§3) non cambia.
+
+## Revisione PHASE 35 (2026-11-08) — l'esito in un file suo (rivede TD-55; ADR-041 §10)
+
+L'esito completo di una task consegnata va in `tasks/TASK-NNN.esito.md` (`TASK.esito.md` per una task senza progetto),
+accanto al documento; la sezione **Esito** del documento tiene un riassunto di poche righe e il link. `TaskOutcomes`
+legge prima il file e, se manca o è vuoto, la sezione Esito come prima — i documenti scritti finora restano validi.
+Per il §6: una run di una task di piano riceve del documento della task le sezioni di lavoro (obiettivo, scope,
+implementazione, contratti, file, test, criteri), le indicazioni compattate voce per voce entro un limite
+(`PlanMarkdown.forRun`), non la storia dell'esito; il documento della fase arriva come prima. Misurato su 37 documenti
+reali: da 8.527 a 2.257 caratteri in media per run.

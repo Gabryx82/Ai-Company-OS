@@ -71,3 +71,55 @@ chiave immutabile, nuova skill, conflitto di chiave, voce MCP senza file, rilett
 con file non valido segnalato, import con riscrittura GitHub e rifiuti SSRF, skill nel prompt di una
 run), `SkillDocument` coperto attraverso l'API; console: `KnowledgeHub.test` (apertura, modifica e
 salvataggio con il tag).
+
+## Revisione PHASE 34 (2026-11-07) — le risorse adottate dal progetto arrivano all'agente
+
+Rivede il §3. Fino a qui le risorse adottate da un progetto (`project_resources`, «Associa» del Knowledge Hub)
+erano solo elencate nella pagina del progetto: né il pacchetto di handoff né le run le leggevano. Ora valgono per
+ogni agente che lavora al progetto, **dopo le sue e senza ripetere** quelle che l'agente ha già:
+
+- **Handoff**: il pacchetto aggiunge alla sezione delle skill il blocco «Adottate dal progetto», con il percorso del
+  file di ogni skill e knowledge; gli MCP adottati finiscono in `.mcp.json` / `opencode.json` come quelli
+  dell'agente (ADR-025, TD-48); il prompt completo li include.
+- **Run nell'AI Engine**: il prompt di sistema aggiunge «Adopted by this project, for every agent working on it: …»
+  e il corpo di ogni skill e knowledge adottata, fino a 4000 caratteri ciascuna. Un progetto che non ha adottato
+  nulla di nuovo lascia il prompt com'era (la regressione di PHASE 6 resta).
+
+La pagina del progetto lo dice sopra l'elenco delle risorse adottate. Test: `ProjectResourcesApiTest` (pacchetto,
+`.mcp.json`, prompt completo, prompt di sistema di una run, la skill dell'agente adottata anche dal progetto una sola
+volta).
+
+## Revisione PHASE 35 (2026-11-08) — skill pertinenti, caricate quando servono (ADR-041 §7–§8)
+
+Rivede il §3 e la revisione PHASE 34 per ciò che arriva all'agente; il file resta la verità (§2).
+
+- **Run nell'AI Engine**: non più il corpo di ogni skill e knowledge (fino a 4000 caratteri ciascuna), ma **al più due**,
+  quelle pertinenti alla task per parole chiave (chiave, nome e tag pesano 2, descrizione 1, soglia 2; `Pertinence`), e
+  di ciascuna la sezione **`## Essenziale`** se c'è, altrimenti il corpo fino al primo titolo di secondo livello, entro
+  `aicos.runs.skill-essential-chars` (1500), tagliata a un paragrafo. Il prompt di sistema nomina sempre l'intero
+  harness e ciò che il progetto ha adottato, nella parte stabile che precede quella che dipende dalla task.
+- **Handoff a uno strumento che carica le skill da sé** (Claude Code CLI e app desktop, Codex, OpenCode, Antigravity,
+  Verdent): il pacchetto non chiede più di leggere i file della libreria; nomina ogni skill con la sua descrizione e
+  dice «usa la skill `<nome>` se pertinente», dopo aver verificato col Knowledge Hub che la copia sia nella cartella
+  personale dello strumento. Se manca, è indietro o la cartella non è del Hub, lo dice, propone la copia dal Hub e dà
+  il file da leggere intanto, se pertinente; non scrive nulla. Le knowledge restano indicate col percorso, solo se
+  pertinenti. Agli altri strumenti il pacchetto arriva come prima.
+
+Per una skill della libreria, scrivere una sezione `## Essenziale` è il modo di decidere che cosa ne riceve un modello
+locale. Test: `PertinenceTest`, `PertinentSkillsInRunsApiTest`, `HandoffSkillsApiTest`.
+
+## Revisione PHASE 36 (2026-11-08) — nessuna voce sparisce in silenzio (ADR-042)
+
+- **Una voce senza file, o con un file non valido**, prima spariva: il pacchetto la nominava senza istruzioni e nessuno
+  lo vedeva. `SkillLibrary.check` dà lo stato del file (`OK`, `MISSING`, `INVALID`: frontmatter assente o illeggibile,
+  chiave o kind diversi dalla voce); il pacchetto lo scrive sotto la voce con «⚠», la verifica prima della consegna lo
+  mostra come avviso (non bloccante: l'agente riceve comunque nome e descrizione).
+- **La knowledge non pertinente** (rivede la revisione PHASE 35): agli strumenti con skill native non è più tolta dal
+  pacchetto, è nominata con «consultala solo se la task la richiede» e il percorso; nelle misure di ADR-041 è una
+  lettura facoltativa, quindi le letture obbligatorie non crescono.
+- **La copia del Knowledge Hub nella cartella dello strumento** si vede prima di aprirlo: la verifica dice per ogni
+  skill se la copia è allineata, modificata nell'app, mancante, indietro, estranea o in conflitto, e per le ultime
+  quattro lo segnala come avviso; per una mancante o indietro il pannello offre «Copia nello strumento», che usa la copia
+  del Hub (`POST /api/skill-hub/library/{key}/copies/{app}`, mai con sostituzione).
+
+Test: `TaskReadinessApiTest`, `HandoffSkillsApiTest`, `HarnessChainApiTest`.
