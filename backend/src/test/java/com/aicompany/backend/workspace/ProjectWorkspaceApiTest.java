@@ -124,11 +124,22 @@ class ProjectWorkspaceApiTest extends AbstractPostgresTest {
         mockMvc.perform(post("/api/projects/" + id + "/workspace"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.path == 'CLAUDE.md')].outcome").value("EXISTING"))
-                .andExpect(jsonPath("$[?(@.path == 'AGENTS.md')].outcome").value("CREATED"));
+                .andExpect(jsonPath("$[?(@.path == 'AGENTS.md')].outcome").value("CREATED"))
+                .andExpect(jsonPath("$[?(@.path == 'GEMINI.md')].outcome").value("CREATED"));
+        // PHASE 34: Antigravity and Gemini CLI read GEMINI.md, which imports the same governance.
+        assertThat(Files.readString(folder.resolve("GEMINI.md"))).contains("\n@./AGENTS.md\n");
 
         assertThat(Files.readString(folder.resolve("CLAUDE.md"))).isEqualTo("the operator's own instructions");
         assertThat(folder.resolve("references/design-targets")).isDirectory();
-        assertThat(Files.readString(folder.resolve("AGENTS.md"))).contains("Demo").contains("GUIDED");
+        assertThat(Files.readString(folder.resolve("AGENTS.md"))).contains("Demo").contains("GUIDED")
+                // PHASE 34: the handoff package comes first; PHASE 36: without one, the agent asks for the delivery.
+                .contains("1. Parti dal pacchetto della tua task in `.aicos/handoffs/`")
+                .contains("Se non c'è, chiedi all'operatore\n   di consegnare la task")
+                // PHASE 35 (ADR-041 §10): the full outcome in its own file, a summary with the link in the task.
+                .contains("`tasks/TASK-NNN.esito.md`").contains("riassunto di poche righe");
+        assertThat(Files.readString(folder.resolve(".aicos/CONTEXT_MAP.md")))
+                .contains("> Leggi .aicos/handoffs/TASK-NNN-<strumento>.md ed esegui la task che descrive.")
+                .contains("`tasks/TASK-NNN.esito.md`");
         assertThat(Files.readString(folder.resolve(".aicos/project.json"))).contains("\"aicosProjectId\" : " + id);
 
         mockMvc.perform(post("/api/projects/" + id + "/workspace"))

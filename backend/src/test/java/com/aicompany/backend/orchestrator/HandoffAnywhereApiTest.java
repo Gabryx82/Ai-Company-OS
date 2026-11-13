@@ -135,6 +135,72 @@ class HandoffAnywhereApiTest extends AbstractPostgresTest {
         assertThat(host.launches().getFirst().command()).contains("claude", result.path("prompt").asString());
     }
 
+    /**
+     * PHASE 34: Claude Code in the desktop app takes a handoff as the CLI does -- the package
+     * written, the app opened on the project folder with the prompt that reads it, through
+     * Claude Desktop's own link; nothing to paste.
+     */
+    @Test
+    void theDesktopAppOpensOnTheFolderWithThePromptThatReadsThePackage() throws Exception {
+        long taskId = task(project());
+        Path rubrica = folder.resolve("rubrica");
+
+        mockMvc.perform(get("/api/tasks/" + taskId + "/orchestration"))
+                .andExpect(jsonPath("$.targets[?(@.key == 'claude-desktop')].available").value(hasItem(true)))
+                .andExpect(jsonPath("$.targets[?(@.key == 'claude-desktop')].delivery").value(hasItem("APP_LINK")));
+
+        JsonNode result = handoff(taskId, "claude-desktop");
+
+        String prompt = "Leggi .aicos/handoffs/TASK-" + taskId + "-claude-desktop.md ed esegui la task che descrive.";
+        assertThat(Files.readString(rubrica.resolve(".aicos/handoffs/TASK-" + taskId + "-claude-desktop.md")))
+                .contains("Handoff Bot").contains("Claude Code (app desktop)").contains("tasks/TASK-" + taskId + ".md");
+        assertThat(Files.readString(rubrica.resolve("CLAUDE.md"))).as("Claude Code imports the governance by itself")
+                .contains("\n@AGENTS.md\n");
+        assertThat(result.path("prompt").asString()).isEqualTo(prompt);
+        assertThat(result.path("delivery").asString()).isEqualTo("APP_LINK");
+        // PHASE 36: in the composer through the link, and in the clipboard for when the app does not take it.
+        assertThat(result.path("promptToClipboard").asBoolean()).as("the prompt is in the clipboard as well").isTrue();
+        assertThat(result.path("task").path("status").asString()).isEqualTo("IN_PROGRESS");
+
+        assertThat(host.launches()).hasSize(1);
+        java.util.List<String> command = host.launches().getFirst().command();
+        assertThat(command).hasSize(2);
+        assertThat(command.getFirst()).endsWith("explorer.exe");
+        assertThat(command.get(1)).startsWith("claude://code/new?folder=")
+                .contains("folder=" + java.net.URLEncoder.encode(rubrica.toAbsolutePath().normalize().toString(),
+                        java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20"))
+                .endsWith("&q=" + java.net.URLEncoder.encode(prompt, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20"));
+        assertThat(jdbc.queryForObject("SELECT target FROM task_handoffs WHERE task_id = ?", String.class, taskId))
+                .isEqualTo("claude-desktop");
+    }
+
+    /**
+     * PHASE 34: a folder the operator brought (an existing repository) had no governance, and the
+     * package sent the agent to an AGENTS.md that did not exist. Now every tool's file is written
+     * where it is missing -- and only those: the operator's own file stays, nothing else is added.
+     */
+    @Test
+    void aFolderTheOperatorBroughtGetsEveryToolsGovernanceAndKeepsItsOwn() throws Exception {
+        long projectId = project();
+        Path rubrica = Files.createDirectories(folder.resolve("rubrica"));
+        Files.writeString(rubrica.resolve("CLAUDE.md"), "# Le mie istruzioni\n");
+
+        JsonNode result = handoff(task(projectId), "codex");
+
+        assertThat(result.path("written").toString()).contains("\"AGENTS.md\"", "\"GEMINI.md\"",
+                "\".aicos/CONTEXT_MAP.md\"", "\".aicos/project.json\"").doesNotContain("\"CLAUDE.md\"");
+        assertThat(Files.readString(rubrica.resolve("CLAUDE.md"))).isEqualTo("# Le mie istruzioni\n");
+        assertThat(Files.readString(rubrica.resolve("AGENTS.md"))).contains("Rubrica").contains("SUPERVISED");
+        assertThat(Files.readString(rubrica.resolve("GEMINI.md"))).contains("\n@./AGENTS.md\n");
+        assertThat(rubrica.resolve("MASTER_PROMPT.md")).doesNotExist();
+        assertThat(rubrica.resolve("docs")).doesNotExist();
+        assertThat(rubrica.resolve("references")).doesNotExist();
+
+        // A second handoff writes none of them again.
+        assertThat(handoff(task(projectId), "claude-code").path("written").toString())
+                .doesNotContain("\"AGENTS.md\"", "\"GEMINI.md\"", "\"CLAUDE.md\"");
+    }
+
     @Test
     void aTaskWithoutAProjectIsPreparedInAnInboxFolder() throws Exception {
         long taskId = task(null);
@@ -145,6 +211,8 @@ class HandoffAnywhereApiTest extends AbstractPostgresTest {
         assertThat(inbox.getFileName().toString()).isEqualTo("task-" + taskId);
         assertThat(inbox.resolve("TASK.md")).exists();
         assertThat(Files.readString(inbox.resolve("AGENTS.md"))).contains("Questa cartella è stata preparata da AI Company OS");
+        assertThat(inbox.resolve("CLAUDE.md")).exists();
+        assertThat(inbox.resolve("GEMINI.md")).exists();
         assertThat(inbox.resolve(".aicos/handoffs/TASK-" + taskId + "-opencode.md")).exists();
         assertThat(host.launches().getFirst().command()).contains("--prompt");
     }
@@ -176,6 +244,51 @@ class HandoffAnywhereApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$[0].text").value("Fatto."))
                 .andExpect(jsonPath("$[0].source").value("sezione Esito di TASK.md"));
         mockMvc.perform(get("/api/tasks/999999/outcomes")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * PHASE 35 (ADR-041 §10, revises TD-55): the full outcome goes in its own file, beside the task
+     * document, and the document's Esito keeps a summary with the link. The file is read first; when it
+     * is missing or empty, the Esito section -- every document written before keeps working.
+     */
+    @Test
+    void theOutcomeFileIsReadFirstAndWithoutItTheEsitoSection() throws Exception {
+        long inProject = task(project());
+        handoff(inProject, "claude-code");
+        String label = "TASK-" + inProject;
+        Path tasks = folder.resolve("rubrica/tasks");
+
+        String pkg = Files.readString(folder.resolve("rubrica/.aicos/handoffs/" + label + "-claude-code.md"));
+        String atTheEnd = pkg.substring(pkg.indexOf("## Alla fine"));
+        assertThat(atTheEnd).contains("`tasks/" + label + ".esito.md`").contains("riassunto di poche righe")
+                .contains("`tasks/" + label + ".md`");
+        assertThat(Files.readString(tasks.resolve(label + ".md"))).as("the placeholder names the file")
+                .contains(label + ".esito.md");
+
+        Files.writeString(tasks.resolve(label + ".md"), Files.readString(tasks.resolve(label + ".md")).replaceAll("(?s)## Esito.*",
+                "## Esito\n\nCRUD fatto, resta la paginazione. Dettagli in [" + label + ".esito.md](" + label + ".esito.md).\n"));
+        Files.writeString(tasks.resolve(label + ".esito.md"), "# Esito\n\n- CRUD dei contatti\n- 6 test verdi\n- Resta la paginazione\n");
+        JsonNode outcome = json.readTree(mockMvc.perform(get("/api/tasks/" + inProject + "/outcomes"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(outcome).hasSize(1);
+        assertThat(outcome.get(0).path("text").asString()).isEqualTo("# Esito\n\n- CRUD dei contatti\n- 6 test verdi\n- Resta la paginazione");
+        assertThat(outcome.get(0).path("source").asString()).isEqualTo("file tasks/" + label + ".esito.md");
+        assertThat(outcome.get(0).path("documentPath").asString()).isEqualTo("tasks/" + label + ".esito.md");
+
+        // An empty file is no outcome: the summary in the document is.
+        Files.writeString(tasks.resolve(label + ".esito.md"), "  \n");
+        mockMvc.perform(get("/api/tasks/" + inProject + "/outcomes"))
+                .andExpect(jsonPath("$[0].source").value("sezione Esito di tasks/" + label + ".md"))
+                .andExpect(jsonPath("$[0].text").value(org.hamcrest.Matchers.startsWith("CRUD fatto, resta la paginazione.")));
+
+        // Outside a project: TASK.esito.md beside TASK.md, and the inbox governance says so.
+        long alone = task(null);
+        Path inbox = Path.of(handoff(alone, "opencode").path("folder").asString());
+        assertThat(Files.readString(inbox.resolve("AGENTS.md"))).contains("`TASK.esito.md`");
+        Files.writeString(inbox.resolve("TASK.esito.md"), "Fatto tutto, con i test.\n");
+        mockMvc.perform(get("/api/tasks/" + alone + "/outcomes"))
+                .andExpect(jsonPath("$[0].text").value("Fatto tutto, con i test."))
+                .andExpect(jsonPath("$[0].source").value("file TASK.esito.md"));
     }
 
     @Test

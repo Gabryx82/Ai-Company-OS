@@ -23,7 +23,7 @@ class HubCommandSafetyTest {
     @Test
     void aCliRunThroughCmdNeverGetsAValueTheCommandLineWouldInterpret(@TempDir Path home) throws IOException {
         Path cmd = Files.writeString(home.resolve("claude.cmd"), "@echo off\r\n");
-        ProcessHubCommands clis = new ProcessHubCommands(home.toString(), home.toString(), cmd.toString(), "");
+        ProcessHubCommands clis = new ProcessHubCommands(home.toString(), home.toString(), cmd.toString(), "", "");
 
         for (String value : List.of("https://mcp.example.org/mcp&rem", "KEY=a|rem", "KEY=%PATH%", "x>NUL", "a^b")) {
             assertThatThrownBy(() -> clis.run(HubCommands.Tool.CLAUDE, List.of("mcp", "add", value), Duration.ofSeconds(5)))

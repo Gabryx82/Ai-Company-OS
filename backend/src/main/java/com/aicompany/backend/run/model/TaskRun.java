@@ -100,6 +100,22 @@ public class TaskRun {
     @Column(name = "finished_at")
     private Instant finishedAt;
 
+    /** PHASE 35 (ADR-041): what the provider measured -- its own durations -- and the window the call asked for. */
+    @Column(name = "provider_total_ms")
+    private Long providerTotalMs;
+
+    @Column(name = "load_ms")
+    private Long loadMs;
+
+    @Column(name = "prompt_eval_ms")
+    private Long promptEvalMs;
+
+    @Column(name = "eval_ms")
+    private Long evalMs;
+
+    @Column(name = "context_window")
+    private Integer contextWindow;
+
     /** PHASE 24 (ADR-031): what the run cost, at the price of the moment it finished. */
     @Column(name = "cost_usd", precision = 14, scale = 6)
     private java.math.BigDecimal costUsd;
@@ -174,6 +190,20 @@ public class TaskRun {
         return true;
     }
 
+    /**
+     * PHASE 35: what the provider measured about the call that finished this run,
+     * as it reported it; a measure it did not report stays null. Only on a run the
+     * engine answered, right after {@link #succeed} or {@link #failSpent}.
+     */
+    public void recordMeasures(Long providerTotalMs, Long loadMs, Long promptEvalMs, Long evalMs,
+                               Integer contextWindow) {
+        this.providerTotalMs = providerTotalMs;
+        this.loadMs = loadMs;
+        this.promptEvalMs = promptEvalMs;
+        this.evalMs = evalMs;
+        this.contextWindow = contextWindow;
+    }
+
     /** {@code QUEUED | RUNNING → FAILED}. A finished run is never rewritten. */
     public boolean fail(String failureType, String failureDetail) {
         if (status.isFinished()) {
@@ -208,6 +238,11 @@ public class TaskRun {
     public Integer getInputTokens() { return inputTokens; }
     public Integer getOutputTokens() { return outputTokens; }
     public Long getLatencyMs() { return latencyMs; }
+    public Long getProviderTotalMs() { return providerTotalMs; }
+    public Long getLoadMs() { return loadMs; }
+    public Long getPromptEvalMs() { return promptEvalMs; }
+    public Long getEvalMs() { return evalMs; }
+    public Integer getContextWindow() { return contextWindow; }
     public String getCorrelationId() { return correlationId; }
     public String getRequestedBy() { return requestedBy; }
     public Instant getCreatedAt() { return createdAt; }

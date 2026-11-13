@@ -134,6 +134,23 @@ public class SkillHubService {
     public record DeployResult(String app, String outcome, String path, @Nullable String backup, String message) {
     }
 
+    /**
+     * PHASE 35 (ADR-041 §8): where a tool that loads skills by itself finds a library entry.
+     *
+     * @param appName the application whose folder this is, as the console names it
+     * @param status  {@code IN_SYNC}, {@code MODIFIED}, {@code OUTDATED}, {@code CONFLICT} for a Hub copy;
+     *                {@code FOREIGN} for a folder of that name the Hub did not write; {@code NONE} when
+     *                there is nothing, and {@code folder} is where the Hub would copy it
+     * @param name    the name the tool knows the skill by: the copy's own, or the key
+     */
+    public record ToolCopy(String appId, String appName, String status, Path folder, String name) {
+
+        /** The tool loads the Hub's copy as it is, and it says what the library says (or what the operator made of it there). */
+        public boolean usable() {
+            return status.equals(CopyStatus.IN_SYNC.name()) || status.equals(CopyStatus.MODIFIED.name());
+        }
+    }
+
     public record InstallResult(String key, String name, String filePath, List<DeployResult> copies) {
     }
 
@@ -453,6 +470,83 @@ public class SkillHubService {
             out.add(new CopyTarget(app.id(), app.name(), app.detected(), dest.toString(), status, at, skillId));
         }
         return out;
+    }
+
+    /**
+     * PHASE 35 (ADR-041 §8): for an execution target whose tool loads skills by itself
+     * from a personal folder, where it would find the library entry {@code key} and how
+     * that copy stands against the library. The folders are those the Hub knows the
+     * tool reads ({@link SkillLocations.App#targets()}, {@link Location#readers()}); a
+     * usable Hub copy in any of them wins, otherwise the first copy found, otherwise
+     * {@code NONE} with the folder the Hub would copy into. Empty when the target's tool
+     * does not load skills from a folder of its own. Reads only: nothing is written.
+     */
+    @Transactional(readOnly = true)
+    public Optional<ToolCopy> copyForTarget(String key, String targetKey) {
+        List<SkillLocations.App> apps = appsOf(targetKey);
+        List<Location> folders = skillFoldersOf(apps);
+        if (folders.isEmpty()) {
+            return Optional.empty();
+        }
+        String libraryPrint = libraryFingerprintOrNull(key);
+        ToolCopy found = null;
+        for (Location location : folders) {
+            Path dest = location.root().resolve(key);
+            if (!Files.exists(dest, LinkOption.NOFOLLOW_LINKS)) {
+                continue;
+            }
+            Optional<HubMarker> marker = HubMarker.read(dest).filter(m -> m.key().equals(key));
+            String status = marker.map(m -> copyStatus(m, dest, libraryPrint).name()).orElse("FOREIGN");
+            ToolCopy copy = new ToolCopy(location.app(), locations.app(location.app()).name(), status, dest, nameIn(dest, key));
+            if (copy.usable()) {
+                return Optional.of(copy);
+            }
+            if (found == null) {
+                found = copy;
+            }
+        }
+        if (found != null) {
+            return Optional.of(found);
+        }
+        // Where the Hub would copy it: the tool's own application first (Codex before the shared folder).
+        Location proposed = folders.stream().filter(l -> l.app().equals(targetKey)).findFirst()
+                .or(() -> apps.stream().flatMap(a -> folders.stream().filter(l -> l.app().equals(a.id()))).findFirst())
+                .orElse(folders.getFirst());
+        return Optional.of(new ToolCopy(proposed.app(), locations.app(proposed.app()).name(), "NONE",
+                proposed.root().resolve(key), key));
+    }
+
+    /** PHASE 35: whether the tool of an execution target loads skills by itself from a personal folder the Hub knows. */
+    @Transactional(readOnly = true)
+    public boolean loadsSkills(String targetKey) {
+        return !skillFoldersOf(appsOf(targetKey)).isEmpty();
+    }
+
+    private List<SkillLocations.App> appsOf(String targetKey) {
+        return locations.apps().stream().filter(a -> a.targets().contains(targetKey)).toList();
+    }
+
+    /** The personal skill folders the Hub writes that one of these applications reads. */
+    private List<Location> skillFoldersOf(List<SkillLocations.App> apps) {
+        java.util.Set<String> appIds = apps.stream().map(SkillLocations.App::id).collect(Collectors.toSet());
+        return locations.locations().stream()
+                .filter(l -> l.writable() && l.scope() == Scope.PERSONAL && l.layout() == SkillLocations.Layout.SKILL_FOLDERS)
+                .filter(l -> l.readers().stream().anyMatch(appIds::contains))
+                .toList();
+    }
+
+    /** The name a copy's SKILL.md gives the skill, or the key. */
+    private static String nameIn(Path folder, String key) {
+        try {
+            Path skill = folder.resolve("SKILL.md");
+            if (!Files.isRegularFile(skill, LinkOption.NOFOLLOW_LINKS)) {
+                return key;
+            }
+            String name = Frontmatter.read(Files.readString(skill, StandardCharsets.UTF_8)).get("name");
+            return name == null || name.isBlank() ? key : name.strip();
+        } catch (IOException | RuntimeException unreadable) {
+            return key;
+        }
     }
 
     /**

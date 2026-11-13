@@ -1,5 +1,6 @@
 package com.aicompany.backend.orchestrator.service;
 
+import com.aicompany.backend.plan.service.PlanMarkdown;
 import com.aicompany.backend.task.exception.TaskNotFoundException;
 import com.aicompany.backend.workspace.service.ProjectWorkspaceService;
 import org.jspecify.annotations.Nullable;
@@ -22,8 +23,9 @@ import java.util.regex.Pattern;
 
 /**
  * What a task produced, read where it is (PHASE 32, TD-55 and TD-63): the output
- * of its last successful run through the AI Engine, and the Esito section that an
- * agent fills in the task's document after a handoff (ADR-021 §4). Nothing is
+ * of its last successful run through the AI Engine, and what an agent wrote after a
+ * handoff (ADR-021 §4) -- since PHASE 35 the outcome file beside the task document
+ * ({@code TASK-NNN.esito.md}), and without it the document's Esito section. Nothing is
  * copied or applied: the console shows it, the operator reviews it.
  */
 @Service
@@ -81,6 +83,15 @@ public class TaskOutcomes {
         }
         String path = projectId == null ? "TASK.md"
                 : task.get("document_path") != null ? (String) task.get("document_path") : "tasks/" + label + ".md";
+        // PHASE 35 (ADR-041 §10): the outcome file first; without it, or empty, the Esito section --
+        // documents written before keep working.
+        String file = PlanMarkdown.outcomePath(path);
+        Optional<String> written = workspace.readIn(folder.get(), file).map(String::strip)
+                .filter(text -> !text.isEmpty() && !text.startsWith("_Da compilare"));
+        if (written.isPresent()) {
+            return Optional.of(new TaskOutcome(taskId, written.get(), "file " + file, modified(folder.get().resolve(file)),
+                    null, file));
+        }
         return workspace.readIn(folder.get(), path).flatMap(TaskOutcomes::esito).map(text ->
                 new TaskOutcome(taskId, text, "sezione Esito di " + path, modified(folder.get().resolve(path)), null, path));
     }

@@ -35,7 +35,9 @@ final class HandoffMcp {
     }
 
     /** Where each target reads the servers of a project. */
-    static final Map<String, String> PROJECT_FILES = Map.of("claude-code", ".mcp.json", "opencode", "opencode.json");
+    static final Map<String, String> PROJECT_FILES = Map.of("claude-code", ".mcp.json",
+            // PHASE 36: Claude Code in the desktop app is Claude Code: it reads the project's .mcp.json too.
+            "claude-desktop", ".mcp.json", "opencode", "opencode.json");
 
     private static final Set<String> LAUNCHERS = Set.of("npx", "uvx", "bunx", "pnpm", "node", "deno", "python", "python3",
             "docker", "dnx");

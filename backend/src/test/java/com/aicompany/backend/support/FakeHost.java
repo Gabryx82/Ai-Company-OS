@@ -39,7 +39,24 @@ public class FakeHost {
     }
 
     public SoftwareLauncher launcher() {
-        return this::start;
+        return new SoftwareLauncher() {
+            @Override
+            public void start(LaunchPlan plan) {
+                FakeHost.this.start(plan);
+            }
+
+            @Override
+            public java.util.Optional<String> unavailable() {
+                return java.util.Optional.ofNullable(FakeHost.this.launcherOff);
+            }
+        };
+    }
+
+    /** PHASE 36: a launcher switched off, as `aicos.launcher.enabled=false` leaves it; null when it starts plans. */
+    private volatile String launcherOff;
+
+    public void switchLauncherOff(String why) {
+        launcherOff = why;
     }
 
     public SoftwareIcons icons() {
@@ -56,6 +73,7 @@ public class FakeHost {
     private volatile int refreshes;
 
     public synchronized void reset() {
+        launcherOff = null;
         scripted.clear();
         icons.clear();
         launches.clear();

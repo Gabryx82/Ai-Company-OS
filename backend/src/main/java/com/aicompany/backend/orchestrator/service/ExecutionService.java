@@ -8,6 +8,8 @@ import com.aicompany.backend.api.RequestValidationException;
 import com.aicompany.backend.binding.AgentBindingService;
 import com.aicompany.backend.binding.ExecutionTargetCatalog;
 import com.aicompany.backend.binding.ExecutionTargetCatalog.ExecutionTarget;
+import com.aicompany.backend.harness.hub.SkillHubService;
+import com.aicompany.backend.harness.library.Pertinence;
 import com.aicompany.backend.harness.library.SkillLibrary;
 import com.aicompany.backend.harness.service.HarnessService;
 import com.aicompany.backend.orchestrator.model.TaskHandoff;
@@ -56,7 +58,8 @@ import java.util.List;
 public class ExecutionService {
 
     public record HandoffResult(TaskHandoff handoff, Task task, String prompt, String fullPrompt, String delivery,
-                                String folder, @Nullable String openUrl, List<String> written, boolean promptToClipboard) {
+                                String folder, @Nullable String openUrl, List<String> written, boolean promptToClipboard,
+                                @Nullable String notOpened) {
     }
 
     public record ReviewResult(TaskReview review, Task task) {
@@ -80,13 +83,23 @@ public class ExecutionService {
     private EntityManager entityManager;
 
     private final OpenCodeSessions sessions;
+    private final HandoffReads reads;
+    private final SkillHubService hub;
+    private final ReadinessService readiness;
+    private final com.aicompany.backend.sync.AgentPublications publications;
 
     public ExecutionService(TaskRepository tasks, ProjectRepository projects, AgentRepository agents,
                             SoftwareRepository softwareCatalog, SoftwareService software,
                             ProjectWorkspaceService workspace, TaskHandoffRepository handoffs,
                             TaskReviewRepository reviews, ExecutionTargetCatalog targets,
                             AgentBindingService binding, HarnessService harness, SkillLibrary library,
-                            TaskTransitions transitions, OpenCodeSessions sessions) {
+                            TaskTransitions transitions, OpenCodeSessions sessions, HandoffReads reads,
+                            SkillHubService hub, ReadinessService readiness,
+                            com.aicompany.backend.sync.AgentPublications publications) {
+        this.publications = publications;
+        this.readiness = readiness;
+        this.hub = hub;
+        this.reads = reads;
         this.sessions = sessions;
         this.transitions = transitions;
         this.library = library;
@@ -113,8 +126,12 @@ public class ExecutionService {
      * starts the task if it is open. Refused -- before anything is written or
      * launched -- by the same rules as a run: frozen, done, no active agent,
      * phase not approved (ADR-022).
+     *
+     * @param learning PHASE 37 (ADR-044): whether the agent teaches (a lesson the operator copies from), works
+     *                 alone and leaves a lesson, or neither; null for what the project's level implies
      */
-    public HandoffResult handoff(Long taskId, String targetKey, String requestedBy, Precondition precondition) {
+    public HandoffResult handoff(Long taskId, String targetKey, com.aicompany.backend.hitl.@Nullable LearningMode learning,
+                                 String requestedBy, Precondition precondition) {
         Task task = tasks.findByIdForUpdate(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
         precondition.requireSatisfiedBy(task.getVersion());
         Project project = task.getProjectId() == null ? null : projects.findByIdForShare(task.getProjectId())
@@ -126,6 +143,8 @@ public class ExecutionService {
         ExecutionTarget target = targets.find(targetKey).filter(t -> !t.isEngine())
                 .orElseThrow(() -> new RequestValidationException("target",
                         "'" + targetKey + "' is not an execution target a task can be handed off to"));
+        // PHASE 36 (ADR-042): what the readiness check blocks stops here, before anything is written or opened.
+        readiness.requireReady(readiness.check(taskId, target.key(), null, false));
 
         // Where: the project's folder -- prepared if it does not exist yet -- or an inbox folder.
         Path folder;
@@ -148,25 +167,39 @@ public class ExecutionService {
             written.add(taskDocument);
         }
         if (project == null) {
-            for (String governance : List.of("AGENTS.md", "CLAUDE.md")) {
+            for (String governance : List.of("AGENTS.md", "CLAUDE.md", "GEMINI.md")) {
                 writeIfOurs(folder, governance, HandoffPackager.inboxGovernance(packagePath), written);
             }
+        } else {
+            // PHASE 34: a folder the operator brought has no governance until now -- every tool's file,
+            // where it is missing, so that Claude Code (CLI or app), Codex, Antigravity... each find theirs.
+            workspace.ensureGovernance(project.getId()).stream()
+                    .filter(entry -> entry.outcome() == ProjectWorkspaceService.Outcome.CREATED)
+                    .forEach(entry -> written.add(entry.path()));
+            // PHASE 36: a project begun earlier follows the way tasks are delivered now, where the text is still ours.
+            written.addAll(workspace.upgradeGenerated(project.getId()));
         }
         if (target.contextFile() != null && !List.of("AGENTS.md", "CLAUDE.md").contains(target.contextFile())) {
             writeIfOurs(folder, target.contextFile(), HandoffPackager.targetRules(target, packagePath), written);
         }
 
-        List<com.aicompany.backend.harness.model.HarnessResource> equipped = harness.of(agent.getId()).resources();
-        java.util.Map<String, String> skillFiles = new java.util.LinkedHashMap<>();
-        for (var r : equipped) {
-            if (SkillLibrary.fileBacked(r.getKind()) && library.body(r).isPresent()) {
-                skillFiles.put(r.getKey(), library.root().resolve(SkillLibrary.relativePath(r.getKind(), r.getKey())).toString());
-            }
-        }
-        String mcpNote = configureMcp(target, folder, equipped, written);
-        HandoffPackager.Package pkg = HandoffPackager.build(task, project, agent, equipped,
-                binding.describe(agent), target, folder, taskDocument,
-                workspace.readIn(folder, taskDocument).orElse(null), packagePath, skillFiles, mcpNote);
+        HarnessService.AgentHarness own = harness.of(agent.getId());
+        List<com.aicompany.backend.harness.model.HarnessResource> equipped = own.resources();
+        // PHASE 34: what the project adopted reaches every agent working on it, after the agent's own.
+        List<com.aicompany.backend.harness.model.HarnessResource> adopted = adoptedBeyond(project, equipped);
+        List<com.aicompany.backend.harness.model.HarnessResource> all = new ArrayList<>(equipped);
+        all.addAll(adopted);
+        String taskText = task.getTitle() + "\n" + (task.getDescription() == null ? "" : task.getDescription());
+        java.util.Map<String, HandoffPackager.LibraryUse> uses = libraryUses(target, all, taskText);
+        String mcpNote = configureMcp(target, folder, all, written);
+        Agent parent = agent.getParentId() == null ? null : agents.findById(agent.getParentId()).orElse(null);
+        // PHASE 36: the agent's model as it stands on the tool the task goes to, not on the agent's own target.
+        com.aicompany.backend.hitl.LearningMode mode = learning != null ? learning
+                : com.aicompany.backend.hitl.LearningMode.defaultFor(project == null
+                ? com.aicompany.backend.project.model.AutonomyLevel.GUIDED : project.getAutonomyLevel());
+        HandoffPackager.Package pkg = HandoffPackager.build(task, project, agent, parent, equipped, adopted, own.software(),
+                binding.describe(agent.getModel(), target.key(), binding.availability()), target, folder, taskDocument,
+                workspace.readIn(folder, taskDocument).orElse(null), packagePath, uses, mcpNote, mode);
         workspace.writeIn(folder, packagePath, pkg.document());
         written.add(packagePath);
 
@@ -178,16 +211,29 @@ public class ExecutionService {
         String command = null;
         String openUrl = null;
         Integer followPort = null;
+        // PHASE 36 (ADR-042): with the launcher off the delivery is prepared whole -- package, governance, prompt,
+        // the command it would run -- and the tool is not opened; the operator opens it. Before, the handoff
+        // failed with 503 after the package was written.
+        String notOpened = target.delivery() == ExecutionTargetCatalog.Delivery.MANUAL
+                || target.delivery() == ExecutionTargetCatalog.Delivery.WEB_PASTE ? null
+                : software.launcherUnavailable().orElse(null);
+        boolean open = notOpened == null;
         switch (target.delivery()) {
             case CLI_PROMPT -> {
                 Software cli = softwareOf(target);
                 // PHASE 32 (TD-49): OpenCode's TUI serves its API on a port chosen here, to follow the session.
-                followPort = "opencode".equals(cliCommand(cli)) ? OpenCodeSessions.freePort() : null;
-                command = String.join(" ", software.launchIn(cli.getKey(), folder,
-                        cliArguments(cli, pkg.compactPrompt(), followPort)).command());
+                followPort = open && "opencode".equals(cliCommand(cli)) ? OpenCodeSessions.freePort() : null;
+                List<String> arguments = cliArguments(cli, pkg.compactPrompt(), followPort, openClawSession(agent, task));
+                command = String.join(" ", (open ? software.launchIn(cli.getKey(), folder, arguments)
+                        : software.planIn(cli.getKey(), folder, arguments)).command());
             }
-            case IDE_FOLDER, APP_PASTE -> command = String.join(" ",
-                    software.launchIn(softwareOf(target).getKey(), folder, List.of()).command());
+            case IDE_FOLDER, APP_PASTE -> command = String.join(" ", (open
+                    ? software.launchIn(softwareOf(target).getKey(), folder, List.of())
+                    : software.planIn(softwareOf(target).getKey(), folder, List.of())).command());
+            // PHASE 34: the app opens on the folder with the prompt in its composer, as a CLI gets it.
+            case APP_LINK -> command = String.join(" ", (open
+                    ? software.launchLink(softwareOf(target).getKey(), target.link(), folder, pkg.compactPrompt())
+                    : software.planLink(softwareOf(target).getKey(), target.link(), folder, pkg.compactPrompt())).command());
             case WEB_PASTE -> {
                 openUrl = softwareOf(target).getUrl();
                 command = openUrl;
@@ -198,11 +244,16 @@ public class ExecutionService {
         }
         String recorded = project != null ? packagePath : folder.resolve(packagePath).toString();
         TaskHandoff handoff = handoffs.save(new TaskHandoff(taskId, target.key(), recorded, pkg.compactPrompt(),
-                command, requestedBy).followedOn(followPort));
+                command, requestedBy).followedOn(followPort).measured(HandoffPackager.chars(pkg.document())).teaching(mode));
+        // PHASE 35 (ADR-041): the size of each file the package asks the agent to read, as it is now.
+        reads.record(handoff.getId(), measureReads(HandoffPackager.reads(task, project, taskDocument, all, uses),
+                folder, all, uses));
         tasks.saveAndFlush(task);
+        // PHASE 36: only a CLI gets the prompt as its argument for sure. Claude Desktop's link fills the composer
+        // when the app takes it, and the prompt is in the clipboard as well, for when it does not.
+        boolean promptArrives = open && target.delivery() == ExecutionTargetCatalog.Delivery.CLI_PROMPT;
         return new HandoffResult(handoff, task, pkg.compactPrompt(), pkg.fullPrompt(), target.delivery().name(),
-                folder.toString(), openUrl, List.copyOf(written),
-                target.delivery() != ExecutionTargetCatalog.Delivery.CLI_PROMPT);
+                folder.toString(), openUrl, List.copyOf(written), !promptArrives, notOpened);
     }
 
     /**
@@ -232,6 +283,70 @@ public class ExecutionService {
                             : " (la voce non dice come avviarli con un solo comando).");
         }
         return note.toString();
+    }
+
+    /**
+     * PHASE 35 (ADR-041): each file the package names, with its characters -- a library
+     * file read whole from the library, any other from the working folder; null when it
+     * is not there. A measure never fails a handoff: a file that cannot be read is null.
+     */
+    private List<HandoffReads.Row> measureReads(List<HandoffPackager.Read> asked, Path folder,
+                                                List<com.aicompany.backend.harness.model.HarnessResource> resources,
+                                                java.util.Map<String, HandoffPackager.LibraryUse> uses) {
+        java.util.Map<String, com.aicompany.backend.harness.model.HarnessResource> libraryFiles = new java.util.HashMap<>();
+        resources.stream().filter(r -> uses.containsKey(r.getKey()))
+                .forEach(r -> libraryFiles.put(uses.get(r.getKey()).libraryPath(), r));
+        List<HandoffReads.Row> rows = new ArrayList<>();
+        for (HandoffPackager.Read read : asked) {
+            boolean library = read.kind() == HandoffPackager.ReadKind.SKILL || read.kind() == HandoffPackager.ReadKind.KNOWLEDGE;
+            Integer chars;
+            try {
+                chars = (library ? this.library.fileText(libraryFiles.get(read.path())) : workspace.readIn(folder, read.path()))
+                        .map(HandoffPackager::chars).orElse(null);
+            } catch (RuntimeException unreadable) {
+                chars = null;
+            }
+            rows.add(new HandoffReads.Row(read.kind().name(), read.path(), read.required(), chars));
+        }
+        return rows;
+    }
+
+    /**
+     * How the package gives each library entry that has a file. A tool that loads skills
+     * by itself (ADR-041 §8) has each skill checked through the Knowledge Hub -- where its
+     * copy is, and how it stands -- and the knowledge given by path; any other tool reads
+     * every file, as before.
+     */
+    private java.util.Map<String, HandoffPackager.LibraryUse> libraryUses(
+            ExecutionTarget target, List<com.aicompany.backend.harness.model.HarnessResource> resources, String taskText) {
+        // PHASE 35 (ADR-041 §8): a tool that loads skills by itself is asked to read only the pertinent knowledge;
+        // PHASE 36: the rest is named, to read if the task needs it -- never dropped.
+        boolean loadsSkills = hub.loadsSkills(target.key());
+        java.util.Map<String, HandoffPackager.LibraryUse> uses = new java.util.LinkedHashMap<>();
+        for (var r : resources) {
+            Optional<SkillLibrary.FileCheck> check = library.check(r);
+            if (check.isEmpty()) {
+                continue;
+            }
+            boolean skill = r.getKind() == com.aicompany.backend.harness.model.HarnessResource.Kind.SKILL;
+            SkillHubService.ToolCopy copy = skill && check.get().status() == SkillLibrary.FileCheck.Status.OK
+                    ? hub.copyForTarget(r.getKey(), target.key()).orElse(null) : null;
+            boolean pertinent = skill || !loadsSkills || Pertinence.score(taskText, r) >= Pertinence.THRESHOLD;
+            uses.put(r.getKey(), new HandoffPackager.LibraryUse(check.get().path(), copy, pertinent, check.get().status(),
+                    check.get().detail()));
+        }
+        return uses;
+    }
+
+    /** PHASE 34: the project's adopted resources the agent does not already carry, in the project's order. */
+    private List<com.aicompany.backend.harness.model.HarnessResource> adoptedBeyond(
+            Project project, List<com.aicompany.backend.harness.model.HarnessResource> equipped) {
+        if (project == null) {
+            return List.of();
+        }
+        java.util.Set<String> carried = new java.util.HashSet<>();
+        equipped.forEach(r -> carried.add(r.getKey()));
+        return harness.ofProject(project.getId()).stream().filter(r -> !carried.contains(r.getKey())).toList();
     }
 
     /** Writes a generated file, unless the operator wrote their own there. */
@@ -288,12 +403,27 @@ public class ExecutionService {
     // --- helpers -------------------------------------------------------------------
 
     /** How each CLI takes an initial prompt. The prompt is the control plane's own text (ADR-019 I3). */
-    static List<String> cliArguments(Software target, String prompt, @org.jspecify.annotations.Nullable Integer followPort) {
+    static List<String> cliArguments(Software target, String prompt, @org.jspecify.annotations.Nullable Integer followPort,
+                                     String openClawSession) {
         return switch (cliCommand(target)) {
             case "opencode" -> followPort == null ? List.of("--prompt", prompt)
                     : List.of("--port", String.valueOf(followPort), "--prompt", prompt);
+            // PHASE 37 (ADR-043): `openclaw tui` on a session of the task's own, with the prompt sent on connecting.
+            case "openclaw" -> List.of("--session", openClawSession, "--message", prompt);
             default -> List.of(prompt);
         };
+    }
+
+    /**
+     * PHASE 37 (ADR-043): the OpenClaw session a task is worked in -- one per task, so that
+     * handing it off again continues the same conversation. {@code agent:<id>:<key>} when
+     * the agent stands in OpenClaw (published there, or brought in from there); a bare key,
+     * which OpenClaw gives to its default agent, when it does not.
+     */
+    private String openClawSession(Agent agent, Task task) {
+        String key = "aicos-task-" + task.getId();
+        return publications.find(agent.getId(), ExecutionTargetCatalog.OPENCLAW)
+                .map(p -> "agent:" + p.externalId() + ":" + key).orElse(key);
     }
 
     private static String cliCommand(Software target) {

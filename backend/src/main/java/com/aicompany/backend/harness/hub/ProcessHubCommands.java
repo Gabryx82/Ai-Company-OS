@@ -19,9 +19,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
- * Runs {@code claude} and {@code codex} for real: found in their documented
- * install places or on the PATH (or where {@code aicos.hub.claude-cli} and
- * {@code aicos.hub.codex-cli} say), started with an argument list -- a
+ * Runs {@code claude}, {@code codex} and {@code openclaw} for real: found in their
+ * documented install places or on the PATH (or where {@code aicos.hub.claude-cli},
+ * {@code aicos.hub.codex-cli} and {@code aicos.sync.openclaw.cli} say), started with an argument list -- a
  * {@code .cmd} wrapper through {@code cmd /c} -- with stdin closed, a timeout,
  * and at most {@value #MAX_OUTPUT} bytes of output kept.
  */
@@ -34,11 +34,14 @@ class ProcessHubCommands implements HubCommands {
     private final Path localAppData;
     private final String claudeCli;
     private final String codexCli;
+    private final String openClawCli;
 
     ProcessHubCommands(@Value("${aicos.hub.home:${user.home}}") String home,
                        @Value("${aicos.hub.local-app-data:}") String localAppData,
                        @Value("${aicos.hub.claude-cli:}") String claudeCli,
-                       @Value("${aicos.hub.codex-cli:}") String codexCli) {
+                       @Value("${aicos.hub.codex-cli:}") String codexCli,
+                       @Value("${aicos.sync.openclaw.cli:}") String openClawCli) {
+        this.openClawCli = openClawCli;
         this.home = Path.of(home).toAbsolutePath().normalize();
         this.localAppData = localAppData == null || localAppData.isBlank()
                 ? Optional.ofNullable(System.getenv("LOCALAPPDATA")).map(Path::of)
@@ -50,7 +53,11 @@ class ProcessHubCommands implements HubCommands {
 
     @Override
     public Optional<Path> executable(Tool tool) {
-        String configured = tool == Tool.CLAUDE ? claudeCli : codexCli;
+        String configured = switch (tool) {
+            case CLAUDE -> claudeCli;
+            case CODEX -> codexCli;
+            case OPENCLAW -> openClawCli;
+        };
         if (configured != null && !configured.isBlank()) {
             Path path = Path.of(configured);
             return Files.isRegularFile(path) ? Optional.of(path) : Optional.empty();
@@ -59,7 +66,7 @@ class ProcessHubCommands implements HubCommands {
         if (tool == Tool.CLAUDE) {
             candidates.add(home.resolve(".local").resolve("bin").resolve("claude.exe"));
             candidates.add(home.resolve(".local").resolve("bin").resolve("claude"));
-        } else {
+        } else if (tool == Tool.CODEX) {
             // The Codex app keeps its CLI in a versioned folder: the newest one.
             Path bin = localAppData.resolve("OpenAI").resolve("Codex").resolve("bin");
             if (Files.isDirectory(bin, LinkOption.NOFOLLOW_LINKS)) {
@@ -71,7 +78,8 @@ class ProcessHubCommands implements HubCommands {
                 }
             }
         }
-        String name = tool == Tool.CLAUDE ? "claude" : "codex";
+        // OpenClaw is an npm package: its command is on the PATH, as a .cmd on Windows.
+        String name = tool.name().toLowerCase(Locale.ROOT);
         for (String dir : Optional.ofNullable(System.getenv("PATH")).orElse("").split(java.io.File.pathSeparator)) {
             if (dir.isBlank()) {
                 continue;
@@ -90,8 +98,11 @@ class ProcessHubCommands implements HubCommands {
     @Override
     public Result run(Tool tool, List<String> arguments, Duration timeout) {
         Path executable = executable(tool).orElseThrow(() -> HubProblemException.readOnly(
-                (tool == Tool.CLAUDE ? "Claude Code (la CLI «claude»)" : "Codex (la CLI «codex»)")
-                        + " non è installato su questo computer"));
+                switch (tool) {
+                    case CLAUDE -> "Claude Code (la CLI «claude»)";
+                    case CODEX -> "Codex (la CLI «codex»)";
+                    case OPENCLAW -> "OpenClaw (la CLI «openclaw»)";
+                } + " non è installato su questo computer"));
         List<String> command = new ArrayList<>();
         String file = executable.getFileName().toString().toLowerCase(Locale.ROOT);
         boolean viaShell = file.endsWith(".cmd") || file.endsWith(".bat");

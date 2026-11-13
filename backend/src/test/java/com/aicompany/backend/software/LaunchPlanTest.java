@@ -280,4 +280,80 @@ class LaunchPlanTest {
         assertThatThrownBy(() -> LaunchPlan.forFile(disabled, INSTALLED_EXE, project, file, host))
                 .hasMessageContaining("disabled");
     }
+
+    // --- PHASE 34: an app opened through its own link ----------------------------
+
+    private static final Detection STORE_APP = Detection.of(Availability.INSTALLED, "Start menu: Claude_pzs8sxrjxfjjc!Claude");
+    private static final String PROMPT = "Leggi .aicos/handoffs/TASK-008-claude-desktop.md ed esegui la task che descrive.";
+
+    private static Software claudeDesktop() {
+        return desktop("Claude_pzs8sxrjxfjjc!Claude", null, false);
+    }
+
+    /** The query of a link as its pairs, in order and decoded -- a second "folder" would show as a third pair. */
+    private static List<Map.Entry<String, String>> query(String link) {
+        return java.util.Arrays.stream(link.substring(link.indexOf('?') + 1).split("&"))
+                .map(pair -> pair.split("=", 2))
+                .map(kv -> Map.entry(kv[0], java.net.URLDecoder.decode(kv[1], java.nio.charset.StandardCharsets.UTF_8)))
+                .toList();
+    }
+
+    @Test
+    void anAppLinkOpensThroughExplorerOnTheFolderWithThePrompt() throws IOException {
+        Path spaced = Files.createDirectories(root.resolve("Progetti").resolve("Il mio progetto"));
+
+        LaunchPlan plan = LaunchPlan.forLink(claudeDesktop(), STORE_APP, "claude://code/new", spaced, PROMPT, host);
+
+        assertThat(plan.command()).hasSize(2);
+        assertThat(plan.command().getFirst()).isEqualTo("C:\\Windows\\explorer.exe");
+        String link = plan.command().get(1);
+        assertThat(link).startsWith("claude://code/new?folder=");
+        assertThat(query(link)).containsExactly(Map.entry("folder", spaced.toAbsolutePath().normalize().toString()),
+                Map.entry("q", PROMPT));
+        assertThat(plan.workingDirectory()).isEqualTo(spaced.toAbsolutePath().normalize());
+        assertThat(plan.folderOpened()).isTrue();
+    }
+
+    @Test
+    void thePromptStaysOneValueAndTheLinkHasNothingToParse() {
+        // Inert on purpose: nothing here would do anything even if a shell ever read it.
+        String hostile = "x&folder=C:\\Temp&q=/x\" ; &rem >NUL";
+
+        String link = LaunchPlan.forLink(claudeDesktop(), STORE_APP, "claude://code/new", project, hostile, host)
+                .command().get(1);
+
+        assertThat(query(link)).hasSize(2).last().isEqualTo(Map.entry("q", hostile));
+        assertThat(link).matches("[A-Za-z0-9:/._*%?=&-]+").doesNotContain(" ", "\"", ";", "+", ">");
+    }
+
+    @Test
+    void onlyAnAppsOwnSchemeAndRouteOpenNeverTheWebAFileOrTheShell() {
+        for (String link : List.of("https://claude.ai/new", "http://localhost/x", "file:///C:/Windows/notepad.exe",
+                "ms-settings://privacy", "shell:AppsFolder", "claude://code/new?folder=C:\\", "claude://code/new#x",
+                "claude:code/new", "")) {
+            assertThatThrownBy(() -> LaunchPlan.forLink(claudeDesktop(), STORE_APP, link, project, PROMPT, host))
+                    .as(link).isInstanceOf(SoftwareNotLaunchableException.class);
+        }
+        assertThatThrownBy(() -> LaunchPlan.forLink(claudeDesktop(), STORE_APP, null, project, PROMPT, host))
+                .isInstanceOf(SoftwareNotLaunchableException.class);
+    }
+
+    @Test
+    void aLinkNeedsAnInstalledEnabledDesktopAppAFolderAndAPromptItKeeps() {
+        Software cli = entry(LaunchKind.CLI, null, null, false, "claude", null, List.of(), null, true);
+        Software disabled = entry(LaunchKind.DESKTOP, "Claude!App", null, false, null, null, List.of(), null, false);
+
+        assertThatThrownBy(() -> LaunchPlan.forLink(cli, STORE_APP, "claude://code/new", project, PROMPT, host))
+                .hasMessageContaining("not a desktop app");
+        assertThatThrownBy(() -> LaunchPlan.forLink(disabled, STORE_APP, "claude://code/new", project, PROMPT, host))
+                .hasMessageContaining("disabled");
+        assertThatThrownBy(() -> LaunchPlan.forLink(claudeDesktop(), Detection.of(Availability.NOT_INSTALLED, "not found"),
+                "claude://code/new", project, PROMPT, host)).hasMessageContaining("not installed");
+        assertThatThrownBy(() -> LaunchPlan.forLink(claudeDesktop(), STORE_APP, "claude://code/new",
+                root.resolve("missing"), PROMPT, host)).hasMessageContaining("does not exist");
+        assertThatThrownBy(() -> LaunchPlan.forLink(claudeDesktop(), STORE_APP, "claude://code/new", project, " ", host))
+                .hasMessageContaining("characters");
+        assertThatThrownBy(() -> LaunchPlan.forLink(claudeDesktop(), STORE_APP, "claude://code/new", project,
+                "x".repeat(LaunchPlan.MAX_LINK_PROMPT + 1), host)).hasMessageContaining("characters");
+    }
 }

@@ -41,12 +41,18 @@ import java.util.concurrent.TimeUnit;
  *
  * Observations are cached for {@link #TTL}: detection runs on every catalog
  * read, and PowerShell takes about a second to start.
+ *
+ * <p>ADR-046: a catalog read asks its services together ({@link #prepare}), so it
+ * takes the time of the slowest answer and not their sum; the Start menu's list is
+ * kept for {@link #START_APPS_TTL} and, once known, renewed in the background --
+ * applications are rarely installed, and a page should not wait for PowerShell.
  */
 public class HostSoftwareDetector implements SoftwareDetector {
 
     private static final Logger log = LoggerFactory.getLogger(HostSoftwareDetector.class);
 
     static final Duration TTL = Duration.ofSeconds(60);
+    static final Duration START_APPS_TTL = Duration.ofMinutes(10);
 
     private final Map<String, String> environment;
     private final boolean windows;
@@ -59,10 +65,22 @@ public class HostSoftwareDetector implements SoftwareDetector {
 
     private volatile Set<String> startApps;
     private volatile Instant startAppsAt = Instant.MIN;
+    private final java.util.concurrent.atomic.AtomicBoolean startAppsLoading = new java.util.concurrent.atomic.AtomicBoolean();
+    /** {@link #refresh()} asked to look again: the next catalog read loads the Start menu alongside its probes. */
+    private volatile boolean startAppsAsked;
     private final Map<String, Probe> probes = new ConcurrentHashMap<>();
 
     private record Probe(boolean up, Instant at) {
     }
+
+    /**
+     * ADR-046: where an executable or a command is, kept like a probe. Looked for at every catalog
+     * read, a command cost a disk check for every folder of the PATH and every extension.
+     */
+    private record Lookup(Optional<Path> path, Instant at) {
+    }
+
+    private final Map<String, Lookup> lookups = new ConcurrentHashMap<>();
 
     public HostSoftwareDetector(Map<String, String> environment, boolean windows, Clock clock) {
         this.environment = Map.copyOf(environment);
@@ -86,8 +104,60 @@ public class HostSoftwareDetector implements SoftwareDetector {
 
     @Override
     public void refresh() {
+        startAppsAsked = true;
         startAppsAt = Instant.MIN;
         probes.clear();
+        lookups.clear();
+    }
+
+    @Override
+    public void forgetServices() {
+        probes.clear();
+    }
+
+    private Optional<Path> located(String key, java.util.function.Supplier<Optional<Path>> find) {
+        Instant now = clock.instant();
+        Lookup cached = lookups.get(key);
+        if (cached != null && cached.at().plus(TTL).isAfter(now)) {
+            return cached.path();
+        }
+        Optional<Path> found = find.get();
+        lookups.put(key, new Lookup(found, now));
+        return found;
+    }
+
+    /**
+     * Asks every local service whose answer is no longer kept, all at once, and loads the
+     * Start menu's list alongside when it was never loaded: then {@link #detect} finds them kept.
+     */
+    @Override
+    public void prepare(java.util.Collection<Software> all) {
+        Instant now = clock.instant();
+        Set<String> urls = new java.util.LinkedHashSet<>();
+        boolean desktop = false;
+        for (Software software : all) {
+            if (software.getIncompatibleReason() != null) {
+                continue;
+            }
+            if (software.getLaunchKind() == LaunchKind.LOCAL_SERVICE) {
+                String url = probeUrl(software);
+                Probe cached = probes.get(url);
+                if (cached == null || !cached.at().plus(TTL).isAfter(now)) {
+                    urls.add(url);
+                }
+            }
+            desktop |= software.getAppId() != null;
+        }
+        boolean loadStartMenu = desktop && windows && (startApps == null || startAppsAsked);
+        if (urls.isEmpty() && !loadStartMenu) {
+            return;
+        }
+        try (var together = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            urls.forEach(url -> together.submit(() -> probe(url)));
+            if (loadStartMenu) {
+                together.submit(this::reloadStartApps);
+            }
+        }
     }
 
     private Availability notFound() {
@@ -98,8 +168,8 @@ public class HostSoftwareDetector implements SoftwareDetector {
         if (software.getExecutable() != null) {
             // A bare command ("docker") is looked up on the PATH, wherever it was installed.
             String template = software.getExecutable().strip();
-            Optional<Path> executable = isBareCommand(template) ? onPath(template)
-                    : PathTemplate.resolveFile(template, environment);
+            Optional<Path> executable = isBareCommand(template) ? located("path:" + template, () -> onPath(template))
+                    : located("file:" + template, () -> PathTemplate.resolveFile(template, environment));
             if (executable.isPresent()) {
                 return Optional.of(new Detection(Availability.INSTALLED, null, executable.get()));
             }
@@ -112,13 +182,17 @@ public class HostSoftwareDetector implements SoftwareDetector {
 
     private Detection detectCli(Software software) {
         String command = software.getCliCommand().strip().split("\\s+")[0];
-        return onPath(command)
+        return located("path:" + command, () -> onPath(command))
                 .map(path -> new Detection(Availability.INSTALLED, null, path))
                 .orElseGet(() -> Detection.of(notFound(), "'" + command + "' is not on the PATH"));
     }
 
+    private static String probeUrl(Software software) {
+        return software.getHealthUrl() != null ? software.getHealthUrl() : software.getUrl();
+    }
+
     private Detection detectService(Software software) {
-        String probeUrl = software.getHealthUrl() != null ? software.getHealthUrl() : software.getUrl();
+        String probeUrl = probeUrl(software);
         boolean up = probe(probeUrl);
         Optional<Detection> installed = detectInstalled(software);
         if (up) {
@@ -198,18 +272,35 @@ public class HostSoftwareDetector implements SoftwareDetector {
         }
         Instant now = clock.instant();
         Set<String> cached = startApps;
-        if (cached != null && startAppsAt.plus(TTL).isAfter(now)) {
+        if (cached != null) {
+            // Known: answered at once; an old list is renewed in the background for the next look.
+            if (!startAppsAt.plus(START_APPS_TTL).isAfter(now) && startAppsLoading.compareAndSet(false, true)) {
+                Thread.ofVirtual().name("aicos-start-apps").start(() -> {
+                    try {
+                        Set<String> loaded = loadStartApps();
+                        startApps = loaded;
+                        startAppsAt = clock.instant();
+                    } finally {
+                        startAppsLoading.set(false);
+                    }
+                });
+            }
             return cached;
         }
         synchronized (this) {
-            if (startApps != null && startAppsAt.plus(TTL).isAfter(clock.instant())) {
+            if (startApps != null) {
                 return startApps;
             }
-            Set<String> loaded = loadStartApps();
-            startApps = loaded;
-            startAppsAt = clock.instant();
-            return loaded;
+            return reloadStartApps();
         }
+    }
+
+    private synchronized Set<String> reloadStartApps() {
+        startAppsAsked = false;
+        Set<String> loaded = loadStartApps();
+        startApps = loaded;
+        startAppsAt = clock.instant();
+        return loaded;
     }
 
     private Set<String> loadStartApps() {

@@ -35,13 +35,20 @@ public final class LlmCatalogDtos {
                                 @Nullable String parameters, ModelLifecycle lifecycle, @Nullable String replacedBy, @Nullable String notes,
                                 @Nullable Boolean engineAvailable, @Nullable String engineDetail, long version,
                                 @Nullable BigDecimal inputPricePerMtok, @Nullable BigDecimal outputPricePerMtok,
-                                List<ModelRole> alsoServes) {
+                                List<ModelRole> alsoServes,
+                                /** PHASE 35 (ADR-041 §11): the window asked of Ollama. */
+                                @Nullable Integer numCtx,
+                                /** PHASE 35: how long Ollama keeps the model loaded after an answer. */
+                                @Nullable String keepAlive,
+                                /** PHASE 35: the quantization recommended for this machine. */
+                                @Nullable String quantization) {
         public static ModelResponse from(LlmCatalogService.ModelView view) {
             LlmModel m = view.model();
             return new ModelResponse(m.getKey(), m.getProviderKey(), m.getDisplayName(), m.getRole(),
                     m.getCapabilities(), m.getContextWindow(), m.getSizeGb(), m.getParameters(), m.getLifecycle(),
                     m.getReplacedBy(), m.getNotes(), view.engineAvailable(), view.engineDetail(), m.getVersion(),
-                    m.getInputPricePerMtok(), m.getOutputPricePerMtok(), m.getAlsoServes());
+                    m.getInputPricePerMtok(), m.getOutputPricePerMtok(), m.getAlsoServes(), m.getNumCtx(),
+                    m.getKeepAlive(), m.getQuantization());
         }
     }
 
@@ -63,6 +70,15 @@ public final class LlmCatalogDtos {
     public record ModelClassificationRequest(@NotNull ModelRole role, @NotNull ModelLifecycle lifecycle,
                                              @Size(max = 200) String replacedBy, @Size(max = 2000) String notes,
                                              /** PHASE 32 (TD-66): the other roles it serves; absent keeps them as they are. */
-                                             List<ModelRole> alsoServes) {
+                                             List<ModelRole> alsoServes,
+                                             /** PHASE 35 (ADR-041 §11): absent keeps it as it is. */
+                                             @jakarta.validation.constraints.Min(512) @jakarta.validation.constraints.Max(1_048_576)
+                                             Integer numCtx,
+                                             @jakarta.validation.constraints.Pattern(regexp = "^(0|-1|[1-9][0-9]{0,5}[smh]?)$",
+                                                     message = "must be a duration Ollama reads: 0, -1, or a number with s, m or h")
+                                             String keepAlive,
+                                             @jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z0-9_]{1,32}$",
+                                                     message = "must be a quantization name such as Q4_K_M")
+                                             String quantization) {
     }
 }

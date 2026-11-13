@@ -148,7 +148,7 @@ public class EcosystemService {
     /** Starts one service unless it is already running; the outcome arrives in the background. */
     public ServiceView start(String key, String by) {
         lockless(key);
-        software.refreshDetection();
+        software.refreshServices();
         SoftwareService.Detected detected = software.findByKey(key);
         if (detected.detection().availability() == Availability.RUNNING) {
             record(key, Status.ALREADY_RUNNING, "Già attivo su " + detected.software().getUrl() + ": nessun nuovo avvio.");
@@ -180,7 +180,8 @@ public class EcosystemService {
         try {
             while (System.currentTimeMillis() < deadline) {
                 Thread.sleep(pollMillis);
-                software.refreshDetection();
+                // Only the services: the Start menu read again every poll made every page wait for PowerShell.
+                software.refreshServices();
                 if (software.findByKey(key).detection().availability() == Availability.RUNNING) {
                     record(key, Status.RUNNING, "Attivo e raggiungibile.");
                     LOG.info("Ecosystem service '{}' is up", key);

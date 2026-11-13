@@ -185,6 +185,12 @@ class ApiProblemCoverageTest {
                         // PHASE 32 (TD-53): the browser session in an HttpOnly cookie.
                         "csrf-rejected", "not-a-browser-session",
                         "binding-invalid", "agent-works-elsewhere", "target-not-found", "no-baseline",
+                        // PHASE 36 (ADR-042): the readiness check before a handoff or a run.
+                        "delivery-not-ready",
+                        // PHASE 37 (ADR-043): agents in the tools around AI Company OS.
+                        "sync-tool-not-found", "sync-tool-unavailable", "sync-refused", "openclaw-item-not-found",
+                        // PHASE 37 (ADR-044): lessons and review cards.
+                        "lesson-not-found",
                         "resource-not-file-backed", "skill-document-invalid", "skill-import-refused", "library-unavailable",
                         // PHASE 31 (ADR-036): the Knowledge Hub across applications and marketplaces.
                         "skill-hub-item-not-found", "skill-package-refused", "skill-hub-conflict",

@@ -297,8 +297,32 @@ public enum ApiProblem {
             "The agent works elsewhere", "This agent works through an application or a CLI: hand the task off instead"),
     TARGET_NOT_FOUND("target-not-found", HttpStatus.NOT_FOUND,
             "Execution target not found", "No execution target with that key"),
+    /** PHASE 36 (ADR-042): the readiness check of a handoff or a run found something that stops it. */
+    DELIVERY_NOT_READY("delivery-not-ready", HttpStatus.CONFLICT,
+            "The delivery is not ready", "Something the agent needs is not there: see the readiness of the task"),
     NO_BASELINE("no-baseline", HttpStatus.CONFLICT,
             "No initial configuration", "Only seed and template agents have an initial configuration to restore"),
+
+    // --- learning by doing (PHASE 37, ADR-044) -------------------------------------------
+
+    LESSON_NOT_FOUND("lesson-not-found", HttpStatus.NOT_FOUND,
+            "Lesson not found", "No such lesson, item of a lesson or review card"),
+
+    // --- agents in the tools around AI Company OS (PHASE 37, ADR-043) -------------------
+
+    SYNC_TOOL_NOT_FOUND("sync-tool-not-found", HttpStatus.NOT_FOUND,
+            "Tool not found", "No tool with that key receives agents"),
+    /** The tool is not installed, lacks something the operator provides, or does not answer. */
+    SYNC_TOOL_UNAVAILABLE("sync-tool-unavailable", HttpStatus.CONFLICT,
+            "The tool is not available", "The tool cannot be written to from here: see its status"),
+    /** The tool answered and refused what it was given. */
+    SYNC_REFUSED("sync-refused", HttpStatus.BAD_GATEWAY,
+            "The tool refused", "The tool did not accept the agent as it was given"),
+
+    // --- OpenClaw inside the console (ADR-045) ------------------------------------------
+
+    OPENCLAW_ITEM_NOT_FOUND("openclaw-item-not-found", HttpStatus.NOT_FOUND,
+            "Not found in OpenClaw", "No such OpenClaw agent, or no such message sent from this console"),
 
     // --- the file-based library (PHASE 19, ADR-026) -------------------------------------
 

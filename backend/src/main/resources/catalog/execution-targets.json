@@ -25,6 +25,18 @@
     "howItWorks": "Si apre Windows Terminal nella cartella del progetto con `claude \"<prompt>\"`. Claude Code legge CLAUDE.md e il pacchetto di handoff. Usa il tuo abbonamento Claude, nessuna API."
   },
   {
+    "key": "claude-desktop",
+    "name": "Claude Code (app desktop)",
+    "software": "claude-desktop",
+    "delivery": "APP_LINK",
+    "link": "claude://code/new",
+    "providers": [
+      "claude-subscription"
+    ],
+    "contextFile": "CLAUDE.md",
+    "howItWorks": "Si apre Claude Desktop su una nuova sessione Code nella cartella del progetto, con il prompt già scritto: conferma la cartella e invia. Claude Code legge CLAUDE.md e il pacchetto di handoff. Usa il tuo abbonamento Claude, nessuna API."
+  },
+  {
     "key": "codex",
     "name": "ChatGPT / Codex (app)",
     "software": "codex",
@@ -48,6 +60,15 @@
     ],
     "contextFile": "AGENTS.md",
     "howItWorks": "Si apre Windows Terminal nella cartella con `opencode --prompt \"<prompt>\"`. OpenCode legge AGENTS.md e usa il modello configurato in OpenCode (anche locale con Ollama)."
+  },
+  {
+    "key": "openclaw",
+    "name": "OpenClaw (agenti)",
+    "software": "openclaw",
+    "delivery": "CLI_PROMPT",
+    "providers": [],
+    "contextFile": "AGENTS.md",
+    "howItWorks": "Si apre Windows Terminal con `openclaw tui`, collegato al gateway di OpenClaw, su una sessione dedicata alla task e con il prompt già inviato. Lavora l'agente di OpenClaw che corrisponde a questo (si pubblica da Agenti → Ecosistema), altrimenti quello predefinito di OpenClaw con il ruolo scritto nel pacchetto. L'agente gira nel gateway, non nella cartella: il prompt gli indica la cartella del progetto e il pacchetto di handoff. Il modello è quello configurato in OpenClaw."
   },
   {
     "key": "antigravity-ide",

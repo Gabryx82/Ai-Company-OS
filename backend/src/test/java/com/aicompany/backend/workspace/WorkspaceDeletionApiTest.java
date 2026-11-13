@@ -182,7 +182,7 @@ class WorkspaceDeletionApiTest extends AbstractPostgresTest {
 
     @Test
     void theStructureOfTheWorkspaceIsEditedNeverDeleted() throws Exception {
-        for (String attempt : new String[]{"MASTER_PROMPT.md", "AGENTS.md", "CLAUDE.md", ".aicos/project.json",
+        for (String attempt : new String[]{"MASTER_PROMPT.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".aicos/project.json",
                 ".aicos/CONTEXT_MAP.md", "docs/../MASTER_PROMPT.md", "docs/phases", "references/README.md"}) {
             mockMvc.perform(delete("/api/projects/" + projectId + "/files").param("path", attempt))
                     .andExpect(status().isBadRequest())

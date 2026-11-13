@@ -11,9 +11,11 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -21,6 +23,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -98,6 +102,65 @@ public class ProjectFileBrowser {
                 .thenComparing(e -> e.name().toLowerCase(Locale.ROOT))
                 .thenComparing(Entry::name));
         return new Listing(isRoot(relative) ? "" : WorkspacePaths.relativeText(root, folder), entries, truncated);
+    }
+
+    /** Folders a recent-changes walk never enters: dependencies, build output, version control. */
+    static final Set<String> RECENT_SKIPPED = Set.of("node_modules", "target", "dist", "build", "out", "bin", "obj",
+            "venv", "__pycache__", "coverage", "vendor");
+    static final int MAX_RECENT = 20;
+    static final int MAX_WALKED = 20_000;
+
+    /**
+     * The files of the project folder changed most recently, newest first: what an agent at work
+     * is writing, for the console's office view. Folders of dependencies, build output and hidden
+     * folders are not entered, links are not followed, and files of credentials are left out.
+     */
+    public List<Entry> recent(Long projectId, int limit) {
+        Path root = existingRoot(projectId);
+        int wanted = Math.max(1, Math.min(limit, MAX_RECENT));
+        Comparator<Entry> newestFirst = Comparator.comparing(Entry::modifiedAt,
+                Comparator.nullsFirst(Comparator.<Instant>naturalOrder())).reversed();
+        PriorityQueue<Entry> newest = new PriorityQueue<>(newestFirst.reversed());
+        int[] walked = {0};
+        try {
+            Files.walkFileTree(root, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attributes) {
+                    if (dir.equals(root)) {
+                        return FileVisitResult.CONTINUE;
+                    }
+                    String name = dir.getFileName().toString();
+                    return name.startsWith(".") || RECENT_SKIPPED.contains(name.toLowerCase(Locale.ROOT))
+                            ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                    if (++walked[0] > MAX_WALKED) {
+                        return FileVisitResult.TERMINATE;
+                    }
+                    String name = file.getFileName().toString();
+                    if (attributes.isRegularFile() && !withheld(name)) {
+                        newest.add(new Entry(name, WorkspacePaths.relativeText(root, file), EntryKind.FILE,
+                                attributes.size(), attributes.lastModifiedTime().toInstant()));
+                        if (newest.size() > wanted) {
+                            newest.poll();
+                        }
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException e) {
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException e) {
+            throw new WorkspaceUnavailableException("The project folder could not be read");
+        }
+        List<Entry> result = new ArrayList<>(newest);
+        result.sort(newestFirst);
+        return result;
     }
 
     /** One file: its text, or why the console shows something else. */

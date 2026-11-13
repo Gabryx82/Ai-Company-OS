@@ -47,6 +47,14 @@ public class TaskHandoff {
     @Column(name = "follow_port", updatable = false)
     private Integer followPort;
 
+    /** PHASE 35 (ADR-041): the characters of the package this handoff wrote; null before the measures existed. */
+    @Column(name = "package_chars", updatable = false)
+    private Integer packageChars;
+
+    /** PHASE 37 (ADR-044): how the handoff asked the agent to work, as far as learning goes; null before V45. */
+    @Column(name = "learning_mode", length = 16, updatable = false)
+    private String learningMode;
+
     protected TaskHandoff() {
     }
 
@@ -71,6 +79,26 @@ public class TaskHandoff {
 
     public Integer getFollowPort() {
         return followPort;
+    }
+
+    public Integer getPackageChars() {
+        return packageChars;
+    }
+
+    public String getLearningMode() {
+        return learningMode;
+    }
+
+    /** Before it is saved: the lesson the handoff asked for, if any. */
+    public TaskHandoff teaching(com.aicompany.backend.hitl.LearningMode mode) {
+        this.learningMode = mode.name();
+        return this;
+    }
+
+    /** Before it is saved: the package this handoff wrote has this many characters. */
+    public TaskHandoff measured(int packageChars) {
+        this.packageChars = packageChars;
+        return this;
     }
 
     /** Before it is saved: the handoff opened OpenCode with its API on this port. */

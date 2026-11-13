@@ -184,6 +184,7 @@ public class ProjectWorkspaceService implements ProjectFolders {
             entries.add(file(workspace, "MASTER_PROMPT.md", template("MASTER_PROMPT.md", values)));
             entries.add(file(workspace, "AGENTS.md", template("AGENTS.md", values)));
             entries.add(file(workspace, "CLAUDE.md", template("CLAUDE.md", values)));
+            entries.add(file(workspace, "GEMINI.md", template("GEMINI.md", values)));
             entries.add(file(workspace, ".aicos/CONTEXT_MAP.md", template("CONTEXT_MAP.md", values)));
             entries.add(file(workspace, "references/README.md", template("REFERENCES.md", values)));
             entries.add(file(workspace, ".aicos/project.json", manifest(project)));
@@ -191,6 +192,73 @@ public class ProjectWorkspaceService implements ProjectFolders {
             throw new WorkspaceUnavailableException("The folder " + workspace + " could not be prepared: " + e.getMessage());
         }
         return entries;
+    }
+
+    /**
+     * PHASE 34: the files every agent tool reads in a project folder that already exists --
+     * {@code AGENTS.md} (Codex, OpenCode, Antigravity, Devin, Verdent), {@code CLAUDE.md}
+     * (Claude Code, in the terminal and in the desktop app), {@code GEMINI.md} (Antigravity,
+     * Gemini CLI) -- with the context map and the manifest {@code AGENTS.md} points to.
+     * Only what is missing is written (W1); unlike the scaffold, nothing else is added to a
+     * folder the operator brought: no {@code docs/}, {@code references/} or {@code MASTER_PROMPT.md}.
+     */
+    @Transactional(readOnly = true)
+    public List<ScaffoldEntry> ensureGovernance(Long projectId) {
+        Project project = projects.findById(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
+        requireWritable(project);
+        Path workspace = workspaceOf(projectId);
+        Map<String, String> values = placeholders(project);
+        List<ScaffoldEntry> entries = new ArrayList<>();
+        try {
+            entries.add(file(workspace, "AGENTS.md", template("AGENTS.md", values)));
+            entries.add(file(workspace, "CLAUDE.md", template("CLAUDE.md", values)));
+            entries.add(file(workspace, "GEMINI.md", template("GEMINI.md", values)));
+            entries.add(file(workspace, ".aicos/CONTEXT_MAP.md", template("CONTEXT_MAP.md", values)));
+            entries.add(file(workspace, ".aicos/project.json", manifest(project)));
+        } catch (IOException e) {
+            throw new WorkspaceUnavailableException("The folder " + workspace + " could not be prepared: " + e.getMessage());
+        }
+        return entries;
+    }
+
+    /**
+     * PHASE 36 (ADR-042 §5): the passages AI Company OS wrote in {@code AGENTS.md}, the
+     * context map and the task documents, where they are still verbatim, brought to how a
+     * task is delivered now ({@link GeneratedTextUpgrades}). Each file changed is first
+     * copied, as it was, under {@code .aicos/upgrades/<when>/}. Returns the files changed.
+     */
+    @Transactional(readOnly = true)
+    public List<String> upgradeGenerated(Long projectId) {
+        Project project = projects.findById(projectId).orElseThrow(() -> new ProjectNotFoundException(projectId));
+        requireWritable(project);
+        Path workspace = workspaceOf(projectId);
+        List<String> candidates = new ArrayList<>(List.of("AGENTS.md", ".aicos/CONTEXT_MAP.md"));
+        Path tasks = workspace.resolve("tasks");
+        if (Files.isDirectory(tasks, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            try (java.util.stream.Stream<Path> files = Files.list(tasks)) {
+                files.filter(p -> Files.isRegularFile(p, java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                        .map(p -> "tasks/" + p.getFileName()).filter(GeneratedTextUpgrades::isTaskDocument)
+                        .sorted().forEach(candidates::add);
+            } catch (IOException e) {
+                throw new WorkspaceUnavailableException("'tasks/' could not be listed: " + e.getMessage());
+            }
+        }
+        String stamp = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
+                .withZone(java.time.ZoneId.systemDefault()).format(java.time.Instant.now());
+        List<String> upgraded = new ArrayList<>();
+        for (String relative : candidates) {
+            Optional<String> before = readIn(workspace, relative);
+            if (before.isEmpty()) {
+                continue;
+            }
+            Optional<String> after = GeneratedTextUpgrades.upgrade(relative, before.get());
+            if (after.isPresent()) {
+                writeIn(workspace, ".aicos/upgrades/" + stamp + "/" + relative, before.get());
+                writeIn(workspace, relative, after.get());
+                upgraded.add(relative);
+            }
+        }
+        return upgraded;
     }
 
     /** Rewrites the manifest from the database: the one generated file that follows the profile. */

@@ -40,6 +40,24 @@ public class RunConfiguration {
     }
 
     /**
+     * PHASE 35 (ADR-041 §12). Runs of a local model: on their own executor, as many at a
+     * time as {@code aicos.runs.local-concurrency} (1) -- a local run waiting for its turn
+     * waits here, queued, and never holds one of the threads the other runs need.
+     */
+    @Bean(name = "localRunExecutor", destroyMethod = "shutdown")
+    ThreadPoolTaskExecutor localRunExecutor(@Value("${aicos.runs.local-concurrency:1}") int concurrency,
+                                            @Value("${aicos.runs.queue-capacity:50}") int queueCapacity) {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(Math.max(1, concurrency));
+        executor.setMaxPoolSize(Math.max(1, concurrency));
+        executor.setQueueCapacity(queueCapacity);
+        executor.setThreadNamePrefix("local-run-");
+        executor.setWaitForTasksToCompleteOnShutdown(false);
+        executor.initialize();
+        return executor;
+    }
+
+    /**
      * PHASE 10 (ADR-021). Plan generations: one at a time, because a local
      * planner model is the heaviest thing this machine runs, and a queue small
      * enough that a stuck engine is noticed rather than buried.

@@ -181,6 +181,34 @@ class HarnessApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:harness-resource-not-found"));
     }
 
+    /**
+     * PHASE 37 (ADR-043 §8): the library proposes to an agent what suits what the agent is --
+     * skills and knowledge only, never what it already carries, and nothing is attached by asking.
+     */
+    @Test
+    void theLibraryProposesToAnAgentTheSkillsThatSuitWhatItIs() throws Exception {
+        long frontend = agent("Console Builder", "Frontend developer React");
+        long painter = agent("Painter", "Illustratore di copertine");
+
+        String proposed = mockMvc.perform(get("/api/agents/" + frontend + "/resource-suggestions"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        // The skill and the documentation of React; not the framework entry of the same name, which is not a skill.
+        assertThat(proposed).contains("\"key\":\"react-typescript\"").contains("\"key\":\"react-docs\"")
+                .doesNotContain("\"key\":\"fw-react\"").doesNotContain("\"key\":\"sql-modeling\"");
+        mockMvc.perform(get("/api/agents/" + frontend + "/profile")).andExpect(jsonPath("$.resources.length()").value(0));
+
+        // What the agent carries is no longer proposed.
+        mockMvc.perform(put("/api/agents/" + frontend + "/resources/react-typescript")).andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/agents/" + frontend + "/resource-suggestions"))
+                .andExpect(jsonPath("$[?(@.key == 'react-typescript')]").isEmpty())
+                .andExpect(jsonPath("$[?(@.key == 'react-docs')]").isNotEmpty());
+
+        // An agent the library has nothing for gets nothing, not the first entries of the list.
+        mockMvc.perform(get("/api/agents/" + painter + "/resource-suggestions"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get("/api/agents/999999/resource-suggestions")).andExpect(status().isNotFound());
+    }
+
     /** PHASE 32 (TD-73, TD-09): an entry a person adds is theirs, and one recorded before as the catalog's is relabelled. */
     @Test
     void anEntryAPersonAddsIsTheirsNotTheShippedCatalogs() throws Exception {

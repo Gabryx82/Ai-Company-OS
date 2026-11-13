@@ -43,6 +43,7 @@ public class ScriptedEngineClient implements EngineClient {
         hold = null;
         entered = null;
         holdFrom = 0;
+        holdOne = false;
     }
 
     public synchronized void answer(String output) {
@@ -76,7 +77,16 @@ public class ScriptedEngineClient implements EngineClient {
         hold = new CountDownLatch(1);
         entered = new CountDownLatch(1);
         holdFrom = requests.size() + passing;
+        holdOne = false;
     }
+
+    /** PHASE 35: only the next call blocks until {@link #release()}; the calls after it answer. */
+    public synchronized void holdOnlyTheNextCall() {
+        holdCallsAfter(0);
+        holdOne = true;
+    }
+
+    private volatile boolean holdOne;
 
     public void release() {
         CountDownLatch current = hold;
@@ -144,6 +154,9 @@ public class ScriptedEngineClient implements EngineClient {
             waitFor = hold != null && requests.size() > holdFrom ? hold : null;
             if (waitFor != null && entered != null) {
                 entered.countDown();
+            }
+            if (waitFor != null && holdOne) {
+                holdFrom = Integer.MAX_VALUE; // the one call is held; the next ones answer
             }
             next = script.poll();
         }

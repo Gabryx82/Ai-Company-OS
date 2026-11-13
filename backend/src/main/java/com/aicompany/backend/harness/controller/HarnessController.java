@@ -173,6 +173,12 @@ public class HarnessController {
         return profile(id);
     }
 
+    /** PHASE 37: the skills and knowledge that suit this agent and that it does not carry yet; proposed, never attached. */
+    @GetMapping("/api/agents/{id}/resource-suggestions")
+    public List<ResourceResponse> resourceSuggestions(@PathVariable Long id) {
+        return service.suggestionsFor(id, 6).stream().map(ResourceResponse::from).toList();
+    }
+
     @PutMapping("/api/agents/{id}/resources/{key}")
     public ResponseEntity<Void> attach(@PathVariable Long id, @PathVariable String key) {
         service.attach(id, key);

@@ -31,10 +31,28 @@ public class RunRecorder {
     private final TaskRunRepository runs;
 
     private final com.aicompany.backend.cost.CostService costs;
+    private final com.aicompany.backend.task.repository.TaskRepository tasks;
 
-    public RunRecorder(TaskRunRepository runs, com.aicompany.backend.cost.CostService costs) {
+    public RunRecorder(TaskRunRepository runs, com.aicompany.backend.cost.CostService costs,
+                       com.aicompany.backend.task.repository.TaskRepository tasks) {
         this.runs = runs;
         this.costs = costs;
+        this.tasks = tasks;
+    }
+
+    /**
+     * PHASE 35: what a queued run asks for, read before it starts -- the model it names
+     * (null: none was chosen) and its task's words, for the catalog's route.
+     */
+    public record Pending(String requestedModel, String work) {
+    }
+
+    /** Empty when the run is gone or no longer queued. */
+    @Transactional(readOnly = true)
+    public Optional<Pending> pending(Long runId) {
+        return runs.findById(runId).filter(run -> run.getStatus() == RunStatus.QUEUED).flatMap(run -> tasks
+                .findById(run.getTaskId()).map(task -> new Pending(run.getRequestedModel(),
+                        task.getTitle() + " " + (task.getDescription() == null ? "" : task.getDescription()))));
     }
 
     /** What the executor needs to call the engine, captured when the run started. */
@@ -60,16 +78,24 @@ public class RunRecorder {
         runs.findByIdForUpdate(runId).ifPresent(run -> {
             boolean noAnswer = (completion.output() == null || completion.output().isBlank())
                     && "length".equals(completion.finishReason());
+            boolean answered;
             if (noAnswer) {
                 // PHASE 32 (TD-65): out of tokens before the first word of the answer.
-                run.failSpent(RunFailures.NO_ANSWER, "Il modello ha usato tutti i " + completion.outputTokens()
+                answered = run.failSpent(RunFailures.NO_ANSWER, "Il modello ha usato tutti i " + completion.outputTokens()
                                 + " token di output senza scrivere una risposta. Rilanciala con un modello che non "
                                 + "ragiona così a lungo, o con un limite di token più alto.",
                         completion.finishReason(), completion.model(), completion.inputTokens(),
                         completion.outputTokens(), completion.latencyMs());
             } else {
-                run.succeed(completion.output(), completion.finishReason(), completion.model(), completion.inputTokens(),
-                        completion.outputTokens(), completion.latencyMs());
+                answered = run.succeed(completion.output(), completion.finishReason(), completion.model(),
+                        completion.inputTokens(), completion.outputTokens(), completion.latencyMs());
+            }
+            // PHASE 35 (ADR-041): what the provider measured, as it reported it -- also on a run without an
+            // answer, never on a run already finished (a cancellation is not rewritten by a late answer).
+            EngineClient.Metrics measured = completion.metrics();
+            if (answered && measured != null) {
+                run.recordMeasures(measured.providerTotalMs(), measured.loadMs(), measured.promptEvalMs(),
+                        measured.evalMs(), measured.contextWindow());
             }
             // PHASE 24 (ADR-031): the cost at the price of this moment; unknown stays null.
             costs.costOf(run.getRequestedModel() != null ? run.getRequestedModel() : completion.model(),

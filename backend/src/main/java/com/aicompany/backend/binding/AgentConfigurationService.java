@@ -47,7 +47,9 @@ public class AgentConfigurationService {
     public record Ref(Long id, String name, String role) {
     }
 
-    public record ResourceRef(String key, String name, String kind, String description, String configuration) {
+    /** PHASE 36: an entry without a description or a configuration (a framework, a TOOL by name) says so. */
+    public record ResourceRef(String key, String name, String kind, @org.jspecify.annotations.Nullable String description,
+                              @org.jspecify.annotations.Nullable String configuration) {
     }
 
     public record BindingSoftwareRef(String key, String name) {

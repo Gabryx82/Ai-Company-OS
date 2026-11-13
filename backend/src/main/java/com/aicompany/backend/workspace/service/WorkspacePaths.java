@@ -26,7 +26,8 @@ public final class WorkspacePaths {
     // are where a handoff prepares the environment of the tool that will do the work.
     static final List<String> WRITABLE_ROOTS = List.of("docs/", "tasks/", "references/", ".aicos/", ".junie/",
             ".continue/rules/");
-    static final List<String> WRITABLE_FILES = List.of("MASTER_PROMPT.md", "AGENTS.md", "CLAUDE.md", "TASK.md");
+    // PHASE 34: GEMINI.md, the instructions file of Antigravity and Gemini CLI, beside AGENTS.md and CLAUDE.md.
+    static final List<String> WRITABLE_FILES = List.of("MASTER_PROMPT.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "TASK.md");
     static final List<String> TEXT_EXTENSIONS = List.of(".md", ".json", ".txt");
     static final List<String> IMAGE_EXTENSIONS = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif");
 

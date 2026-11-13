@@ -131,8 +131,9 @@ class OrchestratorApiTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$.software[0].reason").value("Indicato dal piano"))
                 .andExpect(jsonPath("$.context[?(@.path == 'tasks/TASK-001.md')].exists").value(hasItem(true)))
                 .andExpect(jsonPath("$.context[?(@.path == 'AGENTS.md')].exists").value(hasItem(true)))
+                // PHASE 36 (ADR-042 §5): the prompt shown leads to the task's package.
                 .andExpect(jsonPath("$.prompt").value(
-                        "Esegui TASK-001 seguendo `tasks/TASK-001.md` e la governance in `AGENTS.md`."))
+                        "Esegui TASK-001 partendo dal suo pacchetto di consegna, il più recente `.aicos/handoffs/TASK-001-*.md` (ruolo, skill, knowledge e regole); se non c'è, chiedi all'operatore di consegnare la task da AI Company OS prima di cominciare."))
                 .andExpect(jsonPath("$.targets[?(@.key == 'claude-code')].available").value(hasItem(true)))
                 .andExpect(jsonPath("$.autonomyLevel").value("GUIDED"))
                 .andExpect(jsonPath("$.blockers.length()").value(0));
@@ -173,6 +174,38 @@ class OrchestratorApiTest extends AbstractPostgresTest {
         assertThat(planPhase(0).path("status").asString()).isEqualTo("IN_PROGRESS");
         mockMvc.perform(get("/api/tasks/" + task(0) + "/handoffs"))
                 .andExpect(jsonPath("$[0].target").value("claude-code"));
+    }
+
+    /**
+     * PHASE 35 (ADR-041): the package of a planned task asks for its phase document too; when that
+     * file is not there, its size is unknown -- recorded as missing, not as an empty file.
+     */
+    @Test
+    void aFileThePackageAsksForThatIsNotThereIsMeasuredAsMissing() throws Exception {
+        approvePhase1();
+        String phaseDocument = phase1.path("documentPath").asString();
+        Files.delete(folder.resolve(phaseDocument));
+
+        long handoff = json.readTree(mockMvc.perform(post("/api/tasks/" + task(0) + "/handoffs")
+                        .header(HttpHeaders.IF_MATCH, tag(task(0)))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"target\":\"claude-code\"}"))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString())
+                .path("handoff").path("id").asLong();
+
+        JsonNode measured = null;
+        for (JsonNode h : json.readTree(mockMvc.perform(get("/api/usage/measurements")).andReturn().getResponse()
+                .getContentAsString()).path("handoffs")) {
+            if (h.path("handoffId").asLong() == handoff) {
+                measured = h;
+            }
+        }
+        assertThat(measured).isNotNull();
+        assertThat(measured.path("missingFiles").asInt()).isEqualTo(1);
+        JsonNode phase = measured.path("reads").get(2);
+        assertThat(phase.path("kind").asString()).isEqualTo("PHASE");
+        assertThat(phase.path("path").asString()).isEqualTo(phaseDocument);
+        assertThat(phase.path("chars").isNull()).isTrue();
+        assertThat(measured.path("reads").get(1).path("chars").asInt()).isPositive();
     }
 
     /**
@@ -334,6 +367,42 @@ class OrchestratorApiTest extends AbstractPostgresTest {
                 .contains("You are Backend Bot, Backend Engineer in AI Company OS.");
         assertThat(request.user()).contains("--- tasks/TASK-001.md ---").contains("# TASK-001 — Creare lo scheletro backend")
                 .contains("--- docs/phases/PHASE_1.md ---");
+    }
+
+    /**
+     * PHASE 35 (ADR-041 §10): of the task document a run carries its working sections -- objective, scope,
+     * how to implement it, contracts, files, tests, completion criteria -- and not the delivery, the notes,
+     * and above all not the outcome's history, which grows with every round of work. The phase document
+     * comes as before.
+     */
+    @Test
+    void aRunCarriesTheWorkingSectionsOfTheTaskDocumentNotItsOutcome() throws Exception {
+        approvePhase1();
+        Path document = folder.resolve("tasks/TASK-001.md");
+        assertThat(Files.readString(document)).as("the plan's placeholder names the outcome file").contains("TASK-001.esito.md");
+        Files.writeString(document, Files.readString(document)
+                .replace("## Come implementarla\n\n—", "## Come implementarla\n\nSpring Initializr, poi un test di contesto, "
+                        + "perché il resto si appoggia a una base che compila.")
+                .replaceAll("(?s)## Esito.*",
+                "## Esito\n\nSTORIA-DELL-ESITO: tre giri di lavoro, ognuno raccontato per intero.\n\n## Note\n\nNOTE-DELLA-TASK\n"));
+
+        mockMvc.perform(post("/api/tasks/" + task(0) + "/runs").header(HttpHeaders.IF_MATCH, tag(task(0)))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isAccepted());
+
+        EngineClient.Request request = awaitRequest();
+        String taskPart = request.user().substring(request.user().indexOf("--- tasks/TASK-001.md ---"),
+                request.user().indexOf("--- docs/phases/PHASE_1.md ---"));
+        assertThat(taskPart).contains("# TASK-001 — Creare lo scheletro backend").contains("## Obiettivo")
+                .contains("Progetto Spring Boot che compila").contains("## File da leggere")
+                // The plan's guidance helps a model that cannot open files: it stays, lighter -- without the why.
+                .contains("## Come implementarla\n\nSpring Initializr, poi un test di contesto.")
+                .doesNotContain("si appoggia a una base").contains("## Test richiesti").contains("contesto si avvia")
+                // A section with nothing in it ("—") is not sent.
+                .doesNotContain("## Scope\n\n—")
+                .doesNotContain("STORIA-DELL-ESITO").doesNotContain("NOTE-DELLA-TASK")
+                .doesNotContain("## Come si consegna").doesNotContain("## Software e tool necessari");
+        assertThat(request.user()).contains("--- docs/phases/PHASE_1.md ---");
     }
 
     @Test

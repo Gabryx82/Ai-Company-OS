@@ -63,16 +63,23 @@ public class LearningService {
      * {@code piecesOpen} is null when the project has no folder to look in: unknown,
      * not zero.
      */
+    /**
+     * @param lessons PHASE 37 (ADR-044): what the operator did with the project's lessons -- the
+     *                answers that had no place to be counted before (ADR-022 §5)
+     */
     public record Learning(AutonomyLevel level, int reviewedTasks, int firstPassAccepted, int changesRequested,
                            int operatorCompletions, @Nullable Integer piecesOpen, List<Piece> pieces, boolean piecesTruncated,
-                           LevelSuggestion suggestion) {
+                           LevelSuggestion suggestion, com.aicompany.backend.hitl.lesson.LessonService.LessonStats lessons) {
     }
 
     private final ProjectRepository projects;
     private final ProjectWorkspaceService workspace;
     private final JdbcTemplate jdbc;
+    private final com.aicompany.backend.hitl.lesson.LessonService lessons;
 
-    public LearningService(ProjectRepository projects, ProjectWorkspaceService workspace, JdbcTemplate jdbc) {
+    public LearningService(ProjectRepository projects, ProjectWorkspaceService workspace, JdbcTemplate jdbc,
+                           com.aicompany.backend.hitl.lesson.LessonService lessons) {
+        this.lessons = lessons;
         this.projects = projects;
         this.workspace = workspace;
         this.jdbc = jdbc;
@@ -102,7 +109,8 @@ public class LearningService {
         Integer open = scan == null ? null : scan.count;
         int accepted = (int) firstPass.stream().filter(Boolean::booleanValue).count();
         return new Learning(level, firstPass.size(), accepted, changesRequested, byHand, open,
-                scan == null ? List.of() : scan.pieces, scan != null && scan.truncated, suggest(level, firstPass, open));
+                scan == null ? List.of() : scan.pieces, scan != null && scan.truncated, suggest(level, firstPass, open),
+                lessons.statsOf(projectId));
     }
 
     /**

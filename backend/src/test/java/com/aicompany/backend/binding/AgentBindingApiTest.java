@@ -75,9 +75,11 @@ class AgentBindingApiTest extends AbstractPostgresTest {
     void theExecutionTargetsIncludeTheEngineTheCloudAppsAndTheAgenticIdes() throws Exception {
         mockMvc.perform(get("/api/execution-targets"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].key").value(hasItems("engine", "claude-code", "codex", "opencode",
+                .andExpect(jsonPath("$[*].key").value(hasItems("engine", "claude-code", "claude-desktop", "codex", "opencode",
                         "antigravity-ide", "vscode-continue", "intellij-junie", "manual")))
                 .andExpect(jsonPath("$[?(@.key == 'claude-code')].delivery").value(hasItems("CLI_PROMPT")))
+                .andExpect(jsonPath("$[?(@.key == 'claude-desktop')].delivery").value(hasItems("APP_LINK")))
+                .andExpect(jsonPath("$[?(@.key == 'claude-desktop')].link").value(hasItems("claude://code/new")))
                 .andExpect(jsonPath("$[?(@.key == 'codex')].providers[0]").value(hasItems("chatgpt-subscription")));
     }
 
@@ -96,6 +98,14 @@ class AgentBindingApiTest extends AbstractPostgresTest {
         mockMvc.perform(get("/api/execution-targets/claude-code/check").param("model", "claude-subscription:default"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valid").value(true));
+        // PHASE 34: the same subscription works through the desktop app; a local model does not.
+        mockMvc.perform(get("/api/execution-targets/claude-desktop/check").param("model", "claude-subscription:default"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.target.delivery").value("APP_LINK"));
+        mockMvc.perform(get("/api/execution-targets/claude-desktop/check").param("model", "ollama:qwen3.5:9b"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false));
         mockMvc.perform(get("/api/execution-targets/no-such-target/check"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.type").value("urn:ai-company-os:problem:target-not-found"));

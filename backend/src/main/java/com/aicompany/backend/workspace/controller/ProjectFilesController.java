@@ -80,6 +80,12 @@ public class ProjectFilesController {
                 listing.entries().stream().map(ProjectFileEntry::from).toList(), listing.truncated());
     }
 
+    /** The files changed most recently in the project folder, newest first (the office view's live code). */
+    @GetMapping("/api/projects/{id}/browse/recent")
+    public List<ProjectFileEntry> recentFiles(@PathVariable Long id, @RequestParam(defaultValue = "8") int limit) {
+        return browser.recent(id, limit).stream().map(ProjectFileEntry::from).toList();
+    }
+
     @GetMapping("/api/projects/{id}/browse/file")
     public ProjectFileView browseFile(@PathVariable Long id, @RequestParam String path) {
         ProjectFileBrowser.View v = browser.view(id, path);

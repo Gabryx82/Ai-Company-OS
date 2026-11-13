@@ -70,6 +70,18 @@ public class LlmModel {
     @Column(length = 2000)
     private String notes;
 
+    /** PHASE 35 (ADR-041 §11): the window asked of Ollama (num_ctx); null leaves the engine's default. */
+    @Column(name = "num_ctx")
+    private Integer numCtx;
+
+    /** PHASE 35: how long Ollama keeps the model loaded after an answer ("5m", "0", "-1"). */
+    @Column(name = "keep_alive", length = 8)
+    private String keepAlive;
+
+    /** PHASE 35: the quantization recommended for this machine; the model file decides, this informs. */
+    @Column(length = 32)
+    private String quantization;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -113,6 +125,26 @@ public class LlmModel {
         this.notes = notes;
         alsoServe(getAlsoServes()); // its own role is never also one of the others
     }
+
+    /**
+     * PHASE 35 (ADR-041 §11): how the model runs. A null argument keeps what is there, so a
+     * caller sets only what it was told; the database checks the forms.
+     */
+    public void tune(Integer numCtx, String keepAlive, String quantization) {
+        if (numCtx != null) {
+            this.numCtx = numCtx;
+        }
+        if (keepAlive != null) {
+            this.keepAlive = keepAlive.strip();
+        }
+        if (quantization != null) {
+            this.quantization = quantization.strip();
+        }
+    }
+
+    public Integer getNumCtx() { return numCtx; }
+    public String getKeepAlive() { return keepAlive; }
+    public String getQuantization() { return quantization; }
 
     /** PHASE 32 (TD-66): the other roles this model serves; its own is left out. */
     public void alsoServe(java.util.Collection<ModelRole> roles) {

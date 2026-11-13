@@ -30,7 +30,11 @@ import java.util.List;
 @RestController
 public class OrchestratorController {
 
-    public record HandoffRequest(@NotBlank @Size(max = 64) String target) {
+    /**
+     * @param learning PHASE 37 (ADR-044): TEACH, RECAP or NONE; absent, the project's level decides
+     */
+    public record HandoffRequest(@NotBlank @Size(max = 64) String target,
+                                 com.aicompany.backend.hitl.@Nullable LearningMode learning) {
     }
 
     public record TaskReviewRequest(@NotNull TaskReview.Verdict verdict, @Size(max = 4000) String note,
@@ -46,9 +50,10 @@ public class OrchestratorController {
         }
     }
 
+    /** {@code notOpened}: PHASE 36, why the tool was not opened (the launcher is off); null when it was. */
     public record HandoffResult(HandoffResponse handoff, TaskResponse task, String prompt, String fullPrompt,
                                 String delivery, String folder, @Nullable String openUrl, List<String> written,
-                                boolean promptToClipboard) {
+                                boolean promptToClipboard, @Nullable String notOpened) {
     }
 
     public record ReviewResponse(Long id, Long taskId, TaskReview.Verdict verdict, @Nullable String note, @Nullable Long runId,
@@ -66,8 +71,11 @@ public class OrchestratorController {
     private final OrchestrationService orchestration;
     private final ExecutionService execution;
     private final TaskOutcomes outcomes;
+    private final com.aicompany.backend.orchestrator.service.ReadinessService readiness;
 
-    public OrchestratorController(OrchestrationService orchestration, ExecutionService execution, TaskOutcomes outcomes) {
+    public OrchestratorController(OrchestrationService orchestration, ExecutionService execution, TaskOutcomes outcomes,
+                                  com.aicompany.backend.orchestrator.service.ReadinessService readiness) {
+        this.readiness = readiness;
         this.orchestration = orchestration;
         this.execution = execution;
         this.outcomes = outcomes;
@@ -89,17 +97,30 @@ public class OrchestratorController {
         return orchestration.decide(id);
     }
 
+    /**
+     * PHASE 36 (ADR-042): what the agent would find if the task went to this target now --
+     * context, skills and knowledge (and their copies in the tool), MCP, model, binding --
+     * each OK, a warning, or blocking. Without {@code target}, the agent's own. Changes nothing.
+     */
+    @GetMapping("/api/tasks/{id}/readiness")
+    public com.aicompany.backend.orchestrator.service.ReadinessService.Readiness taskReadiness(
+            @PathVariable Long id,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String target,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String model) {
+        return readiness.check(id, target, model);
+    }
+
     /** Hands the task to an external agent. Takes the task's tag: it may start the task. */
     @PostMapping("/api/tasks/{id}/handoffs")
     public ResponseEntity<HandoffResult> handoffTask(@PathVariable Long id,
                                                  @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                                  @Valid @RequestBody HandoffRequest request, Authentication caller) {
-        ExecutionService.HandoffResult result = execution.handoff(id, request.target(), caller.getName(),
+        ExecutionService.HandoffResult result = execution.handoff(id, request.target(), request.learning(), caller.getName(),
                 Precondition.fromHeader(ifMatch));
         return ResponseEntity.accepted().eTag(ETags.of(result.task().getVersion()))
                 .body(new HandoffResult(HandoffResponse.from(result.handoff()), TaskResponse.from(result.task()),
                         result.prompt(), result.fullPrompt(), result.delivery(), result.folder(), result.openUrl(),
-                        result.written(), result.promptToClipboard()));
+                        result.written(), result.promptToClipboard(), result.notOpened()));
     }
 
     /** PHASE 32 (TD-49): what the OpenCode session a handoff opened is doing, from its local API. */

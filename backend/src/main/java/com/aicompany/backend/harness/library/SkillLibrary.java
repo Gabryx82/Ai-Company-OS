@@ -113,6 +113,65 @@ public class SkillLibrary {
         }
     }
 
+    /**
+     * PHASE 36: how the file of a skill or knowledge entry stands -- the one answer the
+     * handoff package, the readiness check and the console give, so that an entry
+     * without a file, or with a file the library cannot read as its document, is a
+     * problem everyone sees instead of an instruction that vanishes.
+     *
+     * @param path   where the file is, or would be
+     * @param detail why the file is not valid; null otherwise
+     */
+    public record FileCheck(String path, Status status, @org.jspecify.annotations.Nullable String detail) {
+
+        public enum Status { OK, MISSING, INVALID }
+
+        public boolean present() {
+            return status != Status.MISSING;
+        }
+    }
+
+    /** PHASE 36: the state of an entry's file; empty for an entry that has none by its kind. */
+    @Transactional(readOnly = true)
+    public Optional<FileCheck> check(HarnessResource resource) {
+        if (!fileBacked(resource.getKind())) {
+            return Optional.empty();
+        }
+        Path path = pathOf(relativePath(resource.getKind(), resource.getKey()));
+        if (!Files.isRegularFile(path)) {
+            return Optional.of(new FileCheck(path.toString(), FileCheck.Status.MISSING, null));
+        }
+        try {
+            SkillDocument document = SkillDocument.parse(Files.readString(path, StandardCharsets.UTF_8), resource.getKey());
+            if (document.kind() != resource.getKind()) {
+                return Optional.of(new FileCheck(path.toString(), FileCheck.Status.INVALID, "il file dichiara kind "
+                        + document.kind() + ", la voce del catalogo è " + resource.getKind()));
+            }
+            return Optional.of(new FileCheck(path.toString(), FileCheck.Status.OK, null));
+        } catch (LibraryProblemException invalid) {
+            return Optional.of(new FileCheck(path.toString(), FileCheck.Status.INVALID, invalid.getMessage()));
+        } catch (IOException unreadable) {
+            return Optional.of(new FileCheck(path.toString(), FileCheck.Status.INVALID, "illeggibile: " + unreadable.getMessage()));
+        }
+    }
+
+    /**
+     * PHASE 35 (ADR-041): the whole file of an entry -- frontmatter included, as an
+     * agent that opens it reads it -- or empty when it has none. For measures only.
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> fileText(HarnessResource resource) {
+        if (!fileBacked(resource.getKind())) {
+            return Optional.empty();
+        }
+        Path path = pathOf(relativePath(resource.getKind(), resource.getKey()));
+        try {
+            return Files.isRegularFile(path) ? Optional.of(Files.readString(path, StandardCharsets.UTF_8)) : Optional.empty();
+        } catch (IOException e) {
+            return Optional.empty();
+        }
+    }
+
     /** Writes the file of a catalog entry that has none, from what the index knows. Never overwrites. */
     public HarnessResource materialize(String key) {
         HarnessResource resource = resources.findByKeyForUpdate(key).orElseThrow(() -> notFound(key));

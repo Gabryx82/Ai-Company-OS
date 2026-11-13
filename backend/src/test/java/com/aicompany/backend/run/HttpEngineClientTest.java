@@ -89,6 +89,46 @@ class HttpEngineClientTest {
         assertThat(body.get("metadata").get("run_id").asString()).isEqualTo("1");
     }
 
+    /**
+     * PHASE 35: what the provider measured comes back as it was sent; a measure the
+     * engine did not send stays unknown -- never zero, never filled in.
+     */
+    @Test
+    void theProvidersOwnMeasuresAreReadBackAndAMissingOneStaysUnknown() {
+
+        responder = reply(200, "application/json", """
+                {"output":"ok","finish_reason":"stop","model":"ollama:qwen3.5:9b","usage":{"input_tokens":1200,"output_tokens":80},
+                 "latency_ms":9950,"metrics":{"total_duration_ms":9877,"load_duration_ms":2500,
+                 "prompt_eval_duration_ms":null,"eval_duration_ms":3300,"context_window":16384}}""");
+
+        EngineClient.Completion measured = client(Duration.ofSeconds(5)).complete(request("ollama:qwen3.5:9b"));
+
+        assertThat(measured.metrics()).isEqualTo(new EngineClient.Metrics(9877L, 2500L, null, 3300L, 16384));
+
+        responder = reply(200, "application/json", """
+                {"output":"x","finish_reason":"stop","model":"echo:default","usage":{"input_tokens":1,"output_tokens":1},
+                 "metrics":null}""");
+        assertThat(client(Duration.ofSeconds(5)).complete(request(null)).metrics()).isNull();
+    }
+
+    /** PHASE 35 (ADR-041 §11): the window and the keep-alive travel only when the catalog gave them. */
+    @Test
+    void howTheModelRunsTravelsOnlyWhenTheCatalogSaysIt() {
+
+        responder = reply(200, "application/json", """
+                {"output":"x","finish_reason":"stop","model":"ollama:qwen3.5:4b","usage":{"input_tokens":1,"output_tokens":1}}""");
+
+        client(Duration.ofSeconds(5)).complete(request("ollama:qwen3.5:4b").withModelSettings(8192, "2m"));
+        JsonNode tuned = json.readTree(lastBody.get());
+        assertThat(tuned.get("context_window").asInt()).isEqualTo(8192);
+        assertThat(tuned.get("keep_alive").asString()).isEqualTo("2m");
+
+        client(Duration.ofSeconds(5)).complete(request("ollama:qwen3.5:4b"));
+        JsonNode plain = json.readTree(lastBody.get());
+        assertThat(plain.has("context_window")).isFalse();
+        assertThat(plain.has("keep_alive")).isFalse();
+    }
+
     /** PHASE 10: a plain request carries neither field; a planning request carries both, the schema as an object. */
     @Test
     void theJsonFormatAndItsSchemaTravelOnlyWhenAsked() {

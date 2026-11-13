@@ -177,6 +177,66 @@ public record LaunchPlan(List<String> command, Path workingDirectory, boolean fo
         return new LaunchPlan(List.copyOf(command), root, software.getFileArgs().contains(FOLDER), target);
     }
 
+    /** What Claude Desktop keeps of a prompt in a link (support article 14729294): about 14,000 characters. */
+    public static final int MAX_LINK_PROMPT = 14_000;
+
+    /** A custom scheme and a route, nothing else: the query is the handoff's, never the catalog's. */
+    private static final Pattern APP_LINK = Pattern.compile("^[a-z][a-z0-9+.-]{1,31}://[A-Za-z0-9._/-]+$");
+
+    /** Schemes Windows would hand to something other than the app the catalog names. */
+    private static final java.util.Set<String> NOT_AN_APP_SCHEME = java.util.Set.of(
+            "http", "https", "file", "ftp", "ms-settings", "shell", "search-ms", "javascript", "data");
+
+    /**
+     * PHASE 34: the command line that opens a desktop app through its own link -- Claude
+     * Desktop's {@code claude://code/new} -- on a project folder, with a prompt in its
+     * composer. The program is {@code explorer.exe}, which hands the link to the handler
+     * Windows registered for the scheme. The invariants, as for a CLI:
+     *
+     * <ul>
+     *   <li><b>I1</b> the scheme and the route are the target catalog's, and must be an
+     *       app's own scheme -- never the web's (I5), a file's or the shell's;</li>
+     *   <li><b>I2</b> the folder is the caller's, an existing directory;</li>
+     *   <li><b>I3</b> no shell: the link is one argument, and its two values are
+     *       percent-encoded, so it holds nothing but letters, digits, {@code %._*-} and the
+     *       {@code ?=&} that join them -- no space, quote or {@code ;} for anyone to parse.</li>
+     * </ul>
+     */
+    public static LaunchPlan forLink(Software software, Detection detection, String link, Path folder, String prompt,
+                                     HostEnvironment host) {
+        String key = software.getKey();
+        if (!software.isEnabled()) {
+            throw new SoftwareNotLaunchableException("'" + key + "' is disabled in the catalog");
+        }
+        if (software.getLaunchKind() != LaunchKind.DESKTOP) {
+            throw new SoftwareNotLaunchableException("'" + key + "' is not a desktop app: only an app opens through its link");
+        }
+        if (detection.availability() != Availability.INSTALLED && detection.availability() != Availability.RUNNING) {
+            throw new SoftwareNotLaunchableException("'" + key + "' is not installed on this machine"
+                    + (detection.detail() == null ? "" : ": " + detection.detail()));
+        }
+        if (link == null || !APP_LINK.matcher(link).matches()
+                || NOT_AN_APP_SCHEME.contains(link.substring(0, link.indexOf(':')))) {
+            throw new SoftwareNotLaunchableException("'" + link + "' is not an app link the catalog can open");
+        }
+        if (folder == null || !Files.isDirectory(folder)) {
+            throw new SoftwareNotLaunchableException("The project folder " + folder + " does not exist");
+        }
+        if (prompt == null || prompt.isBlank() || prompt.length() > MAX_LINK_PROMPT) {
+            throw new SoftwareNotLaunchableException("The prompt of a link must have between 1 and "
+                    + MAX_LINK_PROMPT + " characters");
+        }
+        Path root = folder.toAbsolutePath().normalize();
+        String url = link + "?folder=" + encode(root.toString()) + "&q=" + encode(prompt);
+        String explorer = PathTemplate.expand("%SystemRoot%\\explorer.exe", host.variables()).orElse("explorer.exe");
+        return new LaunchPlan(List.of(explorer, url), root, true, null);
+    }
+
+    /** RFC 3986 percent-encoding: a space is {@code %20}, not the form encoding's {@code +}. */
+    static String encode(String value) {
+        return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+    }
+
     /** Whether {@link #forFile} can run for this entry as detected, whatever the file. */
     public static boolean takesAFile(Software software, Detection detection) {
         return software.getLaunchKind() == LaunchKind.DESKTOP

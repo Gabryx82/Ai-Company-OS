@@ -64,7 +64,7 @@ public class ProjectFileOperations {
     static final int MAX_RECYCLE_ENTRIES = 10_000;
 
     /** ADR-035 §6: edited, or recreated by «Prepara workspace» -- never renamed or removed from here. */
-    private static final Set<String> STRUCTURE = Set.of("master_prompt.md", "agents.md", "claude.md", ".aicos",
+    private static final Set<String> STRUCTURE = Set.of("master_prompt.md", "agents.md", "claude.md", "gemini.md", ".aicos",
             ".aicos/project.json", ".aicos/plan.json", ".aicos/context_map.md");
 
     private static final Pattern FORBIDDEN_CHARACTERS = Pattern.compile("[<>:\"/\\\\|?*\\u0000-\\u001f]");

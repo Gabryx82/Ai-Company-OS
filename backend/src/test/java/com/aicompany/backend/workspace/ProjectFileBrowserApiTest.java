@@ -206,6 +206,30 @@ class ProjectFileBrowserApiTest extends AbstractPostgresTest {
                 .andExpect(status().isServiceUnavailable());
     }
 
+    @Test
+    void theRecentFilesAreTheNewestFirstWithoutDependenciesHiddenFoldersOrCredentials() throws Exception {
+        write("node_modules/lib/index.js", "module.exports = 1;\n");
+        write(".git/HEAD", "ref: refs/heads/main\n");
+        write("src/main/Player.java", "class Player {}\n");
+        java.time.Instant now = java.time.Instant.now();
+        touch("node_modules/lib/index.js", now.plusSeconds(60));
+        touch(".git/HEAD", now.plusSeconds(60));
+        touch(".env", now.plusSeconds(60));
+        touch("src/main/Player.java", now.plusSeconds(30));
+        touch("README.md", now.plusSeconds(20));
+        touch("src/main/App.java", now.plusSeconds(10));
+
+        mockMvc.perform(get("/api/projects/" + id + "/browse/recent").param("limit", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].path", contains("src/main/Player.java", "README.md", "src/main/App.java")))
+                .andExpect(jsonPath("$[0].kind").value("FILE"))
+                .andExpect(jsonPath("$[0].modifiedAt").exists());
+    }
+
+    private void touch(String relative, java.time.Instant at) throws IOException {
+        Files.setLastModifiedTime(folder.resolve(relative), java.nio.file.attribute.FileTime.from(at));
+    }
+
     private void write(String relative, String text) throws IOException {
         Path path = folder.resolve(relative);
         Files.createDirectories(path.getParent());

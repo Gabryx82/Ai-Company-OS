@@ -55,11 +55,14 @@ public class RunService {
     private final com.aicompany.backend.binding.AgentBindingService binding;
     private final com.aicompany.backend.cost.CostService costs;
     private final TaskTransitions transitions;
+    private final com.aicompany.backend.orchestrator.service.ReadinessService readiness;
 
     public RunService(TaskRunRepository runs, TaskRepository tasks, ProjectRepository projects,
                       AgentRepository agents, ApplicationEventPublisher events, RunContext context,
                       com.aicompany.backend.binding.AgentBindingService binding,
-                      com.aicompany.backend.cost.CostService costs, TaskTransitions transitions) {
+                      com.aicompany.backend.cost.CostService costs, TaskTransitions transitions,
+                      com.aicompany.backend.orchestrator.service.ReadinessService readiness) {
+        this.readiness = readiness;
         this.transitions = transitions;
         this.binding = binding;
         this.costs = costs;
@@ -115,6 +118,9 @@ public class RunService {
         if (runs.existsByTaskIdAndStatusIn(taskId, UNFINISHED)) {
             throw new TaskRunInProgressException(taskId);
         }
+        // PHASE 36 (ADR-042): the readiness check of the run, the one the panel shows, refuses what it blocks.
+        readiness.requireReady(readiness.check(taskId, com.aicompany.backend.binding.ExecutionTargetCatalog.ENGINE,
+                requestedModel, false));
 
         if (task.getStatus() == TaskStatus.OPEN) {
             transitions.apply(task, TaskTransition.START, project, agent, requestedBy, TaskTransitionRecord.Via.RUN);

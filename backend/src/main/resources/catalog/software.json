@@ -154,6 +154,16 @@
     "configuration": "Handoff: opencode --port <porta> --prompt \"<prompt compatto>\" nella cartella del progetto; la console segue la sessione dall'API locale di OpenCode su quella porta."
   },
   {
+    "key": "openclaw", "name": "OpenClaw", "category": "AI_CLOUD",
+    "role": "Agenti personali sempre accesi, da terminale e da chat — execution target",
+    "purpose": "Gateway di agenti con memoria, skill e canali di messaggistica: riceve gli agenti creati in AI Company OS e ne esegue le task.",
+    "capabilities": ["agent-execution", "multi-agent", "messaging", "automation", "multi-provider"],
+    "projectTypes": ["WEB_APP", "BACKEND", "FULL_STACK", "API", "AI_ML", "AUTOMATION", "DATA", "OTHER"],
+    "launchKind": "CLI", "cliCommand": "openclaw tui",
+    "executionTarget": true,
+    "configuration": "Handoff: openclaw tui --session agent:<agente>:aicos-task-<n> --message \"<prompt>\" in Windows Terminal. L'agente gira nel gateway di OpenClaw, non nella cartella: il prompt gli indica la cartella del progetto e il pacchetto in .aicos/handoffs/. Gli agenti si pubblicano da Agenti → Ecosistema."
+  },
+  {
     "key": "chatgpt-classic", "name": "ChatGPT Classic", "category": "AI_CLOUD",
     "role": "Brainstorming e generazione del MASTER PROMPT",
     "purpose": "Punto di partenza di ogni progetto: brainstorming dell'idea, poi MASTER_PROMPT.md da salvare nel progetto.",
@@ -192,6 +202,24 @@
     "capabilities": ["model-router", "billing"],
     "launchKind": "WEB", "url": "https://openrouter.ai/activity", "iconUrl": "https://openrouter.ai/favicon.ico",
     "embedNote": "X-Frame-Options: SAMEORIGIN (misurato il 2026-09-24)."
+  },
+  {
+    "key": "openclaw-gateway", "name": "OpenClaw Gateway", "category": "AI_LOCAL",
+    "role": "Il servizio di OpenClaw: sessioni, agenti, canali e automazioni",
+    "purpose": "Tiene accesi gli agenti di OpenClaw e ne espone la Control UI nel browser.",
+    "capabilities": ["agent-runtime", "multi-agent", "messaging"],
+    "launchKind": "LOCAL_SERVICE", "url": "http://127.0.0.1:18789", "healthUrl": "http://127.0.0.1:18789/healthz",
+    "executable": "openclaw", "executableArgs": ["daemon", "start"],
+    "configuration": "Servizio locale sulla porta 18789, avviato da OpenClaw come attività pianificata. La Control UI chiede il token del gateway: aprila con «openclaw dashboard», che lo passa da sé."
+  },
+  {
+    "key": "litellm", "name": "LiteLLM Gateway", "category": "AI_LOCAL",
+    "role": "Un solo endpoint compatibile con OpenAI davanti a tutti i modelli",
+    "purpose": "Instrada per nome verso i modelli locali e cloud; ogni agente di AI Company OS vi diventa un alias.",
+    "capabilities": ["model-gateway", "openai-compatible", "local-llm"],
+    "launchKind": "LOCAL_SERVICE", "url": "http://localhost:4000", "healthUrl": "http://localhost:4000/health/liveliness",
+    "executable": "docker", "executableArgs": ["start", "litellm-gateway"],
+    "configuration": "Container Docker «litellm-gateway» su localhost:4000, creato da 3D Omniverse con il suo docker-compose. Legge config/litellm_config.yaml all'avvio: dopo una sincronizzazione degli agenti va riavviato."
   },
   {
     "key": "open-webui", "name": "Open WebUI", "category": "AI_LOCAL",

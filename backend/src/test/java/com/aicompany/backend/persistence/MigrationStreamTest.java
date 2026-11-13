@@ -65,10 +65,10 @@ class MigrationStreamTest {
      * It does not, and a wrong explanation is what somebody reasons from later.
      */
     private static final List<String> TABLES_AT_HEAD =
-            List.of("agent_resources", "agent_software", "agents", "app_users", "auth_sessions", "blueprint_ai_actions", "blueprint_change_proposals",
+            List.of("agent_publications", "agent_resources", "agent_software", "agents", "app_users", "auth_sessions", "blueprint_ai_actions", "blueprint_change_proposals",
                     "blueprint_edges", "blueprint_layouts", "blueprint_nodes", "blueprint_scans", "catalog_retirements", "cost_budgets", "daily_items", "ecosystem_autostart",
-                    "flyway_schema_history", "harness_resources", "hub_connector_installs", "llm_models", "model_providers", "plan_runs", "project_phases", "project_resources", "projects",
-                    "quota_plans", "security_events", "skill_categories", "skill_installations", "skill_snapshot", "skill_sync_events", "software", "task_handoffs", "task_reviews", "task_runs", "task_transitions", "tasks");
+                    "flyway_schema_history", "harness_resources", "hub_connector_installs", "learning_concepts", "lesson_progress", "llm_models", "model_providers", "plan_runs", "project_phases", "project_resources", "projects",
+                    "quota_plans", "security_events", "skill_categories", "skill_installations", "skill_snapshot", "skill_sync_events", "software", "task_handoff_reads", "task_handoffs", "task_reviews", "task_runs", "task_transitions", "tasks");
 
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =
@@ -745,6 +745,34 @@ class MigrationStreamTest {
         // History table present, but no legacy row in it.
         assertThat(DevSeedFlyway.removeLegacySeedHistory(dataSource(), schema)).isFalse();
         assertThat(appliedSchemaVersions(schema)).isEqualTo(resolvedSchemaVersions());
+    }
+
+    /**
+     * V46: LM Studio leaves the catalog of a database that PHASE 37 filled -- it is not on the
+     * operator's machine -- unless an agent was given it, which keeps its software as it was.
+     */
+    @Test
+    void lmStudioLeavesTheCatalogUnlessAnAgentUsesIt() {
+        String unused = "v46_unused";
+        String used = "v46_used";
+        for (String schema : List.of(unused, used)) {
+            schemaFlywayUpTo(schema, "45").migrate();
+            for (String key : List.of("lm-studio", "open-webui")) {
+                jdbc().update("INSERT INTO " + schema + ".software (key, name, category, role, launch_kind, executable, created_at, "
+                        + "updated_at) VALUES (?, ?, 'AI_LOCAL', 'test', 'DESKTOP', 'C:\\app.exe', now(), now())", key, key);
+            }
+        }
+        insertAgentAt(used, "Local Model Tinkerer", "Engineer", "uses LM Studio", true);
+        jdbc().update("INSERT INTO " + used + ".agent_software (agent_id, software_id) SELECT a.id, s.id FROM "
+                + used + ".agents a, " + used + ".software s WHERE s.key = 'lm-studio'");
+
+        schemaFlyway(unused).migrate();
+        schemaFlyway(used).migrate();
+
+        assertThat(jdbc().queryForList("SELECT key FROM " + unused + ".software ORDER BY key", String.class))
+                .containsExactly("open-webui");
+        assertThat(jdbc().queryForList("SELECT key FROM " + used + ".software ORDER BY key", String.class))
+                .containsExactly("lm-studio", "open-webui");
     }
 
     // --- helpers -----------------------------------------------------------

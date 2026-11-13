@@ -27,14 +27,18 @@ public final class AutonomyPolicy {
     /** The rules as a Markdown list, for AGENTS.md and handoffs. */
     public static String rules(AutonomyLevel level) {
         return switch (level) {
+            // PHASE 37 (ADR-044, revises ADR-022 §3-4): the code is the agent's; the operator puts it in the
+            // files, one explained step at a time, and is asked to predict, to complete, to explain.
             case GUIDED -> """
-                    - L'operatore sta **imparando**: il lavoro lo fa soprattutto lui, tu lo guidi.
-                    - Prima di scrivere codice spiega l'approccio in poche righe e chiedi all'operatore di \
-                    **prevedere** il risultato o di rispondere a una domanda.
-                    - Lascia all'operatore i pezzi piccoli e significativi da scrivere (indicali come \
-                    `// TODO(operatore): …`) e poi **verifica** quello che ha scritto.
-                    - Quando c'è un errore, spiegane la causa prima della correzione.
-                    - Chiudi con 2–3 domande di verifica della comprensione.""";
+                    - L'operatore sta **imparando facendo**: il codice lo scrivi tu, nei file lo porta lui.
+                    - **Non modificare i file del progetto.** Scrivi una lezione in `lessons/<TASK>.lezione.md`: per ogni \
+                    passo il file, il codice completo e la spiegazione **riga per riga**, in parole semplici. Il formato \
+                    è nel pacchetto di consegna della task.
+                    - Prima del codice fai **prevedere** qualcosa all'operatore; alla fine metti gli esercizi (quiz, \
+                    completa, trova l'errore, spiega a parole tue): si impara facendo, non leggendo.
+                    - Quando l'operatore ha copiato un passo, **verifica** quello che ha scritto; di un errore spiega la \
+                    causa prima della correzione.
+                    - Se l'operatore dice che non può seguire, lavora in autonomia e lascia la lezione di ripasso.""";
             case SUPERVISED -> """
                     - L'operatore **supervisiona**: proponi lavoro completo, ma motivando ogni scelta non ovvia.
                     - Separa il codice da integrare dalle spiegazioni, così che l'operatore possa copiarlo e \
@@ -51,14 +55,32 @@ public final class AutonomyPolicy {
         };
     }
 
+    /**
+     * PHASE 37 (ADR-044): the rules of one handoff. The project's level says how the operator
+     * works as a rule; the operator may say, for this task, that they cannot follow -- and then
+     * the agent works by itself whatever the level, and leaves the lesson to go through after.
+     */
+    public static String rules(AutonomyLevel level, LearningMode mode) {
+        if (mode == LearningMode.RECAP && level == AutonomyLevel.GUIDED) {
+            return """
+                    - Per questa task l'operatore **non può seguire**: implementala, provala e documentala in autonomia, \
+                    dentro il suo scope, senza aspettare risposte.
+                    - Registra nella task le decisioni prese e i debiti trovati.
+                    - Lascia la **lezione di ripasso** descritta sotto: l'operatore sta imparando, e la percorre dopo.
+                    - Fermati comunque prima di ciò che non si può annullare.""";
+        }
+        return rules(level);
+    }
+
     /** The same rules, addressed to a model inside a run's system prompt. */
     public static String systemInstructions(AutonomyLevel level) {
         return "Human-in-the-Loop level of this project: " + level.name() + ".\n" + switch (level) {
             case GUIDED -> """
-                    The operator is learning. Teach while working: explain the approach briefly, ask the \
-                    operator to predict an outcome or answer one question, leave one or two small meaningful \
-                    pieces for the operator to write (mark them TODO(operatore)), explain causes of errors, and \
-                    end with two or three short questions that check understanding. Answer in Italian.""";
+                    The operator is learning by doing. You write the code; the operator copies it into the \
+                    files. Explain the idea in simple words first, ask the operator to predict one outcome, then \
+                    give the code in small steps, each with its file and a line-by-line explanation in plain \
+                    language; end with exercises (a quiz, a blank to fill, a question to answer in their own \
+                    words). Explain the cause of an error before its fix. Answer in Italian.""";
             case SUPERVISED -> """
                     The operator supervises and integrates your work. Give complete work, justify every \
                     non-obvious choice, keep code separate from explanations, and stop to ask before \

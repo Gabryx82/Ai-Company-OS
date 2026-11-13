@@ -41,6 +41,6 @@ public class SoftwareConfiguration {
     @Bean
     SoftwareLauncher softwareLauncher(HostEnvironment host,
                                       @Value("${aicos.launcher.enabled:true}") boolean enabled) {
-        return new ProcessSoftwareLauncher(enabled && host.windows());
+        return new ProcessSoftwareLauncher(enabled, host.windows());
     }
 }

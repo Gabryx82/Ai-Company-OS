@@ -1,0 +1,26 @@
+{
+  "_doc": "PHASE 35 (ADR-041 §12): which model role a task needs when nobody chose a model -- the rule in the catalog, not in the code. Each rule names a role and the word stems that call for it (matched at the start of a word, case and accents ignored as written). The role with the most stems found wins; equal counts go to the earlier rule, so the heavier roles come first: quality before speed. No stem found: defaultRole. Then the catalog's ACTIVE model of that role that the engine serves (its own role before one that also serves it); prefer 'smallest' picks the lightest of those. Without one, the roles of fallback, in order.",
+  "defaultRole": "GENERAL",
+  "fallback": ["PLANNER", "GENERAL", "FAST"],
+  "rules": [
+    {
+      "role": "CODER",
+      "label": "lavoro di codice",
+      "stems": ["implement", "codice", "code", "api", "endpoint", "test", "database", "db", "sql", "schema", "backend",
+                "frontend", "crud", "classe", "controller", "refactor", "servlet", "componente", "component", "migrazion",
+                "migration", "bug", "fix", "build", "script"]
+    },
+    {
+      "role": "PLANNER",
+      "label": "pianificazione e architettura",
+      "stems": ["pianific", "roadmap", "architettur", "strategi", "stima", "scompon", "plan"]
+    },
+    {
+      "role": "FAST",
+      "label": "compiti brevi: classificazione, riassunti, controlli",
+      "prefer": "smallest",
+      "stems": ["classific", "classify", "riassum", "riassunt", "sintesi", "sintetizz", "riepilog", "summar", "controll",
+                "verific", "check", "etichett", "categorizz", "tagga"]
+    }
+  ]
+}

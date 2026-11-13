@@ -202,6 +202,28 @@ public class HarnessService {
                 linkedSoftware().getOrDefault(agentId, List.of()));
     }
 
+    /**
+     * PHASE 37 (ADR-043 §8): the skills and knowledge of the library that suit this agent
+     * and that it does not carry yet -- by the same rule that says which entries are
+     * pertinent to a task (ADR-041 §7), with what the agent is in place of the task: its
+     * role, specialization, description, capabilities, domain, responsibilities and role
+     * instructions. The most pertinent first, at most {@code max}; proposed, never attached.
+     */
+    @Transactional(readOnly = true)
+    public List<HarnessResource> suggestionsFor(Long agentId, int max) {
+        AgentHarness own = of(agentId);
+        Agent agent = own.agent();
+        java.util.Set<String> carried = own.resources().stream().map(HarnessResource::getKey)
+                .collect(java.util.stream.Collectors.toSet());
+        String text = String.join("\n", java.util.stream.Stream.of(agent.getRole(), agent.getSpecialization(),
+                agent.getDescription(), agent.getCapabilities(), agent.getDomain(), agent.getResponsibilities(),
+                agent.getSystemPrompt()).filter(java.util.Objects::nonNull).toList());
+        List<HarnessResource> candidates = search(null, null).stream()
+                .filter(r -> r.getKind() == HarnessResource.Kind.SKILL || r.getKind() == HarnessResource.Kind.KNOWLEDGE)
+                .filter(r -> !carried.contains(r.getKey())).toList();
+        return com.aicompany.backend.harness.library.Pertinence.select(text, candidates, max);
+    }
+
     /** ADR-009 on the agent row; the parent is checked for cycles under that lock. */
     public Agent configure(Long agentId, Profile profile, Precondition precondition) {
         Agent agent = agents.findByIdForUpdate(agentId).orElseThrow(() -> new AgentNotFoundException(agentId));
@@ -298,7 +320,9 @@ public class HarnessService {
     private Map<Long, List<HarnessResource>> linkedResources(String table, String ownerColumn) {
         Map<Long, HarnessResource> byId = resources.findAll().stream()
                 .collect(Collectors.toMap(HarnessResource::getId, r -> r));
-        return jdbc.query("SELECT " + ownerColumn + ", resource_id FROM " + table + " ORDER BY created_at",
+        // PHASE 35: resource_id breaks the ties of one transaction, so a harness always lists in one order --
+        // the stable prefix of an engine run's prompt depends on it (ADR-041 §7).
+        return jdbc.query("SELECT " + ownerColumn + ", resource_id FROM " + table + " ORDER BY created_at, resource_id",
                         (rs, row) -> Map.entry(rs.getLong(1), rs.getLong(2)))
                 .stream()
                 .filter(link -> byId.containsKey(link.getValue()))

@@ -14,8 +14,12 @@ import java.util.Optional;
  */
 public interface HubCommands {
 
-    /** The tools the Hub may run. Nothing else is ever executed. */
-    enum Tool { CLAUDE, CODEX }
+    /**
+     * The tools the control plane may run. Nothing else is ever executed. PHASE 37
+     * (ADR-043): {@code openclaw}, whose agents and configuration are written through
+     * its own commands as Claude Code's and Codex's are.
+     */
+    enum Tool { CLAUDE, CODEX, OPENCLAW }
 
     record Result(int exitCode, String output, boolean timedOut) {
         public boolean ok() {

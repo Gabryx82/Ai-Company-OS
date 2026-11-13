@@ -27,6 +27,15 @@ public class FakeHubCommands implements HubCommands {
     private final List<Call> calls = new CopyOnWriteArrayList<>();
     private final List<Answer> answers = new CopyOnWriteArrayList<>();
     private final List<Tool> missing = new CopyOnWriteArrayList<>();
+    private final List<java.util.function.Consumer<Call>> hooks = new CopyOnWriteArrayList<>();
+
+    /**
+     * PHASE 37: runs before a call is answered -- to read a file the caller wrote for the
+     * command and removes after it, or to leave behind what the real command would.
+     */
+    public void onRun(java.util.function.Consumer<Call> hook) {
+        hooks.add(hook);
+    }
 
     /** Answers the calls of {@code tool} whose arguments begin with {@code prefix}. */
     public void answer(Tool tool, List<String> prefix, int exitCode, String output) {
@@ -38,6 +47,12 @@ public class FakeHubCommands implements HubCommands {
     public void answerWith(Tool tool, List<String> prefix, String argument, int exitCode, String output) {
         answers.addFirst(new Answer(tool, a -> a.size() >= prefix.size() && a.subList(0, prefix.size()).equals(prefix)
                 && a.contains(argument), new Result(exitCode, output, false)));
+    }
+
+    /** PHASE 37: as {@link #answer}, taking precedence over the answers scripted before it. */
+    public void answerFirst(Tool tool, List<String> prefix, int exitCode, String output) {
+        answers.addFirst(new Answer(tool, a -> a.size() >= prefix.size() && a.subList(0, prefix.size()).equals(prefix),
+                new Result(exitCode, output, false)));
     }
 
     public void missing(Tool tool) {
@@ -52,6 +67,7 @@ public class FakeHubCommands implements HubCommands {
         calls.clear();
         answers.clear();
         missing.clear();
+        hooks.clear();
     }
 
     @Override
@@ -61,7 +77,9 @@ public class FakeHubCommands implements HubCommands {
 
     @Override
     public Result run(Tool tool, List<String> arguments, Duration timeout) {
-        calls.add(new Call(tool, List.copyOf(arguments)));
+        Call call = new Call(tool, List.copyOf(arguments));
+        calls.add(call);
+        hooks.forEach(hook -> hook.accept(call));
         for (Answer answer : answers) {
             if (answer.tool() == tool && answer.when().test(arguments)) {
                 return answer.result();

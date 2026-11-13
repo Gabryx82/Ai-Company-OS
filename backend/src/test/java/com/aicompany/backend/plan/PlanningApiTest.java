@@ -182,7 +182,12 @@ public class PlanningApiTest extends AbstractPostgresTest {
 
         assertThat(Files.readString(folder.resolve("tasks/TASK-001.md")))
                 .contains("# TASK-001 — Creare lo scheletro backend")
-                .contains("Esegui TASK-001 seguendo `tasks/TASK-001.md` e la governance in `AGENTS.md`.")
+                // PHASE 34: the document says that the way in is the handoff; PHASE 36: the prompt it shows leads there.
+                .contains("> Esegui TASK-001 partendo dal suo pacchetto di consegna, il più recente `.aicos/handoffs/TASK-001-*.md` (ruolo, skill, knowledge e regole); se non c'è, chiedi all'operatore di consegnare la task da AI Company OS prima di cominciare.")
+                .doesNotContain("seguendo `tasks/TASK-001.md`")
+                .contains("## Come si consegna").contains("«Prepara e apri»")
+                .contains("`.aicos/handoffs/TASK-001-<strumento>.md` con ruolo, skill, knowledge")
+                .doesNotContain("## Prompt compatto")
                 .contains("Backend Bot");
         assertThat(Files.readString(folder.resolve("docs/phases/PHASE_2.md"))).contains("TASK-003");
         assertThat(Files.readString(folder.resolve("docs/IMPLEMENTATION_PLAN.md"))).contains("Un gestionale per officine");

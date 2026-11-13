@@ -25,8 +25,8 @@ import java.util.stream.Stream;
  * <p>The applications own most of these folders: plugins, built-in skills and
  * Claude Desktop's account-managed cache are read, never written. The writable
  * ones are the personal skill folders each application documents for its user:
- * {@code ~/.claude/skills}, {@code ~/.agents/skills} (Codex, Gemini CLI, OpenCode),
- * {@code ~/.gemini/antigravity/skills} and the like.
+ * {@code ~/.claude/skills}, {@code ~/.agents/skills} (Codex, Gemini CLI, OpenCode, OpenClaw),
+ * {@code ~/.gemini/antigravity/skills}, {@code ~/.openclaw/skills} and the like.
  *
  * <p><strong>Claude Desktop from the Microsoft Store</strong> (ADR-036 §2, PHASE 31
  * review): an MSIX package's {@code %APPDATA%} is virtualised. The app -- and every
@@ -159,10 +159,12 @@ public class SkillLocations {
         Path antigravity = gemini.resolve("antigravity");
         Path antigravityIde = gemini.resolve("antigravity-ide");
         Path opencode = home.resolve(".config").resolve("opencode");
+        Path openclaw = home.resolve(".openclaw");
         return List.of(
                 new App("claude-code", "Claude Code",
                         "La CLI e la scheda Code dell'app Claude (che riceve anche i plugin e le skill di Claude Desktop)",
-                        "claude-code", List.of("claude-code"), List.of(claude)),
+                        // PHASE 35: Claude Code in the desktop app (target claude-desktop) loads the same ~/.claude/skills.
+                        "claude-code", List.of("claude-code", "claude-desktop"), List.of(claude)),
                 new App("claude-desktop", "Claude Desktop", "L'app Claude: skill, plugin e connettori del tuo account",
                         "claude-desktop", List.of(),
                         claudeDesktopCandidates().stream().map(p -> p.resolve("local-agent-mode-sessions")).toList()),
@@ -170,14 +172,17 @@ public class SkillLocations {
                         "L'app Codex di OpenAI (con l'abbonamento ChatGPT), la sua CLI e le app del tuo account ChatGPT; "
                                 + "legge anche ~/.agents/skills",
                         "codex", List.of("codex"), List.of(codex)),
-                new App("agents", "Agent Skills condivise", "~/.agents/skills: la cartella standard che leggono Codex, Gemini CLI, OpenCode e altri",
-                        null, List.of("codex", "opencode"), List.of(agents, codex, gemini.resolve("settings.json"))),
+                // PHASE 37 (ADR-043): OpenClaw reads ~/.agents/skills too (its "personal agent skills").
+                new App("agents", "Agent Skills condivise", "~/.agents/skills: la cartella standard che leggono Codex, Gemini CLI, OpenCode, OpenClaw e altri",
+                        null, List.of("codex", "opencode", "openclaw"), List.of(agents, codex, gemini.resolve("settings.json"))),
                 new App("antigravity", "Antigravity", "Antigravity (agent manager) e Antigravity IDE di Google",
                         "antigravity", List.of("antigravity", "antigravity-ide"), List.of(antigravity, antigravityIde)),
                 new App("gemini-cli", "Gemini CLI", "La CLI Gemini di Google",
                         null, List.of(), List.of(gemini.resolve("settings.json"), gemini.resolve("skills"), gemini.resolve("extensions"))),
                 new App("opencode", "OpenCode", "La CLI OpenCode",
                         "opencode", List.of("opencode"), List.of(opencode)),
+                new App("openclaw", "OpenClaw", "Il gateway di agenti OpenClaw; legge anche ~/.agents/skills",
+                        "openclaw", List.of("openclaw"), List.of(openclaw)),
                 new App("verdent", "Verdent", "L'app Verdent",
                         "verdent", List.of("verdent"), List.of(home.resolve(".verdent"))),
                 new App("copilot", "GitHub Copilot CLI", "La CLI di GitHub Copilot",
@@ -194,6 +199,7 @@ public class SkillLocations {
         Path antigravity = gemini.resolve("antigravity");
         Path antigravityIde = gemini.resolve("antigravity-ide");
         Path opencode = home.resolve(".config").resolve("opencode");
+        Path openclaw = home.resolve(".openclaw");
         Path desktop = claudeDesktopHome();
         List<Location> fixed = List.of(
                 new Location("claude-code.personal", "claude-code", "Skill personali", claude.resolve("skills"),
@@ -226,7 +232,7 @@ public class SkillLocations {
                 new Location("codex.instructions", "codex", "Istruzioni globali (AGENTS.md)", codex.resolve("AGENTS.md"),
                         Scope.INSTRUCTIONS, Layout.SINGLE_FILE, false, List.of("codex")),
                 new Location("agents.personal", "agents", "Skill personali condivise", agents.resolve("skills"),
-                        Scope.PERSONAL, Layout.SKILL_FOLDERS, true, List.of("codex", "gemini-cli", "opencode", "copilot")),
+                        Scope.PERSONAL, Layout.SKILL_FOLDERS, true, List.of("codex", "gemini-cli", "opencode", "copilot", "openclaw")),
                 new Location("antigravity.personal", "antigravity", "Skill globali", antigravity.resolve("skills"),
                         Scope.PERSONAL, Layout.SKILL_FOLDERS, true, List.of("antigravity")),
                 new Location("antigravity.system", "antigravity", "Skill integrate (agent manager)",
@@ -256,6 +262,17 @@ public class SkillLocations {
                         Scope.PERSONAL, Layout.SKILL_FOLDERS, false, List.of("opencode")),
                 new Location("opencode.instructions", "opencode", "Istruzioni globali (AGENTS.md)", opencode.resolve("AGENTS.md"),
                         Scope.INSTRUCTIONS, Layout.SINGLE_FILE, false, List.of("opencode")),
+                // PHASE 37 (ADR-043): OpenClaw's managed folder, shared by all its agents, and the skills it ships
+                // with (an npm package, under the roaming npm folder). An agent's own workspace
+                // skills are the agent's, in a folder OpenClaw names in its configuration: not listed here.
+                new Location("openclaw.personal", "openclaw", "Skill condivise fra gli agenti (~/.openclaw/skills)",
+                        openclaw.resolve("skills"), Scope.PERSONAL, Layout.SKILL_FOLDERS, true, List.of("openclaw")),
+                new Location("openclaw.system", "openclaw", "Skill integrate",
+                        appData.resolve("npm").resolve("node_modules").resolve("openclaw").resolve("skills"),
+                        Scope.SYSTEM, Layout.SKILL_FOLDERS, false, List.of("openclaw")),
+                new Location("openclaw.instructions", "openclaw", "Istruzioni dello spazio di lavoro (AGENTS.md)",
+                        openclaw.resolve("workspace").resolve("AGENTS.md"), Scope.INSTRUCTIONS, Layout.SINGLE_FILE, false,
+                        List.of("openclaw")),
                 new Location("verdent.personal", "verdent", "Skill", home.resolve(".verdent").resolve("skills"),
                         Scope.PERSONAL, Layout.SKILL_FOLDERS, true, List.of("verdent")),
                 new Location("copilot.personal", "copilot", "Skill personali", home.resolve(".copilot").resolve("skills"),

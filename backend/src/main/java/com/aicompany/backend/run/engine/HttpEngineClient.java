@@ -61,6 +61,13 @@ public class HttpEngineClient implements EngineClient {
         if (request.responseSchema() != null) {
             body.set("response_schema", json.readTree(request.responseSchema()));
         }
+        // PHASE 35 (ADR-041 §11): optional fields of v1, sent only when the catalog has them.
+        if (request.contextWindow() != null) {
+            body.put("context_window", request.contextWindow());
+        }
+        if (request.keepAlive() != null) {
+            body.put("keep_alive", request.keepAlive());
+        }
         ObjectNode metadata = body.putObject("metadata");
         request.metadata().forEach(metadata::put);
 
@@ -117,7 +124,23 @@ public class HttpEngineClient implements EngineClient {
         }
         return new Completion(output, finishReason, model,
                 usage.path("input_tokens").asInt(0), usage.path("output_tokens").asInt(0),
-                answer.path("latency_ms").asLong(0));
+                answer.path("latency_ms").asLong(0), metrics(answer.get("metrics")));
+    }
+
+    /** PHASE 35: the provider's own measures, an optional field of v1; a missing one stays null, never zero. */
+    private static Metrics metrics(JsonNode metrics) {
+        if (metrics == null || !metrics.isObject()) {
+            return null;
+        }
+        Long window = measure(metrics, "context_window");
+        return new Metrics(measure(metrics, "total_duration_ms"), measure(metrics, "load_duration_ms"),
+                measure(metrics, "prompt_eval_duration_ms"), measure(metrics, "eval_duration_ms"),
+                window == null || window > Integer.MAX_VALUE ? null : window.intValue());
+    }
+
+    private static Long measure(JsonNode metrics, String field) {
+        JsonNode value = metrics.get(field);
+        return value != null && value.isIntegralNumber() && value.asLong() >= 0 ? value.asLong() : null;
     }
 
     @Override

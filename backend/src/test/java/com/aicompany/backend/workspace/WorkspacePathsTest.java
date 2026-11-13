@@ -47,7 +47,7 @@ class WorkspacePathsTest {
                     .isInstanceOf(WorkspacePathRefusedException.class);
         }
         for (String allowed : List.of("docs/phases/PHASE_1.md", ".aicos/plan.json", "references/README.md",
-                "AGENTS.md", "CLAUDE.md", "tasks/notes.txt")) {
+                "AGENTS.md", "CLAUDE.md", "GEMINI.md", "tasks/notes.txt", "tasks/TASK-001.esito.md")) {
             assertThat(WorkspacePaths.writableDocument(root, allowed)).as(allowed).isNotNull();
         }
     }

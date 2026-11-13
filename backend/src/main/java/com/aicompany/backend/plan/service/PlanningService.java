@@ -74,13 +74,19 @@ public class PlanningService {
     private final EngineClient engine;
     private final TaskExecutor executor;
     private final TransactionTemplate transactions;
+    private final com.aicompany.backend.llm.service.ModelSettings settings;
+    private final com.aicompany.backend.llm.service.LocalModelGate gate;
     /** The generation each planning thread is working on, to interrupt it when it is cancelled (TD-43). */
     private final Map<Long, Thread> working = new java.util.concurrent.ConcurrentHashMap<>();
 
     public PlanningService(ProjectRepository projects, ProjectPhaseRepository phases, PlanRunRepository planRuns,
                            TaskRepository tasks, AgentRepository agents, SoftwareRepository software,
                            ProjectWorkspaceService workspace, PlanImporter importer, EngineClient engine,
-                           @Qualifier("planExecutor") TaskExecutor planExecutor, TransactionTemplate transactions) {
+                           @Qualifier("planExecutor") TaskExecutor planExecutor, TransactionTemplate transactions,
+                           com.aicompany.backend.llm.service.ModelSettings settings,
+                           com.aicompany.backend.llm.service.LocalModelGate gate) {
+        this.settings = settings;
+        this.gate = gate;
         this.projects = projects;
         this.phases = phases;
         this.planRuns = planRuns;
@@ -163,6 +169,16 @@ public class PlanningService {
         }
     }
 
+    /**
+     * PHASE 35 (ADR-041 §11–§12): one call of a generation, with how the catalog says the
+     * model runs, and -- for a local model -- in its turn, one at a time with the task runs.
+     */
+    private EngineClient.Completion complete(EngineClient.Request request) {
+        try (com.aicompany.backend.llm.service.LocalModelGate.Permit turn = gate.enter(request.model())) {
+            return engine.complete(settings.apply(request));
+        }
+    }
+
     private void generateOnEngine(Long runId, Long projectId, String model, String masterPrompt) {
         StringBuilder output = new StringBuilder();
         String served = null;
@@ -171,7 +187,7 @@ public class PlanningService {
         try {
             Project project = transactions.execute(status -> projects.findById(projectId).orElseThrow());
             progress(runId, "Fase del piano: elenco delle fasi");
-            EngineClient.Completion skeletonAnswer = engine.complete(new EngineClient.Request(model,
+            EngineClient.Completion skeletonAnswer = complete(new EngineClient.Request(model,
                     PlanPrompt.phasesSystem(), PlanPrompt.user(project, masterPrompt), PLAN_MAX_TOKENS,
                     correlation(runId, 0), Map.of("purpose", "plan-phases", "project", String.valueOf(projectId)),
                     "json", PlanPrompt.PHASES_SCHEMA));
@@ -187,7 +203,7 @@ public class PlanningService {
             List<List<PlanDocument.TaskPlan>> tasksByPhase = new java.util.ArrayList<>();
             for (int i = 0; i < skeleton.phases().size(); i++) {
                 progress(runId, "Task della fase " + (i + 1) + "/" + titles.size() + ": " + titles.get(i));
-                EngineClient.Completion tasksAnswer = engine.complete(new EngineClient.Request(model,
+                EngineClient.Completion tasksAnswer = complete(new EngineClient.Request(model,
                         PlanPrompt.tasksSystem(roles, keys),
                         PlanPrompt.tasksUser(project, masterPrompt, skeleton.summary(), titles, i, skeleton.phases().get(i)),
                         PLAN_MAX_TOKENS, correlation(runId, i + 1),

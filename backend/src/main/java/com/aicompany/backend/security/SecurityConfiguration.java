@@ -149,6 +149,13 @@ public class SecurityConfiguration {
                         // What the launcher may execute is an admin's decision (PHASE 21).
                         .requestMatchers(HttpMethod.POST, "/api/software").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/software/*").hasRole("ADMIN")
+                        // PHASE 37 (ADR-043): writing another tool's configuration -- its agents, its
+                        // models, its gateway file -- is an admin's decision too.
+                        .requestMatchers(HttpMethod.POST, "/api/agent-sync/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/agent-sync/**").hasRole("ADMIN")
+                        // ADR-045: OpenClaw from the console -- a message runs an agent turn with the tools
+                        // OpenClaw gives it, a terminal or the Control UI opens on this machine.
+                        .requestMatchers(HttpMethod.POST, "/api/openclaw/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(entryPoint)

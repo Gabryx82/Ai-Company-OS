@@ -106,4 +106,13 @@ public class FakeHostConfiguration {
     FakeHubCommands fakeHubCommands() {
         return CLIS;
     }
+
+    private static final FakeSyncHttp SYNC = new FakeSyncHttp();
+
+    /** PHASE 37 (ADR-043): nor do they reach Open WebUI, or any tool the agents are published to. */
+    @Bean
+    @Primary
+    FakeSyncHttp fakeSyncHttp() {
+        return SYNC;
+    }
 }

@@ -58,7 +58,8 @@ public class CatalogBootstrap implements ApplicationRunner {
 
     record ModelEntry(String key, String providerKey, String displayName, ModelRole role, List<String> capabilities,
                       Integer contextWindow, BigDecimal sizeGb, String parameters, ModelLifecycle lifecycle,
-                      String replacedBy, String notes, List<ModelRole> alsoServes) {
+                      String replacedBy, String notes, List<ModelRole> alsoServes,
+                      Integer numCtx, String keepAlive, String quantization) {
     }
 
     record ResourceEntry(String key, HarnessResource.Kind kind, String name, String description, List<String> tags,
@@ -154,6 +155,7 @@ public class CatalogBootstrap implements ApplicationRunner {
                 LlmModel model = new LlmModel(m.key(), m.providerKey(), m.displayName(), m.role(), m.capabilities(),
                         m.contextWindow(), m.sizeGb(), m.parameters(), m.lifecycle(), m.replacedBy(), m.notes());
                 model.alsoServe(m.alsoServes());
+                model.tune(m.numCtx(), m.keepAlive(), m.quantization());
                 models.save(model);
                 added++;
             }

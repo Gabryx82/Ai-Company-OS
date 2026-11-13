@@ -1,3 +1,5 @@
 # {{PROJECT_NAME}}
 
-Leggi `AGENTS.md`: è la governance di questo progetto, valida per ogni agente.
+@AGENTS.md
+
+La governance di questo progetto è in `AGENTS.md`, importato qui sopra: vale per ogni agente.

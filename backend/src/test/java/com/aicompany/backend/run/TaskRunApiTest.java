@@ -70,6 +70,9 @@ class TaskRunApiTest extends AbstractPostgresTest {
     @Autowired
     private RunDispatcher dispatcher;
 
+    @Autowired
+    private com.aicompany.backend.run.execution.RunRecorder recorder;
+
     private final JsonMapper json = JsonMapper.builder().build();
 
     @BeforeEach
@@ -301,6 +304,30 @@ class TaskRunApiTest extends AbstractPostgresTest {
         mockMvc.perform(post("/api/runs/{id}/cancel", 999_999L)).andExpect(status().isNotFound());
 
         mockMvc.perform(launch(taskId, etagOfTask(taskId))).andExpect(status().isAccepted());
+    }
+
+    /**
+     * PHASE 35 (ADR-041): an answer that reaches a run already cancelled brings its
+     * measures too; they are not written either -- a finished run is never rewritten.
+     */
+    @Test
+    void aLateAnswerDoesNotWriteItsMeasuresOnACancelledRun() throws Exception {
+
+        Long taskId = task("Cancel me, measured", null, agent("Backend", "Engineer", "jvm"), null);
+        engine.holdNextCall();
+        long runId = idOf(mockMvc.perform(launch(taskId, etagOfTask(taskId))).andReturn());
+        engine.awaitEntered();
+        mockMvc.perform(post("/api/runs/{id}/cancel", runId)).andExpect(status().isOk());
+
+        recorder.succeed(runId, new EngineClient.Completion("too late", "stop", "ollama:qwen3.5:9b", 900, 30, 4000,
+                new EngineClient.Metrics(3900L, 1200L, 2000L, 700L, 16384)));
+
+        JsonNode run = awaitFinished(runId);
+        assertThat(run.path("failureType").asString()).isEqualTo("urn:ai-company-os:run-failure:cancelled");
+        assertThat(run.path("providerTotalMs").isNull()).isTrue();
+        assertThat(run.path("loadMs").isNull()).isTrue();
+        assertThat(run.path("contextWindow").isNull()).isTrue();
+        engine.release();
     }
 
     // ------------------------------------------------------------------

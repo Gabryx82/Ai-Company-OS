@@ -10,6 +10,7 @@ import com.aicompany.backend.hitl.AutonomyPolicy;
 import com.aicompany.backend.llm.model.ModelLifecycle;
 import com.aicompany.backend.llm.model.ModelRole;
 import com.aicompany.backend.llm.service.LlmCatalogService;
+import com.aicompany.backend.llm.service.ModelRouter;
 import com.aicompany.backend.plan.model.ProjectPhase;
 import com.aicompany.backend.plan.service.PlanDocument;
 import com.aicompany.backend.plan.service.PlanMarkdown;
@@ -66,6 +67,9 @@ public class OrchestrationService {
 
     public enum TargetKind { ENGINE, CLI, DESKTOP, WEB, MANUAL }
 
+    /** The blocker of a project without a folder: it stops a handoff, not a run (PHASE 36, ADR-042). */
+    public static final String NO_FOLDER = "Il progetto non ha una cartella di lavoro: impostala nel profilo per gli handoff.";
+
     /**
      * One place the task can be done (ADR-025 §2). {@code recommended} marks the
      * execution target the agent is bound to; {@code delivery} says how the
@@ -102,11 +106,16 @@ public class OrchestrationService {
     private final ExecutionTargetCatalog targetCatalog;
     private final AgentBindingService bindings;
     private final AgentRepository agents;
+    private final ModelRouter modelRouter;
+    private final com.aicompany.backend.harness.service.HarnessService harness;
 
     public OrchestrationService(TaskRepository tasks, AgentRouter router, LlmCatalogService models,
                                 SoftwareService software, ProjectTypeCatalog types, ProjectWorkspaceService workspace,
                                 ExecutionTargetCatalog targetCatalog, AgentBindingService bindings,
-                                AgentRepository agents) {
+                                AgentRepository agents, ModelRouter modelRouter,
+                                com.aicompany.backend.harness.service.HarnessService harness) {
+        this.harness = harness;
+        this.modelRouter = modelRouter;
         this.targetCatalog = targetCatalog;
         this.bindings = bindings;
         this.agents = agents;
@@ -125,6 +134,53 @@ public class OrchestrationService {
         String work = task.getTitle() + " " + (task.getDescription() == null ? "" : task.getDescription());
         Optional<PlanDocument.TaskPlan> planned = plannedTask(task);
 
+        AgentChoice agent = agent(task, work, planned);
+        List<String> blockers = blockers(task, project, phase, agent);
+        boolean hasFolder = project != null && workspace.folderOf(project.getId()).isPresent();
+        boolean folderPossible = project == null || project.getWorkspacePath() != null;
+
+        Agent bound = agent.agentId() == null ? null : agents.findById(agent.agentId()).orElse(null);
+        AgentBindingService.Binding binding = bound == null ? null : bindings.describe(bound);
+        List<SoftwareService.Detected> catalog = software.findAll();
+        // PHASE 36: the software the operator allowed the agent comes first.
+        List<String> allowed = bound == null ? List.of() : harness.of(bound.getId()).software().stream()
+                .map(com.aicompany.backend.software.model.Software::getKey).toList();
+        List<SoftwareChoice> tools = software(task, project, work, planned, catalog, allowed);
+        List<Target> targets = targets(agent, bound, binding, catalog, folderPossible);
+        AutonomyLevel level = project == null ? AutonomyLevel.GUIDED : project.getAutonomyLevel();
+
+        return new Orchestration(task.getId(), task.getCode(), task.getTitle(), task.getStatus(),
+                project == null ? null : project.getId(), project == null ? null : project.getName(),
+                phase == null ? null : phase.getId(), phase == null ? null : phase.getNumber(),
+                phase == null ? null : phase.getTitle(), phase == null || phase.isApproved(), level,
+                AutonomyPolicy.rules(level), agent, model(agent, bound, work), tools,
+                context(task, project, phase, work, planned, hasFolder),
+                // PHASE 36: the prompt shown leads to the task's package, whatever its label.
+                PlanMarkdown.compactPrompt(task.getCode() == null ? "TASK-" + task.getId() : task.getCode()),
+                targets, blockers, binding);
+    }
+
+    /** PHASE 36 (ADR-042): what stops the task and the files of its context -- without the engine or the software. */
+    public record Basics(List<String> blockers, List<ContextFile> context) {
+    }
+
+    /**
+     * The blockers and the context of {@link #decide}, alone: what the readiness check of a
+     * handoff or a run needs inside their transaction, where asking the AI Engine or
+     * detecting every program would hold the task's lock for nothing.
+     */
+    public Basics basics(Long taskId) {
+        Task task = tasks.findByIdWithAssociations(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+        Project project = task.getProject();
+        String work = task.getTitle() + " " + (task.getDescription() == null ? "" : task.getDescription());
+        Optional<PlanDocument.TaskPlan> planned = plannedTask(task);
+        AgentChoice agent = agent(task, work, planned);
+        boolean hasFolder = project != null && workspace.folderOf(project.getId()).isPresent();
+        return new Basics(blockers(task, project, task.getPhase(), agent),
+                context(task, project, task.getPhase(), work, planned, hasFolder));
+    }
+
+    private List<String> blockers(Task task, Project project, ProjectPhase phase, AgentChoice agent) {
         List<String> blockers = new ArrayList<>();
         // PHASE 27 (found by the live smoke): an archived project freezes its tasks; say so here.
         if (project != null && project.isArchived()) {
@@ -136,35 +192,15 @@ public class OrchestrationService {
         if (phase != null && !phase.isApproved()) {
             blockers.add("La fase " + phase.getNumber() + " non è approvata (Human-in-the-Loop).");
         }
-        AgentChoice agent = agent(task, work, planned);
         if (!agent.assigned()) {
             blockers.add("Nessun agente assegnato: assegna quello proposto o un altro.");
         }
-        boolean hasFolder = project != null && workspace.folderOf(project.getId()).isPresent();
         // PHASE 17 (ADR-025 §4): a handoff prepares the folder itself -- the project's (created when
         // missing, once its path is configured) or an inbox folder for a task without a project.
-        boolean folderPossible = project == null || project.getWorkspacePath() != null;
-        if (!folderPossible) {
-            blockers.add("Il progetto non ha una cartella di lavoro: impostala nel profilo per gli handoff.");
+        if (project != null && project.getWorkspacePath() == null) {
+            blockers.add(NO_FOLDER);
         }
-
-        Agent bound = agent.agentId() == null ? null : agents.findById(agent.agentId()).orElse(null);
-        AgentBindingService.Binding binding = bound == null ? null : bindings.describe(bound);
-        List<SoftwareService.Detected> catalog = software.findAll();
-        List<SoftwareChoice> tools = software(task, project, work, planned, catalog);
-        List<Target> targets = targets(agent, bound, binding, catalog, folderPossible);
-        AutonomyLevel level = project == null ? AutonomyLevel.GUIDED : project.getAutonomyLevel();
-
-        return new Orchestration(task.getId(), task.getCode(), task.getTitle(), task.getStatus(),
-                project == null ? null : project.getId(), project == null ? null : project.getName(),
-                phase == null ? null : phase.getId(), phase == null ? null : phase.getNumber(),
-                phase == null ? null : phase.getTitle(), phase == null || phase.isApproved(), level,
-                AutonomyPolicy.rules(level), agent, model(agent, bound, work), tools,
-                context(task, project, phase, work, planned, hasFolder),
-                task.getCode() == null
-                        ? "Esegui TASK-" + task.getId() + " seguendo il pacchetto di handoff in `.aicos/handoffs/` e la governance in `AGENTS.md`."
-                        : PlanMarkdown.compactPrompt(task.getCode()),
-                targets, blockers, binding);
+        return blockers;
     }
 
     // --- agent ---------------------------------------------------------------------
@@ -202,23 +238,23 @@ public class OrchestrationService {
             return new ModelChoice(null, null, null, "Il modello lo sceglie "
                     + targetCatalog.find(bound.getExecutionTarget()).map(ExecutionTarget::name).orElse("lo strumento"));
         }
-        ModelRole wanted = CODE_WORK.matcher(work).find() ? ModelRole.CODER : ModelRole.GENERAL;
+        // PHASE 35 (ADR-041 §12): the role and the model come from the catalog's rule, the same one runs follow.
+        ModelRouter.Route route = modelRouter.route(work);
+        ModelRole wanted = route.role();
         LlmCatalogService.Catalog catalog = models.catalog();
-        for (ModelRole role : List.of(wanted, ModelRole.PLANNER, ModelRole.GENERAL, ModelRole.FAST)) {
+        java.util.Set<String> ready = new java.util.HashSet<>();
+        catalog.models().stream().filter(view -> Boolean.TRUE.equals(view.engineAvailable()))
+                .forEach(view -> ready.add(view.model().getKey()));
+        Optional<ModelRouter.Pick> pick = modelRouter.pick(wanted,
+                catalog.models().stream().map(LlmCatalogService.ModelView::model).toList(), ready::contains);
+        if (pick.isPresent()) {
+            ModelRole role = pick.get().role();
             // PHASE 32 (TD-66): a model of this role first, then one that also serves it.
-            Optional<LlmCatalogService.ModelView> found = catalog.models().stream()
-                    .filter(view -> view.model().serves(role))
-                    .filter(view -> view.model().getLifecycle() == ModelLifecycle.ACTIVE)
-                    .filter(view -> Boolean.TRUE.equals(view.engineAvailable()))
-                    .min(java.util.Comparator.comparing(view -> view.model().getRole() == role ? 0 : 1));
-            if (found.isPresent()) {
-                boolean own = found.get().model().getRole() == role;
-                return new ModelChoice(found.get().model().getKey(), role.name(), true,
-                        role != wanted ? "Nessun modello " + wanted + " pronto: ripiego su " + role
-                                : own ? "Modello attivo del ruolo " + role + " richiesto dalla task"
-                                : "Modello attivo che serve anche il ruolo " + role + " richiesto dalla task (ruolo proprio: "
-                                        + found.get().model().getRole() + ")");
-            }
+            return new ModelChoice(pick.get().model().getKey(), role.name(), true,
+                    (role != wanted ? "Nessun modello " + wanted + " pronto: ripiego su " + role
+                            : pick.get().own() ? "Modello attivo del ruolo " + role + " richiesto dalla task"
+                            : "Modello attivo che serve anche il ruolo " + role + " richiesto dalla task (ruolo proprio: "
+                                    + pick.get().model().getRole() + ")") + " — " + route.explained());
         }
         return new ModelChoice(catalog.engineDefault(), null, catalog.engineReachable() ? true : null,
                 "Nessun modello di catalogo pronto: il default dell'AI Engine");
@@ -228,8 +264,9 @@ public class OrchestrationService {
 
     private List<SoftwareChoice> software(Task task, Project project, String work,
                                           Optional<PlanDocument.TaskPlan> planned,
-                                          List<SoftwareService.Detected> catalog) {
+                                          List<SoftwareService.Detected> catalog, List<String> allowed) {
         Map<String, String> reasons = new LinkedHashMap<>();
+        allowed.forEach(key -> reasons.putIfAbsent(key, "Software dell'agente"));
         planned.ifPresent(p -> p.software().forEach(key -> reasons.putIfAbsent(key, "Indicato dal piano")));
         if (project != null && project.getProjectType() != null) {
             types.of(project.getProjectType()).ifPresent(info -> info.software()

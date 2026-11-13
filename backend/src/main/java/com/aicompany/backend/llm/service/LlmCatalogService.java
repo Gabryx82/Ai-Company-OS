@@ -93,13 +93,16 @@ public class LlmCatalogService {
     }
 
     public LlmModel classify(String key, ModelRole role, ModelLifecycle lifecycle, String replacedBy, String notes,
-                             java.util.List<ModelRole> alsoServes, Precondition precondition) {
+                             java.util.List<ModelRole> alsoServes, Integer numCtx, String keepAlive, String quantization,
+                             Precondition precondition) {
         LlmModel model = models.findByKeyForUpdate(key).orElseThrow(() -> new ModelNotFoundException(key));
         precondition.requireSatisfiedBy(model.getVersion());
         model.classify(role, lifecycle, replacedBy, notes);
         if (alsoServes != null) {
             model.alsoServe(alsoServes);
         }
+        // PHASE 35 (ADR-041 §11): how it runs; what the request does not say stays.
+        model.tune(numCtx, keepAlive, quantization);
         models.flush();
         return model;
     }

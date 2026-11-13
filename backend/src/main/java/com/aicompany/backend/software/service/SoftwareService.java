@@ -10,6 +10,7 @@ import com.aicompany.backend.software.exception.SoftwareNotFoundException;
 import com.aicompany.backend.software.exception.SoftwareNotLaunchableException;
 import com.aicompany.backend.software.launch.LaunchPlan;
 import com.aicompany.backend.software.launch.SoftwareLauncher;
+import com.aicompany.backend.software.model.LaunchKind;
 import com.aicompany.backend.software.model.Software;
 import com.aicompany.backend.software.model.SoftwareDefinition;
 import com.aicompany.backend.software.repository.SoftwareRepository;
@@ -52,9 +53,10 @@ public class SoftwareService {
 
     @Transactional(readOnly = true)
     public List<Detected> findAll() {
-        return repository.findAllByOrderByCategoryAscNameAsc().stream()
-                .map(software -> new Detected(software, detector.detect(software)))
-                .toList();
+        List<Software> all = repository.findAllByOrderByCategoryAscNameAsc();
+        // ADR-046: the services are asked together, then each entry is read from what they answered.
+        detector.prepare(all);
+        return all.stream().map(software -> new Detected(software, detector.detect(software))).toList();
     }
 
     @Transactional(readOnly = true)
@@ -129,6 +131,70 @@ public class SoftwareService {
         return plan;
     }
 
+    /**
+     * PHASE 34, for the orchestrator's handoffs: a desktop app opened through the link of
+     * its execution target, on a project folder, with a prompt the control plane composed.
+     * Not reachable from a request body: the link is the target catalog's.
+     */
+    @Transactional(readOnly = true)
+    public LaunchPlan launchLink(String key, String link, Path folder, String prompt) {
+        Software software = load(key);
+        LaunchPlan plan = LaunchPlan.forLink(software, detector.detect(software), link, folder, prompt, host);
+        launcher.start(plan);
+        return plan;
+    }
+
+    /** PHASE 36 (ADR-042): why the launcher would open nothing at all, or empty when it opens. */
+    @Transactional(readOnly = true)
+    public Optional<String> launcherUnavailable() {
+        return launcher.unavailable();
+    }
+
+    /**
+     * PHASE 36: the plan {@link #launchIn} would start, built by the same rules and not started --
+     * what a handoff records when the launcher is off.
+     */
+    @Transactional(readOnly = true)
+    public LaunchPlan planIn(String key, Path folder, List<String> cliArguments) {
+        Software software = load(key);
+        return LaunchPlan.of(software, detector.detect(software), folder, cliArguments, host);
+    }
+
+    /** PHASE 36: the plan {@link #launchLink} would start, not started. */
+    @Transactional(readOnly = true)
+    public LaunchPlan planLink(String key, String link, Path folder, String prompt) {
+        Software software = load(key);
+        return LaunchPlan.forLink(software, detector.detect(software), link, folder, prompt, host);
+    }
+
+    /**
+     * PHASE 36 (ADR-042): why a handoff could not open this software, before anything is
+     * written -- the same rules {@link #launchIn} and {@link #launchLink} apply, without
+     * launching. The project folder is not checked: the handoff prepares it. Empty when it
+     * would open.
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> launchProblem(String key, @org.jspecify.annotations.Nullable String link) {
+        Optional<Software> found = repository.findByKey(key);
+        if (found.isEmpty()) {
+            return Optional.of("'" + key + "' is not in the Software Hub");
+        }
+        Software software = found.get();
+        Detection detection = detector.detect(software);
+        Path anyFolder = Path.of(System.getProperty("java.io.tmpdir"));
+        try {
+            if (link != null) {
+                LaunchPlan.forLink(software, detection, link, anyFolder, "prompt", host);
+            } else {
+                LaunchPlan.of(software, detection, null,
+                        software.getLaunchKind() == LaunchKind.CLI ? List.of("prompt") : List.of(), host);
+            }
+            return Optional.empty();
+        } catch (com.aicompany.backend.software.exception.SoftwareNotLaunchableException refused) {
+            return Optional.of(refused.getMessage());
+        }
+    }
+
     @Transactional(readOnly = true)
     public Optional<byte[]> icon(String key) {
         Software software = load(key);
@@ -138,6 +204,12 @@ public class SoftwareService {
     @Transactional(readOnly = true)
     public void refreshDetection() {
         detector.refresh();
+    }
+
+    /** ADR-046: the local services are asked again at the next detection; the rest is kept. Writes no row. */
+    @Transactional(readOnly = true)
+    public void refreshServices() {
+        detector.forgetServices();
     }
 
     private Software load(String key) {
