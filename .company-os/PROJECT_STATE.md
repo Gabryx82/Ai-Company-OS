@@ -44,7 +44,30 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Due grafi più chiari, e come muoversi dentro — 2026-11-13, fatta, non committata
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 34–37 in `master` e su `origin` — 2026-11-13
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue: dove le sezioni di PHASE 34–37
+> dicono «nessun commit» o «non committata», descrivono com'era prima di questa chiusura.
+
+- **Richiesta dell'operatore** del 2026-11-13: «Fai il commit sul branch della fase, poi mergia con master/origin e
+  infine pusha» (charter §8: merge e push autorizzati esplicitamente).
+- **Commit** su `autonomous/phase-37-one-ecosystem`, per area, sopra `6a50288` (PHASE 33): `af05370` control plane e
+  contratto OpenAPI (V42–V46), `4d4d850` AI Engine, `c61012f` console, `3b753b5` ADR-041–046, governance, contesto di
+  design, RUNNING, README, debito e stato; `0a6a478` la correzione qui sotto. Restano fuori, non tracciate, le
+  schermate `.impeccable/review/*.jpg`: mostrano la console dal vivo dell'operatore.
+- **Correzione trovata prima del push**: in un checkout pulito di `master` su Windows (`core.autocrlf=true`) i
+  template `backend/src/main/resources/workspace-templates/*.md` diventavano CRLF e tre test andavano rossi
+  (`HandoffAnywhereApiTest` ×2, `ProjectWorkspaceApiTest`): `@AGENTS.md` e `@./AGENTS.md` non stavano più su una riga
+  chiusa da `\n`. Nel working tree erano LF solo perché git non li aveva ancora toccati. Un `.gitattributes`
+  (`text eol=lf`) li tiene LF in ogni checkout; i blob erano già LF.
+- **Merge**: fast-forward di `master` da `6a50288` a `0a6a478`, nessun merge commit, nessun force; `origin/master`
+  non si era mosso. **Push** di `master` e del branch di fase (nuovo su `origin`, tracciato).
+- **Suite** sul `master` pulito, in un worktree a parte (il backend dell'operatore gira da `backend/`): Java **938
+  (0 falliti, 3 saltati: link simbolici su Windows)**; engine **82**; console **216 su 216**, typecheck pulito.
+- **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+- **Prossimo passo**: nessuno in sospeso; si attendono nuove direttive.
+
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Due grafi più chiari, e come muoversi dentro — 2026-11-13, integrata in `master` e pushata il 2026-11-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Solo console; nessun ADR nuovo:
 > la scena resta quella di ADR-037, cambiano aspetto e navigazione.
@@ -78,7 +101,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   `SecondBrain.test.tsx`, 4 dei gesti), visti rossi togliendo la funzione che proteggono. Backend ed engine non toccati.
 - **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
 
-## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Un ecosistema che non fa aspettare — 2026-11-12, fatta, non committata
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Un ecosistema che non fa aspettare — 2026-11-12, integrata in `master` e pushata il 2026-11-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Decisioni in
 > `docs/adr/ADR-046-ecosystem-without-waiting.md`.
@@ -102,7 +125,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   pulito; engine non toccato. Viste rosse prima del verde: 6 nel backend, 2 nella console.
 - **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
 
-## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — OpenClaw dentro la console, LM Studio fuori — 2026-11-12, fatta, non committata
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — OpenClaw dentro la console, LM Studio fuori — 2026-11-12, integrata in `master` e pushata il 2026-11-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Decisioni in
 > `docs/adr/ADR-045-openclaw-in-the-console.md`.
@@ -136,7 +159,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Per usarla**: riavviare il backend (applica V46) e ricaricare la console; gateway acceso (`openclaw daemon start`).
 - **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
 
-## ▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37 — Un ecosistema solo, e imparare facendo — 2026-11-10/11, fatta, non committata
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37 — Un ecosistema solo, e imparare facendo — 2026-11-10/11, integrata in `master` e pushata il 2026-11-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
 
@@ -185,7 +208,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   OpenClaw acceso; TD-100 quando LM Studio è installato; misurare se un modello locale tiene il formato della lezione
   (ADR-044 §6).
 
-## ▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 36 — Garanzia dell'harness — 2026-11-08, fatta, non committata
+## ▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 36 — Garanzia dell'harness — 2026-11-08, integrata in `master` e pushata il 2026-11-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
 
@@ -243,7 +266,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   partenza sono nei due backup in `%USERPROFILE%\.aicos\backups`). I progetti reali si aggiornano alla loro prima
   consegna.
 
-## ▶▶▶▶▶▶▶▶▶▶▶ PHASE 35 — Consumi degli agenti: misurare, poi ridurre — 2026-11-07/08, quattro fasi fatte, non committata
+## ▶▶▶▶▶▶▶▶▶▶▶ PHASE 35 — Consumi degli agenti: misurare, poi ridurre — 2026-11-07/08, quattro fasi fatte, integrata in `master` e pushata il 2026-11-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
 
@@ -314,7 +337,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   `--testTimeout=15000` e typecheck pulito — con il limite predefinito di 5 s un test diverso a ogni giro va in timeout
   (TD-99, file non toccati dalla fase). Misure prima/dopo in ADR-041 §6; punti aperti in §13. **Prossimo passo**: review dell'operatore e decisione su come committare PHASE 34 e PHASE 35.
 
-## ▶▶▶▶▶▶▶▶▶▶ PHASE 34 — Claude Code nell'app desktop come target di consegna — 2026-11-07, nel working tree di `master`, non committata
+## ▶▶▶▶▶▶▶▶▶▶ PHASE 34 — Claude Code nell'app desktop come target di consegna — 2026-11-07, integrata in `master` e pushata il 2026-11-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue.
 
