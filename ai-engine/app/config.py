@@ -118,6 +118,8 @@ class Settings:
     # PHASE 32 (TD-67): per model, the layers Ollama may offload to the GPU; a model not
     # listed is left to Ollama.
     ollama_num_gpu_by_model: dict[str, int] = field(default_factory=lambda: dict(DEFAULT_OLLAMA_NUM_GPU_BY_MODEL))
+    # PHASE 36: where Ollama keeps its pulled models -- read when /api/tags hangs on a running Ollama.
+    ollama_models_dir: str | None = None
     # PHASE 29: whether a text answer thinks first. False by default: on this CPU a
     # thinking qwen3.5 spent its whole budget reasoning and answered nothing, while
     # without thinking it answered correctly. None leaves the model's own default.
@@ -186,6 +188,8 @@ class Settings:
                                      _pairs(env["AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL"]).items()}
             if "AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL" in env else dict(DEFAULT_OLLAMA_NUM_GPU_BY_MODEL),
             ollama_think=_think(env.get("AICOS_ENGINE_OLLAMA_THINK", "false")),
+            ollama_models_dir=env.get("AICOS_ENGINE_OLLAMA_MODELS_DIR") or env.get("OLLAMA_MODELS")
+            or str(Path.home() / ".ollama" / "models"),
             anthropic_api_key=env.get("ANTHROPIC_API_KEY") or None,
             anthropic_models=_csv(env.get("AICOS_ENGINE_ANTHROPIC_MODELS")) or ("claude-opus-5",),
             anthropic_timeout_seconds=float(env.get("AICOS_ENGINE_ANTHROPIC_TIMEOUT_SECONDS", "600")),

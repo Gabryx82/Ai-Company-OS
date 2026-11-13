@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from app.contract import CompletionRequest, FinishReason, ModelInfo
+from app.contract import CompletionRequest, FinishReason, Metrics, ModelInfo
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,8 @@ class ProviderResult:
     # The provider's own name for what ran, when it differs from the request
     # (a fallback model, a resolved alias).
     served_model: str | None = None
+    # PHASE 35: the provider's own timings, when it reports any.
+    metrics: Metrics | None = None
 
 
 class Provider(Protocol):

@@ -60,7 +60,7 @@ def test_a_completion_has_exactly_the_contract_shape(client):
     assert response.status_code == 200
     body = response.json()
     assert set(body) == {"id", "model", "provider", "output", "finish_reason", "usage", "latency_ms",
-                         "correlation_id"}
+                         "correlation_id", "metrics"}
     assert body["id"].startswith("cmpl_")
     assert body["model"] == "echo:default"
     assert body["provider"] == "echo"
@@ -68,6 +68,8 @@ def test_a_completion_has_exactly_the_contract_shape(client):
     assert set(body["usage"]) == {"input_tokens", "output_tokens"}
     assert "Write the plan" in body["output"]
     assert "You are the planner" in body["output"]
+    # PHASE 35: the echo measures nothing, and says so -- no number stands in for a measurement.
+    assert body["metrics"] is None
 
 
 def test_the_echo_says_it_is_an_echo(client):

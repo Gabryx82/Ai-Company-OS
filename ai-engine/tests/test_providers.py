@@ -138,6 +138,14 @@ def test_the_per_model_gpu_layers_come_from_the_environment():
     assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_GPU_BY_MODEL": ""}).ollama_num_gpu_by_model == {}
 
 
+def test_the_folder_of_ollamas_models_follows_ollama_itself():
+    from pathlib import Path
+    assert Settings.from_environment({}).ollama_models_dir == str(Path.home() / ".ollama" / "models")
+    assert Settings.from_environment({"OLLAMA_MODELS": "D:/modelli"}).ollama_models_dir == "D:/modelli"
+    assert Settings.from_environment({"OLLAMA_MODELS": "D:/modelli", "AICOS_ENGINE_OLLAMA_MODELS_DIR": "E:/m"}) \
+        .ollama_models_dir == "E:/m"
+
+
 def test_the_per_model_windows_come_from_the_environment():
     assert Settings.from_environment({}).ollama_num_ctx_by_model == {"deepseek-coder-v2:16b": 4096, "llama3.2:3b": 4096}
     assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_CTX_BY_MODEL": "x:1=8192"}).ollama_num_ctx_by_model \
@@ -149,6 +157,79 @@ def test_the_context_window_comes_from_the_environment_and_zero_leaves_ollamas_d
     assert Settings.from_environment({}).ollama_num_ctx == 16384
     assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_CTX": "8192"}).ollama_num_ctx == 8192
     assert Settings.from_environment({"AICOS_ENGINE_OLLAMA_NUM_CTX": "0"}).ollama_num_ctx is None
+
+
+def test_ollama_reports_its_own_timings_and_the_window_it_was_asked_for():
+    # PHASE 35: what Ollama measured, in its nanoseconds, becomes milliseconds; the window is
+    # the num_ctx this call sent -- a setting, named as such, not a measurement.
+    def handler(request):
+        return httpx.Response(200, json={
+            "model": "qwen3.5:9b", "message": {"content": "ok"}, "done_reason": "stop",
+            "prompt_eval_count": 1200, "eval_count": 80,
+            "total_duration": 9_876_543_210, "load_duration": 2_500_000_000,
+            "prompt_eval_duration": 4_000_400_000, "eval_duration": 3_300_000_000})
+
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(handler), num_ctx=16384,
+                              num_ctx_by_model={"deepseek-coder-v2:16b": 4096})
+    with app_with(provider) as client:
+        body = client.post("/v1/completions", json=completion(model="ollama:qwen3.5:9b"), headers=AUTH).json()
+        small = client.post("/v1/completions", json=completion(model="ollama:deepseek-coder-v2:16b"),
+                            headers=AUTH).json()
+
+    assert body["usage"] == {"input_tokens": 1200, "output_tokens": 80}
+    assert body["metrics"] == {"total_duration_ms": 9877, "load_duration_ms": 2500,
+                               "prompt_eval_duration_ms": 4000, "eval_duration_ms": 3300,
+                               "context_window": 16384}
+    assert small["metrics"]["context_window"] == 4096
+
+
+def test_the_control_plane_sets_the_window_and_how_long_ollama_keeps_the_model():
+    # PHASE 35 (ADR-041 §11): the catalog decides per model; the request carries it and wins over
+    # the engine's own per-model defaults, which remain for a request that says nothing.
+    seen = []
+
+    def handler(r):
+        seen.append(json.loads(r.content))
+        return httpx.Response(200, json={"message": {"content": "ok"}})
+
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(handler), num_ctx=16384,
+                              num_ctx_by_model={"qwen3.5:4b": 4096})
+    with app_with(provider) as client:
+        told = client.post("/v1/completions", json=completion(model="ollama:qwen3.5:4b", context_window=8192,
+                                                              keep_alive="2m"), headers=AUTH).json()
+        client.post("/v1/completions", json=completion(model="ollama:qwen3.5:4b"), headers=AUTH)
+    assert seen[0]["options"]["num_ctx"] == 8192 and seen[0]["keep_alive"] == "2m"
+    assert told["metrics"]["context_window"] == 8192
+    assert seen[1]["options"]["num_ctx"] == 4096 and "keep_alive" not in seen[1]
+
+
+def test_a_keep_alive_that_is_not_a_duration_is_refused_before_ollama_is_called():
+    def handler(r):
+        raise AssertionError("Ollama must not be called")
+
+    with app_with(ollama(handler)) as client:
+        for wrong in ("2 minutes", "5m; rm -rf", "", "-2m"):
+            response = client.post("/v1/completions", json=completion(model="ollama:qwen3.5:4b", keep_alive=wrong),
+                                   headers=AUTH)
+            assert response.status_code == 400, wrong
+        assert client.post("/v1/completions", json=completion(model="ollama:qwen3.5:4b", context_window=100),
+                           headers=AUTH).status_code == 400
+
+
+def test_a_timing_ollama_does_not_report_stays_unknown():
+    # An older Ollama, or a reply cut short: nothing is filled in, and no window is claimed
+    # when the call left Ollama's own default.
+    def handler(request):
+        return httpx.Response(200, json={"message": {"content": "ok"}, "total_duration": 5_000_000,
+                                         "load_duration": "soon", "eval_duration": -3})
+
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(handler), num_ctx=None)
+    with app_with(provider) as client:
+        body = client.post("/v1/completions", json=completion(model="ollama:qwen3.5:9b"), headers=AUTH).json()
+
+    assert body["metrics"] == {"total_duration_ms": 5, "load_duration_ms": None,
+                               "prompt_eval_duration_ms": None, "eval_duration_ms": None,
+                               "context_window": None}
 
 
 def test_ollama_length_is_reported_as_length():
@@ -168,6 +249,72 @@ def test_an_ollama_that_is_not_running_is_unavailable_not_broken():
 
     assert response.status_code == 503
     assert response.json()["type"] == PROBLEM + "provider-unavailable"
+    assert {"id": "ollama:*", "provider": "ollama", "available": False,
+            "detail": "Ollama is not reachable; start it and pull a model", "billed": False} in models
+
+
+# PHASE 36: a running Ollama whose model list hangs -- seen on the operator's machine, /api/tags waiting
+# 12-55 s and ending in 500 while Ollama fetched its model recommendations from ollama.com -- is not an
+# Ollama that is down. Its models stay available: those it listed last, or those installed in its folder.
+
+def _tags_hang_after(first, version_ok=True):
+    calls = {"tags": 0}
+
+    def handler(request):
+        if request.url.path == "/api/version":
+            if not version_ok:
+                raise httpx.ConnectError("refused")
+            return httpx.Response(200, json={"version": "0.35.1"})
+        calls["tags"] += 1
+        if first is not None and calls["tags"] == 1:
+            return httpx.Response(200, json={"models": [{"name": n} for n in first]})
+        raise httpx.ReadTimeout("model recommendations")
+    return handler
+
+
+def test_a_running_ollama_slow_to_list_keeps_the_models_it_listed_last(tmp_path):
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(_tags_hang_after(["qwen3.5:4b"])),
+                              models_dir=tmp_path / "no-folder")
+    with app_with(provider) as client:
+        client.get("/v1/models", headers=AUTH)
+        models = client.get("/v1/models", headers=AUTH).json()["models"]
+    listed = [m for m in models if m["provider"] == "ollama"]
+    assert [(m["id"], m["available"]) for m in listed] == [("ollama:qwen3.5:4b", True)]
+    assert "listed last" in listed[0]["detail"]
+
+
+def test_without_a_previous_list_the_installed_models_come_from_ollamas_folder(tmp_path):
+    manifests = tmp_path / "models" / "manifests"
+    for parts in [("registry.ollama.ai", "library", "qwen3.5", "9b"), ("registry.ollama.ai", "library", "gemma4", "e4b"),
+                  ("registry.ollama.ai", "someone", "coder", "latest"), ("hf.co", "org", "repo", "q4")]:
+        (manifests.joinpath(*parts[:-1])).mkdir(parents=True, exist_ok=True)
+        manifests.joinpath(*parts).write_text("{}")
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(_tags_hang_after(None)),
+                              models_dir=tmp_path / "models")
+    with app_with(provider) as client:
+        models = client.get("/v1/models", headers=AUTH).json()["models"]
+    listed = {m["id"]: m for m in models if m["provider"] == "ollama"}
+    assert set(listed) == {"ollama:qwen3.5:9b", "ollama:gemma4:e4b", "ollama:someone/coder:latest", "ollama:hf.co/org/repo:q4"}
+    assert all(m["available"] for m in listed.values())
+    assert "installed" in listed["ollama:qwen3.5:9b"]["detail"]
+
+
+def test_a_running_ollama_with_nothing_to_list_says_it_did_not_answer_in_time(tmp_path):
+    provider = OllamaProvider("http://ollama.test", 5.0, transport=httpx.MockTransport(_tags_hang_after(None)),
+                              models_dir=tmp_path / "empty")
+    with app_with(provider) as client:
+        models = client.get("/v1/models", headers=AUTH).json()["models"]
+    assert {"id": "ollama:*", "provider": "ollama", "available": False, "billed": False,
+            "detail": "Ollama is running but did not list its models in time (GET /api/tags); try again"} in models
+
+
+def test_an_ollama_that_does_not_answer_at_all_is_still_unreachable(tmp_path):
+    provider = OllamaProvider("http://ollama.test", 5.0,
+                              transport=httpx.MockTransport(_tags_hang_after(["qwen3.5:4b"], version_ok=False)),
+                              models_dir=tmp_path)
+    with app_with(provider) as client:
+        client.get("/v1/models", headers=AUTH)
+        models = client.get("/v1/models", headers=AUTH).json()["models"]
     assert {"id": "ollama:*", "provider": "ollama", "available": False,
             "detail": "Ollama is not reachable; start it and pull a model", "billed": False} in models
 

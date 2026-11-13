@@ -50,6 +50,7 @@ class Gateway:
             usage=Usage(input_tokens=result.input_tokens, output_tokens=result.output_tokens),
             latency_ms=latency_ms,
             correlation_id=correlation_id,
+            metrics=result.metrics,
         )
 
     async def models(self) -> ModelList:

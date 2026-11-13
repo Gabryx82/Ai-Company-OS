@@ -42,11 +42,32 @@ class CompletionRequest(BaseModel):
     # decoding (Ollama) enforces it token by token -- measured necessary: a local
     # 9B planner asked only for "json" returned a phase with no tasks.
     response_schema: dict[str, Any] | None = None
+    # PHASE 35 (ADR-041 §11): how the model runs, as the control plane's catalog decides it per model.
+    # Optional, so the addition is compatible; absent leaves the engine's own defaults. The window is
+    # Ollama's num_ctx; keep_alive how long Ollama keeps the model loaded after the answer ("5m", "0" to
+    # unload at once, "-1" to keep it). A provider without these knobs ignores them.
+    context_window: int | None = Field(default=None, ge=512, le=1_048_576)
+    keep_alive: str | None = Field(default=None, max_length=8, pattern=r"^(0|-1|[1-9][0-9]{0,5}[smh]?)$")
 
 
 class Usage(BaseModel):
     input_tokens: int
     output_tokens: int
+
+
+class Metrics(BaseModel):
+    """PHASE 35: what the provider itself measured about this call, as it reported it.
+
+    A field the provider did not report is null: nothing here is estimated.
+    ``context_window`` is the exception that is not a measurement -- it is the
+    window this call *asked* for (Ollama's ``num_ctx``), null when the call left
+    the provider's own default.
+    """
+    total_duration_ms: int | None = None
+    load_duration_ms: int | None = None
+    prompt_eval_duration_ms: int | None = None
+    eval_duration_ms: int | None = None
+    context_window: int | None = None
 
 
 FinishReason = Literal["stop", "length", "refusal"]
@@ -61,6 +82,8 @@ class CompletionResponse(BaseModel):
     usage: Usage
     latency_ms: int
     correlation_id: str
+    # PHASE 35: optional, so the addition is compatible; null for a provider that measures nothing.
+    metrics: Metrics | None = None
 
 
 class ModelInfo(BaseModel):
