@@ -455,6 +455,15 @@ function PhaseCard({ phase, agents, onOpenTask, onReview }: {
 
 // --- documents ------------------------------------------------------------------
 
+/**
+ * PHASE 35 and 37 (ADR-041 §10, ADR-047): beside each task document its agent writes the
+ * full outcome, TASK-NNN.esito.md, and keeps a diary while it works, TASK-NNN.diario.md.
+ * The control plane lists all three under tasks/; the tab shows each kind in its own section.
+ * The suffixes are the ones PlanMarkdown.outcomePath and diaryPath write.
+ */
+const isOutcome = (path: string) => path.endsWith(".esito.md");
+const isDiary = (path: string) => path.endsWith(".diario.md");
+
 function Documents({ project, docs, onChanged }: { project: Project; docs: WorkspaceDocuments | null; onChanged: () => void }) {
   const api = useApi();
   const [open, setOpen] = useState<string | null>(null);
@@ -475,13 +484,17 @@ function Documents({ project, docs, onChanged }: { project: Project; docs: Works
   if (!docs) return <div className="muted">Nessuna cartella.</div>;
   const groups: [string, { path: string; size: number }[]][] = [
     ["Progetto", [docs.masterPrompt, docs.agents, docs.implementationPlan, docs.planJson].filter((d): d is NonNullable<typeof d> => !!d)],
-    ["Fasi", docs.phases], ["Task", docs.tasks], ["Handoff", docs.handoffs],
+    ["Fasi", docs.phases],
+    ["Task", docs.tasks.filter((d) => !isOutcome(d.path) && !isDiary(d.path))],
+    ["Esiti", docs.tasks.filter((d) => isOutcome(d.path))],
+    ["Diari", docs.tasks.filter((d) => isDiary(d.path))],
+    ["Handoff", docs.handoffs],
   ];
   return (
     <div className="split">
       <div className="card">
         {groups.map(([title, list]) => (
-          <div key={title}>
+          <section key={title} aria-label={title}>
             <div className="card-head"><div className="section-title">{title}</div></div>
             {list.length === 0 && <div className="list-item muted">—</div>}
             {list.map((d) => (
@@ -491,7 +504,7 @@ function Documents({ project, docs, onChanged }: { project: Project; docs: Works
                 <span className="spacer" /><span className="muted" style={{ fontSize: 11 }}>{Math.max(1, Math.round(d.size / 1024))} KB</span>
               </button>
             ))}
-          </div>
+          </section>
         ))}
       </div>
       <div className="card card-body">
