@@ -44,7 +44,26 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — La pagina Impara senza scritte sovrapposte — 2026-11-14, non committata
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito, in `master` e su `origin` — 2026-11-14
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue: le tre sezioni qui sotto
+> (Impara, diario degli agenti, navigazione dell'Ufficio 3D) sono integrate e pushate.
+
+- **Richiesta dell'operatore** del 2026-11-14: «Committa tutto le ultime modifiche sul branch della fase, mergia su
+  Master/Origin e infine pusha» (charter §8: merge e push autorizzati esplicitamente).
+- **Commit** su `autonomous/phase-37-one-ecosystem`, per area, sopra `27107db`: `76278ed` control plane e contratto
+  OpenAPI (ADR-047, pacchetto `journal/`), `f973def` console (diario e modifiche nell'ufficio, navigazione, Impara),
+  `ecb36b8` ADR-047, RUNNING, README e stato. Restano fuori, non tracciate, le schermate `.impeccable/review/*.jpg`,
+  come nel merge precedente.
+- **Suite** prima del merge: Java **949 (0 falliti, 3 saltati: link simbolici su Windows)** in un worktree a parte
+  su `ecb36b8` (il backend dell'operatore gira da `backend/`), poi rimosso; console **235 su 235** e typecheck pulito
+  sullo stesso codice; engine non toccato dal merge precedente, non rieseguito.
+- **Merge**: fast-forward di `master` da `27107db` a `ecb36b8`, senza cambiare branch, nessun merge commit, nessun
+  force; `origin/master` non si era mosso. **Push** di `master` e del branch di fase.
+- **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+- **Prossimo passo**: nessuno in sospeso; si attendono nuove direttive.
+
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — La pagina Impara senza scritte sovrapposte — 2026-11-14, integrata in `master` e pushata il 2026-11-14
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Solo console; nessun ADR nuovo.
 
@@ -76,7 +95,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Suite** (2026-11-14): console **235 su 235**, typecheck pulito.
 - **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
 
-## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Il diario degli agenti e le modifiche al codice — 2026-11-13, non committata
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Il diario degli agenti e le modifiche al codice — 2026-11-13, integrata in `master` e pushata il 2026-11-14
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Decisioni in
 > `docs/adr/ADR-047-agents-journal-and-changes.md`.
@@ -111,7 +130,7 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   cartellino e la vista delle modifiche togliendo la riga che li collega, la copia di un altro database.
 - **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
 
-## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Muoversi nell'Ufficio 3D, e chi lavora davvero — 2026-11-13, non committata
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Muoversi nell'Ufficio 3D, e chi lavora davvero — 2026-11-13, integrata in `master` e pushata il 2026-11-14
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Solo console; nessun ADR nuovo.
 
