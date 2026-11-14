@@ -87,6 +87,7 @@ public class ExecutionService {
     private final SkillHubService hub;
     private final ReadinessService readiness;
     private final com.aicompany.backend.sync.AgentPublications publications;
+    private final com.aicompany.backend.journal.WorkChanges changes;
 
     public ExecutionService(TaskRepository tasks, ProjectRepository projects, AgentRepository agents,
                             SoftwareRepository softwareCatalog, SoftwareService software,
@@ -95,8 +96,10 @@ public class ExecutionService {
                             AgentBindingService binding, HarnessService harness, SkillLibrary library,
                             TaskTransitions transitions, OpenCodeSessions sessions, HandoffReads reads,
                             SkillHubService hub, ReadinessService readiness,
-                            com.aicompany.backend.sync.AgentPublications publications) {
+                            com.aicompany.backend.sync.AgentPublications publications,
+                            com.aicompany.backend.journal.WorkChanges changes) {
         this.publications = publications;
+        this.changes = changes;
         this.readiness = readiness;
         this.hub = hub;
         this.reads = reads;
@@ -202,6 +205,15 @@ public class ExecutionService {
                 workspace.readIn(folder, taskDocument).orElse(null), packagePath, uses, mcpNote, mode);
         workspace.writeIn(folder, packagePath, pkg.document());
         written.add(packagePath);
+        // PHASE 37 (ADR-047): the diary the agent keeps while it works -- created once, never overwritten:
+        // a second handoff of the same task goes on writing in it.
+        String diary = com.aicompany.backend.plan.service.PlanMarkdown.diaryPath(taskDocument);
+        if (workspace.readIn(folder, diary).isEmpty()) {
+            workspace.writeIn(folder, diary, com.aicompany.backend.journal.DiaryFormat.template(label));
+            written.add(diary);
+        }
+        // ...and the folder as it is now, before the tool is opened: what the agent changes is measured against it.
+        String copy = changes.snapshot(task.getId(), folder);
 
         if (task.getStatus() == TaskStatus.OPEN) {
             transitions.apply(task, TaskTransition.START, project, agent, requestedBy, TaskTransitionRecord.Via.HANDOFF);
@@ -245,6 +257,8 @@ public class ExecutionService {
         String recorded = project != null ? packagePath : folder.resolve(packagePath).toString();
         TaskHandoff handoff = handoffs.save(new TaskHandoff(taskId, target.key(), recorded, pkg.compactPrompt(),
                 command, requestedBy).followedOn(followPort).measured(HandoffPackager.chars(pkg.document())).teaching(mode));
+        changes.bind(task.getId(), copy, new com.aicompany.backend.journal.WorkChanges.Baseline(handoff.getId(),
+                handoff.getCreatedAt()));
         // PHASE 35 (ADR-041): the size of each file the package asks the agent to read, as it is now.
         reads.record(handoff.getId(), measureReads(HandoffPackager.reads(task, project, taskDocument, all, uses),
                 folder, all, uses));

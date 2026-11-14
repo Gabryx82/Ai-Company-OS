@@ -37,6 +37,15 @@ public final class PlanMarkdown {
     }
 
     /**
+     * PHASE 37 (ADR-047): where an agent keeps its diary while it works -- a file beside the
+     * task document, {@code tasks/TASK-001.md} → {@code tasks/TASK-001.diario.md}, one line per step.
+     */
+    public static String diaryPath(String documentPath) {
+        return (documentPath.endsWith(".md") ? documentPath.substring(0, documentPath.length() - 3) : documentPath)
+                + ".diario.md";
+    }
+
+    /**
      * The sections of a task document an engine run carries (ADR-041 §10): what the work is and how the plan
      * says to do and check it. Not why it exists, the tools, the delivery, the notes or the outcome.
      */

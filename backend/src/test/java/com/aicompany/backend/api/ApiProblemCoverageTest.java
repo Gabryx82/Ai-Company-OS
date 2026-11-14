@@ -53,7 +53,9 @@ class ApiProblemCoverageTest {
             // PHASE 24 (ADR-031): cost governance.
             "com.aicompany.backend.cost",
             // ADR-029 §5: a running terminal that is not, or not the caller's.
-            "com.aicompany.backend.terminal");
+            "com.aicompany.backend.terminal",
+            // PHASE 37 (ADR-047): the agents' journal and the changes to their work.
+            "com.aicompany.backend.journal");
 
     /**
      * The precondition refusals of ADR-009. They live in {@code api} rather than in

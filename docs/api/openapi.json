@@ -1744,6 +1744,34 @@
         "required" : [ "key", "label" ],
         "type" : "object"
       },
+      "ChangedFile" : {
+        "properties" : {
+          "additions" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "comparable" : {
+            "type" : "boolean"
+          },
+          "deletions" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "modifiedAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "ADDED", "MODIFIED", "DELETED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "additions", "comparable", "deletions", "modifiedAt", "path", "status" ],
+        "type" : "object"
+      },
       "CodeGraph" : {
         "properties" : {
           "cycles" : {
@@ -2612,6 +2640,55 @@
         "required" : [ "app", "backup", "message", "outcome", "path" ],
         "type" : "object"
       },
+      "DiffHunk" : {
+        "properties" : {
+          "lines" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DiffLine"
+            },
+            "type" : "array"
+          },
+          "newLines" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "newStart" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "oldLines" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "oldStart" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "lines", "newLines", "newStart", "oldLines", "oldStart" ],
+        "type" : "object"
+      },
+      "DiffLine" : {
+        "properties" : {
+          "kind" : {
+            "enum" : [ "CONTEXT", "ADDED", "REMOVED" ],
+            "type" : "string"
+          },
+          "newNumber" : {
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "oldNumber" : {
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "kind", "newNumber", "oldNumber", "text" ],
+        "type" : "object"
+      },
       "Document" : {
         "properties" : {
           "modified" : {
@@ -2983,6 +3060,39 @@
           }
         },
         "required" : [ "description", "details", "inputs", "installName", "kind", "name", "provider", "ref", "sourceUrl", "targets", "version", "warnings" ],
+        "type" : "object"
+      },
+      "FileDiff" : {
+        "properties" : {
+          "additions" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "comparable" : {
+            "type" : "boolean"
+          },
+          "deletions" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "hunks" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DiffHunk"
+            },
+            "type" : "array"
+          },
+          "note" : {
+            "type" : [ "string", "null" ]
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "ADDED", "MODIFIED", "DELETED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "additions", "comparable", "deletions", "hunks", "note", "path", "status" ],
         "type" : "object"
       },
       "FileResponse" : {
@@ -3555,6 +3665,46 @@
           }
         },
         "required" : [ "app", "applicable", "command", "detail", "from", "id", "key", "name", "needsOverwrite", "software", "to", "type" ],
+        "type" : "object"
+      },
+      "JournalEntry" : {
+        "properties" : {
+          "actor" : {
+            "type" : [ "string", "null" ]
+          },
+          "agentId" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "approximate" : {
+            "type" : "boolean"
+          },
+          "at" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "DELIVERED", "STARTED", "STEP", "OUTCOME", "RUN_QUEUED", "RUN_STARTED", "RUN_SUCCEEDED", "RUN_FAILED", "ACCEPTED", "CHANGES_REQUESTED", "COMPLETED", "STOPPED", "REOPENED" ],
+            "type" : "string"
+          },
+          "task" : {
+            "type" : "string"
+          },
+          "taskId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "taskTitle" : {
+            "type" : "string"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "actor", "agentId", "approximate", "at", "key", "kind", "task", "taskId", "taskTitle", "text" ],
         "type" : "object"
       },
       "LaunchRequest" : {
@@ -7156,6 +7306,36 @@
         "required" : [ "agentId" ],
         "type" : "object"
       },
+      "TaskChanges" : {
+        "properties" : {
+          "additions" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "deletions" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "files" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ChangedFile"
+            },
+            "type" : "array"
+          },
+          "since" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "tracked" : {
+            "type" : "boolean"
+          },
+          "truncated" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "additions", "deletions", "files", "since", "tracked", "truncated" ],
+        "type" : "object"
+      },
       "TaskCreateRequest" : {
         "properties" : {
           "agentId" : {
@@ -9821,6 +10001,45 @@
           }
         },
         "tags" : [ "orchestrator-controller" ]
+      }
+    },
+    "/api/journal" : {
+      "get" : {
+        "operationId" : "journal",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "agentId",
+          "required" : false,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "default" : 100,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/JournalEntry"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "journal-controller" ]
       }
     },
     "/api/learning" : {
@@ -14265,6 +14484,67 @@
           }
         },
         "tags" : [ "task-routing-controller" ]
+      }
+    },
+    "/api/tasks/{id}/changes" : {
+      "get" : {
+        "operationId" : "changes",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TaskChanges"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "journal-controller" ]
+      }
+    },
+    "/api/tasks/{id}/changes/file" : {
+      "get" : {
+        "operationId" : "changedFile",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FileDiff"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "journal-controller" ]
       }
     },
     "/api/tasks/{id}/complete" : {

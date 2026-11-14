@@ -102,6 +102,8 @@ final class HandoffPackager {
         // PHASE 35 (ADR-041 §10): the full outcome in a file beside the task document.
         String outcome = PlanMarkdown.outcomePath(taskDocument);
         String outcomeFile = outcome.substring(outcome.lastIndexOf('/') + 1);
+        // PHASE 37 (ADR-047): the diary of the steps, read by the 3D office while the agent works.
+        String diary = PlanMarkdown.diaryPath(taskDocument);
 
         String document = """
                 # Handoff — %s → %s
@@ -139,7 +141,7 @@ final class HandoffPackager {
                 ## Livello di Human-in-the-Loop: %s
 
                 %s
-                %s
+                %s%s
                 ## Alla fine
 
                 - Scrivi l'esito completo in `%s`: cosa hai fatto, file toccati, test eseguiti, cosa resta.
@@ -151,7 +153,8 @@ final class HandoffPackager {
                 modelFits ? binding.model().displayName() + " (`" + binding.model().key() + "`)" : "scelto nell'app o nella CLI",
                 modelFits && binding.provider() != null ? binding.provider().name() : "—",
                 target.name(), target.howItWorks(), allowed, skills, context, AutonomyPolicy.label(level),
-                rules, lesson.isEmpty() ? "" : "\n## Lezione\n\n" + lesson, outcome, taskDocument, outcomeFile, outcomeFile);
+                rules, lesson.isEmpty() ? "" : "\n## Lezione\n\n" + lesson, diaryRules(diary, taskDocument, outcome),
+                outcome, taskDocument, outcomeFile, outcomeFile);
 
         String full = """
                 Sei %s (%s) e lavori per AI Company OS%s, nella cartella `%s`.
@@ -172,13 +175,37 @@ final class HandoffPackager {
 
                 Software che puoi usare: %s.
                 %s
+                Mentre lavori, appena inizi e poi a ogni passo, aggiungi in fondo a `%s` una riga \
+                `- <ora del sistema, con date -Iseconds o Get-Date -Format o> · <cosa hai fatto>`: AI Company OS la mostra \
+                nell'Ufficio 3D. Non cancellare le righe già scritte.
+
                 Alla fine scrivi l'esito completo in `%s` (cosa hai fatto, file toccati, test eseguiti, cosa resta) e \
                 nella sezione Esito di `%s` un riassunto di poche righe con il link a quel file. Non chiudere tu la task.
                 """.formatted(agent.getName(), agent.getRole(), project == null ? "" : ", progetto «" + project.getName() + "»",
                 folder, role, taskDocumentText == null ? task.getTitle() : taskDocumentText.strip(),
                 AutonomyPolicy.label(level), rules, skills, allowed,
-                lesson.isEmpty() ? "" : "\n## Lezione\n\n" + lesson, outcome, taskDocument);
+                lesson.isEmpty() ? "" : "\n## Lezione\n\n" + lesson, diary, outcome, taskDocument);
         return new Package(document, compact, full);
+    }
+
+    /**
+     * PHASE 37 (ADR-047): how the agent keeps its diary -- a line per step, appended, with the time
+     * from the system clock -- so that the 3D office shows the work while it happens.
+     */
+    static String diaryRules(String diary, String taskDocument, String outcome) {
+        return """
+
+                ## Mentre lavori: il diario
+
+                AI Company OS mostra il tuo lavoro passo passo nell'Ufficio 3D leggendo `%s`: tienilo aggiornato \
+                mentre lavori, non alla fine.
+
+                - Appena inizi, e poi a ogni passo (un file letto, una decisione, un file creato o modificato, un comando \
+                o un test eseguito, un problema), **aggiungi in fondo** una riga `- <ora> · <cosa hai fatto>`, breve e al passato.
+                - Prendi l'ora dal sistema, con il fuso: `date -Iseconds`, in PowerShell `Get-Date -Format o`. Per esempio \
+                `- 2026-11-13T12:04:05+01:00 · Letto %s`.
+                - Non cancellare né riscrivere le righe già scritte. L'ultima, a fine lavoro: `- <ora> · Finito: esito in %s`.
+                """.formatted(diary, taskDocument, outcome);
     }
 
     /** A target's own rules file (Junie, Continue): points to AGENTS.md and to the current package. */
@@ -186,6 +213,7 @@ final class HandoffPackager {
         return MARKER + "\n\n# Regole per " + target.name() + "\n\n"
                 + "- La governance del progetto è in `AGENTS.md`: leggila prima di tutto.\n"
                 + "- Il lavoro corrente è descritto in `" + packagePath + "`.\n"
+                + "- Mentre lavori tieni il diario dei passi che il pacchetto indica: una riga per passo, aggiunta in fondo.\n"
                 + "- Non chiudere le task: le chiude l'operatore in AI Company OS dopo la review.\n";
     }
 
@@ -195,6 +223,8 @@ final class HandoffPackager {
                 + "Questa cartella è stata preparata da AI Company OS per una sola task, senza progetto.\n\n"
                 + "- Il lavoro da fare è in `" + packagePath + "`.\n"
                 + "- Lavora solo in questa cartella; non eseguire azioni esterne senza consenso.\n"
+                + "- Mentre lavori tieni il diario in `TASK.diario.md`: una riga per passo, `- <ora> · <cosa hai fatto>`, "
+                + "aggiunta in fondo, con l'ora del sistema.\n"
                 + "- A fine lavoro scrivi l'esito completo in `TASK.esito.md` e, nella sezione Esito di `TASK.md`, "
                 + "un riassunto di poche righe con il link a quel file; la task la chiude l'operatore.\n";
     }

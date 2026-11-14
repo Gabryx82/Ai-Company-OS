@@ -214,6 +214,9 @@ class HandoffAnywhereApiTest extends AbstractPostgresTest {
         assertThat(inbox.resolve("CLAUDE.md")).exists();
         assertThat(inbox.resolve("GEMINI.md")).exists();
         assertThat(inbox.resolve(".aicos/handoffs/TASK-" + taskId + "-opencode.md")).exists();
+        // PHASE 37 (ADR-047): the diary beside TASK.md, and the governance says how to keep it.
+        assertThat(Files.readString(inbox.resolve("TASK.diario.md"))).contains("una riga per passo");
+        assertThat(Files.readString(inbox.resolve("AGENTS.md"))).contains("`TASK.diario.md`");
         assertThat(host.launches().getFirst().command()).contains("--prompt");
     }
 

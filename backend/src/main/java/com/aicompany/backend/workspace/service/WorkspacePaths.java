@@ -27,7 +27,9 @@ public final class WorkspacePaths {
     static final List<String> WRITABLE_ROOTS = List.of("docs/", "tasks/", "references/", ".aicos/", ".junie/",
             ".continue/rules/");
     // PHASE 34: GEMINI.md, the instructions file of Antigravity and Gemini CLI, beside AGENTS.md and CLAUDE.md.
-    static final List<String> WRITABLE_FILES = List.of("MASTER_PROMPT.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "TASK.md");
+    // PHASE 37 (ADR-047): TASK.diario.md, the diary a handoff outside a project prepares beside TASK.md.
+    static final List<String> WRITABLE_FILES = List.of("MASTER_PROMPT.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "TASK.md",
+            "TASK.diario.md");
     static final List<String> TEXT_EXTENSIONS = List.of(".md", ".json", ".txt");
     static final List<String> IMAGE_EXTENSIONS = List.of(".png", ".jpg", ".jpeg", ".webp", ".gif");
 
