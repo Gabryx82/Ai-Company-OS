@@ -44,7 +44,7 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
-## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — La scheda Documenti con esiti e diari a parte — 2026-11-14
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — La scheda Documenti con esiti e diari a parte — 2026-11-14, integrata in `master` e pushata il 2026-11-14
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Solo console; nessun ADR nuovo,
 > nessun cambio del contratto API.
@@ -52,7 +52,12 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
 - **Direttiva** dell'operatore del 2026-11-14: «Date le ultime modifiche alla documentazione di AI-COMPANY-OS, la
   scheda documenti di un progetto organizzala dividendo in sezioni per ogni categoria di documento: come hai diviso
   fasi, tasks e handoffs, aggiungi anche la sezione per gli esiti delle task e per i documenti di diario». Stesso
-  branch e working tree; **nessun commit**.
+  branch e working tree.
+- **Integrazione**, su richiesta dell'operatore del 2026-11-14 («Esegui il commit, poi mergia in master/origin e
+  pusha»; charter §8): commit su `autonomous/phase-37-one-ecosystem` sopra `94f03ef`, `aea0422` console e test,
+  `5efd3df` stato; fast-forward di `master` da `94f03ef` a `5efd3df` senza cambiare branch, nessun merge commit, nessun
+  force (`origin/master` era fermo a `94f03ef`); push di `master` e del branch di fase. Poi, allo stesso modo, questo
+  aggiornamento dello stato. Restano fuori, non tracciate, le schermate `.impeccable/review/*.jpg`.
 - **Causa**: il control plane elenca in `Documents.tasks` tutto ciò che sta in `tasks/`, e da PHASE 35 (ADR-041 §10)
   e PHASE 37 (ADR-047) lì accanto a `TASK-NNN.md` ci sono anche `TASK-NNN.esito.md` e `TASK-NNN.diario.md`: la sezione
   «Task» li mescolava in ordine alfabetico (diario, esito, task di ogni numero).
@@ -73,8 +78,12 @@ stato autorizzato esplicitamente da un umano e solo allora eseguito.
   l'aggiornamento dei testi generati e la prontezza (`ReadinessService`) passano anche sui diari. Non cambia nulla: i
   due schemi sostituiti sono intestazioni di un documento di task («## Prompt compatto», «## Come si consegna») che un
   diario non contiene. Da allineare la prossima volta che si tocca quel file.
-- **Suite** (2026-11-14): console **238 su 238** (235 + 3), typecheck pulito. Backend ed engine non toccati.
+- **Suite** (2026-11-14): console **238 su 238** (235 + 3), typecheck pulito. Backend ed engine non toccati: la suite
+  Java intera non è stata rieseguita; prima del merge, in un worktree a parte su `5efd3df` (poi rimosso), i quattro test
+  che leggono il repository (`BlueprintSelfScanTest`, `AuditDebtGuardTest`, `DebtRegistryConsistencyTest`,
+  `ReadmeTruthTest`): **17 su 17**.
 - **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+- **Prossimo passo**: nessuno in sospeso; si attendono nuove direttive.
 
 ## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito, in `master` e su `origin` — 2026-11-14
 
