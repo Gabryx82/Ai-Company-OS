@@ -44,6 +44,106 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — La pagina Impara senza scritte sovrapposte — 2026-11-14, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Solo console; nessun ADR nuovo.
+
+- **Direttiva** dell'operatore del 2026-11-14: «Ho aperto la scheda impara, ci sono scritte sovrapposte da aggiustare e
+  rendere più pulito il design della pagina». Stesso branch e working tree; **nessun commit**. Toccati solo
+  `frontend/src/views/Learn.tsx`, `Learn.test.tsx` e le regole di Impara in `styles.css` (sezione ADR-044; nel vecchio
+  blocco `@media (max-width: 900px)` resta solo la riga di `.eco-report`).
+- **Causa** (misurata, non a occhio: ogni riga di testo contro testo e controlli, tolto ciò che uno scroller taglia):
+  nella lezione la colonna delle tappe era una griglia dimensionata sul contenuto, con l'etichetta `nowrap` senza
+  `min-width: 0`: una tappa dal titolo lungo («Passo 2 — Una richiesta sola, anche quando…») usciva dai 250 px e si
+  scriveva sopra la card del passo, in ogni tappa, a 1100 e a 1440 px. Con il pannello File aperto (734 px di pagina in
+  una finestra di 1280) le media query sulla finestra tenevano le due colonne e il testo passava sotto la card. A
+  telefono il percorso del file del passo allargava la pagina di 48 px.
+- **Fatto**: colonna delle tappe `minmax(0, 1fr)`, tappe su due righe al massimo con il nome intero nel tooltip;
+  container query sulla larghezza della pagina (`.learn`) e non della finestra; il percorso del file va a capo. Home
+  ripulita con le classi che c'erano: le tre cifre con il riquadro di `widget-icon`; «Riprendi da dove eri» sopra il
+  titolo della lezione, che diventa il titolo della card; i progetti in `card-head` con «N di M lezioni finite»; righe
+  con il titolo su due righe, le barre allineate (a telefono sotto il titolo invece di sparire), «fuori formato» come
+  badge, «Rivedi» in grigio e «Continua»/«Inizia» in blu; «← Impara» sopra il titolo come «← Progetti»; lo stato vuoto
+  largo come le altre card; la spunta delle lezioni finite leggibile nel tema chiaro.
+- **Comportamento corretto, con test visti rossi**: nelle lezioni vere `**grassetto**` e `*corsivo*` comparivano come
+  asterischi, e nei concetti finali e sul retro delle carte anche i backtick: `inline()` li rende, mai dentro il codice.
+  Nella pagina stretta la tappa corrente restava fuori vista nella barra che scorre di lato: ora la barra scorre fino a
+  lei, la pagina no. 4 test nuovi in `Learn.test.tsx`.
+- **Verifica**: anteprima temporanea con dati finti presi da una lezione vera (Vite su 5192, rimossa con la sua voce
+  in `.claude/launch.json`): nessuna sovrapposizione né scorrimento orizzontale su home, ogni tappa della lezione e
+  ripasso a 1600, 1440, 1100, 960, 820, 760, 520 e 320 px, e con il pannello File a 1280 e 1600; temi scuro e chiaro.
+  Schermate prima e dopo mostrate all'operatore. Non provata sulla console reale dell'operatore.
+- **Suite** (2026-11-14): console **235 su 235**, typecheck pulito.
+- **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Il diario degli agenti e le modifiche al codice — 2026-11-13, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Decisioni in
+> `docs/adr/ADR-047-agents-journal-and-changes.md`.
+
+- **Direttive** dell'operatore del 2026-11-13: «Io voglio vedere l'agente che inizia a lavorare e me lo segna in
+  ufficio3D, passo passo regitra le sue azioni ogni agente» (scelta: «Diario completo»); «per il codice in tempo reale
+  crea un sistema simile a quello già presente nell'app desktop di claude dove posso vedere le modifiche fatte al
+  codice». Stesso branch e working tree; **nessun commit**.
+- **Diagnosi** (database dell'operatore, sola lettura): TASK-017 (id 52) consegnata a `claude-desktop` alle 11:00:12 UTC
+  e chiusa 26 s dopo da «Accetta e completa» (review ACCEPTED); lo 0% al lavoro era vero (nessuna task IN_PROGRESS).
+  Per riprenderla: «Riapri con modifiche» e una nuova consegna. Il database dell'operatore non è stato toccato.
+- **Fatto** (ADR-047): la consegna crea `TASK-NNN.diario.md` e chiede all'agente una riga per passo con l'ora; prima di
+  aprire lo strumento copia i file di testo della cartella in `<aicos.home>/snapshots/task-<id>/`, legata alla
+  consegna. `GET /api/journal`, `GET /api/tasks/{id}/changes`, `GET /api/tasks/{id}/changes/file` (pacchetto
+  `backend/.../journal/`). Ufficio 3D: schede «Diario» e «Modifiche al codice» (file A/M/D con +/−, diff unificato con
+  i numeri di riga, come l'app desktop di Claude), ultima voce sotto il nome sul cartellino, «Diario dell'ufficio» al
+  posto di «Attività recenti». «Accetta e completa» e «Completa» senza esito non sono l'azione principale e chiedono
+  conferma (il secondo trovato nella prova dal vivo). `TASK.diario.md` fra i file scrivibili dell'inbox.
+- **Trovato dai test e corretto**: una copia indicizzata solo per id della task veniva letta per un'altra task con lo
+  stesso id (database rifatto): ora una copia vale solo per la sua consegna (id e istante). La rinomina atomica della
+  cartella della copia falliva su Windows: ora la copia si scrive in posto, manifesto per ultimo. `LineDiff.Result`
+  pubblico toglieva la nullabilità allo schema `Result` del contratto (omonimia): rinominato `DiffResult`.
+- **Smoke dal vivo** (backend 8101 su `aicompany_p47j`, console 5187, home e progetti nello scratchpad, launcher
+  spento): consegna a Claude Desktop non aperta; l'agente simulato scrive tre passi, modifica `cart.js`, crea
+  `discount.js`, cancella `README.md`, scrive l'esito. Nell'ufficio: cartellino con l'ultimo passo, Diario con le voci e
+  le ore, Diario dell'ufficio aggiornato da solo, 4 file cambiati con diff riga per riga (tema scuro e chiaro), i due
+  pulsanti di completamento non principali con la conferma. Il diario scritto da un vero Claude Desktop non è provato:
+  dipende dall'agente che segue il pacchetto.
+- **Suite** (2026-11-13): console **231 su 231**, typecheck pulito (7 test nuovi); backend Java **949 (0 falliti, 3 saltati: i link simbolici)** in un worktree a parte (il backend dell'operatore gira da
+  `backend/`), 11 test nuovi; dopo, la cache del «è testo?» in `WorkChanges` verificata con `AgentJournalApiTest`; contratto
+  rigenerato (solo aggiunte). Visti rossi: i parser contro uno stub, i pulsanti contro la versione precedente, il passo sul
+  cartellino e la vista delle modifiche togliendo la riga che li collega, la copia di un altro database.
+- **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — Muoversi nell'Ufficio 3D, e chi lavora davvero — 2026-11-13, non committata
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Solo console; nessun ADR nuovo.
+
+- **Direttiva** dell'operatore del 2026-11-13: «Nella scheda ufficio 3D migliora il sistema di navigazione visuale come
+  fatto per la second brain e per ecosistema 3D, inoltre il cartello tag del nome dell'agente nell'ufficio 3D non deve
+  muoversi o fare altro mentre muovo la visuale». Branch `autonomous/phase-37-one-ecosystem`, working tree; **nessun commit**.
+- **Navigazione** come in Ecosistema 3D: i controlli condivisi di `GraphNav` (avvicina, allontana, inquadra; viste
+  panoramica/dall'alto/laterale al posto delle due schede in testa; rotazione automatica; scorciatoie con `?`), percorso
+  «Ufficio › agente» con Indietro, tastiera sulla scena (frecce, Maiusc + frecce, `+ −`, `F`, `1 2 3`, `N`/Maiusc + `N`
+  tra gli agenti, Invio, Backspace, `R`), zoom verso il puntatore, tasto destro che sposta **sul pavimento**, due dita
+  di lato, doppio clic su un agente per raggiungerlo e sul pavimento per inquadrare tutto, la squadra a destra che porta
+  la camera alla scrivania. La vista non esce dall'ufficio. Funzioni pure in `views/office/officeCamera.ts`.
+- **Cartellini**: erano messi a ogni frame *prima* che OrbitControls muovesse la camera e con le sue matrici vecchie,
+  quindi restavano un frame indietro e scivolavano mentre la vista girava; erano agganciati alla testa, che oscilla;
+  sotto il puntatore in trascinamento si accendevano e spegnevano; intercettavano rotella e clic. Ora sono etichette
+  ferme sopra la sedia, messe dopo il movimento con la camera aggiornata, a pixel interi, senza dissolvenze né hover
+  durante un gesto; il puntatore le attraversa (un clic su un cartellino sceglie ancora l'agente).
+- **Diagnosi chiesta dall'operatore** («0% al lavoro», «la task 17 risulta già completata»), letta in sola lettura dal
+  database: TASK-017 (id 52) START via API alle 10:59:31 UTC, consegnata a `claude-desktop` alle 11:00:12, **COMPLETE
+  via REVIEW (ACCEPTED, gabryx82) alle 11:00:38**, 26 s dopo, dal pulsante primario «Accetta e completa» del pannello
+  dell'orchestratore, offerto appena la task è in corso. Nessuna task è IN_PROGRESS (13 OPEN, 17 DONE): l'ufficio,
+  che conosce solo lo stato del control plane, dice il vero. Una sessione esterna non riferisce nulla al control plane
+  (tranne OpenCode seguibile); l'esito arriva solo alla fine, in `TASK-NNN.esito.md`.
+- **Diario degli agenti e modifiche al codice**: chiesti a metà di questa sezione, interrotti dal limite d'uso e
+  completati: vedi la sezione sopra (ADR-047).
+- **Verifica**: anteprima temporanea su dati finti (Vite, tema scuro e chiaro, rimossa): cartellini sopra le teste anche
+  durante l'inerzia di un trascinamento, vista dall'alto, «vai a» dalla squadra. Non provata sulla console reale né su
+  un touchpad vero.
+- **Suite** (2026-11-13): console **224 su 224**, typecheck pulito; 8 test nuovi (5 della camera, 3 della vista), visti
+  rossi prima: il cartellino messo con le matrici vecchie sbagliava di 866 px. Backend ed engine non toccati.
+- **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+
 ## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 34–37 in `master` e su `origin` — 2026-11-13
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue: dove le sezioni di PHASE 34–37

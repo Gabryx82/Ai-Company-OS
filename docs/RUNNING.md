@@ -580,6 +580,20 @@ l'ultima lettura con l'ora e dice quando ne sta facendo una. Una risposta di un 
   stanno i programmi 60 s; «Aggiorna» guarda di nuovo tutto.
 - Open WebUI in Chat LLM, e le altre app incorporate, restano caricate dopo la prima apertura; «Ricarica» le ricarica.
 
+### Il diario degli agenti e le modifiche al codice (ADR-047)
+
+- Ogni consegna crea `TASK-NNN.diario.md` accanto al documento della task (`TASK.diario.md` nell'inbox) e chiede
+  all'agente una riga per passo, con l'ora del sistema: `- 2026-11-13T12:04:05+01:00 · Letto tasks/TASK-017.md`.
+- Prima di aprire lo strumento, la consegna copia i file di testo della cartella in `<aicos.home>/snapshots/task-<id>/`
+  (proprietà `aicos.snapshots.root`); le modifiche sono la cartella contro quella copia. Una copia per task: l'ultima.
+- `GET /api/journal?agentId=&limit=` (consegne, avvii, esecuzioni, passi del diario, esito, review),
+  `GET /api/tasks/{id}/changes` e `GET /api/tasks/{id}/changes/file?path=` (il file riga per riga).
+- Nell'Ufficio 3D: «Diario» e «Modifiche al codice» nel pannello dell'agente, l'ultima voce sul cartellino, il «Diario
+  dell'ufficio» in fondo. Una task consegnata prima di questa versione non ha copia: le modifiche riga per riga arrivano
+  dalla consegna successiva.
+- «Accetta e completa» e «Completa», finché l'agente non ha scritto l'esito, non sono l'azione principale e chiedono
+  conferma.
+
 ### Imparare facendo: lezioni, esercizi, ripasso (PHASE 37, ADR-044)
 
 Alla consegna di una task scegli **come lavorarci**: «Imparo» (l'agente scrive la lezione, i file li tocchi tu), «Non

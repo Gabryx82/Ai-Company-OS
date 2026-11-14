@@ -57,6 +57,9 @@ is also a place to hand a task to, and its own agents can be brought in. Its own
 sessions, takes a session up again in `openclaw tui`, and opens the full Control UI -- which refuses to be framed --
 in the browser through `openclaw dashboard`. No page waits for a slow tool (ADR-046): OpenClaw's agents are read in
 the background and shared by both pages, the catalog is detected at startup, and embedded apps stay loaded.
+The 3D office shows each agent at work (ADR-047): a handoff asks the agent to keep a diary, one line per step, and
+copies the working folder first, so the office shows the steps as they come and what changed in the code, file by
+file and line by line, as a diff view does -- git or not.
 
 Learning is done, not read (ADR-044): when a task is handed over the operator says how they want to work on it. The
 agent writes a lesson -- the code, explained line by line -- and the operator copies each step into its file; the
