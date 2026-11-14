@@ -44,6 +44,38 @@ terza chiedeva un `FINAL_HANDOFF` aggiornato, e TASK-011 lo ha scritto.
 **Il charter §8 è stato rispettato**: l'agente si è fermato e ha preparato l'handoff; il merge è
 stato autorizzato esplicitamente da un umano e solo allora eseguito.
 
+## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito — La scheda Documenti con esiti e diari a parte — 2026-11-14
+
+> **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue. Solo console; nessun ADR nuovo,
+> nessun cambio del contratto API.
+
+- **Direttiva** dell'operatore del 2026-11-14: «Date le ultime modifiche alla documentazione di AI-COMPANY-OS, la
+  scheda documenti di un progetto organizzala dividendo in sezioni per ogni categoria di documento: come hai diviso
+  fasi, tasks e handoffs, aggiungi anche la sezione per gli esiti delle task e per i documenti di diario». Stesso
+  branch e working tree; **nessun commit**.
+- **Causa**: il control plane elenca in `Documents.tasks` tutto ciò che sta in `tasks/`, e da PHASE 35 (ADR-041 §10)
+  e PHASE 37 (ADR-047) lì accanto a `TASK-NNN.md` ci sono anche `TASK-NNN.esito.md` e `TASK-NNN.diario.md`: la sezione
+  «Task» li mescolava in ordine alfabetico (diario, esito, task di ogni numero).
+- **Fatto** (`frontend/src/views/ProjectDetail.tsx`, `Documents`): sezioni Progetto, Fasi, Task, **Esiti**, **Diari**,
+  Handoff. Esiti e diari si riconoscono dai suffissi `.esito.md` e `.diario.md`, gli stessi che scrivono
+  `PlanMarkdown.outcomePath` e `diaryPath`; ogni altro file di `tasks/` resta in «Task». Ogni sezione è una `section`
+  con il suo nome accessibile. Apertura ed eliminazione invariate (esiti e diari sono sotto `tasks/`, quindi
+  eliminabili come prima). Il contratto resta com'è: dividere l'elenco è una scelta di presentazione.
+- **Test visti rossi**: `frontend/src/views/ProjectDocuments.test.tsx`, 3 test (l'ordine delle sezioni e i file di
+  ciascuna; un esito si apre e si elimina dalla sua sezione; senza esiti né diari le due sezioni dicono «—»). Prima della
+  modifica fallivano tutti e tre perché le sezioni Esiti e Diari non esistevano.
+- **Verifica**: anteprima temporanea su Vite 5193 con la vera `ProjectDetail` e un server finto (4 task, 2 esiti,
+  3 diari, 2 fasi, 2 handoff), poi rimossa con la sua voce in `.claude/launch.json`: sei sezioni nell'ordine atteso
+  con i file giusti, intestazioni identiche alle altre, un diario si apre con il pulsante Elimina, nessuno scorrimento
+  orizzontale. Nessuna schermata: la finestra dell'app era ridotta a icona e la pagina non si disegnava. Non provata
+  sulla console reale dell'operatore (chiede l'accesso).
+- **Notato, innocuo, non fatto**: `GeneratedTextUpgrades.isTaskDocument` esclude `.esito.md` ma non `.diario.md`, quindi
+  l'aggiornamento dei testi generati e la prontezza (`ReadinessService`) passano anche sui diari. Non cambia nulla: i
+  due schemi sostituiti sono intestazioni di un documento di task («## Prompt compatto», «## Come si consegna») che un
+  diario non contiene. Da allineare la prossima volta che si tocca quel file.
+- **Suite** (2026-11-14): console **238 su 238** (235 + 3), typecheck pulito. Backend ed engine non toccati.
+- **Debito**: nessuno aperto. Prossimo id libero **TD-101**.
+
 ## ▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶▶ PHASE 37, seguito, in `master` e su `origin` — 2026-11-14
 
 > **Leggere prima questa sezione.** Sostituisce, dove diverge, tutto ciò che segue: le tre sezioni qui sotto
