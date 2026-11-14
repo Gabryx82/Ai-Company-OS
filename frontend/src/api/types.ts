@@ -534,3 +534,13 @@ export type StepCheck = S["StepCheck"];
 export type ExerciseResult = S["ExerciseResult"];
 export type ReviewDeck = S["ReviewDeck"];
 export type ReviewCard = S["ReviewCard"];
+
+// PHASE 37 (ADR-047): what each agent did, step by step, and what it changed since its handoff.
+export type JournalKind = NonNullable<S["JournalEntry"]["kind"]>;
+export type JournalEntry = S["JournalEntry"] & { kind: JournalKind };
+export type ChangeStatus = NonNullable<S["ChangedFile"]["status"]>;
+export type ChangedFile = S["ChangedFile"] & { status: ChangeStatus };
+export type TaskChanges = Omit<S["TaskChanges"], "files"> & { files: ChangedFile[] };
+export type DiffLine = S["DiffLine"] & { kind: "CONTEXT" | "ADDED" | "REMOVED" };
+export type DiffHunk = Omit<S["DiffHunk"], "lines"> & { lines: DiffLine[] };
+export type FileDiff = Omit<S["FileDiff"], "hunks" | "status"> & { status: ChangeStatus; hunks: DiffHunk[] };

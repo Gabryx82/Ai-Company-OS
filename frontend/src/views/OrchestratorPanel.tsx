@@ -89,8 +89,10 @@ export function ReadinessList({ readiness, onCopy }: {
  * where the task can be handed off -- with the agent's own target first -- and
  * the operator's review. Every action takes the task's tag through `act`.
  */
-export function OrchestratorPanel({ task, busy, act }: {
+export function OrchestratorPanel({ task, busy, act, hasOutcome = false }: {
   task: Task; busy: boolean; act: (mutation: (etag: string) => Promise<unknown>) => Promise<void>;
+  /** PHASE 37 (ADR-047): whether the agent left its outcome; before it, completing asks to be sure. */
+  hasOutcome?: boolean;
 }) {
   const api = useApi();
   const [decision, setDecision] = useState<Orchestration | null>(null);
@@ -105,6 +107,7 @@ export function OrchestratorPanel({ task, busy, act }: {
   const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [confirmReadiness, setConfirmReadiness] = useState<Readiness | null>(null);
   const [learning, setLearning] = useState<LearningMode | null>(null);
+  const [confirmAccept, setConfirmAccept] = useState(false);
 
   const load = useCallback(() => {
     api.orchestration(task.id).then(setDecision).catch(setProblem);
@@ -305,14 +308,32 @@ export function OrchestratorPanel({ task, busy, act }: {
           <div className="muted" style={{ fontSize: 12 }}>Review dell'operatore</div>
           <textarea placeholder="Nota (facoltativa): cosa hai verificato, cosa manca…" value={note}
                     onChange={(e) => setNote(e.target.value)} style={{ minHeight: 56 }} />
+          {task.status === "IN_PROGRESS" && !hasOutcome && (
+            <div className="muted" style={{ fontSize: 12 }}>L'agente non ha ancora scritto l'esito: segui il suo diario e le modifiche
+              al codice nell'Ufficio 3D, e accetta quando ha finito.</div>
+          )}
           <div className="row">
             {task.status === "IN_PROGRESS" && (
-              <button className="btn btn-primary" disabled={busy} onClick={() => review("ACCEPTED")}>
+              // PHASE 37 (ADR-047): a task just handed off was closed by this button, 26 s after the delivery, while
+              // the tool was still working on it. Without an outcome it is not the primary action and it asks first.
+              <button className={hasOutcome ? "btn btn-primary" : "btn"} disabled={busy}
+                      onClick={() => (hasOutcome ? review("ACCEPTED") : setConfirmAccept(true))}>
                 <Icon name="check" size={13} /> Accetta e completa</button>
             )}
             <button className="btn" disabled={busy} onClick={() => review("CHANGES_REQUESTED")}>
               {task.status === "DONE" ? "Riapri con modifiche" : "Richiedi modifiche"}</button>
           </div>
+          {confirmAccept && task.status === "IN_PROGRESS" && !hasOutcome && (
+            <div className="notice notice-warn" role="alertdialog" aria-label="Completare la task senza esito?">
+              <div>L'agente non ha ancora scritto l'esito. Se completi adesso, per AI Company OS la task è chiusa anche se lo
+                strumento ci sta ancora lavorando; per riprenderla servirà «Riapri con modifiche».</div>
+              <div className="row" style={{ marginTop: 6 }}>
+                <button className="btn btn-danger" disabled={busy} onClick={() => { setConfirmAccept(false); review("ACCEPTED"); }}>
+                  Completa comunque</button>
+                <button className="btn" onClick={() => setConfirmAccept(false)}>Annulla</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

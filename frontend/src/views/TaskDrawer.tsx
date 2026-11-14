@@ -29,6 +29,8 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
   const [runs, setRuns] = useState<Run[]>([]);
   const [moves, setMoves] = useState<TaskMove[]>([]);
   const [outcomes, setOutcomes] = useState<TaskOutcome[]>([]);
+  // PHASE 37 (ADR-047): completing a task whose agent has not written its outcome asks first.
+  const [confirmComplete, setConfirmComplete] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [bindings, setBindings] = useState<AgentConfiguration[]>([]);
@@ -126,12 +128,25 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
               </div>
               <div className="row">
                 {(Object.keys(TRANSITIONS) as Transition[]).filter((step) => TRANSITIONS[step] === task.status).map((step) => (
-                  <button key={step} className={step === "complete" ? "btn btn-primary" : "btn"} disabled={busy}
-                          onClick={() => act((etag) => api.transition(task.id, step, etag))}>
+                  <button key={step} className={step === "complete" && outcomes.length > 0 ? "btn btn-primary" : "btn"} disabled={busy}
+                          onClick={() => (step === "complete" && outcomes.length === 0 ? setConfirmComplete(true)
+                            : act((etag) => api.transition(task.id, step, etag)))}>
                     {STEP_LABEL[step]}
                   </button>
                 ))}
               </div>
+              {confirmComplete && task.status === "IN_PROGRESS" && outcomes.length === 0 && (
+                <div className="notice notice-warn" role="alertdialog" aria-label="Completare la task senza esito?">
+                  <div>L'agente non ha ancora scritto l'esito. Se completi adesso, per AI Company OS la task è chiusa anche se lo
+                    strumento ci sta ancora lavorando: il suo diario e le modifiche al codice sono nell'Ufficio 3D.</div>
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <button className="btn btn-danger" disabled={busy}
+                            onClick={() => { setConfirmComplete(false); act((etag) => api.transition(task.id, "complete", etag)); }}>
+                      Completa comunque</button>
+                    <button className="btn" onClick={() => setConfirmComplete(false)}>Annulla</button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <AssignSection task={task} agent={agent} binding={binding} bindings={bindings} project={project}
@@ -140,7 +155,7 @@ export function TaskDrawer({ taskId, agents, projects, onClose, onChanged }: {
                            onUnassign={() => act((etag) => api.unassignAgent(task.id, etag))}
                            onProject={(id) => act((etag) => api.assignProject(task.id, etag, id))} />
 
-            <OrchestratorPanel task={task} busy={busy} act={act} />
+            <OrchestratorPanel task={task} busy={busy} act={act} hasOutcome={outcomes.length > 0} />
 
             <RunSection task={task} agent={agent} binding={binding} runs={runs} models={models} busy={busy}
                         onLaunch={(model) => act((etag) => api.launchRun(task.id, etag, model))}

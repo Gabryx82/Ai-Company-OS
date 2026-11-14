@@ -13,7 +13,7 @@
 //    into an ApiProblem the views can branch on.
 import type {
   Agent, AgentProfile, AgentTemplate, AgentWrite, AutonomyLevel, DailyItem, InstalledAgent, Resource, Handoff, HandoffOutcome, OpenCodeSession, LaunchResult, ModelCatalog, CatalogModel, ModelList, Orchestration, Readiness,
-  Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry, TaskMove, TaskOutcome, Learning,
+  Phase, Plan, PlanRun, Project, ProjectType, ProjectTypeInfo, ProjectWrite, Provider, Review, Run, ScaffoldEntry, TaskMove, TaskOutcome, Learning, JournalEntry, TaskChanges, FileDiff,
   Software, Suggestion, Task, TaskCreate, TaskStatus, TaskUpdate, Transition, UsageWindow, WorkspaceDocument, MeasuresReport,
   WorkspaceDocuments, Me, Role, SecurityEventInfo, UserInfo, AgentConfiguration, AgentConfigurationWrite, Binding,
   ExecutionTarget, LibraryInfo, LibrarySync, ResourceFile, TasksPolicy, DeletionPreview, SubAgentsPolicy, CatalogRetirement,
@@ -654,6 +654,23 @@ export class ControlPlane {
   /** PHASE 32 (TD-55): what the task produced, the most recent first; empty while nothing has. */
   taskOutcomes(taskId: number): Promise<TaskOutcome[]> {
     return this.plain("GET", `/api/tasks/${taskId}/outcomes`);
+  }
+
+  /** PHASE 37 (ADR-047): what the agents did, step by step, the most recent first; one agent with `agentId`. */
+  journal(agentId?: number, limit = 100): Promise<JournalEntry[]> {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (agentId !== undefined) query.set("agentId", String(agentId));
+    return this.plain("GET", `/api/journal?${query}`);
+  }
+
+  /** PHASE 37 (ADR-047): the files the agent changed since the task's latest handoff. */
+  taskChanges(taskId: number): Promise<TaskChanges> {
+    return this.plain("GET", `/api/tasks/${taskId}/changes`);
+  }
+
+  /** PHASE 37 (ADR-047): one changed file, line by line. */
+  changedFile(taskId: number, path: string): Promise<FileDiff> {
+    return this.plain("GET", `/api/tasks/${taskId}/changes/file?path=${encodeURIComponent(path)}`);
   }
 
   /** PHASE 32 (TD-38): who moved the task, when and through what, the most recent first. */

@@ -948,6 +948,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/journal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["journal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/learning": {
         parameters: {
             query?: never;
@@ -2740,6 +2756,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/{id}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["changes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{id}/changes/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["changedFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/{id}/complete": {
         parameters: {
             query?: never;
@@ -3695,6 +3743,18 @@ export interface components {
             key: string;
             label: string;
         };
+        ChangedFile: {
+            /** Format: int32 */
+            additions: number;
+            comparable: boolean;
+            /** Format: int32 */
+            deletions: number;
+            /** Format: date-time */
+            modifiedAt: string | null;
+            path: string;
+            /** @enum {string} */
+            status: "ADDED" | "MODIFIED" | "DELETED";
+        };
         CodeGraph: {
             cycles: string[][];
             edges: components["schemas"]["CodeGraphEdge"][];
@@ -3947,6 +4007,26 @@ export interface components {
             outcome: string;
             path: string;
         };
+        DiffHunk: {
+            lines: components["schemas"]["DiffLine"][];
+            /** Format: int32 */
+            newLines: number;
+            /** Format: int32 */
+            newStart: number;
+            /** Format: int32 */
+            oldLines: number;
+            /** Format: int32 */
+            oldStart: number;
+        };
+        DiffLine: {
+            /** @enum {string} */
+            kind: "CONTEXT" | "ADDED" | "REMOVED";
+            /** Format: int32 */
+            newNumber: number | null;
+            /** Format: int32 */
+            oldNumber: number | null;
+            text: string;
+        };
         Document: {
             /** Format: date-time */
             modified: string;
@@ -4063,6 +4143,18 @@ export interface components {
             targets: components["schemas"]["InstallPlan"][];
             version: string | null;
             warnings: string[];
+        };
+        FileDiff: {
+            /** Format: int32 */
+            additions: number;
+            comparable: boolean;
+            /** Format: int32 */
+            deletions: number;
+            hunks: components["schemas"]["DiffHunk"][];
+            note: string | null;
+            path: string;
+            /** @enum {string} */
+            status: "ADDED" | "MODIFIED" | "DELETED";
         };
         FileResponse: {
             absolutePath: string;
@@ -4263,6 +4355,22 @@ export interface components {
             to: string | null;
             /** @enum {string} */
             type: "MARKETPLACE" | "SOURCE" | "COPY" | "PULL" | "PLUGIN" | "CONNECTOR";
+        };
+        JournalEntry: {
+            actor: string | null;
+            /** Format: int64 */
+            agentId: number | null;
+            approximate: boolean;
+            /** Format: date-time */
+            at: string | null;
+            key: string;
+            /** @enum {string} */
+            kind: "DELIVERED" | "STARTED" | "STEP" | "OUTCOME" | "RUN_QUEUED" | "RUN_STARTED" | "RUN_SUCCEEDED" | "RUN_FAILED" | "ACCEPTED" | "CHANGES_REQUESTED" | "COMPLETED" | "STOPPED" | "REOPENED";
+            task: string;
+            /** Format: int64 */
+            taskId: number;
+            taskTitle: string;
+            text: string;
         };
         LaunchRequest: {
             path?: string;
@@ -5479,6 +5587,17 @@ export interface components {
         TaskAgentAssignmentRequest: {
             /** Format: int64 */
             agentId: number;
+        };
+        TaskChanges: {
+            /** Format: int32 */
+            additions: number;
+            /** Format: int32 */
+            deletions: number;
+            files: components["schemas"]["ChangedFile"][];
+            /** Format: date-time */
+            since: string | null;
+            tracked: boolean;
+            truncated: boolean;
         };
         TaskCreateRequest: {
             /** Format: int64 */
@@ -7362,6 +7481,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OpenCodeSession"];
+                };
+            };
+        };
+    };
+    journal: {
+        parameters: {
+            query?: {
+                agentId?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JournalEntry"][];
                 };
             };
         };
@@ -10686,6 +10828,52 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Suggestion"][];
+                };
+            };
+        };
+    };
+    changes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TaskChanges"];
+                };
+            };
+        };
+    };
+    changedFile: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FileDiff"];
                 };
             };
         };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useApi } from "../context";
 import type {
   ExerciseResult, LearningOverview, LessonExercise, LessonStep, LessonSummary, LessonView, ReviewCard, ReviewDeck, StepCheck,
@@ -54,33 +54,40 @@ function LearnHome({ navigate }: { navigate: Navigate }) {
       {overview && (
         <>
           <section className="card learn-strip" aria-label="Il tuo percorso">
-            <div className="learn-figure">
-              <Icon name="flame" size={20} className={overview.streakDays > 0 ? "learn-flame is-lit" : "learn-flame"} />
-              <div><strong>{overview.streakDays}</strong> {overview.streakDays === 1 ? "giorno di fila" : "giorni di fila"}
-                <small>{overview.streakDays > 0 ? "Un passo anche oggi e la serie continua." : "Comincia oggi: basta un passo."}</small></div>
+            <div className={overview.streakDays > 0 ? "learn-figure is-lit" : "learn-figure"}>
+              <span className="widget-icon"><Icon name="flame" size={17} /></span>
+              <div className="learn-figure-text">
+                <p><strong>{overview.streakDays}</strong> {overview.streakDays === 1 ? "giorno di fila" : "giorni di fila"}</p>
+                <small>{overview.streakDays > 0 ? "Un passo anche oggi e la serie continua." : "Comincia oggi: basta un passo."}</small>
+              </div>
             </div>
             <div className="learn-figure">
-              <Icon name="learn" size={20} />
-              <div><strong>{overview.stats.lessonsCompleted}</strong> di {overview.stats.lessons} lezioni finite
+              <span className="widget-icon"><Icon name="learn" size={17} /></span>
+              <div className="learn-figure-text">
+                <p><strong>{overview.stats.lessonsCompleted}</strong> di {overview.stats.lessons} lezioni finite</p>
                 <small>{count(overview.stats.stepsWritten, "passo scritto", "passi scritti")} · {count(overview.stats.exercisesRightFirstTry,
-                  "esercizio giusto al primo colpo", "esercizi giusti al primo colpo")}</small></div>
+                  "esercizio giusto al primo colpo", "esercizi giusti al primo colpo")}</small>
+              </div>
             </div>
             <div className="learn-figure">
-              <Icon name="cards" size={20} />
-              <div><strong>{overview.cardsDue}</strong> {overview.cardsDue === 1 ? "carta da ripassare" : "carte da ripassare"}
+              <span className="widget-icon"><Icon name="cards" size={17} /></span>
+              <div className="learn-figure-text">
+                <p><strong>{overview.cardsDue}</strong> {overview.cardsDue === 1 ? "carta da ripassare" : "carte da ripassare"}</p>
                 <small>{overview.cards === 0 ? "Le carte arrivano quando finisci una lezione."
-                  : `${overview.cards} concetti in tutto, che tornano a distanza di giorni.`}</small></div>
+                  : `${overview.cards} concetti in tutto, che tornano a distanza di giorni.`}</small>
+              </div>
               {overview.cardsDue > 0 && (
-                <button className="btn btn-primary" onClick={() => navigate("learn", "review")}>Ripassa</button>
+                <button className="btn btn-primary btn-small" onClick={() => navigate("learn", "review")}>Ripassa</button>
               )}
             </div>
           </section>
 
           {next && (
             <section className="card learn-next">
-              <div>
-                <h2>{next.lesson.done > 0 ? "Riprendi da dove eri" : "Comincia da qui"}</h2>
-                <p><strong>{next.lesson.title}</strong> <span className="muted">· {next.project.projectName}</span></p>
+              <div className="learn-next-text">
+                <span className="learn-eyebrow">{next.lesson.done > 0 ? "Riprendi da dove eri" : "Comincia da qui"}</span>
+                <h2>{next.lesson.title}</h2>
+                <p className="muted">{next.project.projectName}{next.lesson.task ? ` · ${next.lesson.task}` : ""}</p>
                 <LessonProgress lesson={next.lesson} />
               </div>
               <button className="btn btn-primary" onClick={() => navigate("learn", lessonRoute(next.project.projectId, next.lesson.path))}>
@@ -103,35 +110,45 @@ function LearnHome({ navigate }: { navigate: Navigate }) {
             </section>
           )}
 
-          {overview.projects.map((project) => (
-            <section key={project.projectId} className="card">
-              <div className="card-body">
-                <div className="row" style={{ marginBottom: 10 }}>
-                  <h2>{project.projectName}</h2>
-                  <span className="spacer" />
+          {overview.projects.map((project) => {
+            const finished = project.lessons.filter((l) => l.completed).length;
+            return (
+              <section key={project.projectId} className="card learn-project">
+                <div className="card-head">
+                  <div className="learn-project-title">
+                    <h2>{project.projectName}</h2>
+                    <small>{finished} di {project.lessons.length} {project.lessons.length === 1 ? "lezione finita" : "lezioni finite"}</small>
+                  </div>
                   <button className="btn btn-small" onClick={() => navigate("projects", String(project.projectId))}>Apri il progetto</button>
                 </div>
                 <ul className="lesson-list">
                   {project.lessons.map((lesson) => (
                     <li key={lesson.path}>
-                      <button className="lesson-row" onClick={() => navigate("learn", lessonRoute(project.projectId, lesson.path))}>
+                      <button className={lesson.completed ? "lesson-row is-done" : "lesson-row"} title={lesson.title}
+                              onClick={() => navigate("learn", lessonRoute(project.projectId, lesson.path))}>
                         <span className={lesson.completed ? "lesson-mark is-done" : "lesson-mark"} aria-hidden="true">
                           {lesson.completed && <Icon name="check" size={13} />}
                         </span>
                         <span className="lesson-row-text">
                           <strong>{lesson.title}</strong>
-                          <small className="muted">{lesson.task ?? lesson.path}
-                            {lesson.problems.length > 0 && " · fuori formato in qualche punto"}</small>
+                          <small className="lesson-row-meta">
+                            <span>{lesson.task ?? lesson.path}</span>
+                            {lesson.problems.length > 0 && (
+                              <span className="badge badge-warn" title="La lezione non segue il formato in qualche punto">fuori formato</span>
+                            )}
+                          </small>
                         </span>
                         <LessonProgress lesson={lesson} />
-                        <span className="lesson-row-cta">{lesson.completed ? "Rivedi" : lesson.done > 0 ? "Continua" : "Inizia"}</span>
+                        <span className="lesson-row-cta">
+                          {lesson.completed ? "Rivedi" : lesson.done > 0 ? "Continua" : "Inizia"}<Icon name="chevron" size={14} />
+                        </span>
                       </button>
                     </li>
                   ))}
                 </ul>
-              </div>
-            </section>
-          ))}
+              </section>
+            );
+          })}
         </>
       )}
     </div>
@@ -179,9 +196,9 @@ function ReviewSession({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="stack learn review">
+      <BackRow onBack={onBack} />
       <div className="page-head">
         <div><h1>Ripasso</h1><p>Prima prova a dirlo a voce, poi gira la carta.</p></div>
-        <button className="btn" onClick={onBack}><Icon name="back" size={14} /> Torna a Impara</button>
       </div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
       {deck && deck.due.length === 0 && (
@@ -195,7 +212,7 @@ function ReviewSession({ onBack }: { onBack: () => void }) {
       {deck && card && (
         <div className="review-card card" aria-live="polite">
           <small className="muted">Carta {at + 1} di {deck.due.length} · {card.projectName}</small>
-          <h2>{card.name}</h2>
+          <h2>{inline(card.name)}</h2>
           {back === null ? (
             <>
               <p className="muted">Che cos'è? A che cosa serve? Dillo con parole tue.</p>
@@ -203,7 +220,7 @@ function ReviewSession({ onBack }: { onBack: () => void }) {
             </>
           ) : (
             <>
-              <p className="review-answer">{back.explanation}</p>
+              <p className="review-answer">{inline(back.explanation)}</p>
               <div className="row">
                 <button className="btn btn-primary" onClick={() => answer(true)}><Icon name="check" size={14} /> Lo sapevo</button>
                 <button className="btn" onClick={() => answer(false)}>Non ancora</button>
@@ -293,10 +310,21 @@ function LessonPlayer({ projectId, path, onBack }: { projectId: number; path: st
   const stage = stages[current];
   const forward = () => setAt(Math.min(current + 1, stages.length - 1));
 
+  // In a narrow page the stops are a row that scrolls sideways: the current one is brought to its middle,
+  // scrolling the row and never the page. Beside the stage, the rail shows them all and has nothing to scroll.
+  const rail = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const list = rail.current;
+    const stop = list?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (!list || !stop || list.scrollWidth <= list.clientWidth) return;
+    const box = list.getBoundingClientRect(), at = stop.getBoundingClientRect();
+    list.scrollLeft += at.left - box.left - (box.width - at.width) / 2;
+  }, [current, lesson]);
+
   if (!lesson || !stage) {
     return (
       <div className="stack learn">
-        <button className="btn lesson-back" onClick={onBack}><Icon name="back" size={14} /> Impara</button>
+        <BackRow onBack={onBack} />
         <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
         {!problem && <p className="muted">Apro la lezione…</p>}
       </div>
@@ -305,12 +333,12 @@ function LessonPlayer({ projectId, path, onBack }: { projectId: number; path: st
 
   return (
     <div className="stack learn">
+      <BackRow onBack={onBack} />
       <div className="page-head">
         <div>
           <h1>{lesson.title}</h1>
           <p>{lesson.task ? `${lesson.task} · ` : ""}{lesson.done} di {lesson.items} fatti</p>
         </div>
-        <button className="btn" onClick={onBack}><Icon name="back" size={14} /> Impara</button>
       </div>
       <ProblemNote problem={problem} onDismiss={() => setProblem(null)} />
       {lesson.problems.length > 0 && (
@@ -320,11 +348,11 @@ function LessonPlayer({ projectId, path, onBack }: { projectId: number; path: st
         </details>
       )}
       <div className="lesson">
-        <ol className="lesson-rail" aria-label="Le tappe della lezione">
+        <ol className="lesson-rail" aria-label="Le tappe della lezione" ref={rail}>
           {stages.map((s, i) => (
             <li key={i}>
               <button className="lesson-stop" disabled={i > frontier} aria-current={i === current ? "step" : undefined}
-                      data-done={isDone(s) || undefined} onClick={() => setAt(i)}>
+                      data-done={isDone(s) || undefined} title={stageLabel(s, lesson)} onClick={() => setAt(i)}>
                 <span className="lesson-dot" aria-hidden="true">{isDone(s) && <Icon name="check" size={11} />}</span>
                 <span>{stageLabel(s, lesson)}</span>
               </button>
@@ -364,7 +392,7 @@ function LessonPlayer({ projectId, path, onBack }: { projectId: number; path: st
                 <p>Hai previsto, scritto e spiegato. Questo è quello che ti porti via:</p>
                 {lesson.concepts.length > 0 ? (
                   <dl className="lesson-concepts">
-                    {lesson.concepts.map((c) => <div key={c.name}><dt>{c.name}</dt><dd>{c.text}</dd></div>)}
+                    {lesson.concepts.map((c) => <div key={c.name}><dt>{inline(c.name)}</dt><dd>{inline(c.text)}</dd></div>)}
                   </dl>
                 ) : <p className="muted">La lezione non elenca concetti da ripassare.</p>}
                 {lesson.concepts.length > 0 && <p className="muted">Tornano come carte da ripassare: la prima volta domani.</p>}
@@ -382,10 +410,31 @@ function Prose({ text }: { text: string }) {
   return <div className="lesson-prose">{text.split(/\n{2,}/).map((p, i) => <p key={i}>{inline(p)}</p>)}</div>;
 }
 
-/** `code` in backticks inside a sentence; nothing else of Markdown is interpreted. */
+/**
+ * `code` in backticks, **bold** and *emphasis* inside a sentence -- what the lessons the agents write use
+ * between the lines; nothing else of Markdown is interpreted, and nothing inside `code` is.
+ */
 function inline(text: string): ReactNode[] {
-  return text.split(/(`[^`]+`)/).map((part, i) =>
-    part.startsWith("`") && part.endsWith("`") && part.length > 2 ? <code key={i}>{part.slice(1, -1)}</code> : part);
+  return text.split(/(`[^`]+`)/).flatMap((part, i) =>
+    part.startsWith("`") && part.endsWith("`") && part.length > 2 ? [<code key={i}>{part.slice(1, -1)}</code>] : emphasis(part, i));
+}
+
+/** `**bold**` and `*emphasis*`: a single star needs a word right inside it, so `2 * 3` stays as it is. */
+function emphasis(text: string, at: number): ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*|\*[^*\s](?:[^*]*[^*\s])?\*)/).map((part, i) => {
+    if (part.length > 4 && part.startsWith("**") && part.endsWith("**")) return <strong key={`${at}.${i}`}>{part.slice(2, -2)}</strong>;
+    if (part.length > 2 && part.startsWith("*") && part.endsWith("*")) return <em key={`${at}.${i}`}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
+
+/** Back to the page, above the heading: as a project's page goes back to the projects. */
+function BackRow({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="row">
+      <button className="btn btn-small" onClick={onBack}><Icon name="back" size={14} /> Impara</button>
+    </div>
+  );
 }
 
 function PredictionStage({ prediction, onAnswer, onNext, onProblem }: {
@@ -452,10 +501,11 @@ function StepStage({ step, onCheck, onNext, onProblem }: {
     <>
       <h2>{step.title}</h2>
       <div className="lesson-file">
-        <Icon name="file" size={14} />
-        {step.file ? <code>{step.file}</code> : <span className="muted">la lezione non indica il file</span>}
-        <span className="muted">· {MODE_LABEL[step.mode] ?? step.mode}</span>
-        <span className="spacer" />
+        <Icon name="file" size={15} />
+        <div className="lesson-file-text">
+          {step.file ? <code>{step.file}</code> : <span className="muted">la lezione non indica il file</span>}
+          <small>{MODE_LABEL[step.mode] ?? step.mode}</small>
+        </div>
         <button className="btn btn-small" onClick={copy}><Icon name="copy" size={13} /> {copied ? "Copiato" : "Copia il codice"}</button>
       </div>
       <CodeBlock lines={codeLines} lit={highlighted} />

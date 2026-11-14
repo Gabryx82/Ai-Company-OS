@@ -274,3 +274,59 @@ describe("OrchestratorPanel — following OpenCode", () => {
     expect(screen.queryByLabelText("Sessione OpenCode")).toBeNull();
   });
 });
+
+/**
+ * PHASE 37 (ADR-047): «Accetta e completa» closed a task 26 s after it was handed to Claude Desktop, while
+ * the app was still working on it. Without the agent's outcome it is not the primary action, and it asks first.
+ */
+describe("OrchestratorPanel — completing a task", () => {
+  const working = { ...PLANNED, status: "IN_PROGRESS" };
+  const routes = (outcomes: unknown[]) => ({
+    "GET /api/tasks/9": () => ({ body: working, etag: '"5"' }),
+    "GET /api/tasks/9/orchestration": () => ({ body: decision({ status: "IN_PROGRESS" }) }),
+    "GET /api/tasks/9/outcomes": () => ({ body: outcomes }),
+    "POST /api/tasks/9/reviews": () => ({ status: 201, body: { review: { id: 1, taskId: 9, verdict: "ACCEPTED", note: null,
+      runId: null, handoffId: null, reviewer: "operator", createdAt: "2026-11-13T11:00:38Z" }, task: { ...working, status: "DONE" } } }),
+  });
+
+  it("asks before completing a task whose agent has not written its outcome", async () => {
+    const calls = renderPlanned(routes([]));
+    const accept = await screen.findByRole("button", { name: /Accetta e completa/ });
+    expect(accept.className).not.toContain("btn-primary");
+    expect(screen.getByText(/L'agente non ha ancora scritto l'esito: segui il suo diario/)).toBeTruthy();
+
+    fireEvent.click(accept);
+    const ask = screen.getByRole("alertdialog", { name: "Completare la task senza esito?" });
+    expect(ask.textContent).toContain("anche se lo strumento ci sta ancora lavorando");
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Annulla" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+
+    fireEvent.click(accept);
+    fireEvent.click(screen.getByRole("button", { name: "Completa comunque" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "POST" && c.path === "/api/tasks/9/reviews")?.body)
+      .toMatchObject({ verdict: "ACCEPTED" }));
+  });
+
+  it("asks the same before the drawer's own «Completa» closes the task", async () => {
+    const calls = renderPlanned({ ...routes([]), "POST /api/tasks/9/complete": () => ({ body: { ...working, status: "DONE" } }) });
+    const complete = await screen.findByRole("button", { name: "Completa" });
+    expect(complete.className).not.toContain("btn-primary");
+    fireEvent.click(complete);
+    expect(screen.getByRole("alertdialog", { name: "Completare la task senza esito?" })).toBeTruthy();
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Completa comunque" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/api/tasks/9/complete")).toBe(true));
+  });
+
+  it("completes at once, as the primary action, once the outcome is there", async () => {
+    const calls = renderPlanned(routes([{ taskId: 9, text: "CRUD fatto, 6 test verdi.", source: "file tasks/TASK-001.esito.md",
+      at: "2026-11-13T11:30:00Z", runId: null, documentPath: "tasks/TASK-001.esito.md" }]));
+    await screen.findByText(/CRUD fatto, 6 test verdi/);
+    const accept = await screen.findByRole("button", { name: /Accetta e completa/ });
+    await waitFor(() => expect(accept.className).toContain("btn-primary"));
+    fireEvent.click(accept);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/api/tasks/9/reviews")).toBe(true));
+  });
+});

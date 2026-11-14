@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiProblem } from "../../api/client";
-import type { Agent, Handoff, OpenCodeSession, Project, ProjectFileEntry, Run, Task } from "../../api/types";
+import type { Agent, Handoff, JournalEntry, OpenCodeSession, Project, ProjectFileEntry, Run, Task } from "../../api/types";
 import { useApi } from "../../context";
 import { Icon } from "../../components/icons";
 import { PriorityBadge } from "../../components/ui";
 import { ago } from "../dashboard/Widgets";
 import { changedLines, CodeView } from "./CodeView";
 import type { DeskState } from "./OfficeScene";
+import { JournalList } from "./AgentJournal";
+import { ChangesView, useTaskChanges } from "./ChangesView";
 
 const STATE_TEXT: Record<DeskState, string> = {
   working: "Al lavoro", waiting: "Ha task da iniziare", idle: "In pausa", off: "Disattivato",
@@ -34,12 +36,14 @@ function usePoll<T>(load: (() => Promise<T>) | null, ms: number, deps: unknown[]
   return [value, problem];
 }
 
-export function AgentLive({ agent, state, task, project, next, onOpenTask }: {
+export function AgentLive({ agent, state, task, project, next, journal, onOpenTask }: {
   agent: Agent; state: DeskState; task: Task | null; project: Project | null; next: Task[];
+  /** PHASE 37 (ADR-047): this agent's moments, the most recent first. */
+  journal: JournalEntry[];
   onOpenTask: (task: Task) => void;
 }) {
   const api = useApi();
-  const [tab, setTab] = useState<"code" | "about">("code");
+  const [tab, setTab] = useState<"diary" | "code" | "about">("diary");
   const [picked, setPicked] = useState<string | null>(null);
   const [file, setFile] = useState<{ path: string; text: string | null; note: string | null; changed: Set<number> } | null>(null);
   const previous = useRef<{ path: string; text: string; modifiedAt: string | null } | null>(null);
@@ -55,6 +59,11 @@ export function AgentLive({ agent, state, task, project, next, onOpenTask }: {
   const [files, filesProblem] = usePoll<ProjectFileEntry[]>(projectId && state !== "off" ? () => api.recentFiles(projectId, 6) : null,
     3000, [api, projectId, state]);
   const missingEndpoint = filesProblem instanceof ApiProblem && filesProblem.status === 404;
+  // PHASE 37 (ADR-047): what the agent changed since the handoff, when the handoff took the copy to compare with.
+  const { changes, problem: changesProblem } = useTaskChanges(tab === "code" ? taskId : null);
+  const tracked = changes?.tracked === true;
+  // Without a copy to compare with (or a server that does not know the changes yet): the files touched lately.
+  const fallback = changesProblem !== null || (changes !== null && !changes.tracked);
   const noFolder = filesProblem instanceof ApiProblem && (filesProblem.status === 409 || filesProblem.status === 503);
 
   useEffect(() => { setPicked(null); setFile(null); previous.current = null; }, [agent.id]);
@@ -93,7 +102,8 @@ export function AgentLive({ agent, state, task, project, next, onOpenTask }: {
         </span>
         <span className="spacer" />
         <div className="tabs" role="tablist" aria-label="Vista">
-          <button className="tab" role="tab" aria-selected={tab === "code"} onClick={() => setTab("code")}>Codice in tempo reale</button>
+          <button className="tab" role="tab" aria-selected={tab === "diary"} onClick={() => setTab("diary")}>Diario</button>
+          <button className="tab" role="tab" aria-selected={tab === "code"} onClick={() => setTab("code")}>Modifiche al codice</button>
           <button className="tab" role="tab" aria-selected={tab === "about"} onClick={() => setTab("about")}>Cosa sta facendo</button>
         </div>
       </header>
@@ -113,8 +123,29 @@ export function AgentLive({ agent, state, task, project, next, onOpenTask }: {
         </p>
       )}
 
-      {tab === "code" && task && (
+      {tab === "diary" && (
         <div className="agent-live-body">
+          {journal.length === 0
+            ? <p className="widget-note">Nessun passo ancora. Quando consegni una task a {agent.name}, qui compaiono la consegna e
+              ogni passo che l'agente scrive nel suo diario mentre lavora.</p>
+            : <JournalList entries={journal} />}
+        </div>
+      )}
+
+      {tab === "code" && task && tracked && changes && (
+        <div className="agent-live-body"><ChangesView taskId={task.id} changes={changes} /></div>
+      )}
+
+      {tab === "code" && task && !tracked && !fallback && (
+        <div className="agent-live-body"><p className="widget-note">Leggo le modifiche…</p></div>
+      )}
+
+      {tab === "code" && task && fallback && (
+        <div className="agent-live-body">
+          {changes && !changes.tracked && (
+            <p className="widget-note">Le modifiche riga per riga si vedono dalla prossima consegna della task: AI Company OS fotografa la
+              cartella quando la consegna. Intanto, i file toccati di recente.</p>
+          )}
           {running && (
             <div className="engine-live">
               <span className="engine-pulse" aria-hidden="true" />

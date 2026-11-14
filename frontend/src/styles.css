@@ -1061,59 +1061,110 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .link-button:focus-visible, .lesson-stop:focus-visible, .lesson-row:focus-visible, .lesson-line:focus-visible,
 .eco-out:focus-visible, .lesson-code button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.learn-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.learn-figure { display: flex; gap: 12px; align-items: center; padding: 16px 18px; min-width: 0; }
-.learn-figure + .learn-figure { border-left: 1px solid var(--border); }
-.learn-figure > svg { flex: none; color: var(--muted); }
-.learn-figure > div { flex: 1; min-width: 0; }
-.learn-figure strong { font-size: 20px; margin-right: 2px; font-variant-numeric: tabular-nums; }
-.learn-figure small { display: block; margin-top: 2px; color: var(--muted); }
-.learn-flame.is-lit { color: var(--warn); }
-.learn-next { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 18px 20px; }
-.learn-next > div { flex: 1 1 320px; min-width: 0; }
-.learn-next p { margin: 6px 0 10px; }
-.learn-empty { display: grid; gap: 10px; max-width: 72ch; }
-.learn-empty p { margin: 0; line-height: 1.6; }
+/* The page answers to the room it has, not to the window: with the file panel open, a wide window
+   still leaves it narrow -- and a layout for a wide one put the stops of a lesson under its stage. */
+.learn { container: learn / inline-size; }
 
-.lesson-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.learn-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.learn-figure {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "icon text action";
+  gap: 10px 12px; align-items: center; padding: 16px 18px; min-width: 0;
+}
+.learn-figure + .learn-figure { border-left: 1px solid var(--border); }
+.learn-figure > .widget-icon { grid-area: icon; }
+.learn-figure.is-lit > .widget-icon { color: var(--warn); background: var(--warn-soft); box-shadow: none; }
+.learn-figure > .btn { grid-area: action; }
+.learn-figure-text { grid-area: text; display: grid; gap: 2px; min-width: 0; }
+.learn-figure-text p { margin: 0; color: var(--text-soft); }
+.learn-figure-text strong {
+  margin-right: 3px; font-size: 20px; line-height: 1.2; color: var(--text); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+}
+.learn-figure-text small { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+
+/* The lesson to go on with: what it is first, where it stands under it, the one primary button beside it. */
+.learn-next { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: space-between; padding: 20px 22px; }
+.learn-next-text { flex: 1 1 320px; min-width: 0; display: grid; gap: 4px; }
+.learn-eyebrow { font-size: 12px; font-weight: 600; color: var(--accent-text); }
+.learn-next h2 { font-size: 16.5px; overflow-wrap: anywhere; }
+.learn-next p { margin: 0; overflow-wrap: anywhere; }
+.learn-next .lesson-progress { max-width: 440px; margin-top: 8px; }
+.learn-empty { display: grid; gap: 10px; justify-items: start; }
+.learn-empty p { margin: 0; max-width: 72ch; line-height: 1.6; }
+
+/* A project: its name and how far its lessons are in the card's head, the lessons as rows under it. */
+.learn-project .card-head { flex-wrap: wrap; gap: 8px 12px; }
+.learn-project-title { flex: 1 1 220px; min-width: 0; display: grid; gap: 2px; }
+.learn-project-title h2 { overflow-wrap: anywhere; }
+.learn-project-title small { color: var(--muted); font-size: 12px; }
+.learn-project .card-head .btn { flex: none; }
+.lesson-list { list-style: none; margin: 0; padding: 6px 8px; display: grid; }
 .lesson-list li + li { border-top: 1px solid var(--border); }
 .lesson-row {
-  width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(120px, 200px) auto; gap: 14px; align-items: center;
-  padding: 12px 6px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer;
+  width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) minmax(110px, 180px) 5.5rem;
+  grid-template-areas: "mark text progress cta"; gap: 6px 14px; align-items: center;
+  padding: 11px 10px; border: 0; border-radius: var(--radius-sm); background: none; text-align: left; cursor: pointer;
+  transition: background-color .12s;
 }
 .lesson-row:hover { background: var(--surface-2); }
-.lesson-row-text { display: grid; min-width: 0; }
-.lesson-row-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lesson-row-cta { color: var(--accent); font-weight: 600; }
-.lesson-mark, .lesson-dot { flex: none; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; color: #06281c; }
+.lesson-row > .lesson-mark { grid-area: mark; }
+.lesson-row > .lesson-progress { grid-area: progress; }
+.lesson-row-text { grid-area: text; display: grid; gap: 2px; min-width: 0; }
+/* A long title takes two lines, then the tooltip -- never the room of the columns beside it. */
+.lesson-row-text strong {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.4;
+}
+.lesson-row-meta { display: flex; gap: 8px; align-items: center; min-width: 0; color: var(--muted); font-size: 12px; }
+.lesson-row-meta > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lesson-row-meta .badge { flex: none; }
+.lesson-row-cta {
+  grid-area: cta; justify-self: end; display: inline-flex; align-items: center; gap: 2px;
+  color: var(--accent-text); font-weight: 600; font-size: 13px; white-space: nowrap;
+}
+/* The bars of one card start and end on the same lines, whatever the figure beside them. */
+.lesson-row .lesson-progress small { min-width: 6ch; text-align: right; }
+.lesson-row.is-done .lesson-row-cta { color: var(--muted); }
+/* The check on the green: dark on the bright green of the dark theme, white on the deep green of the light one. */
+.lesson-mark, .lesson-dot { flex: none; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; color: var(--surface); }
 .lesson-mark { width: 22px; height: 22px; }
 .lesson-mark.is-done { background: var(--ok); border-color: var(--ok); }
 .lesson-progress { display: flex; gap: 8px; align-items: center; min-width: 0; }
 .lesson-progress .progress { flex: 1; }
-.lesson-progress small { font-variant-numeric: tabular-nums; }
+.lesson-progress small { flex: none; font-variant-numeric: tabular-nums; }
 
-.lesson { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 20px; align-items: start; }
-.lesson-rail { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; position: sticky; top: 76px; }
-.lesson-stop {
-  width: 100%; display: flex; gap: 10px; align-items: center; padding: 7px 8px; border: 0; border-radius: 8px;
-  background: none; color: var(--muted); text-align: left; cursor: pointer;
+.lesson { display: grid; grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); gap: 20px; align-items: start; }
+/* One column as wide as the rail: a long stop wraps inside it. Sized by its content, the column grew
+   past the rail and the stop was written over the stage beside it. */
+.lesson-rail {
+  list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; position: sticky; top: 76px;
 }
-.lesson-stop span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lesson-stop {
+  width: 100%; display: flex; gap: 10px; align-items: flex-start; padding: 7px 8px; border: 0; border-radius: 8px;
+  background: none; color: var(--muted); text-align: left; cursor: pointer; line-height: 1.4;
+}
+.lesson-stop > span:last-child {
+  min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+}
 .lesson-stop:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
 .lesson-stop:disabled { cursor: default; opacity: 0.5; }
 .lesson-stop[aria-current="step"] { background: var(--accent-soft); color: var(--text); font-weight: 600; }
-.lesson-dot { width: 18px; height: 18px; }
+.lesson-dot { width: 18px; height: 18px; margin-top: 1px; }
 .lesson-stop[data-done] .lesson-dot { background: var(--ok); border-color: var(--ok); }
 .lesson-stop[aria-current="step"] .lesson-dot { border-color: var(--accent); }
-.lesson-stage { padding: 22px 24px; display: grid; gap: 14px; max-width: 88ch; animation: stage-in 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
+.lesson-stage { padding: 22px 24px; display: grid; gap: 14px; max-width: 940px; animation: stage-in 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
 @keyframes stage-in { from { opacity: 0; transform: translateY(6px); } }
-.lesson-stage h2 { font-size: 18px; }
+.lesson-stage h2 { font-size: 18px; overflow-wrap: anywhere; }
 .lesson-stage h3 { margin-top: 4px; font-size: 12.5px; color: var(--muted); }
 .lesson-prose { display: grid; gap: 10px; }
 .lesson-prose p, .lesson-question, .lesson-why { margin: 0; max-width: 70ch; font-size: 15px; line-height: 1.6; }
 .lesson-question { font-weight: 600; }
 .lesson-why { padding: 12px 14px; border-radius: 10px; background: var(--info-soft); }
-.lesson-file { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+/* The file of a step: its path (which wraps, it has no spaces) and what to do with it, the copy button beside. */
+.lesson-file { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; font-size: 13px; }
+.lesson-file > svg { flex: none; margin-top: 2px; color: var(--muted); }
+.lesson-file-text { flex: 1 1 220px; min-width: 0; display: grid; gap: 1px; }
+.lesson-file-text code { overflow-wrap: anywhere; color: var(--text-soft); }
+.lesson-file-text small { color: var(--muted); font-size: 12px; }
+.lesson-file > .btn { flex: none; }
 
 .lesson-code {
   list-style: none; counter-reset: line; margin: 0; padding: 10px 0; overflow-x: auto;
@@ -1179,7 +1230,7 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 
 .burst {
   position: relative; width: 48px; height: 48px; margin-bottom: 6px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--ok); color: #06281c; animation: burst-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--ok); color: var(--surface); animation: burst-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .burst i {
   position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px; border-radius: 1px; background: var(--ok);
@@ -1192,6 +1243,32 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
   to { opacity: 0; transform: rotate(calc(var(--i) * 45deg)) translateY(-40px); }
 }
 @media (prefers-reduced-motion: reduce) { .burst, .burst i, .lesson-stage { animation: none; } }
+
+/* Measured on the page's own width (the .learn container), not the window's. */
+@container learn (min-width: 721px) and (max-width: 1000px) {
+  /* Three figures of a third each: the review button goes under its words. */
+  .learn-figure { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "icon text" ". action"; }
+  .learn-figure > .btn { justify-self: start; }
+}
+@container learn (max-width: 720px) {
+  .learn-strip { grid-template-columns: minmax(0, 1fr); }
+  .learn-figure + .learn-figure { border-left: 0; border-top: 1px solid var(--border); }
+}
+@container learn (max-width: 640px) {
+  /* The progress goes under the title instead of away: how far a lesson is stays on the row. */
+  .lesson-row { grid-template-columns: 22px minmax(0, 1fr) 5.5rem; grid-template-areas: "mark text cta" "mark progress cta"; }
+}
+@container learn (max-width: 760px) {
+  .lesson { grid-template-columns: minmax(0, 1fr); }
+  .lesson-rail { position: static; display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+  .lesson-rail li { flex: none; }
+  .lesson-stop { align-items: center; }
+  .lesson-stop > span:last-child { display: block; max-width: 18ch; white-space: nowrap; text-overflow: ellipsis; }
+  .lesson-dot { margin-top: 0; }
+  .lesson-line { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .lesson-compare { grid-template-columns: minmax(0, 1fr); }
+  .lesson-stage { padding: 16px; }
+}
 
 /* --- PHASE 37 (ADR-043): the agents in the tools around AI Company OS ------------- */
 
@@ -1215,17 +1292,6 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .eco-import > li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--border); }
 
 @media (max-width: 900px) {
-  .learn-strip { grid-template-columns: 1fr; }
-  .learn-figure + .learn-figure { border-left: 0; border-top: 1px solid var(--border); }
-  .lesson { grid-template-columns: minmax(0, 1fr); }
-  .lesson-rail { position: static; display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
-  .lesson-rail li { flex: none; }
-  .lesson-stop span:last-child { max-width: 16ch; }
-  .lesson-row { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .lesson-row .lesson-progress { display: none; }
-  .lesson-line { grid-template-columns: minmax(0, 1fr); gap: 2px; }
-  .lesson-compare { grid-template-columns: minmax(0, 1fr); }
-  .lesson-stage { padding: 16px; }
   .eco-report > li { grid-template-columns: minmax(0, 1fr); gap: 4px; }
 }
 
@@ -1287,23 +1353,31 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 .office-canvas { position: absolute; inset: 0; }
 .office-canvas canvas { display: block; }
 .office-fallback { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; margin: 0; color: var(--muted); text-align: center; }
+/* The name tags are labels pinned over the robots: the pointer goes through them to the
+   office, and they do nothing but follow their robot while the view moves (no fading, no
+   hover, no transition on their place). The scene places them once the camera has moved. */
 .office-tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.office-tag { position: absolute; left: 0; top: 0; pointer-events: auto; display: inline-flex; align-items: center; gap: 6px;
-  padding: 3px 10px 3px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; white-space: nowrap; cursor: pointer;
-  color: #e9eef7; background: rgba(8, 11, 18, 0.72); border: 1px solid rgba(148, 163, 184, 0.24); backdrop-filter: blur(6px);
-  transition: opacity .2s, border-color .15s; will-change: transform; }
+.office-tag { position: absolute; left: 0; top: 0; pointer-events: none; display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px 3px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; white-space: nowrap; user-select: none;
+  color: #e9eef7; background: rgba(8, 11, 18, 0.72); border: 1px solid rgba(148, 163, 184, 0.24); will-change: transform; }
 .office-tag .dot { width: 6px; height: 6px; }
 .office-tag.is-working .dot { background: #5fb0ff; box-shadow: 0 0 0 3px rgba(95, 176, 255, .25); }
 .office-tag.is-waiting .dot { background: #f2b84b; }
 .office-tag.is-idle .dot { background: #8d96a9; }
 .office-tag.is-off .dot { background: #3a4256; }
 /* A name tag shows over who works, who is chosen and who is under the pointer; the rest stay out of the way. */
-.office-tag:not(.is-shown) { visibility: hidden; }
+.office-tag:not(.is-shown), .office-tag[data-behind] { visibility: hidden; }
 .office-tag.is-selected { border-color: var(--accent); background: rgba(31, 111, 229, 0.85); }
-.office-legend { position: absolute; left: 14px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11.5px;
+.office-legend { position: absolute; left: 14px; top: 48px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11.5px;
   padding: 6px 12px; border-radius: 10px; color: var(--text-soft); background: color-mix(in srgb, var(--surface) 80%, transparent);
   border: 1px solid var(--border); backdrop-filter: blur(8px); }
 .office-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.office-hint { position: absolute; left: 14px; right: 64px; bottom: 12px; z-index: 2; pointer-events: none; font-size: 11.5px;
+  color: var(--muted); }
+/* The navigation is ink in both themes; over the light office it needs more body to read. */
+:root[data-theme="light"] .office-stage :is(.graph-nav-group, .graph-trail ol, .graph-trail-back) { background: rgba(18, 26, 42, .86); }
+.office-hint kbd { font-family: var(--sans); font-size: 10.5px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--border-strong);
+  color: var(--text-soft); }
 .office-legend i, .roster-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
 .office-legend i.is-working, .roster-dot.is-working { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .office-legend i.is-waiting, .roster-dot.is-waiting { background: var(--warn); }
@@ -1386,9 +1460,80 @@ details pre { white-space: pre-wrap; background: var(--surface-2); padding: 10px
 @media (max-width: 760px) {
   .live-files { grid-template-columns: minmax(0, 1fr); }
   .office-stage { height: 380px; }
-  .office-legend { display: none; }
+  .office-legend, .office-hint { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .engine-pulse { animation: none; } }
+
+/* PHASE 37 (ADR-047): the agents' journal, their latest step on the tag, and what they changed,
+   as a diff view shows it: the files with their letter and their counts, the chosen one line by line. */
+.office-tag-text { display: grid; min-width: 0; line-height: 1.25; }
+.office-tag-step { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px;
+  font-weight: 400; color: #aeb9cc; animation: office-step-in .5s ease-out; }
+.office-tag:has(.office-tag-step) { align-items: flex-start; border-radius: 12px; padding: 4px 10px 4px 8px; }
+.office-tag:has(.office-tag-step) .dot { margin-top: 5px; }
+@keyframes office-step-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+.journal { list-style: none; margin: 0; padding: 0; display: grid; max-height: 440px; overflow-y: auto; }
+.journal-entry { display: grid; grid-template-columns: 76px 12px minmax(0, 1fr); gap: 8px; align-items: start; padding: 6px 2px;
+  border-top: 1px solid var(--border); animation: journal-in .35s ease-out; }
+.journal-entry:first-child { border-top: 0; }
+.journal-when { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; padding-top: 1px; white-space: nowrap; }
+.journal-mark { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--faint); }
+.journal-entry.is-step .journal-mark { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.journal-entry.is-start .journal-mark { background: var(--ok); }
+.journal-entry.is-done .journal-mark { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+.journal-entry.is-run .journal-mark { background: #9a8cff; }
+.journal-entry.is-warn .journal-mark { background: var(--warn); }
+.journal-entry.is-fail .journal-mark { background: var(--danger); }
+.journal-what { display: grid; gap: 2px; min-width: 0; font-size: 13px; }
+.journal-text { overflow-wrap: anywhere; }
+.journal-what small { display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--muted); font-size: 11.5px; }
+.journal-what small .mono { font-size: 11px; }
+.journal-what small .link-button { font-size: 11.5px; }
+@keyframes journal-in { from { opacity: 0; } to { opacity: 1; } }
+
+.changes { display: grid; gap: 10px; }
+.changes-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.changes-count { display: inline-flex; gap: 6px; flex: none; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.changes-count .is-add { color: var(--ok); }
+.changes-count .is-del { color: var(--danger); }
+.changes-body { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 14px; min-height: 0; }
+.changes-files { display: grid; gap: 2px; align-content: start; max-height: 560px; overflow-y: auto; }
+.changes-follow { justify-self: end; font-size: 12px; padding: 0 8px 4px; }
+.changes-file { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 9px; background: none;
+  color: var(--text-soft); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.changes-file:hover { background: var(--surface-2); }
+.changes-file.is-on { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.changes-file:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: -2px; }
+.changes-name { display: grid; min-width: 0; flex: 1; }
+.changes-name small { color: var(--faint); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+.changes-letter { flex: none; width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center; font: 600 10.5px var(--mono); }
+.changes-letter.is-added { color: var(--ok); background: var(--ok-soft); }
+.changes-letter.is-modified { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, transparent); }
+.changes-letter.is-deleted { color: var(--danger); background: color-mix(in srgb, var(--danger) 15%, transparent); }
+.diff { display: grid; grid-template-rows: auto minmax(0, 1fr); border-radius: 12px; overflow: hidden; border: 1px solid var(--ink-border);
+  background: var(--ink); color: var(--ink-text); min-width: 0; max-height: 600px; }
+.diff-head { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--ink-border); font-size: 12px;
+  color: var(--ink-muted); background: var(--ink-2); }
+.diff-head .mono { color: var(--ink-text); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diff-head .muted { color: var(--ink-muted); }
+.diff-note { padding: 16px; }
+.diff-table { display: block; overflow: auto; border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; }
+.diff-table tbody { display: table; min-width: 100%; }
+.diff-hunk td { padding: 3px 12px; color: #7f8aa1; background: rgba(58, 141, 255, .08); font-size: 11.5px; }
+.diff-num { width: 1%; min-width: 42px; padding: 0 8px; text-align: right; color: #4b587a; user-select: none; font-variant-numeric: tabular-nums; }
+.diff-sign { width: 1%; padding: 0 6px 0 2px; user-select: none; color: #4b587a; }
+.diff-code { padding: 0 16px 0 0; white-space: pre; }
+.diff-code code { font: inherit; white-space: pre; }
+.diff tr.is-added { background: rgba(60, 207, 138, .13); }
+.diff tr.is-added .diff-sign { color: #3ccf8a; }
+.diff tr.is-removed { background: rgba(255, 107, 107, .13); }
+.diff tr.is-removed .diff-sign { color: #ff6b6b; }
+@media (max-width: 760px) {
+  .changes-body { grid-template-columns: minmax(0, 1fr); }
+  .journal-entry { grid-template-columns: 62px 12px minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .office-tag-step, .journal-entry { animation: none; } }
 
 /* Graph canvases (Ecosistema 3D, Second Brain): the navigation cluster, the trail of
    where the operator has been, and the keys. They float on the ink, frosted, so the

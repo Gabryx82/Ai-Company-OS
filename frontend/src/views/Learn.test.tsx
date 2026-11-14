@@ -163,12 +163,71 @@ describe("Impara — one lesson, one act at a time", () => {
     expect(await screen.findByText("Quiz")).toBeTruthy();
   });
 
+  it("in a narrow page the stops scroll sideways and the current one is brought into view", async () => {
+    // jsdom has no layout: the rail is 300 px wide, its stops 900, the current one at 500.
+    vi.spyOn(Element.prototype, "scrollWidth", "get").mockReturnValue(900);
+    vi.spyOn(Element.prototype, "clientWidth", "get").mockReturnValue(300);
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      const box = this.matches(".lesson-rail") ? { left: 0, width: 300 }
+        : this.matches('[aria-current="step"]') ? { left: 500, width: 120 } : { left: 0, width: 0 };
+      return { ...box, top: 0, height: 30, right: box.left + box.width, bottom: 30, x: box.left, y: 0, toJSON: () => box } as DOMRect;
+    });
+    try {
+      mount({ "GET /api/projects/5/lessons/view": () => ({ body: lesson({ predicted: true }) }) }, lessonRoute(5, PATH));
+
+      expect(await screen.findByRole("button", { name: "L'ho scritto nel file: controlla" })).toBeTruthy();
+      const rail = screen.getByRole("list", { name: "Le tappe della lezione" });
+      // Centred: 500 from the rail's edge, less half of what the rail shows beside the stop.
+      await waitFor(() => expect(rail.scrollLeft).toBe(500 - (300 - 120) / 2));
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
   it("a lesson that departs from the format is shown with what it lacks", async () => {
     mount({ "GET /api/projects/5/lessons/view": () => ({ body: { ...lesson(),
       problems: ["Passo 1: manca la spiegazione «**Riga per riga**»."] } }) }, lessonRoute(5, PATH));
 
     expect(await screen.findByText(/non segue il formato in un punto/)).toBeTruthy();
     expect(screen.getByText("Passo 1: manca la spiegazione «**Riga per riga**».")).toBeTruthy();
+  });
+});
+
+describe("Impara — the lesson's own markup", () => {
+  it("shows `code`, **bold** and *emphasis* as such in the line-by-line, never the marks themselves", async () => {
+    const view = lesson({ predicted: true });
+    view.steps[0].lines = [{ code: "boolean scaduto()", text: "**una** riga sola, *non* due: `true` o `false`" }];
+    mount({ "GET /api/projects/5/lessons/view": () => ({ body: view }) }, lessonRoute(5, PATH));
+
+    const line = await screen.findByRole("button", { name: /riga sola/ });
+    expect(line.querySelector("strong")?.textContent).toBe("una");
+    expect(line.querySelector("em")?.textContent).toBe("non");
+    expect([...line.querySelectorAll("span code")].map((c) => c.textContent)).toEqual(["true", "false"]);
+    expect(line.textContent).not.toMatch(/[*`]/);
+  });
+
+  it("does the same in what a finished lesson leaves and on the back of a review card", async () => {
+    mount({ "GET /api/projects/5/lessons/view": () => ({ body: { ...lesson({ predicted: true, written: true, quiz: true }),
+      concepts: [{ name: "`Record`", text: "un tipo che **non** cambia: `final` in ogni campo" }] } }) }, lessonRoute(5, PATH));
+
+    expect(await screen.findByText("Lezione finita")).toBeTruthy();
+    const concepts = document.querySelector(".lesson-concepts")!;
+    expect([...concepts.querySelectorAll("code")].map((c) => c.textContent)).toEqual(["Record", "final"]);
+    expect(concepts.querySelector("strong")?.textContent).toBe("non");
+    expect(concepts.textContent).not.toMatch(/[*`]/);
+  });
+
+  it("turns the back of a review card into code where it says so", async () => {
+    const card = { id: 7, projectId: 5, projectName: "Biblioteca", lessonPath: PATH, name: "`Record`", box: 1, dueOn: "2026-11-10", reviews: 0 };
+    mount({
+      "GET /api/learning/review": () => ({ body: { due: [{ ...card, explanation: "" }], total: 1, nextDue: null } }),
+      "GET /api/learning/review/7": () => ({ body: { ...card, explanation: "un tipo che non cambia: `final` in ogni campo" } }),
+    }, "review");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Gira la carta" }));
+    const answer = await screen.findByText(/in ogni campo/);
+    expect(answer.querySelector("code")?.textContent).toBe("final");
+    expect(screen.getByRole("heading", { name: "Record" }).querySelector("code")).toBeTruthy();
   });
 });
 

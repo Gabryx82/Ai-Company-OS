@@ -2,11 +2,18 @@
 // Geometry only (no models to download): rounded boxes, capsules and spheres in the
 // console's palette. A robot types and its screen scrolls when its agent has a task in
 // progress; it waits, eyes dimmed, when it has none; it sleeps when the agent is off.
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+// The camera moves as in the other 3D views: orbit, move along the floor, zoom towards
+// the pointer, two fingers sideways; and it glides where it is asked (officeCamera.ts).
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { horizontalSwipe } from "../../components/graphGestures";
+import {
+  MAX_POLAR, MIN_DISTANCE, TAG_HEIGHT, answer, clampToRoom, maxDistance, offsetDirection, placeTags, seat,
+  type Goal, type OfficeCameraRequest, type Room, type ScreenPoint,
+} from "./officeCamera";
 
 export type DeskState = "working" | "waiting" | "idle" | "off";
 
@@ -16,9 +23,26 @@ export interface DeskAgent {
   role: string;
   state: DeskState;
   task: string | null;
+  /** PHASE 37 (ADR-047): its latest moment, when recent: shown on its tag under the name. */
+  step?: string | null;
 }
 
-export type OfficeView = "overview" | "top";
+export interface OfficeSceneProps {
+  agents: DeskAgent[];
+  selected: number | null;
+  /** The last thing the camera was asked to do. */
+  camera: OfficeCameraRequest | null;
+  autoRotate: boolean;
+  /** False with reduced motion: the camera jumps instead of gliding. */
+  animate: boolean;
+  dark: boolean;
+  /** A click on a robot or on its name tag. */
+  onSelect: (id: number) => void;
+  /** A double click on a robot or on its name tag. */
+  onActivate: (id: number) => void;
+  /** A double click on the floor or on the walls. */
+  onBackground: () => void;
+}
 
 const ACCENT = new THREE.Color("#3a8dff");
 const EYE: Record<DeskState, string> = { working: "#5fb0ff", waiting: "#f2b84b", idle: "#8d96a9", off: "#1a2030" };
@@ -98,11 +122,10 @@ function useScreen(agent: DeskAgent) {
   return { texture, paint };
 }
 
-function Robot({ agent, desk, selected, dark, onSelect, onHover, tagRef }: {
+function Robot({ agent, desk, selected, dark, onSelect, onActivate, onHover }: {
   agent: DeskAgent; dark: boolean; desk: { x: number; z: number; rot: number }; selected: boolean;
-  onSelect: (id: number) => void; onHover: (id: number | null) => void; tagRef: (el: THREE.Object3D | null) => void;
+  onSelect: (id: number) => void; onActivate: (id: number) => void; onHover: (id: number | null) => void;
 }) {
-  const root = useRef<THREE.Group>(null);
   const head = useRef<THREE.Group>(null);
   const armL = useRef<THREE.Mesh>(null);
   const armR = useRef<THREE.Mesh>(null);
@@ -155,9 +178,11 @@ function Robot({ agent, desk, selected, dark, onSelect, onHover, tagRef }: {
     }
   });
 
-  const pick = (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onSelect(agent.id); };
-  const over = (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); document.body.style.cursor = "pointer"; onHover(agent.id); };
-  const out = () => { document.body.style.cursor = ""; onHover(null); };
+  // A drag that starts and ends on the same robot moved the view: it does not choose the robot.
+  const pick = (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (e.delta <= 4) onSelect(agent.id); };
+  const activate = (e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onActivate(agent.id); };
+  const over = (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); onHover(agent.id); };
+  const out = () => onHover(null);
   const shell = agent.state === "off" ? "#9aa3b5" : "#e9eef7";
 
   return (
@@ -193,7 +218,7 @@ function Robot({ agent, desk, selected, dark, onSelect, onHover, tagRef }: {
         <meshBasicMaterial color={ACCENT} transparent opacity={0} toneMapped={false} />
       </mesh>
       {/* the robot */}
-      <group ref={root} position={[0, 0, -0.98]} onClick={pick} onPointerOver={over} onPointerOut={out}>
+      <group position={[0, 0, -0.98]} onClick={pick} onDoubleClick={activate} onPointerOver={over} onPointerOut={out}>
         <mesh geometry={geo.body} position={[0, 0.88, 0]} castShadow>
           <meshStandardMaterial color={shell} roughness={0.25} metalness={0.15} />
         </mesh>
@@ -214,7 +239,6 @@ function Robot({ agent, desk, selected, dark, onSelect, onHover, tagRef }: {
           <mesh geometry={geo.eye} position={[0.08, 0.02, 0.245]}>
             <meshStandardMaterial color={EYE[agent.state]} emissive={EYE[agent.state]} emissiveIntensity={1.5} toneMapped={false} />
           </mesh>
-          <object3D ref={tagRef} position={[0, 0.55, 0]} />
         </group>
       </group>
     </group>
@@ -242,75 +266,187 @@ function Plant({ x, z, scale = 1 }: { x: number; z: number; scale?: number }) {
   );
 }
 
-/** Keeps each name tag over its robot's head: positions projected to the canvas each frame. */
-function Tags({ anchors, tags }: {
-  anchors: MutableRefObject<Map<number, THREE.Object3D>>; tags: MutableRefObject<Map<number, HTMLElement>>;
+/**
+ * The camera: orbit, move along the floor, zoom towards the pointer, and a goal it glides
+ * to when asked. In the same frame, after the camera has moved, each name tag is put over
+ * its robot: a tag placed before the move trails behind it while the view turns.
+ */
+function CameraRig({ room, request, autoRotate, animate, seats, anchors, tags, onGesture }: {
+  room: Room; request: OfficeCameraRequest | null; autoRotate: boolean; animate: boolean;
+  seats: Map<number, THREE.Vector3>; anchors: Map<number, THREE.Vector3>;
+  tags: MutableRefObject<Map<number, HTMLElement>>; onGesture: (active: boolean) => void;
 }) {
-  const { camera, size } = useThree();
-  const v = useMemo(() => new THREE.Vector3(), []);
-  useFrame(() => {
-    for (const [id, el] of tags.current) {
-      const anchor = anchors.current.get(id);
-      if (!anchor) continue;
-      anchor.getWorldPosition(v);
-      v.project(camera);
-      const visible = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
-      el.style.opacity = visible ? "" : "0";
-      el.style.transform = `translate(-50%, -100%) translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px)`;
-    }
-  });
-  return null;
-}
-
-function CameraRig({ view, width, depth }: { view: OfficeView; width: number; depth: number }) {
-  const { camera, gl, invalidate, size } = useThree();
-  // Far enough for the whole floor to fit the frame, whatever the frame's proportions.
-  const aspect = size.width / Math.max(size.height, 1);
-  const extent = Math.max(depth * 1.35, (width * 1.45) / Math.max(aspect, 0.6));
+  const { camera, gl } = useThree();
   const controls = useMemo(() => new OrbitControls(camera, gl.domElement), [camera, gl]);
-  const goal = useRef<THREE.Vector3 | null>(null);
+  const goal = useRef<Goal | null>(null);
+  const gesture = useRef(onGesture);
+  gesture.current = onGesture;
   useEffect(() => {
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.maxPolarAngle = Math.PI * 0.46;
-    controls.minDistance = 4;
-    controls.maxDistance = extent * 2.2;
-    controls.target.set(0, 0.6, 0);
-    const stop = () => { goal.current = null; };
-    controls.addEventListener("start", stop);
-    return () => { controls.removeEventListener("start", stop); controls.dispose(); };
-  }, [controls, extent]);
+    controls.rotateSpeed = 0.7;
+    controls.zoomSpeed = 0.9;
+    // The right button moves the view along the floor, as over a plan, not up into the air.
+    controls.screenSpacePanning = false;
+    controls.zoomToCursor = true;
+    controls.minDistance = MIN_DISTANCE;
+    controls.maxPolarAngle = MAX_POLAR;
+    controls.autoRotateSpeed = 0.35;
+    const start = () => { goal.current = null; gesture.current(true); };
+    const end = () => gesture.current(false);
+    controls.addEventListener("start", start);
+    controls.addEventListener("end", end);
+    return () => {
+      controls.removeEventListener("start", start);
+      controls.removeEventListener("end", end);
+      controls.dispose();
+    };
+  }, [controls]);
+  useEffect(() => { controls.maxDistance = maxDistance(room); }, [controls, room]);
+  useEffect(() => { controls.autoRotate = autoRotate; }, [controls, autoRotate]);
+
+  // Two fingers to the right or left on a touchpad (or Shift + wheel): the view moves along x,
+  // the office following the fingers at the depth of the target. Caught on the way down to
+  // the canvas, before the orbit controls would read it as a zoom; up and down still zoom.
   useEffect(() => {
-    goal.current = view === "top" ? new THREE.Vector3(0, extent * 1.25, 0.01) : new THREE.Vector3(0, extent * 0.62, extent * 0.72);
-    invalidate();
-  }, [view, extent, invalidate]);
-  useFrame((_, delta) => {
+    const host = gl.domElement.parentElement ?? gl.domElement;
+    const right = new THREE.Vector3();
+    const onWheel = (event: WheelEvent) => {
+      const dx = horizontalSwipe(event);
+      if (dx === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const fov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
+      const perPixel = (2 * camera.position.distanceTo(controls.target) * Math.tan(fov / 2)) / Math.max(1, gl.domElement.clientHeight);
+      right.setFromMatrixColumn(camera.matrix, 0).multiplyScalar(dx * perPixel);
+      camera.position.add(right);
+      controls.target.add(right);
+      goal.current = null;
+      controls.update();
+    };
+    host.addEventListener("wheel", onWheel, { capture: true, passive: false });
+    return () => host.removeEventListener("wheel", onWheel, { capture: true });
+  }, [gl, camera, controls]);
+
+  // A request is answered in the frame loop, once the canvas has its size: framing needs the real aspect.
+  const pending = useRef<OfficeCameraRequest | null>(null);
+  useEffect(() => { if (request) pending.current = request; }, [request?.seq]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const temp = useMemo(() => ({ dir: new THREE.Vector3(), clamped: new THREE.Vector3() }), []);
+  const placed = useMemo(() => new Map<number, ScreenPoint>(), []);
+  const written = useMemo(() => new WeakMap<HTMLElement, string>(), []);
+
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, 0.1);
+    const cam = camera as THREE.PerspectiveCamera;
+    const asked = pending.current;
+    if (asked && state.size.width > 0 && state.size.height > 0) {
+      pending.current = null;
+      const next = answer(asked, goal.current, cam, controls.target, state.size.width / state.size.height, room, seats);
+      if (next) goal.current = next;
+      const instant = (asked.kind === "fit" || asked.kind === "focus") && asked.instant;
+      if (goal.current && (instant || !animate)) {
+        const dir = (goal.current.direction ?? offsetDirection(camera.position, controls.target, temp.dir)).clone();
+        controls.target.copy(goal.current.target);
+        camera.position.copy(dir.multiplyScalar(goal.current.distance).add(controls.target));
+        goal.current = null;
+      }
+    }
     if (goal.current) {
-      camera.position.lerp(goal.current, 1 - Math.exp(-delta * 3.5));
-      if (camera.position.distanceTo(goal.current) < 0.05) goal.current = null;
+      const k = 1 - Math.exp(-dt * 3.6);
+      const want = goal.current;
+      controls.target.lerp(want.target, k);
+      const distance = camera.position.distanceTo(controls.target);
+      const dir = offsetDirection(camera.position, controls.target, temp.dir);
+      if (want.direction) dir.lerp(want.direction, k).normalize();
+      const nextDistance = distance + (want.distance - distance) * k;
+      camera.position.copy(dir).multiplyScalar(nextDistance).add(controls.target);
+      if (Math.abs(nextDistance - want.distance) < 0.02 && controls.target.distanceTo(want.target) < 0.02
+          && (!want.direction || dir.angleTo(want.direction) < 0.002)) goal.current = null;
     }
     controls.update();
+    // The view stays over the office: past the edge, camera and target stop together.
+    clampToRoom(temp.clamped.copy(controls.target), room).sub(controls.target);
+    if (temp.clamped.lengthSq() > 0) {
+      controls.target.add(temp.clamped);
+      camera.position.add(temp.clamped);
+    }
+
+    // The tags, with the camera as it is in this frame. Only what changed is written.
+    placeTags(camera, anchors, state.size.width, state.size.height, state.viewport.dpr, placed);
+    for (const [id, el] of tags.current) {
+      const at = placed.get(id);
+      const css = at ? `translate(${at.x}px, ${at.y}px) translate(-50%, -100%)` : "hidden";
+      if (written.get(el) === css) continue;
+      written.set(el, css);
+      if (at) {
+        el.style.transform = css;
+        delete el.dataset.behind;
+      } else {
+        el.dataset.behind = "";
+      }
+    }
   });
   return null;
 }
 
-export default function OfficeScene({ agents, selected, onSelect, view, dark }: {
-  agents: DeskAgent[]; selected: number | null; onSelect: (id: number | null) => void; view: OfficeView; dark: boolean;
-}) {
+export default function OfficeScene({ agents, selected, camera, autoRotate, animate, dark, onSelect, onActivate, onBackground }: OfficeSceneProps) {
   const { desks, pods, width, depth } = useMemo(() => layout(agents.length), [agents.length]);
-  const anchors = useRef(new Map<number, THREE.Object3D>());
+  const room = useMemo<Room>(() => ({ width, depth }), [width, depth]);
+  // Where each robot sits and where its tag hangs: fixed points, not the moving head.
+  const seats = useMemo(() => new Map(agents.map((a, i) => [a.id, seat(desks[i])])), [agents, desks]);
+  const anchors = useMemo(() => new Map(agents.map((a, i) => [a.id, seat(desks[i], TAG_HEIGHT)])), [agents, desks]);
   const tags = useRef(new Map<number, HTMLElement>());
   const extent = Math.max(width, depth);
-  const [hovered, setHovered] = useState<number | null>(null);
   const ground = dark ? "#0b0f18" : "#dfe4ec";
   const wall = dark ? "#0e1320" : "#eef1f6";
 
+  // While the view moves, the tags hold still: the robot passed under the pointer does not
+  // light its tag up. What the pointer ends on counts when the move ends.
+  const [hovered, setHovered] = useState<number | null>(null);
+  const [moving, setMoving] = useState(false);
+  const gesture = useRef(false);
+  const underPointer = useRef<number | null>(null);
+  const hover = useCallback((id: number | null) => {
+    underPointer.current = id;
+    if (!gesture.current) setHovered(id);
+  }, []);
+  const onGesture = useCallback((active: boolean) => {
+    gesture.current = active;
+    setMoving(active);
+    if (!active) setHovered(underPointer.current);
+  }, []);
+
+  // The tags are labels: the pointer goes through them to the office, so a drag or a wheel
+  // that starts on one still moves the view. A click that lands on one chooses its agent.
+  const down = useRef<{ x: number; y: number } | null>(null);
+  const tagAt = (x: number, y: number): number | null => {
+    let found: number | null = null;
+    for (const [id, el] of tags.current) {
+      if (!el.classList.contains("is-shown") || el.dataset.behind !== undefined) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) found = id;
+    }
+    return found;
+  };
+  const clickTag = (event: ReactMouseEvent) => {
+    const from = down.current;
+    if (from && Math.hypot(event.clientX - from.x, event.clientY - from.y) > 4) return;
+    const id = tagAt(event.clientX, event.clientY);
+    if (id !== null) onSelect(id);
+  };
+  const doubleClickTag = (event: ReactMouseEvent) => {
+    const id = tagAt(event.clientX, event.clientY);
+    if (id !== null) onActivate(id);
+  };
+
   return (
-    <div className="office-canvas">
-      <Canvas shadows dpr={[1, 2]} camera={{ fov: 42, near: 0.1, far: 400, position: [0, extent * 0.4, extent * 0.52] }}
-              gl={{ antialias: true }} onPointerMissed={() => onSelect(null)}>
+    <div className="office-canvas" style={{ cursor: moving ? "grabbing" : hovered !== null ? "pointer" : "grab" }}
+         onPointerDown={(e) => { down.current = { x: e.clientX, y: e.clientY }; }} onClick={clickTag} onDoubleClick={doubleClickTag}>
+      <Canvas shadows dpr={[1, 2]} camera={{ fov: 42, near: 0.1, far: 400, position: [0, extent * 0.62, extent * 0.72] }}
+              gl={{ antialias: true }} onPointerMissed={(e) => { if (e.type === "dblclick") onBackground(); }}>
         <color attach="background" args={[dark ? "#05070c" : "#e8ecf3"]} />
-        <fog attach="fog" args={[dark ? "#05070c" : "#e8ecf3", extent * 1.4, extent * 3.2]} />
+        <fog attach="fog" args={[dark ? "#05070c" : "#e8ecf3", extent * 1.6, extent * 4]} />
         <ambientLight intensity={dark ? 0.5 : 0.75} />
         <hemisphereLight args={[dark ? "#6f8fff" : "#ffffff", dark ? "#0b0f18" : "#c7cdd9", dark ? 0.55 : 0.6]} />
         <directionalLight position={[extent * 0.4, extent * 0.9, extent * 0.3]} intensity={dark ? 1.7 : 1.8} castShadow
@@ -353,20 +489,23 @@ export default function OfficeScene({ agents, selected, onSelect, view, dark }: 
         <Plant x={-(width / 2 + 1.8)} z={depth / 2 + 1.4} />
 
         {agents.map((a, i) => (
-          <Robot key={a.id} agent={a} desk={desks[i]} selected={selected === a.id} dark={dark} onSelect={onSelect} onHover={setHovered}
-                 tagRef={(el) => { if (el) anchors.current.set(a.id, el); else anchors.current.delete(a.id); }} />
+          <Robot key={a.id} agent={a} desk={desks[i]} selected={selected === a.id} dark={dark}
+                 onSelect={onSelect} onActivate={onActivate} onHover={hover} />
         ))}
-        <Tags anchors={anchors} tags={tags} />
-        <CameraRig view={view} width={width} depth={depth} />
+        <CameraRig room={room} request={camera} autoRotate={autoRotate} animate={animate} seats={seats} anchors={anchors}
+                   tags={tags} onGesture={onGesture} />
       </Canvas>
       <div className="office-tags" aria-hidden="true">
         {agents.map((a) => (
-          <button key={a.id} tabIndex={-1}
-                  className={`office-tag is-${a.state}${selected === a.id ? " is-selected" : ""}${a.state === "working" || selected === a.id || hovered === a.id ? " is-shown" : ""}`}
-                  ref={(el) => { if (el) tags.current.set(a.id, el); else tags.current.delete(a.id); }}
-                  onClick={() => onSelect(a.id)}>
-            <span className="dot" />{a.name}
-          </button>
+          <span key={a.id}
+                className={`office-tag is-${a.state}${selected === a.id ? " is-selected" : ""}${a.state === "working" || selected === a.id || hovered === a.id ? " is-shown" : ""}`}
+                ref={(el) => { if (el) tags.current.set(a.id, el); else tags.current.delete(a.id); }}>
+            <span className="dot" />
+            <span className="office-tag-text">{a.name}
+              {/* A new step comes in with a short fade: the tag says the agent did something. */}
+              {a.step && <small key={a.step} className="office-tag-step">{a.step}</small>}
+            </span>
+          </span>
         ))}
       </div>
     </div>
